@@ -11,6 +11,10 @@ export type ZenithNlIntent = {
     peBucket?: string
     leadSource?: string
     search?: string
+    panelBrand?: string
+    inverterBrand?: string
+    financingBank?: string
+    availingLoan?: boolean
   }
   insightHints?: string
 }
@@ -45,6 +49,14 @@ export type ZenithNlViz =
       valueLabel?: string
     }
 
+export type ZenithNlEffectiveDateFilter = {
+  selectedFYs: string[]
+  selectedQuarters: string[]
+  selectedMonths: string[]
+  source: 'command_bar' | 'question'
+  phrase?: string
+}
+
 export type ZenithNlQuerySuccess = {
   ok: true
   question: string
@@ -54,6 +66,8 @@ export type ZenithNlQuerySuccess = {
   intent: ZenithNlIntent
   suggestedQuestions?: string[]
   followUps?: string[]
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter
+  chipMatch?: boolean
 }
 
 export type ZenithNlQueryClarify = {
@@ -62,11 +76,12 @@ export type ZenithNlQueryClarify = {
   question: string
   message: string
   suggestedQuestions: string[]
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter
 }
 
 export type ZenithNlQueryResult = ZenithNlQuerySuccess | ZenithNlQueryClarify
 
-/** Session-only Ask history entry (not persisted). */
+/** Ask history entry — persisted per user in localStorage for this browser. */
 export type ZenithAskHistoryItem = {
   id: string
   question: string

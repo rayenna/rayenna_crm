@@ -25,10 +25,8 @@ import {
 import { loadLifecycleBrandGaps } from '../utils/lifecycleBrandGaps';
 import { loadDataSenseGaps } from '../utils/dataSense';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
-import {
-  isZenithNlAskEnabled,
-  runZenithNlQuery,
-} from '../services/zenithNlQueryService';
+import { runZenithNlQuery } from '../services/zenithNlQueryService';
+import { resolveAskDateFilter } from '../services/zenithNl/relativeDates';
 
 const router = express.Router();
 
@@ -3252,13 +3250,6 @@ router.post(
         });
       }
 
-      if (!isZenithNlAskEnabled()) {
-        return res.status(503).json({
-          error:
-            'Zenith Ask is not configured. Set ANTHROPIC_API_KEY on the API server to enable natural-language analytics.',
-        });
-      }
-
       const question = typeof req.body?.question === 'string' ? req.body.question : '';
       const fyFilters = Array.isArray(req.body?.fy)
         ? (req.body.fy as unknown[]).map(String).filter(Boolean)
@@ -3295,27 +3286,61 @@ router.post(
                       peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
                       leadSource?: string;
                       search?: string;
+                      panelBrand?: string;
+                      inverterBrand?: string;
+                      financingBank?: string;
+                      availingLoan?: boolean;
                     })
                   : undefined,
             }
           : null;
 
+      const commandBarDates = {
+        selectedFYs: fyFilters,
+        selectedQuarters: quarterFilters,
+        selectedMonths: monthFilters,
+      };
+      const { dateFilter, relative } = resolveAskDateFilter(question, commandBarDates);
+      const effectiveDateFilter = relative
+        ? {
+            selectedFYs: dateFilter.selectedFYs,
+            selectedQuarters: dateFilter.selectedQuarters,
+            selectedMonths: dateFilter.selectedMonths,
+            source: 'question' as const,
+            phrase: relative.phrase,
+          }
+        : {
+            selectedFYs: dateFilter.selectedFYs,
+            selectedQuarters: dateFilter.selectedQuarters,
+            selectedMonths: dateFilter.selectedMonths,
+            source: 'command_bar' as const,
+          };
+
       const baseWhere: Record<string, unknown> = {};
       if (role === UserRole.SALES) {
         baseWhere.salespersonId = userId;
       }
-      const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+      const where = applyDateFilters(
+        baseWhere,
+        dateFilter.selectedFYs,
+        dateFilter.selectedMonths,
+        dateFilter.selectedQuarters,
+      );
+
+      console.info('[zenith-nl-query]', {
+        event: 'ask_submitted',
+        role,
+        userId,
+        relativeDate: relative?.phrase || null,
+      });
 
       const result = await runZenithNlQuery({
         question,
         role,
         userId,
         where: where as Prisma.ProjectWhereInput,
-        dateFilter: {
-          selectedFYs: fyFilters,
-          selectedQuarters: quarterFilters,
-          selectedMonths: monthFilters,
-        },
+        dateFilter,
+        effectiveDateFilter,
         prior,
       });
 

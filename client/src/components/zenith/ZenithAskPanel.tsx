@@ -16,6 +16,7 @@ import type {
   ZenithNlQueryResult,
   ZenithNlViz,
 } from '../../types/zenithNlQuery'
+import { trackZenithAskEvent } from '../../utils/zenithAskAnalytics'
 import ChartPanel from './ChartPanel'
 
 const PIE_COLORS = [
@@ -153,6 +154,9 @@ type Props = {
   error: string | null
   loading: boolean
   history: ZenithAskHistoryItem[]
+  /** Active filters for this answer (command bar or relative phrase from the question). */
+  filterSummary?: string
+  role?: string
   onClose: () => void
   onAskSuggestion: (q: string) => void
   onReplayHistory: (item: ZenithAskHistoryItem) => void
@@ -163,11 +167,18 @@ export default function ZenithAskPanel({
   error,
   loading,
   history,
+  filterSummary,
+  role,
   onClose,
   onAskSuggestion,
   onReplayHistory,
 }: Props) {
   if (!result && !error && !loading && history.length === 0) return null
+
+  const datePhrase =
+    result?.effectiveDateFilter?.source === 'question' && result.effectiveDateFilter.phrase
+      ? result.effectiveDateFilter.phrase
+      : filterSummary
 
   return (
     <section id="zenith-ask-result" className="zenith-ask-result" aria-live="polite">
@@ -176,6 +187,9 @@ export default function ZenithAskPanel({
           <p className="zenith-ask-result__eyebrow">
             <Sparkles className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
             Zenith Ask
+            {datePhrase ? (
+              <span className="zenith-ask-result__filters"> · Using {datePhrase}</span>
+            ) : null}
           </p>
           {result?.question ? (
             <p className="zenith-ask-result__question">{result.question}</p>
@@ -266,7 +280,17 @@ export default function ZenithAskPanel({
               </div>
             ) : null}
             {result.projectsHref ? (
-              <Link to={result.projectsHref} className="zenith-ask-result__cta">
+              <Link
+                to={result.projectsHref}
+                className="zenith-ask-result__cta"
+                onClick={() =>
+                  trackZenithAskEvent('ask_open_projects', {
+                    role,
+                    metric: result.intent.metric,
+                    chipMatch: result.chipMatch,
+                  })
+                }
+              >
                 Open in Projects →
               </Link>
             ) : null}

@@ -1,5 +1,5 @@
 import { type FormEvent } from 'react'
-import { ArrowUp, Mic, MicOff, Sparkles } from 'lucide-react'
+import { ArrowUp, Mic, MicOff, Sparkles, X } from 'lucide-react'
 import { useZenithAskSpeech } from '../../hooks/useZenithAskSpeech'
 
 type Props = {
@@ -34,6 +34,13 @@ export default function ZenithAskComposer({
     onSubmit(q)
   }
 
+  const handleClear = () => {
+    askSpeech.stop()
+    onChange('')
+  }
+
+  const hasText = Boolean(value.trim())
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -47,9 +54,23 @@ export default function ZenithAskComposer({
             <Sparkles className="w-3.5 h-3.5" aria-hidden />
             Ask Zenith
           </span>
-          <span className="zenith-ask-composer__hint">
-            {askSpeech.listening ? 'Listening…' : 'Type or speak'}
-          </span>
+          <div className="zenith-ask-composer__header-meta">
+            {hasText || askSpeech.listening ? (
+              <button
+                type="button"
+                onClick={handleClear}
+                disabled={loading}
+                className="zenith-ask-composer__clear"
+                title="Clear text"
+                aria-label="Clear ask text"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden strokeWidth={2.5} />
+                <span>Clear</span>
+              </button>
+            ) : (
+              <span className="zenith-ask-composer__hint">Type or speak</span>
+            )}
+          </div>
         </div>
 
         <label className="sr-only" htmlFor="zenith-ask-input">

@@ -25,6 +25,18 @@ export function enrichInsight(
   viz: ZenithNlViz,
   fallback: string,
 ): string {
+  // List / cohort answers already carry an accurate count + totals sentence.
+  if (
+    metric === 'cohort_summary' ||
+    metric === 'projects_list_slice' ||
+    metric === 'availing_loan' ||
+    metric === 'outstanding_balance' ||
+    metric === 'pending_subsidy' ||
+    metric === 'top_customers_by_profit'
+  ) {
+    return fallback;
+  }
+
   if (viz.kind === 'chart' && viz.series.length > 0) {
     const total = viz.series.reduce((s, x) => s + x.value, 0);
     const dealCount = viz.series.reduce((s, x) => s + (x.count || 0), 0);

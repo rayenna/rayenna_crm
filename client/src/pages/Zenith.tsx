@@ -58,6 +58,12 @@ import {
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
 import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
+import { zenithAskExampleChips } from '../constants/zenithAskExamples'
+import {
+  readZenithAskHistory,
+  writeZenithAskHistory,
+} from '../utils/zenithAskHistoryStorage'
+import { trackZenithAskEvent } from '../utils/zenithAskAnalytics'
 import type {
   ZenithAskHistoryItem,
   ZenithNlPriorContext,
@@ -65,35 +71,7 @@ import type {
   ZenithNlQuerySuccess,
 } from '../types/zenithNlQuery'
 
-const ZENITH_ASK_HISTORY_MAX = 6
-
-const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
-  SALES: [
-    'Which lead sources drove the most revenue?',
-    'Show my pipeline by stage',
-    'Projects with outstanding balance',
-  ],
-  MANAGEMENT: [
-    'Which lead sources drove the most revenue this FY?',
-    'Revenue by salesperson',
-    'Summarise lost deals by reason',
-  ],
-  ADMIN: [
-    'Which lead sources drove the most revenue this FY?',
-    'Payment status breakdown',
-    'Proposal Engine bucket counts',
-  ],
-  OPERATIONS: [
-    'Show installation status breakdown',
-    'Projects pending subsidy credit',
-    'Pipeline by stage',
-  ],
-  FINANCE: [
-    'Payment status breakdown',
-    'Projects with outstanding balance',
-    'Which projects are availing loan?',
-  ],
-}
+const ZENITH_ASK_HISTORY_MAX = 12
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -112,6 +90,7 @@ const Zenith = () => {
   const [askError, setAskError] = useState<string | null>(null)
   const [askHistory, setAskHistory] = useState<ZenithAskHistoryItem[]>([])
   const askPriorRef = useRef<ZenithNlPriorContext | null>(null)
+  const askHistoryHydratedRef = useRef<string | null>(null)
 
   const wasOfflineRef = useRef(false)
   const [showOnlineAck, setShowOnlineAck] = useState(false)
@@ -129,6 +108,13 @@ const Zenith = () => {
     }
   }, [isOnline])
 
+  useEffect(() => {
+    if (!user?.id) return
+    if (askHistoryHydratedRef.current === user.id) return
+    askHistoryHydratedRef.current = user.id
+    setAskHistory(readZenithAskHistory(user.id))
+  }, [user?.id])
+
   const execZenithRole =
     user?.role === UserRole.SALES ||
     user?.role === UserRole.MANAGEMENT ||
@@ -139,30 +125,58 @@ const Zenith = () => {
     user?.role === UserRole.OPERATIONS ||
     user?.role === UserRole.FINANCE
 
-  const pushAskHistory = useCallback((success: ZenithNlQuerySuccess) => {
-    const entry: ZenithAskHistoryItem = {
-      id: `${Date.now()}-${success.intent.metric}`,
-      question: success.question,
-      insight: success.insight,
-      metric: success.intent.metric,
-      at: Date.now(),
-    }
-    setAskHistory((prev) => [entry, ...prev.filter((h) => h.question !== entry.question)].slice(0, ZENITH_ASK_HISTORY_MAX))
-    askPriorRef.current = {
-      question: success.question,
-      metric: success.intent.metric,
-      filters: success.intent.filters,
-    }
-  }, [])
+  const askFilterSummary = formatZenithFilterSummary(
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
+  )
+  const askExampleChips = zenithAskExampleChips(user?.role, 3)
+  const showAskSideSuggestions = Boolean(
+    showZenithAsk && user?.role && !askResult && !askLoading && !askError,
+  )
+  const showAskMoreChips = Boolean(
+    showZenithAsk && user?.role && (askResult || askError) && !askLoading,
+  )
+
+  const pushAskHistory = useCallback(
+    (success: ZenithNlQuerySuccess) => {
+      const entry: ZenithAskHistoryItem = {
+        id: `${Date.now()}-${success.intent.metric}`,
+        question: success.question,
+        insight: success.insight,
+        metric: success.intent.metric,
+        at: Date.now(),
+      }
+      setAskHistory((prev) => {
+        const next = [entry, ...prev.filter((h) => h.question !== entry.question)].slice(
+          0,
+          ZENITH_ASK_HISTORY_MAX,
+        )
+        writeZenithAskHistory(user?.id, next)
+        return next
+      })
+      askPriorRef.current = {
+        question: success.question,
+        metric: success.intent.metric,
+        filters: success.intent.filters,
+      }
+    },
+    [user?.id],
+  )
 
   const runZenithAsk = useCallback(
-    async (question: string) => {
+    async (
+      question: string,
+      source: 'typed' | 'chip' | 'follow_up' | 'history' | 'dictate' = 'typed',
+    ) => {
       const q = question.trim()
       if (!q || !showZenithAsk || !isOnline) return
+      const started = Date.now()
       setAskLoading(true)
       setAskError(null)
       setAskResult(null)
       setAskValue(q)
+      trackZenithAskEvent('ask_submitted', { role: user?.role, source })
       try {
         const res = await axiosInstance.post<ZenithNlQueryResult>('/api/dashboard/zenith-nl-query', {
           question: q,
@@ -174,6 +188,21 @@ const Zenith = () => {
         setAskResult(res.data)
         if (res.data.ok) {
           pushAskHistory(res.data)
+          trackZenithAskEvent('ask_success', {
+            role: user?.role,
+            metric: res.data.intent.metric,
+            chipMatch: res.data.chipMatch,
+            relativeDate: res.data.effectiveDateFilter?.phrase ?? null,
+            source,
+            ms: Date.now() - started,
+          })
+        } else {
+          trackZenithAskEvent('ask_clarify', {
+            role: user?.role,
+            source,
+            relativeDate: res.data.effectiveDateFilter?.phrase ?? null,
+            ms: Date.now() - started,
+          })
         }
         window.requestAnimationFrame(() => {
           document.getElementById('zenith-ask-result')?.scrollIntoView({
@@ -184,11 +213,24 @@ const Zenith = () => {
       } catch (err) {
         setAskError(getFriendlyApiErrorMessage(err))
         setAskResult(null)
+        trackZenithAskEvent('ask_error', {
+          role: user?.role,
+          source,
+          ms: Date.now() - started,
+        })
       } finally {
         setAskLoading(false)
       }
     },
-    [showZenithAsk, isOnline, selectedFYs, selectedQuarters, selectedMonths, pushAskHistory],
+    [
+      showZenithAsk,
+      isOnline,
+      selectedFYs,
+      selectedQuarters,
+      selectedMonths,
+      pushAskHistory,
+      user?.role,
+    ],
   )
 
   const showQuickActionDrawer =
@@ -594,9 +636,7 @@ const Zenith = () => {
       {showZenithAsk ? (
         <section
           className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-3 pb-1${
-            !askResult && !askLoading && !askError && user?.role
-              ? ' zenith-ask-page-block--with-suggestions'
-              : ''
+            showAskSideSuggestions ? ' zenith-ask-page-block--with-suggestions' : ''
           }`}
           aria-label="Zenith Ask"
         >
@@ -610,19 +650,24 @@ const Zenith = () => {
                 isOnline={isOnline}
               />
             </div>
-            {!askResult && !askLoading && !askError && user?.role ? (
+            {showAskSideSuggestions ? (
               <aside className="zenith-ask-suggestions" aria-label="Example questions">
                 <div className="zenith-ask-suggestions__head">
                   <span className="zenith-ask-examples__label">Try asking</span>
-                  <p className="zenith-ask-suggestions__sub">Tap a prompt to run it with your filters</p>
+                  <p className="zenith-ask-suggestions__sub">
+                    Tap a prompt to run it with your current filters ({askFilterSummary})
+                  </p>
                 </div>
                 <div className="zenith-ask-examples zenith-ask-examples--panel">
-                  {(ZENITH_ASK_EXAMPLES[user.role] ?? ZENITH_ASK_EXAMPLES.MANAGEMENT).map((q) => (
+                  {askExampleChips.map((q) => (
                     <button
                       key={q}
                       type="button"
                       disabled={!isOnline}
-                      onClick={() => void runZenithAsk(q)}
+                      onClick={() => {
+                        trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
+                        void runZenithAsk(q, 'chip')
+                      }}
                       className="zenith-ask-examples__chip"
                     >
                       {q}
@@ -637,17 +682,40 @@ const Zenith = () => {
             error={askError}
             loading={askLoading}
             history={askHistory}
+            filterSummary={askFilterSummary}
+            role={user?.role}
             onClose={() => {
               setAskResult(null)
               setAskError(null)
             }}
             onAskSuggestion={(q) => {
-              void runZenithAsk(q)
+              void runZenithAsk(q, 'follow_up')
             }}
             onReplayHistory={(item) => {
-              void runZenithAsk(item.question)
+              void runZenithAsk(item.question, 'history')
             }}
           />
+          {showAskMoreChips ? (
+            <div className="zenith-ask-more" aria-label="More example questions">
+              <span className="zenith-ask-more__label">More questions</span>
+              <div className="zenith-ask-examples">
+                {askExampleChips.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    disabled={!isOnline}
+                    onClick={() => {
+                      trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
+                      void runZenithAsk(q, 'chip')
+                    }}
+                    className="zenith-ask-examples__chip"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 

@@ -20,6 +20,9 @@ export function buildZenithNlProjectsHref(
     dataSenseNeedsReview?: boolean;
     pendingSubsidy?: boolean;
     availingLoan?: boolean;
+    financingBank?: string[];
+    panelBrand?: string;
+    inverterBrand?: string;
   },
   dateFilter: ZenithNlDateFilter,
 ): string {
@@ -32,6 +35,9 @@ export function buildZenithNlProjectsHref(
   if (params.dataSenseNeedsReview) search.append('dataSenseNeedsReview', 'true');
   if (params.pendingSubsidy) search.append('pendingSubsidy', 'true');
   if (params.availingLoan) search.append('availingLoan', 'true');
+  params.financingBank?.forEach((v) => search.append('financingBank', v));
+  if (params.panelBrand?.trim()) search.append('panelBrand', params.panelBrand.trim());
+  if (params.inverterBrand?.trim()) search.append('inverterBrand', params.inverterBrand.trim());
   const q = params.search != null ? String(params.search).trim() : '';
   if (q !== '') search.append('search', q);
   dateFilter.selectedFYs.forEach((fy) => search.append('fy', fy));
@@ -39,6 +45,23 @@ export function buildZenithNlProjectsHref(
   dateFilter.selectedMonths.forEach((m) => search.append('month', m));
   const qs = search.toString();
   return qs ? `/projects?${qs}` : '/projects';
+}
+
+function entityHrefParams(intent: ZenithNlIntent): {
+  panelBrand?: string;
+  inverterBrand?: string;
+  financingBank?: string[];
+  availingLoan?: boolean;
+} {
+  const panelBrand = intent.filters?.panelBrand?.trim() || undefined;
+  const inverterBrand = intent.filters?.inverterBrand?.trim() || undefined;
+  const bank = intent.filters?.financingBank?.trim() || undefined;
+  return {
+    panelBrand,
+    inverterBrand,
+    financingBank: bank ? [bank] : undefined,
+    availingLoan: bank || intent.filters?.availingLoan ? true : undefined,
+  };
 }
 
 const REVENUE_STATUSES = [
@@ -148,7 +171,8 @@ export function projectsHrefForIntent(
       }
       return buildZenithNlProjectsHref({}, dateFilter);
     }
-    case 'projects_list_slice': {
+    case 'projects_list_slice':
+    case 'cohort_summary': {
       const st = intent.filters?.projectStatus?.trim();
       const ps = intent.filters?.paymentStatus?.trim();
       const pe = intent.filters?.peBucket;
@@ -161,6 +185,7 @@ export function projectsHrefForIntent(
           peBucket: pe,
           leadSource: lsRaw ? [LEAD_LABEL_TO_ENUM[lsRaw] ?? lsRaw] : undefined,
           search,
+          ...entityHrefParams(intent),
         },
         dateFilter,
       );
@@ -185,7 +210,16 @@ export function projectsHrefForIntent(
     case 'pending_subsidy':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
     case 'availing_loan':
-      return buildZenithNlProjectsHref({ availingLoan: true }, dateFilter);
+    case 'loan_bank_breakdown':
+      return buildZenithNlProjectsHref(
+        { availingLoan: true, ...entityHrefParams(intent) },
+        dateFilter,
+      );
+    case 'panel_brand_mix':
+      return buildZenithNlProjectsHref(
+        { ...entityHrefParams(intent) },
+        dateFilter,
+      );
     default:
       return null;
   }

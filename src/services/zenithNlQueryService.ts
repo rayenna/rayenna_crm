@@ -17,13 +17,23 @@ import {
   metricAllowedForRole,
   METRIC_CATALOG,
   suggestedQuestionsForRole,
+  type ZenithNlEffectiveDateFilter,
   type ZenithNlIntent,
   type ZenithNlMetric,
   type ZenithNlPriorContext,
   type ZenithNlQueryResult,
   type ZenithNlViz,
 } from './zenithNl/catalog';
+import { matchExactChipIntent } from './zenithNl/chipIntents';
 import { enrichInsight } from './zenithNl/insights';
+import {
+  brandContainsToken,
+  extractZenithEntityFilters,
+  findFinancingBankFromRaw,
+  resolveInverterBrand,
+  resolvePanelBrand,
+  type ExtractedZenithEntities,
+} from './zenithNl/entityFilters';
 import {
   projectsHrefForIntent,
   type ZenithNlDateFilter,
@@ -86,6 +96,8 @@ export type ZenithNlQueryInput = {
   userId: string;
   where: Prisma.ProjectWhereInput;
   dateFilter: ZenithNlDateFilter;
+  /** Resolved date context for the response eyebrow (command bar or question phrase). */
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter;
   /** Prior successful Ask in this session (follow-ups). */
   prior?: ZenithNlPriorContext | null;
 };
@@ -162,6 +174,19 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
       filtersRaw.peBucket === 'rest'
         ? filtersRaw.peBucket
         : undefined;
+    const panelBrand = resolvePanelBrand(
+      typeof filtersRaw.panelBrand === 'string' ? filtersRaw.panelBrand : undefined,
+    );
+    const inverterBrand = resolveInverterBrand(
+      typeof filtersRaw.inverterBrand === 'string' ? filtersRaw.inverterBrand : undefined,
+    );
+    const financingBank = findFinancingBankFromRaw(
+      typeof filtersRaw.financingBank === 'string' ? filtersRaw.financingBank : undefined,
+    );
+    const availingLoan =
+      filtersRaw.availingLoan === true ||
+      filtersRaw.availingLoan === 'true' ||
+      Boolean(financingBank);
     return {
       metric: parsed.metric,
       viz: viz ?? 'table',
@@ -173,13 +198,157 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
           typeof filtersRaw.paymentStatus === 'string' ? filtersRaw.paymentStatus : undefined,
         peBucket,
         leadSource: typeof filtersRaw.leadSource === 'string' ? filtersRaw.leadSource : undefined,
+        // Customer name search only — never put brand/bank tokens here.
         search: typeof filtersRaw.search === 'string' ? filtersRaw.search : undefined,
+        panelBrand,
+        inverterBrand,
+        financingBank,
+        availingLoan: availingLoan || undefined,
       },
       insightHints: typeof parsed.insightHints === 'string' ? parsed.insightHints : undefined,
     };
   } catch {
     return null;
   }
+}
+
+function pushWhereAnd(where: Prisma.ProjectWhereInput, clause: Prisma.ProjectWhereInput): void {
+  const existing = where.AND;
+  if (Array.isArray(existing)) {
+    where.AND = [...existing, clause];
+  } else if (existing) {
+    where.AND = [existing as Prisma.ProjectWhereInput, clause];
+  } else {
+    where.AND = [clause];
+  }
+}
+
+/** Apply panel / inverter / bank / loan intent filters onto a Prisma where. */
+export function applyZenithIntentEntityFilters(
+  where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
+): Prisma.ProjectWhereInput {
+  const next: Prisma.ProjectWhereInput = { ...where };
+  const panel = resolvePanelBrand(intent.filters?.panelBrand);
+  if (panel) {
+    pushWhereAnd(next, {
+      panelBrand: { contains: brandContainsToken(panel), mode: 'insensitive' },
+    });
+  }
+  const inverter = resolveInverterBrand(intent.filters?.inverterBrand);
+  if (inverter) {
+    pushWhereAnd(next, {
+      inverterBrand: { contains: brandContainsToken(inverter), mode: 'insensitive' },
+    });
+  }
+  const bank = findFinancingBankFromRaw(intent.filters?.financingBank);
+  if (bank) {
+    pushWhereAnd(next, { financingBank: bank, availingLoan: true });
+  } else if (intent.filters?.availingLoan) {
+    pushWhereAnd(next, { availingLoan: true });
+  }
+  return next;
+}
+
+function mergeEntitiesIntoIntent(
+  intent: ZenithNlIntent,
+  entities: ExtractedZenithEntities,
+): ZenithNlIntent {
+  const filters = { ...(intent.filters || {}) };
+  if (entities.panelBrand) filters.panelBrand = entities.panelBrand;
+  if (entities.inverterBrand) filters.inverterBrand = entities.inverterBrand;
+  if (entities.financingBank) {
+    filters.financingBank = entities.financingBank;
+    filters.availingLoan = true;
+  } else if (entities.availingLoan) {
+    filters.availingLoan = true;
+  }
+  // If Claude stuffed a brand into customer search, drop it when we have entity filters.
+  if (
+    filters.search &&
+    (filters.panelBrand || filters.inverterBrand || filters.financingBank)
+  ) {
+    const s = filters.search.toLowerCase();
+    const brandBits = [
+      filters.panelBrand,
+      filters.inverterBrand,
+      filters.financingBank,
+      entities.panelBrand,
+      entities.inverterBrand,
+    ]
+      .filter(Boolean)
+      .map((x) => String(x).toLowerCase());
+    if (brandBits.some((b) => s.includes(brandContainsToken(b).toLowerCase()) || s.includes(b))) {
+      delete filters.search;
+    }
+  }
+  return { ...intent, filters };
+}
+
+function salvageMetricFromEntities(
+  intent: ZenithNlIntent,
+  entities: ExtractedZenithEntities,
+  role: UserRole,
+): ZenithNlIntent {
+  const hasEntity = Boolean(
+    intent.filters?.panelBrand ||
+      intent.filters?.inverterBrand ||
+      intent.filters?.financingBank ||
+      intent.filters?.availingLoan,
+  );
+  if (!hasEntity) return intent;
+
+  if (intent.metric !== 'clarify') {
+    // Upgrade generic clarify-adjacent picks: revenue-by-* without needing a group-by.
+    if (
+      (entities.wantsRevenue || entities.wantsCount) &&
+      (intent.metric === 'revenue_by_lead_source' ||
+        intent.metric === 'revenue_by_salesperson' ||
+        intent.metric === 'projects_list_slice')
+    ) {
+      if (metricAllowedForRole('cohort_summary', role)) {
+        return normalizeIntent({ ...intent, metric: 'cohort_summary', viz: 'table' }, role);
+      }
+    }
+    if (
+      (intent.filters?.financingBank || intent.filters?.availingLoan) &&
+      entities.wantsCount &&
+      intent.metric !== 'availing_loan' &&
+      metricAllowedForRole('availing_loan', role)
+    ) {
+      return normalizeIntent({ ...intent, metric: 'availing_loan', viz: 'table' }, role);
+    }
+    return intent;
+  }
+
+  if (
+    (intent.filters?.financingBank || intent.filters?.availingLoan) &&
+    !intent.filters?.panelBrand &&
+    !intent.filters?.inverterBrand &&
+    metricAllowedForRole('availing_loan', role)
+  ) {
+    return normalizeIntent({ ...intent, metric: 'availing_loan', viz: 'table' }, role);
+  }
+  if (metricAllowedForRole('cohort_summary', role)) {
+    return normalizeIntent({ ...intent, metric: 'cohort_summary', viz: 'table' }, role);
+  }
+  return intent;
+}
+
+/** Collapse accidental "foo foo bar" dictation/typing duplicates at the start. */
+export function sanitizeAskQuestion(question: string): string {
+  let q = question.trim().replace(/\s+/g, ' ');
+  // Repeat of a leading 2–6 word phrase: "number of users number of users who…"
+  const words = q.split(' ');
+  for (let n = Math.min(6, Math.floor(words.length / 2)); n >= 2; n -= 1) {
+    const head = words.slice(0, n).join(' ').toLowerCase();
+    const next = words.slice(n, n * 2).join(' ').toLowerCase();
+    if (head && head === next) {
+      q = words.slice(n).join(' ');
+      break;
+    }
+  }
+  return q.trim();
 }
 
 function normalizeIntent(intent: ZenithNlIntent, role: UserRole): ZenithNlIntent {
@@ -234,7 +403,24 @@ ${priorBlock}
 Rules:
 - Prefer the closest metric. If unclear or outside catalog, use metric "clarify".
 - viz must be "chart" or "table". For chart, chartType is "bar" or "pie".
-- Optional filters: projectStatus (Prisma enum e.g. CONFIRMED), paymentStatus (PENDING|PARTIAL|FULLY_PAID), peBucket (proposal-ready|draft|not-started|rest), leadSource (label or enum), search (customer name).
+- Optional filters (use whenever the user names them):
+  - projectStatus (Prisma enum e.g. CONFIRMED)
+  - paymentStatus (PENDING|PARTIAL|FULLY_PAID)
+  - peBucket (proposal-ready|draft|not-started|rest)
+  - leadSource (label or enum)
+  - search (customer name ONLY — never put panel/inverter/bank names here)
+  - panelBrand (e.g. "Adani Solar", "Waaree", "Vikram Solar" — from "Adani panels", "Adani Solar modules")
+  - inverterBrand (e.g. "Deye", "Growatt", "GoodWe", "Sunways")
+  - financingBank (enum keys: SBI, HDFC_BANK, ICICI_BANK, AXIS_BANK, FEDERAL_BANK, …)
+  - availingLoan (true when asking about loans / financing / EMI)
+- For how-many / count / revenue questions about a panel brand, inverter brand, or bank loan → prefer metric "cohort_summary" with those filters (or "availing_loan" when only loan/bank).
+- Panel/bank mix: "which panel brands sold most" → panel_brand_mix; "which banks are financing loans" → loan_bank_breakdown.
+- Examples:
+  - "number of projects on Adani panels" → cohort_summary, filters.panelBrand="Adani Solar"
+  - "revenue of projects who used Deye inverters" → cohort_summary, filters.inverterBrand="Deye"
+  - "customers using loans from SBI" → availing_loan (or cohort_summary), filters.financingBank="SBI", availingLoan=true
+  - "summarise my lost deals" (Sales) → lost_deals_summary; "installation status" (Sales) → install_by_status
+- Date phrases like "last FY" / "this quarter" are handled outside this JSON — do not invent date fields.
 - insightHints: short phrase describing what the user cares about (no numbers).
 - Follow-ups like "as a table" / "show that as a pie" should keep the prior metric and only change viz/chartType when possible.
 
@@ -709,10 +895,10 @@ async function execProposalEngineBuckets(
   };
 }
 
-async function execProjectsListSlice(
+function applyStatusPaymentLeadSearchFilters(
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
-): Promise<{ viz: ZenithNlViz; insight: string }> {
+): Prisma.ProjectWhereInput {
   const w: Prisma.ProjectWhereInput = { ...where };
   const st = intent.filters?.projectStatus?.trim();
   if (st && (Object.values(ProjectStatus) as string[]).includes(st)) {
@@ -724,10 +910,12 @@ async function execProjectsListSlice(
   }
   const search = intent.filters?.search?.trim();
   if (search) {
-    w.OR = [
-      { customer: { customerName: { contains: search, mode: 'insensitive' } } },
-      { customer: { firstName: { contains: search, mode: 'insensitive' } } },
-    ];
+    pushWhereAnd(w, {
+      OR: [
+        { customer: { customerName: { contains: search, mode: 'insensitive' } } },
+        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
+      ],
+    });
   }
   const lsRaw = intent.filters?.leadSource?.trim();
   if (lsRaw) {
@@ -741,6 +929,23 @@ async function execProjectsListSlice(
       if (entry) w.leadSource = entry[0] as LeadSource;
     }
   }
+  return w;
+}
+
+function describeEntitySlice(intent: ZenithNlIntent): string {
+  const bits: string[] = [];
+  if (intent.filters?.panelBrand) bits.push(`${intent.filters.panelBrand} panels`);
+  if (intent.filters?.inverterBrand) bits.push(`${intent.filters.inverterBrand} inverters`);
+  if (intent.filters?.financingBank) bits.push(`${intent.filters.financingBank.replace(/_/g, ' ')} loans`);
+  else if (intent.filters?.availingLoan) bits.push('availing loan');
+  return bits.length ? bits.join(' · ') : 'your filters';
+}
+
+async function execProjectsListSlice(
+  where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  let w = applyStatusPaymentLeadSearchFilters(where, intent);
 
   if (intent.filters?.peBucket) {
     const pe = await loadPeBucketProjectIds(where);
@@ -761,38 +966,141 @@ async function execProjectsListSlice(
         },
       };
     }
-    w.id = { in: projectIdsFilter };
+    w = { ...w, id: { in: projectIdsFilter } };
   }
 
-  const projects = await prisma.project.findMany({
-    where: w,
-    select: {
-      slNo: true,
-      projectStatus: true,
-      projectCost: true,
-      customer: { select: { customerName: true, firstName: true } },
-    },
-    orderBy: { updatedAt: 'desc' },
-    take: TABLE_ROW_CAP,
-  });
-  const insight = projects.length
-    ? `Showing ${projects.length} project${projects.length === 1 ? '' : 's'} matching your ask (capped at ${TABLE_ROW_CAP}).`
-    : 'No projects match that slice under your filters.';
+  const showEquipment = Boolean(intent.filters?.panelBrand || intent.filters?.inverterBrand);
+  const showBank = Boolean(intent.filters?.financingBank || intent.filters?.availingLoan);
+
+  const [projects, aggregate] = await Promise.all([
+    prisma.project.findMany({
+      where: w,
+      select: {
+        slNo: true,
+        projectStatus: true,
+        projectCost: true,
+        panelBrand: true,
+        inverterBrand: true,
+        financingBank: true,
+        customer: { select: { customerName: true, firstName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: TABLE_ROW_CAP,
+    }),
+    prisma.project.aggregate({
+      where: w,
+      _count: { id: true },
+      _sum: { projectCost: true },
+    }),
+  ]);
+  const totalCount = aggregate._count.id;
+  const totalValue = Math.round(Number(aggregate._sum.projectCost) || 0);
+  const sliceLabel = describeEntitySlice(intent);
+  const insight = totalCount
+    ? `${totalCount} project${totalCount === 1 ? '' : 's'} match ${sliceLabel} (${formatInr(totalValue)} order value; showing up to ${TABLE_ROW_CAP}).`
+    : `No projects match ${sliceLabel} under your Zenith filters.`;
+
+  const columns = [
+    { key: 'slNo', label: 'SL No' },
+    { key: 'customer', label: 'Customer' },
+    { key: 'stage', label: 'Stage' },
+    ...(showEquipment
+      ? [
+          { key: 'panel', label: 'Panel' },
+          { key: 'inverter', label: 'Inverter' },
+        ]
+      : []),
+    ...(showBank ? [{ key: 'bank', label: 'Bank' }] : []),
+    { key: 'value', label: 'Order value (₹)' },
+  ];
+
   return {
     insight,
     viz: {
       kind: 'table',
       title: 'Projects',
+      columns,
+      rows: projects.map((p) => ({
+        slNo: p.slNo,
+        customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
+        stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+        ...(showEquipment
+          ? {
+              panel: p.panelBrand?.trim() || '—',
+              inverter: p.inverterBrand?.trim() || '—',
+            }
+          : {}),
+        ...(showBank ? { bank: p.financingBank?.trim() || '—' } : {}),
+        value: Math.round(Number(p.projectCost) || 0),
+      })),
+    },
+  };
+}
+
+async function execCohortSummary(
+  where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
+  entities: ExtractedZenithEntities,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  let w = applyStatusPaymentLeadSearchFilters(where, intent);
+  // Revenue / order-value asks use the confirmed+ revenue cohort; pure counts use full filter set.
+  if (entities.wantsRevenue || /\brevenue|order value/i.test(intent.insightHints || '')) {
+    w = getRevenueWhere(w);
+  }
+
+  const [aggregate, projects] = await Promise.all([
+    prisma.project.aggregate({
+      where: w,
+      _count: { id: true },
+      _sum: { projectCost: true, systemCapacity: true },
+    }),
+    prisma.project.findMany({
+      where: w,
+      select: {
+        slNo: true,
+        projectStatus: true,
+        projectCost: true,
+        panelBrand: true,
+        inverterBrand: true,
+        financingBank: true,
+        customer: { select: { customerName: true, firstName: true } },
+      },
+      orderBy: { projectCost: 'desc' },
+      take: TABLE_ROW_CAP,
+    }),
+  ]);
+
+  const count = aggregate._count.id;
+  const orderValue = Math.round(Number(aggregate._sum.projectCost) || 0);
+  const capacity = Math.round(Number(aggregate._sum.systemCapacity) || 0);
+  const sliceLabel = describeEntitySlice(intent);
+  const insight = count
+    ? `${count} project${count === 1 ? '' : 's'} with ${sliceLabel}: ${formatInr(orderValue)} order value` +
+      (capacity > 0 ? `, ${capacity} kW capacity` : '') +
+      `.`
+    : `No projects match ${sliceLabel} under your Zenith filters (check FY filters and that panel/inverter/bank is filled on the project).`;
+
+  return {
+    insight,
+    viz: {
+      kind: 'table',
+      title: `Cohort · ${sliceLabel}`,
       columns: [
         { key: 'slNo', label: 'SL No' },
         { key: 'customer', label: 'Customer' },
         { key: 'stage', label: 'Stage' },
+        { key: 'panel', label: 'Panel' },
+        { key: 'inverter', label: 'Inverter' },
+        { key: 'bank', label: 'Bank' },
         { key: 'value', label: 'Order value (₹)' },
       ],
       rows: projects.map((p) => ({
         slNo: p.slNo,
         customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
         stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+        panel: p.panelBrand?.trim() || '—',
+        inverter: p.inverterBrand?.trim() || '—',
+        bank: p.financingBank?.trim() || '—',
         value: Math.round(Number(p.projectCost) || 0),
       })),
     },
@@ -950,32 +1258,122 @@ async function execPendingSubsidy(
   };
 }
 
-async function execAvailingLoan(
+async function execPanelBrandMix(
   where: Prisma.ProjectWhereInput,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
-  const projects = await prisma.project.findMany({
+  const rows = await prisma.project.groupBy({
+    by: ['panelBrand'],
+    where: {
+      ...where,
+      projectStatus: { not: ProjectStatus.LOST },
+      panelBrand: { not: null },
+      NOT: { panelBrand: '' },
+    },
+    _count: { id: true },
+    _sum: { projectCost: true },
+  });
+  const series = rows
+    .map((r) => ({
+      label: (r.panelBrand || 'Unknown').trim() || 'Unknown',
+      value: Math.round(Number(r._sum.projectCost) || 0),
+      count: r._count.id,
+    }))
+    .sort((a, b) => b.value - a.value || b.count - a.count)
+    .slice(0, 12);
+  const totalValue = series.reduce((s, x) => s + x.value, 0);
+  const totalCount = series.reduce((s, x) => s + (x.count || 0), 0);
+  return {
+    insight: series.length
+      ? `Panel brand mix: ${totalCount} projects · ${formatInr(totalValue)} order value across ${series.length} brands (top by value).`
+      : 'No projects with panel brand set match your filters.',
+    viz: {
+      kind: 'chart',
+      title: 'Panel brand mix',
+      chartType: 'bar',
+      series,
+      valueLabel: 'Order value (₹)',
+    },
+  };
+}
+
+async function execLoanBankBreakdown(
+  where: Prisma.ProjectWhereInput,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const rows = await prisma.project.groupBy({
+    by: ['financingBank'],
     where: {
       ...where,
       availingLoan: true,
       projectStatus: { not: ProjectStatus.LOST },
+      financingBank: { not: null },
+      NOT: { financingBank: '' },
     },
-    select: {
-      slNo: true,
-      projectCost: true,
-      financingBank: true,
-      paymentStatus: true,
-      customer: { select: { customerName: true, firstName: true } },
-    },
-    orderBy: { updatedAt: 'desc' },
-    take: TABLE_ROW_CAP,
+    _count: { id: true },
+    _sum: { projectCost: true },
   });
+  const series = rows
+    .map((r) => ({
+      label: (r.financingBank || 'Unknown').replace(/_/g, ' '),
+      value: Math.round(Number(r._sum.projectCost) || 0),
+      count: r._count.id,
+    }))
+    .sort((a, b) => b.count - a.count || b.value - a.value)
+    .slice(0, 12);
+  const totalCount = series.reduce((s, x) => s + (x.count || 0), 0);
   return {
-    insight: projects.length
-      ? `${projects.length} project${projects.length === 1 ? '' : 's'} availing loan under your filters (capped at ${TABLE_ROW_CAP}).`
-      : 'No availing-loan projects match your filters.',
+    insight: series.length
+      ? `Loan bank mix: ${totalCount} availing-loan projects across ${series.length} banks (top by count).`
+      : 'No availing-loan projects with a financing bank match your filters.',
+    viz: {
+      kind: 'chart',
+      title: 'Loan bank breakdown',
+      chartType: 'bar',
+      series,
+      valueLabel: 'Order value (₹)',
+    },
+  };
+}
+
+async function execAvailingLoan(
+  where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const bank = findFinancingBankFromRaw(intent.filters?.financingBank);
+  const loanWhere: Prisma.ProjectWhereInput = {
+    ...where,
+    availingLoan: true,
+    projectStatus: { not: ProjectStatus.LOST },
+    ...(bank ? { financingBank: bank } : {}),
+  };
+
+  const [projects, aggregate] = await Promise.all([
+    prisma.project.findMany({
+      where: loanWhere,
+      select: {
+        slNo: true,
+        projectCost: true,
+        financingBank: true,
+        paymentStatus: true,
+        customer: { select: { customerName: true, firstName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: TABLE_ROW_CAP,
+    }),
+    prisma.project.aggregate({
+      where: loanWhere,
+      _count: { id: true },
+      _sum: { projectCost: true },
+    }),
+  ]);
+  const total = aggregate._count.id;
+  const bankLabel = bank ? bank.replace(/_/g, ' ') : 'any bank';
+  return {
+    insight: total
+      ? `${total} project${total === 1 ? '' : 's'} availing loan (${bankLabel}) — ${formatInr(Math.round(Number(aggregate._sum.projectCost) || 0))} order value (showing up to ${TABLE_ROW_CAP}).`
+      : `No availing-loan projects match ${bank ? bankLabel : 'your filters'}.`,
     viz: {
       kind: 'table',
-      title: 'Availing loan',
+      title: bank ? `Availing loan · ${bankLabel}` : 'Availing loan',
       columns: [
         { key: 'slNo', label: 'SL No' },
         { key: 'customer', label: 'Customer' },
@@ -996,6 +1394,7 @@ async function executeMetric(
   metric: ZenithNlMetric,
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
+  entities: ExtractedZenithEntities,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   switch (metric) {
     case 'revenue_by_lead_source':
@@ -1018,12 +1417,18 @@ async function executeMetric(
       return execProposalEngineBuckets(where);
     case 'projects_list_slice':
       return execProjectsListSlice(where, intent);
+    case 'cohort_summary':
+      return execCohortSummary(where, intent, entities);
+    case 'panel_brand_mix':
+      return execPanelBrandMix(where);
+    case 'loan_bank_breakdown':
+      return execLoanBankBreakdown(where);
     case 'install_by_status':
       return execInstallByStatus(where);
     case 'pending_subsidy':
       return execPendingSubsidy(where);
     case 'availing_loan':
-      return execAvailingLoan(where);
+      return execAvailingLoan(where, intent);
     default:
       throw new Error('clarify');
   }
@@ -1071,35 +1476,85 @@ function maybeForceChart(viz: ZenithNlViz, intent: ZenithNlIntent): ZenithNlViz 
   };
 }
 
+function withDateMeta(
+  result: ZenithNlQueryResult,
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter,
+): ZenithNlQueryResult {
+  if (!effectiveDateFilter) return result;
+  return { ...result, effectiveDateFilter };
+}
+
 /**
- * Run Zenith NL Ask: Claude intent → deterministic execute → insight + one viz.
+ * Run Zenith NL Ask: chip match or Claude intent → deterministic execute → insight + one viz.
  */
 export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<ZenithNlQueryResult> {
-  const question = input.question.trim();
+  const question = sanitizeAskQuestion(input.question);
+  const dateMeta = input.effectiveDateFilter;
   if (!question) {
-    return clarifyResult('', input.role, 'Ask a question about your Zenith analytics.');
+    return withDateMeta(
+      clarifyResult('', input.role, 'Ask a question about your Zenith analytics.'),
+      dateMeta,
+    );
   }
   if (question.length > 500) {
-    return clarifyResult(question.slice(0, 500), input.role, 'Please keep questions under 500 characters.');
-  }
-  if (!isZenithNlAskEnabled()) {
-    throw new Error('ANTHROPIC_API_KEY_MISSING');
+    return withDateMeta(
+      clarifyResult(question.slice(0, 500), input.role, 'Please keep questions under 500 characters.'),
+      dateMeta,
+    );
   }
 
   const started = Date.now();
-  const intent = await parseIntentWithClaude(question, input.role, input.prior);
+  const entities = extractZenithEntityFilters(question);
+  let chipMatch = false;
+  let intent: ZenithNlIntent | null = matchExactChipIntent(question, input.role);
+  if (intent) {
+    chipMatch = true;
+    intent = normalizeIntent(intent, input.role);
+  } else if (isZenithNlAskEnabled()) {
+    intent = await parseIntentWithClaude(question, input.role, input.prior);
+  } else {
+    // No Claude — still answer when entity salvage can pick a metric.
+    intent = { metric: 'clarify', viz: 'table', insightHints: 'Claude unavailable' };
+  }
+
+  intent = mergeEntitiesIntoIntent(intent, entities);
+  // Chip intents already carry brands; salvage still helps free-text without Claude.
+  if (!chipMatch) {
+    intent = salvageMetricFromEntities(intent, entities, input.role);
+  }
+
+  // Cohort revenue hint when chip says revenue of Deye…
+  const execEntities: ExtractedZenithEntities = {
+    ...entities,
+    wantsRevenue:
+      entities.wantsRevenue ||
+      (chipMatch && intent.metric === 'cohort_summary' && /revenue/i.test(question)),
+  };
 
   if (intent.metric === 'clarify') {
+    if (!isZenithNlAskEnabled() && !chipMatch) {
+      throw new Error('ANTHROPIC_API_KEY_MISSING');
+    }
     console.info('[zenith-nl-query]', {
       role: input.role,
       metric: 'clarify',
+      chipMatch: false,
       ms: Date.now() - started,
+      event: 'ask_clarify',
     });
-    return clarifyResult(question, input.role);
+    return withDateMeta(
+      clarifyResult(
+        question,
+        input.role,
+        'I can answer analytics questions from the Zenith catalog — including panel brand, inverter brand, financing bank slices, and bank/panel mix charts. Try one of the examples below.',
+      ),
+      dateMeta,
+    );
   }
 
   try {
-    const executed = await executeMetric(intent.metric, input.where, intent);
+    const scopedWhere = applyZenithIntentEntityFilters(input.where, intent);
+    const executed = await executeMetric(intent.metric, scopedWhere, intent, execEntities);
     let viz = executed.viz;
     viz = maybeForceTable(viz, intent);
     viz = maybeForceChart(viz, intent);
@@ -1111,22 +1566,38 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       role: input.role,
       metric: intent.metric,
       viz: viz.kind,
+      chipMatch,
+      panelBrand: intent.filters?.panelBrand || null,
+      inverterBrand: intent.filters?.inverterBrand || null,
+      financingBank: intent.filters?.financingBank || null,
       followUp: Boolean(input.prior?.metric),
       ms: Date.now() - started,
+      event: 'ask_success',
     });
 
-    return {
-      ok: true,
-      question,
-      insight,
-      viz,
-      projectsHref,
-      intent,
-      suggestedQuestions: suggestedQuestionsForRole(input.role),
-      followUps,
-    };
+    return withDateMeta(
+      {
+        ok: true,
+        question,
+        insight,
+        viz,
+        projectsHref,
+        intent,
+        suggestedQuestions: suggestedQuestionsForRole(input.role),
+        followUps,
+        chipMatch,
+      },
+      dateMeta,
+    );
   } catch (err) {
     console.error('[zenith-nl-query] execute failed', err);
-    return clarifyResult(question, input.role, 'I could not compute that answer. Try a different question from the examples.');
+    return withDateMeta(
+      clarifyResult(
+        question,
+        input.role,
+        'I could not compute that answer. Try a different question from the examples.',
+      ),
+      dateMeta,
+    );
   }
 }

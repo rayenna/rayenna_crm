@@ -12,6 +12,9 @@ export const ZENITH_NL_METRICS = [
   'lost_deals_summary',
   'proposal_engine_buckets',
   'projects_list_slice',
+  'cohort_summary',
+  'panel_brand_mix',
+  'loan_bank_breakdown',
   'install_by_status',
   'pending_subsidy',
   'availing_loan',
@@ -33,6 +36,14 @@ export type ZenithNlIntent = {
     peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
     leadSource?: string;
     search?: string;
+    /** Canonical panel brand label (e.g. Adani Solar) or distinctive token. */
+    panelBrand?: string;
+    /** Canonical inverter brand label (e.g. Deye). */
+    inverterBrand?: string;
+    /** Stored financingBank enum (e.g. SBI, HDFC_BANK). */
+    financingBank?: string;
+    /** Restrict to projects availing loan. */
+    availingLoan?: boolean;
   };
   insightHints?: string;
 };
@@ -67,6 +78,16 @@ export type ZenithNlViz =
       valueLabel?: string;
     };
 
+export type ZenithNlEffectiveDateFilter = {
+  selectedFYs: string[];
+  selectedQuarters: string[];
+  selectedMonths: string[];
+  /** command_bar = Zenith filters; question = relative/explicit phrase in the Ask. */
+  source: 'command_bar' | 'question';
+  /** e.g. "last FY (2024-25)" when source is question. */
+  phrase?: string;
+};
+
 export type ZenithNlQuerySuccess = {
   ok: true;
   question: string;
@@ -76,6 +97,9 @@ export type ZenithNlQuerySuccess = {
   intent: ZenithNlIntent;
   suggestedQuestions?: string[];
   followUps?: string[];
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter;
+  /** True when intent came from an exact example-chip match (no Claude). */
+  chipMatch?: boolean;
 };
 
 export type ZenithNlQueryClarify = {
@@ -84,6 +108,7 @@ export type ZenithNlQueryClarify = {
   question: string;
   message: string;
   suggestedQuestions: string[];
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter;
 };
 
 export type ZenithNlQueryResult = ZenithNlQuerySuccess | ZenithNlQueryClarify;
@@ -96,7 +121,12 @@ const ALL_ASK: UserRole[] = [
   UserRole.FINANCE,
 ];
 const EXEC: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN];
-const MGMT_ADMIN: UserRole[] = [UserRole.MANAGEMENT, UserRole.ADMIN];
+/** Lost deals: Sales sees own book (salespersonId scoped in the route). */
+const LOST_DEALS_ROLES: UserRole[] = [
+  UserRole.SALES,
+  UserRole.MANAGEMENT,
+  UserRole.ADMIN,
+];
 const FINANCE_PLUS: UserRole[] = [
   UserRole.FINANCE,
   UserRole.MANAGEMENT,
@@ -107,6 +137,14 @@ const OPS_PLUS: UserRole[] = [
   UserRole.OPERATIONS,
   UserRole.MANAGEMENT,
   UserRole.ADMIN,
+];
+/** Install status: Ops pack + Sales own-book. */
+const INSTALL_ROLES: UserRole[] = [...OPS_PLUS, UserRole.SALES];
+/** Mix charts for exec finance stakeholders. */
+const MIX_CHART_ROLES: UserRole[] = [
+  UserRole.MANAGEMENT,
+  UserRole.ADMIN,
+  UserRole.FINANCE,
 ];
 
 export type MetricCatalogEntry = {
@@ -165,9 +203,10 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'lost_deals_summary',
-    description: 'Lost deals summary by reason (Admin / Management only)',
+    description:
+      'Lost deals summary by reason (Management / Admin company-wide; Sales own book)',
     defaultViz: 'table',
-    roles: MGMT_ADMIN,
+    roles: LOST_DEALS_ROLES,
   },
   {
     metric: 'proposal_engine_buckets',
@@ -177,15 +216,40 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'projects_list_slice',
-    description: 'Show a filtered list of projects matching a status, payment, PE bucket, or search',
+    description:
+      'Show a filtered list of projects matching status, payment, PE bucket, customer search, panel brand, inverter brand, or financing bank',
     defaultViz: 'table',
     roles: ALL_ASK,
   },
   {
-    metric: 'install_by_status',
-    description: 'Installation / late-stage project counts by status (Ops pack)',
+    metric: 'cohort_summary',
+    description:
+      'Count + total order value for a filtered cohort — use for how-many / revenue questions about panel brand, inverter brand, financing bank, or loan projects (e.g. Adani panels, Deye inverters, SBI loans)',
     defaultViz: 'table',
-    roles: OPS_PLUS,
+    roles: ALL_ASK,
+  },
+  {
+    metric: 'panel_brand_mix',
+    description:
+      'Project count and order value grouped by panel brand (mix / share chart)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'loan_bank_breakdown',
+    description:
+      'Availing-loan projects grouped by financing bank (bank mix chart)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'install_by_status',
+    description:
+      'Installation / late-stage project counts by status (Ops + Management/Admin; Sales own book)',
+    defaultViz: 'table',
+    roles: INSTALL_ROLES,
   },
   {
     metric: 'pending_subsidy',
@@ -195,7 +259,8 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'availing_loan',
-    description: 'Projects availing loan / financing (not Lost)',
+    description:
+      'Projects availing loan / financing (not Lost); filter by financingBank when a bank is named (SBI, HDFC, etc.)',
     defaultViz: 'table',
     roles: FINANCE_PLUS,
   },
@@ -217,40 +282,45 @@ export function isZenithNlMetric(v: unknown): v is ZenithNlMetric {
   return typeof v === 'string' && (ZENITH_NL_METRICS as readonly string[]).includes(v);
 }
 
+/**
+ * Canonical Ask examples by role.
+ * Keep in sync with `client/src/constants/zenithAskExamples.ts`.
+ * Dates come from the Zenith command bar — avoid “this FY” in chip copy.
+ */
 export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Which lead sources drove the most revenue?',
     'Show my pipeline by stage',
-    'Which customers have the highest profit?',
-    'What is my Proposal Engine status?',
-    'Show projects with outstanding balance',
+    'Summarise my lost deals by reason',
+    'Show installation status breakdown',
+    'How many of my projects used Adani panels?',
   ],
   MANAGEMENT: [
-    'Which lead sources drove the most revenue this FY?',
-    'Revenue by salesperson',
-    'Pipeline by stage',
+    'Which lead sources drove the most revenue?',
+    'How many projects used Adani panels?',
+    'Which panel brands sold most?',
+    'Which banks are financing loans?',
     'Summarise lost deals by reason',
-    'Top customers by profit',
   ],
   ADMIN: [
-    'Which lead sources drove the most revenue this FY?',
-    'Revenue by salesperson',
+    'Which lead sources drove the most revenue?',
+    'How many projects used Adani panels?',
+    'Which panel brands sold most?',
+    'Which banks are financing loans?',
     'Payment status breakdown',
-    'Summarise lost deals by reason',
-    'Proposal Engine bucket counts',
   ],
   OPERATIONS: [
     'Show installation status breakdown',
+    'How many projects used Adani panels?',
+    'Projects with Deye inverters',
     'Projects pending subsidy credit',
-    'Pipeline by stage',
-    'What capacity have we sold?',
   ],
   FINANCE: [
     'Payment status breakdown',
+    'Which banks are financing loans?',
+    'How many customers have SBI loans?',
+    'Which panel brands sold most?',
     'Projects with outstanding balance',
-    'Which projects are availing loan?',
-    'Revenue by lead source',
-    'Pending subsidy projects',
   ],
 };
 
@@ -317,6 +387,21 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Payment status breakdown',
       'Show projects with outstanding balance',
     ],
+    cohort_summary: [
+      'Break that down by payment status',
+      'Show the project list',
+      'Which projects are availing loan?',
+    ],
+    panel_brand_mix: [
+      'How many projects used Adani panels?',
+      'Revenue of projects with Deye inverters',
+      'Which banks are financing loans?',
+    ],
+    loan_bank_breakdown: [
+      'How many customers have SBI loans?',
+      'Payment status breakdown',
+      'Which panel brands sold most?',
+    ],
     install_by_status: [
       'Projects pending subsidy credit',
       'Pipeline by stage',
@@ -330,14 +415,11 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
     availing_loan: [
       'Payment status breakdown',
       'Projects with outstanding balance',
-      'Revenue by lead source',
+      'How many customers have SBI loans?',
     ],
   };
   const list = (common[metric] ?? suggestedQuestionsForRole(role)).filter((q) => {
     const lower = q.toLowerCase();
-    if (role === UserRole.SALES && (lower.includes('lost deal') || lower.includes('installation status'))) {
-      return false;
-    }
     if (
       role === UserRole.OPERATIONS &&
       (lower.includes('salesperson') || lower.includes('lost deal') || lower.includes('proposal engine'))

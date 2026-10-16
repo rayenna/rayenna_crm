@@ -1684,11 +1684,47 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-gold) 40%, transparent);
 }
 
+.zenith-root .zenith-ask-composer__header-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  min-height: 1.5rem;
+}
+
 .zenith-root .zenith-ask-composer__hint {
   font-size: 0.65rem;
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.02em;
+}
+
+.zenith-root .zenith-ask-composer__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 35%, var(--border-default));
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.zenith-root .zenith-ask-composer__clear:hover:not(:disabled) {
+  color: var(--accent-gold);
+  border-color: color-mix(in srgb, var(--accent-gold) 55%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-gold) 12%, var(--bg-surface));
+}
+
+.zenith-root .zenith-ask-composer__clear:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .zenith-root .zenith-ask-composer__input {
@@ -1922,6 +1958,36 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   color: var(--accent-gold);
 }
 
+.zenith-root .zenith-ask-result__filters {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+.zenith-root .zenith-ask-more {
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 22%, var(--border-default));
+  background: color-mix(in srgb, var(--bg-surface) 80%, var(--bg-card));
+}
+
+.zenith-root .zenith-ask-more__label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.zenith-root .zenith-ask-more .zenith-ask-examples {
+  margin: 0;
+  padding: 0;
+}
+
 .zenith-root .zenith-ask-result__question {
   margin: 0.25rem 0 0;
   font-size: 0.98rem;
@@ -2080,28 +2146,57 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 }
 
 @media (min-width: 1024px) {
-  .zenith-root .zenith-ask-composer__shell {
-    padding: 0.75rem 0.9rem 0.85rem;
-    height: 100%;
-  }
-
+  /* Laptop: Ask + suggestions share one row height; text area grows, buttons stay snug */
   .zenith-root .zenith-ask-page-block--with-suggestions .zenith-ask-page-block__row {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.85fr);
-    gap: 0.85rem;
+    grid-template-columns: minmax(0, 2fr) minmax(15rem, 0.72fr);
+    gap: 0.75rem;
     align-items: stretch;
   }
 
   .zenith-root .zenith-ask-page-block__composer,
   .zenith-root .zenith-ask-composer {
     height: 100%;
+    min-height: 0;
+  }
+
+  .zenith-root .zenith-ask-composer__shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding: 0.5rem 0.55rem 0.5rem;
+  }
+
+  .zenith-root .zenith-ask-composer__header {
+    flex-shrink: 0;
+    margin-bottom: 0.35rem;
+  }
+
+  .zenith-root .zenith-ask-composer__input {
+    flex: 1 1 auto;
+    min-height: 5.5rem;
+    height: auto;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .zenith-root .zenith-ask-composer__actions {
+    flex-shrink: 0;
+    margin-top: 0.4rem;
+    gap: 0.45rem;
+  }
+
+  .zenith-root .zenith-ask-composer__status {
+    flex-shrink: 0;
   }
 
   .zenith-root .zenith-ask-suggestions {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 0;
     border-radius: 1.1rem;
-    padding: 0.85rem 0.9rem;
+    padding: 0.7rem 0.75rem;
     border: 1.5px solid color-mix(in srgb, var(--accent-gold) 32%, var(--border-default));
     background:
       linear-gradient(

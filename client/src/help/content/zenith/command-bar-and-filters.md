@@ -1,6 +1,6 @@
 # Command bar and filters
 
-Open Zenith, set **FY / Quarter / Month**, use **Live/Offline** and the **daily briefing**. **Sales**, **Management**, and **Admin** also get **Ask Zenith** under the filters — see [Ask Zenith](#ask-zenith-natural-language). Filter rules match the [classic Dashboard](/help/dashboard#dashboard-filters).
+Open Zenith, set **FY / Quarter / Month**, use **Live/Offline** and the **daily briefing**. **Ask Zenith** is available to **Sales**, **Operations**, **Finance**, **Management**, and **Admin** (under Solar News) — see [Ask Zenith](#ask-zenith-natural-language). Ask uses the same FY / Quarter / Month filters as KPIs. Filter rules match the [classic Dashboard](/help/dashboard#dashboard-filters).
 
 
 ## Opening Zenith

@@ -96,7 +96,17 @@ export function useZenithAskSpeech(opts: {
       }
       const spoken = `${finalChunk}${interimChunk}`.trim()
       const base = baseTextRef.current
-      const next = base ? (spoken ? `${base} ${spoken}` : base) : spoken
+      let next = spoken
+      if (base && spoken) {
+        const baseNorm = base.toLowerCase()
+        const spokenNorm = spoken.toLowerCase()
+        // Avoid "Number of users" + spoken "number of users who…" → duplicated lead-in
+        if (spokenNorm.startsWith(baseNorm)) next = spoken
+        else if (baseNorm.includes(spokenNorm) && spokenNorm.length >= 8) next = base
+        else next = `${base} ${spoken}`
+      } else if (base) {
+        next = base
+      }
       onChangeRef.current(next)
     }
 
