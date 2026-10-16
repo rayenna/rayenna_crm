@@ -7,7 +7,7 @@
 
 ## How to use Ask
 
-1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this quarter**, **this month**, **FY 2024-25**). The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
+1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this quarter**, **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY) growth** or **this FY versus last FY** for **revenue**, **gross profit**, or **average margin** — Ask compares both financial years in one table. The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
 2. Focus the Ask box with **/** or **A** (when you are not already typing in a field), or open **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to jump here and run it.
 3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
@@ -46,6 +46,7 @@ Role packs differ — example chips under the Ask box show questions allowed for
 ### Finance and collections
 
 - Profit summary (order value, gross profit, margin, collected, outstanding, kW)
+- **YoY / this FY vs last FY** — revenue growth, gross profit, or average margin comparison
 - Payment status breakdown · Outstanding balance · Outstanding by salesperson
 - Payment mode mix (UPI / Bank / Cheque) · Unpaid invoices · Which projects are availing loan?
 

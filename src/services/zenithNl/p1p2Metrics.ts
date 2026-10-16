@@ -21,6 +21,7 @@ import {
   type ComplianceGapId,
 } from '../../utils/complianceGaps';
 import type { ZenithNlViz } from './catalog';
+import { formatDelta, formatGrowthPct, growthPct } from './periodCompare';
 
 const TABLE_CAP = 25;
 
@@ -366,9 +367,19 @@ export async function execOutstandingBySalesperson(
   };
 }
 
-export async function execProfitSummary(
+export type ProfitSummaryTotals = {
+  deals: number;
+  order: number;
+  profit: number;
+  avgMargin: number;
+  collected: number;
+  balance: number;
+  kw: number;
+};
+
+async function aggregateProfitSummaryTotals(
   where: Prisma.ProjectWhereInput,
-): Promise<{ viz: ZenithNlViz; insight: string }> {
+): Promise<ProfitSummaryTotals> {
   const agg = await prisma.project.aggregate({
     where: {
       ...where,
@@ -391,13 +402,22 @@ export async function execProfitSummary(
     },
     _avg: { profitability: true },
   });
-  const deals = agg._count.id;
-  const order = Math.round(Number(agg._sum.projectCost) || 0);
-  const profit = Math.round(Number(agg._sum.grossProfit) || 0);
-  const collected = Math.round(Number(agg._sum.totalAmountReceived) || 0);
-  const balance = Math.round(Number(agg._sum.balanceAmount) || 0);
-  const avgMargin = Math.round((Number(agg._avg.profitability) || 0) * 10) / 10;
-  const kw = Math.round(Number(agg._sum.systemCapacity) || 0);
+  return {
+    deals: agg._count.id,
+    order: Math.round(Number(agg._sum.projectCost) || 0),
+    profit: Math.round(Number(agg._sum.grossProfit) || 0),
+    avgMargin: Math.round((Number(agg._avg.profitability) || 0) * 10) / 10,
+    collected: Math.round(Number(agg._sum.totalAmountReceived) || 0),
+    balance: Math.round(Number(agg._sum.balanceAmount) || 0),
+    kw: Math.round(Number(agg._sum.systemCapacity) || 0),
+  };
+}
+
+export async function execProfitSummary(
+  where: Prisma.ProjectWhereInput,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const { deals, order, profit, avgMargin, collected, balance, kw } =
+    await aggregateProfitSummaryTotals(where);
   return {
     insight: deals
       ? `Profit summary: ${deals} deals · ${formatInr(order)} order · ${formatInr(profit)} gross profit · avg margin ${avgMargin}% · collected ${formatInr(collected)} · balance ${formatInr(balance)} · ${kw} kW.`
@@ -418,6 +438,128 @@ export async function execProfitSummary(
         { metric: 'Outstanding (₹)', value: balance },
         { metric: 'Capacity (kW)', value: kw },
       ],
+    },
+  };
+}
+
+/**
+ * This FY vs last FY comparison (revenue / profit / margin) for Ask YoY questions.
+ */
+export async function execPeriodCompare(
+  wherePrimary: Prisma.ProjectWhereInput,
+  wherePrior: Prisma.ProjectWhereInput,
+  opts: {
+    focus?: 'revenue' | 'margin' | 'profit' | 'all';
+    primaryFy: string;
+    priorFy: string;
+  },
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const [cur, prior] = await Promise.all([
+    aggregateProfitSummaryTotals(wherePrimary),
+    aggregateProfitSummaryTotals(wherePrior),
+  ]);
+  const focus = opts.focus ?? 'all';
+  const thisLabel = `This FY (${opts.primaryFy})`;
+  const lastLabel = `Last FY (${opts.priorFy})`;
+
+  type Row = {
+    metric: string;
+    thisFy: string | number;
+    lastFy: string | number;
+    change: string;
+    growth: string;
+    _sort: number;
+  };
+
+  const mkMoney = (label: string, a: number, b: number, sort: number): Row => ({
+    metric: label,
+    thisFy: a,
+    lastFy: b,
+    change: formatDelta(a, b, 'inr'),
+    growth: formatGrowthPct(growthPct(a, b)),
+    _sort: sort,
+  });
+  const mkMargin = (a: number, b: number): Row => ({
+    metric: 'Avg margin %',
+    thisFy: a,
+    lastFy: b,
+    change: formatDelta(a, b, 'pp'),
+    growth: formatGrowthPct(growthPct(a, b)),
+    _sort: 2,
+  });
+  const mkDeals = (a: number, b: number): Row => ({
+    metric: 'Deals',
+    thisFy: a,
+    lastFy: b,
+    change: formatDelta(a, b, 'count'),
+    growth: formatGrowthPct(growthPct(a, b)),
+    _sort: 0,
+  });
+
+  let rows: Row[] = [
+    mkDeals(cur.deals, prior.deals),
+    mkMoney('Order value (₹)', cur.order, prior.order, 1),
+    mkMoney('Gross profit (₹)', cur.profit, prior.profit, 3),
+    mkMargin(cur.avgMargin, prior.avgMargin),
+  ];
+
+  if (focus === 'revenue') {
+    rows = [mkMoney('Order value (₹)', cur.order, prior.order, 1), mkDeals(cur.deals, prior.deals)];
+  } else if (focus === 'profit') {
+    rows = [
+      mkMoney('Gross profit (₹)', cur.profit, prior.profit, 1),
+      mkMoney('Order value (₹)', cur.order, prior.order, 2),
+      mkMargin(cur.avgMargin, prior.avgMargin),
+    ];
+  } else if (focus === 'margin') {
+    rows = [
+      mkMargin(cur.avgMargin, prior.avgMargin),
+      mkMoney('Order value (₹)', cur.order, prior.order, 2),
+      mkMoney('Gross profit (₹)', cur.profit, prior.profit, 3),
+    ];
+  }
+
+  let insight: string;
+  if (focus === 'margin') {
+    const d = Math.round((cur.avgMargin - prior.avgMargin) * 10) / 10;
+    const sign = d > 0 ? '+' : '';
+    insight =
+      prior.deals === 0 && cur.deals === 0
+        ? 'No revenue-stage deals in either FY for margin comparison.'
+        : prior.deals === 0
+          ? `Avg margin ${cur.avgMargin}% this FY (${opts.primaryFy}); no prior-FY baseline (${opts.priorFy}).`
+          : `Avg margin: ${cur.avgMargin}% this FY vs ${prior.avgMargin}% last FY (${sign}${d} pp).`;
+  } else if (focus === 'profit') {
+    const g = growthPct(cur.profit, prior.profit);
+    insight =
+      prior.profit === 0 && cur.profit === 0
+        ? 'No gross profit in either FY to compare.'
+        : prior.profit === 0
+          ? `Gross profit ${formatInr(cur.profit)} this FY; no prior-FY baseline.`
+          : `Gross profit YoY: ${formatInr(cur.profit)} this FY vs ${formatInr(prior.profit)} last FY (${formatGrowthPct(g)}).`;
+  } else {
+    const g = growthPct(cur.order, prior.order);
+    insight =
+      prior.order === 0 && cur.order === 0
+        ? 'No revenue (order value) in either FY to compare.'
+        : prior.order === 0
+          ? `Revenue ${formatInr(cur.order)} this FY; no prior-FY baseline.`
+          : `Revenue YoY: ${formatInr(cur.order)} this FY vs ${formatInr(prior.order)} last FY (${formatGrowthPct(g)}).`;
+  }
+
+  return {
+    insight,
+    viz: {
+      kind: 'table',
+      title: `YoY compare · ${opts.primaryFy} vs ${opts.priorFy}`,
+      columns: [
+        { key: 'metric', label: 'Metric' },
+        { key: 'thisFy', label: thisLabel },
+        { key: 'lastFy', label: lastLabel },
+        { key: 'change', label: 'Change' },
+        { key: 'growth', label: 'Growth %' },
+      ],
+      rows: rows.map(({ _sort: _s, ...rest }) => rest),
     },
   };
 }

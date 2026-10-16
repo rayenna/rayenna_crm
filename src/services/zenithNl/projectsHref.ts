@@ -317,6 +317,7 @@ export function projectsHrefForIntent(
     case 'revenue_by_city':
     case 'loan_vs_cash_revenue':
     case 'profit_summary':
+    case 'period_compare':
     case 'outstanding_by_salesperson':
       return buildZenithNlProjectsHref(
         {
@@ -832,6 +833,7 @@ export function attachAskDrillHrefs(
             row.count != null ||
             (typeof row.value === 'number' &&
               metric !== 'profit_summary' &&
+              metric !== 'period_compare' &&
               metric !== 'capacity_sold' &&
               metric !== 'ticket_resolution_time');
           if (skipZero && rowCount(asRec) <= 0) return row;

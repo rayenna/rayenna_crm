@@ -108,6 +108,15 @@ export function parseZenithNlPriorFilters(raw: unknown): PriorFilters | undefine
   if (inverterCapacityKwMin !== undefined) out.inverterCapacityKwMin = inverterCapacityKwMin;
   const inverterCapacityKwMax = asFiniteNumber(f.inverterCapacityKwMax);
   if (inverterCapacityKwMax !== undefined) out.inverterCapacityKwMax = inverterCapacityKwMax;
+  const compareFocus = asTrimmedString(f.compareFocus);
+  if (
+    compareFocus === 'revenue' ||
+    compareFocus === 'margin' ||
+    compareFocus === 'profit' ||
+    compareFocus === 'all'
+  ) {
+    out.compareFocus = compareFocus;
+  }
 
   return Object.keys(out).length > 0 ? out : undefined;
 }

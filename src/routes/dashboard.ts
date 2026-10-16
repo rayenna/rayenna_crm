@@ -27,6 +27,7 @@ import { loadDataSenseGaps } from '../utils/dataSense';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 import { runZenithNlQuery } from '../services/zenithNlQueryService';
 import { resolveAskDateFilter } from '../services/zenithNl/relativeDates';
+import { parsePeriodCompare } from '../services/zenithNl/periodCompare';
 import { parseZenithNlPriorFilters } from '../services/zenithNl/priorFilters';
 import { listUserAskHistory, persistUserAskHistory } from '../services/zenithNl/askHistory';
 import { logZenithAskEvent } from '../utils/auditLogger';
@@ -3290,7 +3291,20 @@ router.post(
         selectedQuarters: quarterFilters,
         selectedMonths: monthFilters,
       };
-      const { dateFilter, relative } = resolveAskDateFilter(question, commandBarDates);
+      // YoY / vs-last before single-period relative dates (avoid collapsing to this FY only).
+      const periodCompare = parsePeriodCompare(question);
+      let dateFilter = commandBarDates;
+      let relative: { phrase: string } | null = null;
+      let compareDateFilter: typeof commandBarDates | null = null;
+      if (periodCompare) {
+        dateFilter = periodCompare.primary;
+        compareDateFilter = periodCompare.prior;
+        relative = { phrase: periodCompare.phrase };
+      } else {
+        const resolved = resolveAskDateFilter(question, commandBarDates);
+        dateFilter = resolved.dateFilter;
+        relative = resolved.relative;
+      }
       const effectiveDateFilter = relative
         ? {
             selectedFYs: dateFilter.selectedFYs,
@@ -3316,6 +3330,14 @@ router.post(
         dateFilter.selectedMonths,
         dateFilter.selectedQuarters,
       );
+      const compareWhere = compareDateFilter
+        ? (applyDateFilters(
+            { ...baseWhere },
+            compareDateFilter.selectedFYs,
+            compareDateFilter.selectedMonths,
+            compareDateFilter.selectedQuarters,
+          ) as Prisma.ProjectWhereInput)
+        : undefined;
 
       const askStarted = Date.now();
       console.info('[zenith-nl-query]', {
@@ -3323,6 +3345,7 @@ router.post(
         role,
         userId,
         relativeDate: relative?.phrase || null,
+        periodCompare: Boolean(periodCompare),
       });
       logZenithAskEvent({
         userId,
@@ -3341,6 +3364,14 @@ router.post(
         role,
         userId,
         where: where as Prisma.ProjectWhereInput,
+        compareWhere,
+        compareMeta: periodCompare
+          ? {
+              primaryFy: periodCompare.primaryFy,
+              priorFy: periodCompare.priorFy,
+              focus: periodCompare.focus,
+            }
+          : undefined,
         dateFilter,
         effectiveDateFilter,
         prior,

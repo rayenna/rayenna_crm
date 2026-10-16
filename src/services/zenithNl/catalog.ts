@@ -44,6 +44,7 @@ export const ZENITH_NL_METRICS = [
   'amc_expiring',
   'ticket_resolution_time',
   'hub_plant_link_summary',
+  'period_compare',
   'clarify',
 ] as const;
 
@@ -113,6 +114,8 @@ export type ZenithNlIntent = {
     panelCapacityWMax?: number;
     inverterCapacityKwMin?: number;
     inverterCapacityKwMax?: number;
+    /** YoY / FY compare focus for period_compare */
+    compareFocus?: 'revenue' | 'margin' | 'profit' | 'all';
   };
   insightHints?: string;
 };
@@ -481,6 +484,13 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: FINANCE_PLUS,
   },
   {
+    metric: 'period_compare',
+    description:
+      'Year-on-year or this FY vs last FY comparison for revenue (order value), gross profit, and avg margin %',
+    defaultViz: 'table',
+    roles: FINANCE_PLUS,
+  },
+  {
     metric: 'tickets_by_salesperson',
     description: 'Support ticket volume grouped by project salesperson',
     defaultViz: 'chart',
@@ -828,6 +838,11 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Outstanding by salesperson',
       'Loan vs cash revenue',
       'Revenue by city',
+    ],
+    period_compare: [
+      'Profit summary this FY',
+      'Profit summary last FY',
+      'Outstanding by salesperson',
     ],
     tickets_by_salesperson: [
       'Ticket resolution time',

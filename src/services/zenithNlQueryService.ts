@@ -36,6 +36,7 @@ import {
   matchExactChipIntent,
   matchSupportTicketIntent,
 } from './zenithNl/chipIntents';
+import { parsePeriodCompare, periodCompareIntent } from './zenithNl/periodCompare';
 import { enrichInsight } from './zenithNl/insights';
 import {
   brandContainsToken,
@@ -79,6 +80,7 @@ import {
   execOpsWorkload,
   execOutstandingBySalesperson,
   execPaymentModeMix,
+  execPeriodCompare,
   execProfitSummary,
   execProjectStageMix,
   execRevenueByCity,
@@ -146,6 +148,13 @@ export type ZenithNlQueryInput = {
   role: UserRole;
   userId: string;
   where: Prisma.ProjectWhereInput;
+  /** Prior FY where for period_compare (YoY / vs last). */
+  compareWhere?: Prisma.ProjectWhereInput;
+  compareMeta?: {
+    primaryFy: string;
+    priorFy: string;
+    focus: 'revenue' | 'margin' | 'profit' | 'all';
+  };
   dateFilter: ZenithNlDateFilter;
   /** Resolved date context for the response eyebrow (command bar or question phrase). */
   effectiveDateFilter?: ZenithNlEffectiveDateFilter;
@@ -1959,7 +1968,13 @@ async function executeMetric(
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
   entities: ExtractedZenithEntities,
-  ctx: { userId: string; role: UserRole; dateFilter: ZenithNlDateFilter },
+  ctx: {
+    userId: string;
+    role: UserRole;
+    dateFilter: ZenithNlDateFilter;
+    compareWhere?: Prisma.ProjectWhereInput;
+    compareMeta?: ZenithNlQueryInput['compareMeta'];
+  },
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   switch (metric) {
     case 'revenue_by_lead_source':
@@ -2022,6 +2037,28 @@ async function executeMetric(
       return execOutstandingBySalesperson(where);
     case 'profit_summary':
       return execProfitSummary(where);
+    case 'period_compare': {
+      if (!ctx.compareWhere || !ctx.compareMeta) {
+        return {
+          insight:
+            'I can compare this FY vs last FY for revenue, profit, or margin. Try “year on year revenue growth this FY”.',
+          viz: {
+            kind: 'table',
+            title: 'Period compare',
+            columns: [
+              { key: 'metric', label: 'Metric' },
+              { key: 'value', label: 'Value' },
+            ],
+            rows: [],
+          },
+        };
+      }
+      return execPeriodCompare(where, ctx.compareWhere, {
+        focus: intent.filters?.compareFocus ?? ctx.compareMeta.focus,
+        primaryFy: ctx.compareMeta.primaryFy,
+        priorFy: ctx.compareMeta.priorFy,
+      });
+    }
     case 'tickets_by_salesperson':
       return execTicketsBySalesperson(where, ctx);
     case 'compliance_backlog':
@@ -2157,18 +2194,25 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
 
   const entities = extractZenithEntityFilters(question);
   let chipMatch = false;
-  let intent: ZenithNlIntent | null =
-    matchExactChipIntent(question, input.role) ||
-    matchSupportTicketIntent(question, input.role) ||
-    matchEquipmentMixIntent(question, input.role);
-  if (intent) {
+  let intent: ZenithNlIntent | null = null;
+  const periodCmp = parsePeriodCompare(question);
+  if (periodCmp && metricAllowedForRole('period_compare', input.role)) {
+    intent = normalizeIntent(periodCompareIntent(periodCmp), input.role);
     chipMatch = true;
-    intent = normalizeIntent(intent, input.role);
-  } else if (isZenithNlAskEnabled()) {
-    intent = await parseIntentWithClaude(question, input.role, input.prior);
   } else {
-    // No Claude — still answer when entity salvage can pick a metric.
-    intent = { metric: 'clarify', viz: 'table', insightHints: 'Claude unavailable' };
+    intent =
+      matchExactChipIntent(question, input.role) ||
+      matchSupportTicketIntent(question, input.role) ||
+      matchEquipmentMixIntent(question, input.role);
+    if (intent) {
+      chipMatch = true;
+      intent = normalizeIntent(intent, input.role);
+    } else if (isZenithNlAskEnabled()) {
+      intent = await parseIntentWithClaude(question, input.role, input.prior);
+    } else {
+      // No Claude — still answer when entity salvage can pick a metric.
+      intent = { metric: 'clarify', viz: 'table', insightHints: 'Claude unavailable' };
+    }
   }
 
   intent = mergeEntitiesIntoIntent(intent, entities);
@@ -2259,10 +2303,19 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       intent,
       { salespersonId, opsId },
     );
+    const compareScoped = input.compareWhere
+      ? applyZenithDimensionFilters(
+          applyZenithIntentEntityFilters(input.compareWhere, intent),
+          intent,
+          { salespersonId, opsId },
+        )
+      : undefined;
     const executed = await executeMetric(intent.metric, scopedWhere, intent, execEntities, {
       userId: input.userId,
       role: input.role,
       dateFilter: input.dateFilter,
+      compareWhere: compareScoped,
+      compareMeta: input.compareMeta,
     });
     let viz = executed.viz;
     viz = maybeForceTable(viz, intent);

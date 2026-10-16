@@ -41,6 +41,7 @@ export type ZenithNlIntent = {
     panelCapacityWMax?: number
     inverterCapacityKwMin?: number
     inverterCapacityKwMax?: number
+    compareFocus?: 'revenue' | 'margin' | 'profit' | 'all'
   }
   insightHints?: string
 }

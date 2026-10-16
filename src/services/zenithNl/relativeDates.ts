@@ -7,7 +7,7 @@ export type ZenithRelativeDateParse = ZenithNlDateFilter & {
   source: 'question';
 };
 
-function getPreviousFY(fy: string): string {
+export function getPreviousFY(fy: string): string {
   const twoDigit = fy.match(/^(\d{4})-(\d{2})$/);
   if (twoDigit) {
     const start = parseInt(twoDigit[1]!, 10);
