@@ -341,10 +341,12 @@ export function AskBarChart({
                   transition: 'filter 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as SVGElement).style.filter = 'brightness(1.15)'
+                  const el = e.currentTarget as SVGElement
+                  el.style.filter = 'brightness(1.15)'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as SVGElement).style.filter = 'brightness(1)'
+                  const el = e.currentTarget as SVGElement
+                  el.style.filter = 'brightness(1)'
                 }}
               />
             ))}
