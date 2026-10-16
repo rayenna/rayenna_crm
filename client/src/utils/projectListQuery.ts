@@ -32,6 +32,21 @@ export type ProjectsListFiltersState = {
   lifecycleSpecsIncomplete: boolean
   dataSenseNeedsReview: boolean
   dataSenseRule: DataSenseRuleId | null
+  /** Ask chart deep-link filters (no panel controls). */
+  panelType?: string
+  systemType?: string
+  roofType?: string
+  statusIndicator?: string
+  projectStage?: string
+  capacityMin?: number | null
+  capacityMax?: number | null
+  hubPlantLinked?: boolean | null
+  salespersonName?: string
+  opsName?: string
+  city?: string
+  installationStatus?: string
+  paymentMode?: string
+  notAvailingLoan?: boolean
   search?: string
   sortBy?: string
   sortOrder?: string
@@ -81,6 +96,31 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.dataSenseRule) params.append('dataSenseRule', filters.dataSenseRule)
   if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
   if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
+  if (filters.panelType?.trim()) params.append('panelType', filters.panelType.trim())
+  if (filters.systemType?.trim()) params.append('systemType', filters.systemType.trim())
+  if (filters.roofType?.trim()) params.append('roofType', filters.roofType.trim())
+  if (filters.statusIndicator?.trim()) {
+    params.append('statusIndicator', filters.statusIndicator.trim().toUpperCase())
+  }
+  if (filters.projectStage?.trim()) params.append('projectStage', filters.projectStage.trim())
+  if (filters.capacityMin != null && Number.isFinite(filters.capacityMin)) {
+    params.append('capacityMin', String(filters.capacityMin))
+  }
+  if (filters.capacityMax != null && Number.isFinite(filters.capacityMax)) {
+    params.append('capacityMax', String(filters.capacityMax))
+  }
+  if (filters.hubPlantLinked === true) params.append('hubPlantLinked', 'true')
+  if (filters.hubPlantLinked === false) params.append('hubPlantLinked', 'false')
+  if (filters.salespersonName?.trim()) {
+    params.append('salespersonName', filters.salespersonName.trim())
+  }
+  if (filters.opsName?.trim()) params.append('opsName', filters.opsName.trim())
+  if (filters.city?.trim()) params.append('city', filters.city.trim())
+  if (filters.installationStatus?.trim()) {
+    params.append('installationStatus', filters.installationStatus.trim())
+  }
+  if (filters.paymentMode?.trim()) params.append('paymentMode', filters.paymentMode.trim())
+  if (filters.notAvailingLoan) params.append('notAvailingLoan', 'true')
   if (filters.sortBy) {
     params.append('sortBy', filters.sortBy)
     params.append('sortOrder', filters.sortOrder || 'desc')

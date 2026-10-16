@@ -1,34 +1,77 @@
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import { Sparkles, X } from 'lucide-react'
+import { Search, Sparkles, X } from 'lucide-react'
 import type {
   ZenithAskHistoryItem,
+  ZenithNlCatalogHint,
   ZenithNlQueryResult,
   ZenithNlViz,
 } from '../../types/zenithNlQuery'
 import { trackZenithAskEvent } from '../../utils/zenithAskAnalytics'
 import ChartPanel from './ChartPanel'
+import { AskBarChart, AskPieChart, buildAskChartData } from './ZenithAskCharts'
 
-const PIE_COLORS = [
-  'var(--accent-gold)',
-  'var(--accent-teal, #2dd4bf)',
-  'var(--accent-blue, #60a5fa)',
-  'var(--accent-red)',
-  '#a78bfa',
-  '#f472b6',
-  '#34d399',
-  '#fbbf24',
-]
+function AskClarifyCatalog({
+  hints,
+  role,
+  onPick,
+}: {
+  hints: ZenithNlCatalogHint[]
+  role?: string
+  onPick: (ask: string) => void
+}) {
+  const [q, setQ] = useState('')
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    if (!needle) return hints
+    return hints.filter((h) => {
+      const hay = `${h.title} ${h.description} ${h.metric} ${h.ask}`.toLowerCase()
+      return needle.split(/\s+/).every((part) => hay.includes(part))
+    })
+  }, [hints, q])
+
+  return (
+    <div className="zenith-ask-catalog" aria-label="What you can ask">
+      <p className="zenith-ask-catalog__label">What you can ask</p>
+      <div className="zenith-ask-catalog__search">
+        <Search className="zenith-ask-catalog__search-icon" aria-hidden />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search metrics for your role…"
+          className="zenith-ask-catalog__input"
+          aria-label="Search Ask catalog"
+        />
+      </div>
+      <ul className="zenith-ask-catalog__list">
+        {filtered.length === 0 ? (
+          <li className="zenith-ask-catalog__empty">No metrics match “{q.trim()}”</li>
+        ) : (
+          filtered.map((h) => (
+            <li key={h.metric}>
+              <button
+                type="button"
+                className="zenith-ask-catalog__row"
+                onClick={() => {
+                  trackZenithAskEvent('ask_catalog_pick', {
+                    role,
+                    metric: h.metric,
+                    source: 'catalog',
+                  })
+                  onPick(h.ask)
+                }}
+              >
+                <span className="zenith-ask-catalog__title">{h.title}</span>
+                <span className="zenith-ask-catalog__desc">{h.description}</span>
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
+  )
+}
 
 function formatCell(v: string | number | null): string {
   if (v == null) return '—'
@@ -132,96 +175,45 @@ function AskViz({
     )
   }
 
-  const data = viz.series.map((s) => ({
-    name: s.label,
-    value: s.value,
-    count: s.count,
-    href: s.href,
-  }))
+  const data = buildAskChartData(viz.series)
   const anyChartClickable = data.some((d) => Boolean(d.href))
+  const drillHint = anyChartClickable
+    ? viz.chartType === 'pie'
+      ? 'Click a slice or legend row to open matching projects'
+      : 'Click a bar to open matching projects'
+    : undefined
 
   if (viz.chartType === 'pie') {
     return (
-      <ChartPanel title={viz.title} contentClassName="min-h-[240px]">
-        {anyChartClickable ? (
-          <p className="mb-1 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
-            Click a slice to open matching projects
-          </p>
-        ) : null}
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              label={({ name }) => String(name)}
-              cursor={anyChartClickable ? 'pointer' : undefined}
-              onClick={(_, index) => {
-                const href = data[index]?.href
-                if (href) onDrill?.(href)
-              }}
-            >
-              {data.map((_, i) => (
-                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(value: number) => [
-                value.toLocaleString('en-IN'),
-                viz.valueLabel || 'Value',
-              ]}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+      <ChartPanel
+        title={viz.title}
+        subtitle={drillHint}
+        contentClassName="min-h-0"
+        showExploreHint={anyChartClickable}
+      >
+        <AskPieChart
+          data={data}
+          valueLabel={viz.valueLabel}
+          clickable={anyChartClickable}
+          onDrill={onDrill}
+        />
       </ChartPanel>
     )
   }
 
   return (
-    <ChartPanel title={viz.title} contentClassName="min-h-[240px]">
-      {anyChartClickable ? (
-        <p className="mb-1 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
-          Click a bar to open matching projects
-        </p>
-      ) : null}
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 48 }}>
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-            interval={0}
-            angle={-28}
-            textAnchor="end"
-            height={56}
-          />
-          <YAxis
-            tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-            tickFormatter={(v) =>
-              typeof v === 'number' && v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)
-            }
-          />
-          <Tooltip
-            formatter={(value: number) => [
-              value.toLocaleString('en-IN'),
-              viz.valueLabel || 'Value',
-            ]}
-          />
-          <Bar
-            dataKey="value"
-            fill="var(--accent-gold)"
-            radius={[4, 4, 0, 0]}
-            cursor={anyChartClickable ? 'pointer' : undefined}
-            onClick={(entry) => {
-              const payload = entry as { payload?: { href?: string }; href?: string }
-              const href = payload.payload?.href || payload.href
-              if (href) onDrill?.(href)
-            }}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+    <ChartPanel
+      title={viz.title}
+      subtitle={drillHint}
+      contentClassName="min-h-0"
+      showExploreHint={anyChartClickable}
+    >
+      <AskBarChart
+        data={data}
+        valueLabel={viz.valueLabel}
+        clickable={anyChartClickable}
+        onDrill={onDrill}
+      />
     </ChartPanel>
   )
 }
@@ -235,7 +227,7 @@ type Props = {
   filterSummary?: string
   role?: string
   onClose: () => void
-  onAskSuggestion: (q: string) => void
+  onAskSuggestion: (q: string, source?: 'follow_up' | 'catalog') => void
   onReplayHistory: (item: ZenithAskHistoryItem) => void
 }
 
@@ -258,28 +250,47 @@ export default function ZenithAskPanel({
       ? result.effectiveDateFilter.phrase
       : filterSummary
 
+  const historyOnly = !result && !error && !loading && history.length > 0
+
   return (
-    <section id="zenith-ask-result" className="zenith-ask-result" aria-live="polite">
+    <section
+      id="zenith-ask-result"
+      className={`zenith-ask-result${historyOnly ? ' zenith-ask-result--history-only' : ''}`}
+      aria-live="polite"
+    >
       <div className="zenith-ask-result__header">
         <div className="min-w-0">
-          <p className="zenith-ask-result__eyebrow">
-            <Sparkles className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
-            Zenith Ask
-            {datePhrase ? (
-              <span className="zenith-ask-result__filters"> · Using {datePhrase}</span>
-            ) : null}
-          </p>
-          {result?.question ? (
-            <p className="zenith-ask-result__question">{result.question}</p>
-          ) : loading ? (
-            <p className="zenith-ask-result__question">Thinking with your CRM data…</p>
-          ) : history.length > 0 ? (
-            <p className="zenith-ask-result__question">Recent asks this session</p>
+          {historyOnly ? (
+            <p className="zenith-ask-result__eyebrow">Recent asks</p>
           ) : (
-            <p className="zenith-ask-result__question">Answer</p>
+            <>
+              <p className="zenith-ask-result__eyebrow">
+                <Sparkles className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
+                Zenith Ask
+                {datePhrase ? (
+                  <span className="zenith-ask-result__filters"> · Using {datePhrase}</span>
+                ) : null}
+              </p>
+              {result?.question ? (
+                <p className="zenith-ask-result__question">{result.question}</p>
+              ) : loading ? (
+                <p className="zenith-ask-result__question">Thinking with your CRM data…</p>
+              ) : (
+                <p className="zenith-ask-result__question">Answer</p>
+              )}
+            </>
           )}
         </div>
-        <button type="button" onClick={onClose} className="zenith-ask-result__close" aria-label="Close">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onClose()
+          }}
+          className="zenith-ask-result__close"
+          aria-label="Close"
+        >
           <X className="w-4 h-4 mx-auto" aria-hidden />
         </button>
       </div>
@@ -287,7 +298,7 @@ export default function ZenithAskPanel({
       <div className="zenith-ask-result__body">
         {history.length > 0 ? (
           <div className="zenith-ask-history" aria-label="Ask history this session">
-            <p className="zenith-ask-history__label">This session</p>
+            {!historyOnly ? <p className="zenith-ask-history__label">This session</p> : null}
             <div className="zenith-ask-history__list">
               {history.map((item) => (
                 <button
@@ -332,6 +343,13 @@ export default function ZenithAskPanel({
                   </button>
                 ))}
               </div>
+            ) : null}
+            {result.catalogHints && result.catalogHints.length > 0 ? (
+              <AskClarifyCatalog
+                hints={result.catalogHints}
+                role={role}
+                onPick={(ask) => onAskSuggestion(ask, 'catalog')}
+              />
             ) : null}
           </>
         ) : null}

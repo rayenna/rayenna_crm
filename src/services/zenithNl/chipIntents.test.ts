@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import {
   matchEquipmentMixIntent,
   matchExactChipIntent,
+  matchPhraseChipIntent,
   matchSupportTicketIntent,
 } from './chipIntents';
 
@@ -111,5 +112,47 @@ describe('matchEquipmentMixIntent', () => {
     expect(
       matchEquipmentMixIntent('Which panel brands sold most last FY?', UserRole.ADMIN)?.metric,
     ).toBe('panel_brand_mix');
+  });
+});
+
+describe('matchPhraseChipIntent', () => {
+  it('salvages profit paraphrase without Claude', () => {
+    expect(matchPhraseChipIntent("what's our profit?", UserRole.ADMIN)?.metric).toBe(
+      'profit_summary',
+    );
+  });
+
+  it('salvages ops workload and compliance paraphrases', () => {
+    expect(matchPhraseChipIntent('how busy is ops', UserRole.OPERATIONS)?.metric).toBe(
+      'ops_workload',
+    );
+    expect(matchPhraseChipIntent('KSEB backlog', UserRole.MANAGEMENT)?.metric).toBe(
+      'compliance_backlog',
+    );
+  });
+
+  it('salvages finance paraphrases', () => {
+    expect(matchPhraseChipIntent('loan vs cash', UserRole.FINANCE)?.metric).toBe(
+      'loan_vs_cash_revenue',
+    );
+    expect(matchPhraseChipIntent('unpaid invoices list', UserRole.FINANCE)?.metric).toBe(
+      'unpaid_invoices',
+    );
+  });
+
+  it('does not steal Deye inverter cohort for hub plants', () => {
+    expect(
+      matchPhraseChipIntent('Revenue of projects with Deye inverters', UserRole.ADMIN),
+    ).toBeNull();
+  });
+
+  it('respects role gates', () => {
+    expect(matchPhraseChipIntent('ops workload', UserRole.FINANCE)).toBeNull();
+  });
+
+  it('is wired through matchExactChipIntent', () => {
+    expect(matchExactChipIntent('show me the profit summary please', UserRole.ADMIN)?.metric).toBe(
+      'profit_summary',
+    );
   });
 });

@@ -30,6 +30,7 @@ export function buildZenithNlProjectsHref(
     pendingSubsidy?: boolean;
     complianceGap?: ComplianceGapId;
     availingLoan?: boolean;
+    notAvailingLoan?: boolean;
     financingBank?: string[];
     panelBrand?: string;
     inverterBrand?: string;
@@ -37,6 +38,19 @@ export function buildZenithNlProjectsHref(
     customerType?: string[];
     projectServiceType?: string[];
     salespersonUnassigned?: boolean;
+    panelType?: string;
+    systemType?: string;
+    roofType?: string;
+    statusIndicator?: string;
+    projectStage?: string;
+    capacityMin?: number;
+    capacityMax?: number;
+    hubPlantLinked?: boolean;
+    salespersonName?: string;
+    opsName?: string;
+    city?: string;
+    installationStatus?: string;
+    paymentMode?: string;
   },
   dateFilter: ZenithNlDateFilter,
 ): string {
@@ -50,6 +64,7 @@ export function buildZenithNlProjectsHref(
   if (params.pendingSubsidy) search.append('pendingSubsidy', 'true');
   if (params.complianceGap) search.append('complianceGap', params.complianceGap);
   if (params.availingLoan) search.append('availingLoan', 'true');
+  if (params.notAvailingLoan) search.append('notAvailingLoan', 'true');
   params.financingBank?.forEach((v) => search.append('financingBank', v));
   if (params.panelBrand?.trim()) search.append('panelBrand', params.panelBrand.trim());
   if (params.inverterBrand?.trim()) search.append('inverterBrand', params.inverterBrand.trim());
@@ -57,6 +72,30 @@ export function buildZenithNlProjectsHref(
   params.customerType?.forEach((v) => search.append('customerType', v));
   params.projectServiceType?.forEach((v) => search.append('projectServiceType', v));
   if (params.salespersonUnassigned) search.append('salespersonUnassigned', 'true');
+  if (params.panelType?.trim()) search.append('panelType', params.panelType.trim());
+  if (params.systemType?.trim()) search.append('systemType', params.systemType.trim());
+  if (params.roofType?.trim()) search.append('roofType', params.roofType.trim());
+  if (params.statusIndicator?.trim()) {
+    search.append('statusIndicator', params.statusIndicator.trim().toUpperCase());
+  }
+  if (params.projectStage?.trim()) search.append('projectStage', params.projectStage.trim());
+  if (params.capacityMin != null && Number.isFinite(params.capacityMin)) {
+    search.append('capacityMin', String(params.capacityMin));
+  }
+  if (params.capacityMax != null && Number.isFinite(params.capacityMax)) {
+    search.append('capacityMax', String(params.capacityMax));
+  }
+  if (params.hubPlantLinked === true) search.append('hubPlantLinked', 'true');
+  if (params.hubPlantLinked === false) search.append('hubPlantLinked', 'false');
+  if (params.salespersonName?.trim()) {
+    search.append('salespersonName', params.salespersonName.trim());
+  }
+  if (params.opsName?.trim()) search.append('opsName', params.opsName.trim());
+  if (params.city?.trim()) search.append('city', params.city.trim());
+  if (params.installationStatus?.trim()) {
+    search.append('installationStatus', params.installationStatus.trim());
+  }
+  if (params.paymentMode?.trim()) search.append('paymentMode', params.paymentMode.trim());
   const q = params.search != null ? String(params.search).trim() : '';
   if (q !== '') search.append('search', q);
   dateFilter.selectedFYs.forEach((fy) => search.append('fy', fy));
@@ -82,19 +121,37 @@ function entityHrefParams(intent: ZenithNlIntent): {
   const projectType = intent.filters?.projectType?.trim().toUpperCase().replace(/[\s-]+/g, '_');
   const customerType = intent.filters?.customerType?.trim().toUpperCase();
   const service = intent.filters?.projectServiceType?.trim().toUpperCase().replace(/\s+/g, '_');
-  return {
-    panelBrand,
-    inverterBrand,
-    financingBank: bank ? [bank] : undefined,
-    availingLoan: bank || intent.filters?.availingLoan ? true : undefined,
-    type:
-      projectType === 'SUBSIDY' || projectType === 'NON_SUBSIDY' ? [projectType] : undefined,
-    customerType: customerType
-      ? [customerType]
-      : undefined,
-    projectServiceType: service ? [service] : undefined,
-    salespersonUnassigned: intent.filters?.salespersonUnassigned || undefined,
-  };
+  const out: {
+    panelBrand?: string;
+    inverterBrand?: string;
+    financingBank?: string[];
+    availingLoan?: boolean;
+    type?: string[];
+    customerType?: string[];
+    projectServiceType?: string[];
+    salespersonUnassigned?: boolean;
+  } = {};
+  if (panelBrand) out.panelBrand = panelBrand;
+  if (inverterBrand) out.inverterBrand = inverterBrand;
+  if (bank) {
+    out.financingBank = [bank];
+    out.availingLoan = true;
+  } else if (intent.filters?.availingLoan) {
+    out.availingLoan = true;
+  }
+  if (projectType === 'SUBSIDY' || projectType === 'NON_SUBSIDY') out.type = [projectType];
+  if (customerType) out.customerType = [customerType];
+  if (service) out.projectServiceType = [service];
+  if (intent.filters?.salespersonUnassigned) out.salespersonUnassigned = true;
+  return out;
+}
+
+/** Merge entity filters under slice-specific params (slice wins; skip undefined). */
+function withEntity(
+  slice: Parameters<typeof buildZenithNlProjectsHref>[0],
+  entity: ReturnType<typeof entityHrefParams>,
+): Parameters<typeof buildZenithNlProjectsHref>[0] {
+  return { ...entity, ...slice };
 }
 
 const REVENUE_STATUSES = [
@@ -349,6 +406,56 @@ const STATUS_LABEL_TO_PARAM: Record<string, string> = {
   Lost: 'LOST',
 };
 
+/** Lifecycle `projectStage` labels (not CRM projectStatus). */
+const PROJECT_STAGE_LABEL_TO_PARAM: Record<string, string> = {
+  Survey: 'SURVEY',
+  Proposal: 'PROPOSAL',
+  Approved: 'APPROVED',
+  Installation: 'INSTALLATION',
+  Billing: 'BILLING',
+  Live: 'LIVE',
+  AMC: 'AMC',
+  Lost: 'LOST',
+};
+
+const SERVICE_TYPE_LABEL_TO_PARAM: Record<string, string> = {
+  'EPC Project': 'EPC_PROJECT',
+  'Panel Cleaning': 'PANEL_CLEANING',
+  Maintenance: 'MAINTENANCE',
+  Repair: 'REPAIR',
+  Consulting: 'CONSULTING',
+  Resale: 'RESALE',
+  'Other Services': 'OTHER_SERVICES',
+};
+
+const SYSTEM_TYPE_LABEL_TO_PARAM: Record<string, string> = {
+  'On-grid': 'ON_GRID',
+  'Off-grid': 'OFF_GRID',
+  Hybrid: 'HYBRID',
+  ON_GRID: 'ON_GRID',
+  OFF_GRID: 'OFF_GRID',
+  HYBRID: 'HYBRID',
+};
+
+const CAPACITY_BAND_TO_RANGE: Record<string, { min: number; max?: number }> = {
+  'Under 3 kW': { min: 0, max: 2 },
+  '3–5 kW': { min: 3, max: 5 },
+  '6–10 kW': { min: 6, max: 10 },
+  'Above 10 kW': { min: 11 },
+};
+
+const INSTALL_STATUS_LABEL_TO_PARAM: Record<string, string> = {
+  Pending: 'PENDING',
+  'In progress': 'IN_PROGRESS',
+  Completed: 'COMPLETED',
+};
+
+const PAYMENT_MODE_LABEL_TO_PARAM: Record<string, string> = {
+  UPI: 'UPI',
+  Bank: 'BANK',
+  Cheque: 'CHEQUE',
+};
+
 const LEAD_SOURCE_LABEL_TO_PARAM: Record<string, string> = {
   Website: 'WEBSITE',
   Referral: 'REFERRAL',
@@ -363,7 +470,6 @@ const LEAD_SOURCE_LABEL_TO_PARAM: Record<string, string> = {
 const TICKET_TABLE_METRICS = new Set<ZenithNlMetric>([
   'support_tickets_summary',
   'ticket_resolution_time',
-  'tickets_by_salesperson',
 ]);
 
 const PROJECT_LIST_ROW_METRICS = new Set<ZenithNlMetric>([
@@ -408,23 +514,26 @@ function sliceHrefForLabel(
 ): string | null {
   if (!label || label === 'Unknown' || label === 'None') return null;
 
+  const revenueBase = {
+    status: REVENUE_STATUS_LIST,
+    zenithSlice: 'revenue' as const,
+  };
+
   switch (metric) {
     case 'payment_status_breakdown': {
       const paymentStatus = PAYMENT_LABEL_TO_PARAM[label];
       return paymentStatus
-        ? buildZenithNlProjectsHref({ paymentStatus: [paymentStatus], ...entity }, dateFilter)
+        ? buildZenithNlProjectsHref(
+            withEntity({ paymentStatus: [paymentStatus] }, entity),
+            dateFilter,
+          )
         : null;
     }
     case 'revenue_by_lead_source': {
       const leadSource = LEAD_SOURCE_LABEL_TO_PARAM[label] || LEAD_LABEL_TO_ENUM[label];
       return leadSource
         ? buildZenithNlProjectsHref(
-            {
-              status: REVENUE_STATUS_LIST,
-              zenithSlice: 'revenue',
-              leadSource: [leadSource],
-              ...entity,
-            },
+            withEntity({ ...revenueBase, leadSource: [leadSource] }, entity),
             dateFilter,
           )
         : null;
@@ -432,70 +541,176 @@ function sliceHrefForLabel(
     case 'revenue_by_project_type': {
       const type = PROJECT_TYPE_LABEL_TO_PARAM[label];
       return type
-        ? buildZenithNlProjectsHref(
-            { status: REVENUE_STATUS_LIST, zenithSlice: 'revenue', type: [type], ...entity },
-            dateFilter,
-          )
+        ? buildZenithNlProjectsHref(withEntity({ ...revenueBase, type: [type] }, entity), dateFilter)
         : null;
     }
     case 'revenue_by_customer_type': {
       const customerType = CUSTOMER_TYPE_LABEL_TO_PARAM[label];
       return customerType
         ? buildZenithNlProjectsHref(
-            {
-              status: REVENUE_STATUS_LIST,
-              zenithSlice: 'revenue',
-              customerType: [customerType],
-              ...entity,
-            },
+            withEntity({ ...revenueBase, customerType: [customerType] }, entity),
             dateFilter,
           )
         : null;
     }
     case 'panel_brand_mix':
       return buildZenithNlProjectsHref(
-        {
-          status: REVENUE_STATUS_LIST,
-          zenithSlice: 'revenue',
-          panelBrand: label,
-          ...entity,
-        },
+        withEntity({ ...revenueBase, panelBrand: label }, entity),
         dateFilter,
       );
     case 'inverter_brand_mix':
       return buildZenithNlProjectsHref(
-        {
-          status: REVENUE_STATUS_LIST,
-          zenithSlice: 'revenue',
-          inverterBrand: label,
-          ...entity,
-        },
+        withEntity({ ...revenueBase, inverterBrand: label }, entity),
         dateFilter,
       );
     case 'loan_bank_breakdown':
       return buildZenithNlProjectsHref(
-        {
-          availingLoan: true,
-          financingBank: [label.toUpperCase().replace(/\s+/g, '_')],
-          ...entity,
-        },
+        withEntity(
+          {
+            availingLoan: true,
+            financingBank: [label.toUpperCase().replace(/\s+/g, '_')],
+          },
+          entity,
+        ),
         dateFilter,
       );
-    case 'loan_vs_cash_revenue':
-      return label.toLowerCase().includes('loan')
+    case 'loan_vs_cash_revenue': {
+      const lower = label.toLowerCase();
+      const isLoan = lower.includes('loan') && !lower.includes('not');
+      return isLoan
         ? buildZenithNlProjectsHref(
-            { status: REVENUE_STATUS_LIST, zenithSlice: 'revenue', availingLoan: true, ...entity },
+            withEntity({ ...revenueBase, availingLoan: true }, entity),
             dateFilter,
           )
         : buildZenithNlProjectsHref(
-            { status: REVENUE_STATUS_LIST, zenithSlice: 'revenue', ...entity },
+            withEntity({ ...revenueBase, notAvailingLoan: true }, entity),
             dateFilter,
           );
+    }
     case 'pipeline_by_stage':
-    case 'install_by_status':
-    case 'project_stage_mix': {
+    case 'install_by_status': {
       const status = STATUS_LABEL_TO_PARAM[label];
-      return status ? buildZenithNlProjectsHref({ status: [status], ...entity }, dateFilter) : null;
+      return status
+        ? buildZenithNlProjectsHref(withEntity({ status: [status] }, entity), dateFilter)
+        : null;
+    }
+    case 'project_stage_mix': {
+      const projectStage = PROJECT_STAGE_LABEL_TO_PARAM[label];
+      return projectStage
+        ? buildZenithNlProjectsHref(withEntity({ projectStage }, entity), dateFilter)
+        : null;
+    }
+    case 'service_type_mix': {
+      const projectServiceType = SERVICE_TYPE_LABEL_TO_PARAM[label];
+      return projectServiceType
+        ? buildZenithNlProjectsHref(
+            withEntity({ projectServiceType: [projectServiceType] }, entity),
+            dateFilter,
+          )
+        : null;
+    }
+    case 'panel_type_mix':
+      return buildZenithNlProjectsHref(
+        withEntity({ ...revenueBase, panelType: label }, entity),
+        dateFilter,
+      );
+    case 'roof_type_mix':
+      return buildZenithNlProjectsHref(withEntity({ roofType: label }, entity), dateFilter);
+    case 'system_type_mix': {
+      const systemType = SYSTEM_TYPE_LABEL_TO_PARAM[label];
+      return systemType
+        ? buildZenithNlProjectsHref(
+            withEntity({ ...revenueBase, systemType }, entity),
+            dateFilter,
+          )
+        : null;
+    }
+    case 'capacity_by_band': {
+      const band = CAPACITY_BAND_TO_RANGE[label];
+      if (!band) return null;
+      return buildZenithNlProjectsHref(
+        withEntity(
+          {
+            ...revenueBase,
+            capacityMin: band.min,
+            ...(band.max != null ? { capacityMax: band.max } : {}),
+          },
+          entity,
+        ),
+        dateFilter,
+      );
+    }
+    case 'sla_indicator_mix': {
+      if (!['GREEN', 'AMBER', 'RED'].includes(label.toUpperCase())) return null;
+      return buildZenithNlProjectsHref(
+        withEntity({ statusIndicator: label.toUpperCase() }, entity),
+        dateFilter,
+      );
+    }
+    case 'ops_workload':
+      return label === 'Unassigned'
+        ? null
+        : buildZenithNlProjectsHref(
+            withEntity(
+              {
+                status: ['CONFIRMED', 'UNDER_INSTALLATION', 'SUBMITTED_FOR_SUBSIDY'],
+                opsName: label,
+              },
+              entity,
+            ),
+            dateFilter,
+          );
+    case 'revenue_by_salesperson':
+    case 'outstanding_by_salesperson':
+    case 'tickets_by_salesperson':
+      if (label === 'Unassigned') {
+        return buildZenithNlProjectsHref(
+          withEntity(
+            {
+              ...(metric === 'revenue_by_salesperson' ? revenueBase : {}),
+              ...(metric === 'outstanding_by_salesperson'
+                ? { paymentStatus: ['PENDING', 'PARTIAL'] }
+                : {}),
+              salespersonUnassigned: true,
+            },
+            entity,
+          ),
+          dateFilter,
+        );
+      }
+      return buildZenithNlProjectsHref(
+        withEntity(
+          {
+            ...(metric === 'revenue_by_salesperson' ? revenueBase : {}),
+            ...(metric === 'outstanding_by_salesperson'
+              ? { paymentStatus: ['PENDING', 'PARTIAL'] }
+              : {}),
+            salespersonName: label,
+          },
+          entity,
+        ),
+        dateFilter,
+      );
+    case 'hub_plant_link_summary': {
+      const linked = label.toLowerCase().includes('linked') && !label.toLowerCase().includes('not');
+      const notLinked = label.toLowerCase().includes('not');
+      if (!linked && !notLinked) return null;
+      return buildZenithNlProjectsHref(
+        withEntity({ hubPlantLinked: linked && !notLinked }, entity),
+        dateFilter,
+      );
+    }
+    case 'installation_model_status': {
+      const installationStatus = INSTALL_STATUS_LABEL_TO_PARAM[label];
+      return installationStatus
+        ? buildZenithNlProjectsHref(withEntity({ installationStatus }, entity), dateFilter)
+        : null;
+    }
+    case 'payment_mode_mix': {
+      const paymentMode = PAYMENT_MODE_LABEL_TO_PARAM[label];
+      return paymentMode
+        ? buildZenithNlProjectsHref(withEntity({ paymentMode }, entity), dateFilter)
+        : null;
     }
     case 'proposal_engine_buckets': {
       const pe = PE_BUCKET_LABEL_TO_PARAM[label];
@@ -514,14 +729,11 @@ function sliceHrefForLabel(
     }
     case 'revenue_by_city':
       return buildZenithNlProjectsHref(
-        {
-          status: REVENUE_STATUS_LIST,
-          zenithSlice: 'revenue',
-          search: label,
-          ...entity,
-        },
+        withEntity({ ...revenueBase, city: label }, entity),
         dateFilter,
       );
+    case 'lost_competition_breakdown':
+      return buildZenithNlProjectsHref(withEntity({ status: ['LOST'] }, entity), dateFilter);
     default:
       return null;
   }
@@ -571,11 +783,13 @@ export function attachAskDrillHrefs(
           return {
             ...row,
             href: buildZenithNlProjectsHref(
-              {
-                status: [status],
-                ...(metric === 'subsidy_funnel' ? { type: ['SUBSIDY'] } : {}),
-                ...entity,
-              },
+              withEntity(
+                {
+                  status: [status],
+                  ...(metric === 'subsidy_funnel' ? { type: ['SUBSIDY'] } : {}),
+                },
+                entity,
+              ),
               dateFilter,
             ),
           };
@@ -597,7 +811,7 @@ export function attachAskDrillHrefs(
           if (rowCount(asRec) <= 0) return row;
           return {
             ...row,
-            href: buildZenithNlProjectsHref({ status: ['LOST'], ...entity }, dateFilter),
+            href: buildZenithNlProjectsHref(withEntity({ status: ['LOST'] }, entity), dateFilter),
           };
         }
 
@@ -607,7 +821,7 @@ export function attachAskDrillHrefs(
           if (!q) return cohortHref ? { ...row, href: cohortHref } : row;
           return {
             ...row,
-            href: buildZenithNlProjectsHref({ search: q, ...entity }, dateFilter),
+            href: buildZenithNlProjectsHref(withEntity({ search: q }, entity), dateFilter),
           };
         }
 

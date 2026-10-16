@@ -51,6 +51,12 @@ import {
   projectsDeepLinkClearPatch,
 } from '../utils/projectDeepLinkFilters'
 import {
+  askProjectsDrillFilterPatch,
+  askProjectsDrillHasAny,
+  emptyAskProjectsDrillParams,
+  parseAskProjectsDrillParams,
+} from '../utils/askProjectsDrillParams'
+import {
   buildProjectsPresetPatch,
   projectsPresetsForRole,
   type ProjectsPresetId,
@@ -126,7 +132,8 @@ function getInitialFiltersFromUrl(): {
   lifecycleSpecsComplete: boolean
   lifecycleSpecsIncomplete: boolean
   dataSenseNeedsReview: boolean
-    dataSenseRule: DataSenseRuleId | null
+  dataSenseRule: DataSenseRuleId | null
+  askDrill: ReturnType<typeof parseAskProjectsDrillParams>
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -158,6 +165,7 @@ function getInitialFiltersFromUrl(): {
     (p.get('lifecycleSpecsComplete') === 'true' || panelBrand !== '' || inverterBrand !== '')
   const dataSenseNeedsReview = p.get('dataSenseNeedsReview') === 'true'
   const dataSenseRule = parseDataSenseRule(p.get('dataSenseRule'))
+  const askDrill = parseAskProjectsDrillParams(p)
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -183,7 +191,8 @@ function getInitialFiltersFromUrl(): {
     p.get('lifecycleSpecsComplete') === 'true' ||
     p.get('lifecycleSpecsIncomplete') === 'true' ||
     dataSenseNeedsReview ||
-    dataSenseRule != null
+    dataSenseRule != null ||
+    askProjectsDrillHasAny(askDrill)
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -216,6 +225,7 @@ function getInitialFiltersFromUrl(): {
     lifecycleSpecsIncomplete,
     dataSenseNeedsReview: dataSenseNeedsReview || dataSenseRule != null,
     dataSenseRule,
+    askDrill,
   }
 }
 
@@ -641,6 +651,8 @@ const Projects = () => {
     lifecycleSpecsIncomplete: urlInit?.lifecycleSpecsIncomplete ?? false,
     dataSenseNeedsReview: urlInit?.dataSenseNeedsReview ?? false,
     dataSenseRule: urlInit?.dataSenseRule ?? null,
+    ...emptyAskProjectsDrillParams(),
+    ...(urlInit?.askDrill ? askProjectsDrillFilterPatch(urlInit.askDrill) : {}),
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -679,6 +691,7 @@ const Projects = () => {
     const lifecycleSpecsFromUrl = searchParams.get('lifecycleSpecsComplete') === 'true'
     const dataSenseNeedsReviewFromUrl = searchParams.get('dataSenseNeedsReview') === 'true'
     const dataSenseRuleFromUrl = parseDataSenseRule(searchParams.get('dataSenseRule'))
+    const askDrillFromUrl = parseAskProjectsDrillParams(searchParams)
     const lifecycleSpecsActiveFromUrl =
       !lifecycleSpecsIncompleteFromUrl &&
       (lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== '')
@@ -698,6 +711,7 @@ const Projects = () => {
     const hasZenithClosedParams =
       (zenithClosedFromUrl != null && zenithClosedFromUrl.trim() !== '') ||
       (zenithClosedToUrl != null && zenithClosedToUrl.trim() !== '')
+    const hasAskDrillParams = askProjectsDrillHasAny(askDrillFromUrl)
     const hasExtendedTileParams =
       validTypeFromUrl.length > 0 ||
       validCustomerTypeFromUrl.length > 0 ||
@@ -715,7 +729,8 @@ const Projects = () => {
       lifecycleSpecsIncompleteFromUrl ||
       dataSenseNeedsReviewFromUrl ||
       dataSenseRuleFromUrl != null ||
-      complianceGapFromUrl != null
+      complianceGapFromUrl != null ||
+      hasAskDrillParams
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -740,7 +755,7 @@ const Projects = () => {
         peBucket: peBucketValid,
         ...(validStatus.length > 0
           ? { status: validStatus }
-          : peBucketValid != null || complianceGapFromUrl != null
+          : peBucketValid != null || complianceGapFromUrl != null || hasAskDrillParams
             ? { status: [] as string[] }
             : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
@@ -776,6 +791,8 @@ const Projects = () => {
         lifecycleSpecsIncomplete: lifecycleSpecsIncompleteFromUrl,
         dataSenseNeedsReview: dataSenseNeedsReviewFromUrl || dataSenseRuleFromUrl != null,
         dataSenseRule: dataSenseRuleFromUrl,
+        ...emptyAskProjectsDrillParams(),
+        ...askProjectsDrillFilterPatch(askDrillFromUrl),
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -947,6 +964,7 @@ const Projects = () => {
       lifecycleSpecsIncomplete: false,
       dataSenseNeedsReview: false,
       dataSenseRule: null,
+      ...emptyAskProjectsDrillParams(),
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -1100,7 +1118,8 @@ const Projects = () => {
     searchParams.get('lifecycleSpecsIncomplete') === 'true' ||
     searchParams.get('dataSenseNeedsReview') === 'true' ||
     Boolean(parseDataSenseRule(searchParams.get('dataSenseRule'))) ||
-    Boolean(parseComplianceGap(searchParams.get('complianceGap')))
+    Boolean(parseComplianceGap(searchParams.get('complianceGap'))) ||
+    askProjectsDrillHasAny(parseAskProjectsDrillParams(searchParams))
 
   const listQueryInput = {
     filters,

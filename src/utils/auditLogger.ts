@@ -77,3 +77,41 @@ export function logSecurityAudit(payload: SecurityAuditPayload): void {
     });
   });
 }
+
+/** Product analytics for Zenith Ask — stored in SecurityAuditLog (entityType ZenithAsk). */
+export type ZenithAskAuditEvent =
+  | 'ask_submitted'
+  | 'ask_success'
+  | 'ask_action'
+  | 'ask_clarify'
+  | 'ask_error'
+  | 'ask_open_projects'
+  | 'ask_chip_click'
+  | 'ask_catalog_pick';
+
+export function logZenithAskEvent(payload: {
+  userId: string;
+  role: string;
+  event: ZenithAskAuditEvent | string;
+  summary?: Record<string, unknown> | null;
+  req?: Request;
+}): void {
+  const event = String(payload.event || '').slice(0, 64);
+  if (!event || !payload.userId) return;
+  let summaryStr: string | null = null;
+  if (payload.summary && typeof payload.summary === 'object') {
+    try {
+      summaryStr = JSON.stringify(payload.summary).slice(0, 4000);
+    } catch {
+      summaryStr = null;
+    }
+  }
+  logSecurityAudit({
+    userId: payload.userId,
+    role: payload.role,
+    actionType: `zenith_${event}`,
+    entityType: 'ZenithAsk',
+    summary: summaryStr,
+    req: payload.req,
+  });
+}

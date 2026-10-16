@@ -205,6 +205,27 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
 
   // —— Go to ——
   {
+    id: 'ask_zenith',
+    label: 'Ask Zenith…',
+    keywords: ['ask', 'analytics', 'nl', 'question', 'chart', 'insight', 'zenith ask'],
+    group: 'Go to',
+    roles: DASHBOARD,
+    href: '/zenith?askFocus=1',
+  },
+  {
+    id: 'ask_zenith_query',
+    label: 'Ask Zenith',
+    keywords: ['ask', 'analytics', 'question'],
+    group: 'Search',
+    roles: DASHBOARD,
+    href: (q) => {
+      const t = q.trim()
+      if (!t) return '/zenith?askFocus=1'
+      return `/zenith?ask=${encodeURIComponent(t)}&askRun=1`
+    },
+    dynamic: true,
+  },
+  {
     id: 'go_zenith',
     label: 'Go to Zenith',
     keywords: ['ask', 'analytics', 'dashboard'],
@@ -394,7 +415,9 @@ export function filterCommandPaletteItems(
           ? `Search customers for “${query.trim()}”`
           : item.id === 'search_projects'
             ? `Search projects for “${query.trim()}”`
-            : item.label,
+            : item.id === 'ask_zenith_query'
+              ? `Ask Zenith: “${query.trim()}”`
+              : item.label,
     }))
 
   return [...staticHits, ...dynamic]

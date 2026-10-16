@@ -126,6 +126,20 @@ export type BuildProjectFilterChipsInput = {
     lifecycleSpecsIncomplete: boolean
     dataSenseNeedsReview: boolean
     dataSenseRule: DataSenseRuleId | null
+    panelType?: string
+    systemType?: string
+    roofType?: string
+    statusIndicator?: string
+    projectStage?: string
+    capacityMin?: number | null
+    capacityMax?: number | null
+    hubPlantLinked?: boolean | null
+    salespersonName?: string
+    opsName?: string
+    city?: string
+    installationStatus?: string
+    paymentMode?: string
+    notAvailingLoan?: boolean
     search?: string
     sortBy?: string
     sortOrder?: string
@@ -429,6 +443,100 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'lifecycle-complete',
       label: 'Lifecycle: both brands set',
       onRemove: () => onPatchFilters({ lifecycleSpecsComplete: false }),
+    })
+  }
+
+  if (filters.panelType) {
+    chips.push({
+      id: 'ask-panel-type',
+      label: `Panel type: ${filters.panelType}`,
+      onRemove: () => onPatchFilters({ panelType: '' }),
+    })
+  }
+  if (filters.systemType) {
+    chips.push({
+      id: 'ask-system-type',
+      label: `System: ${filters.systemType.replace(/_/g, ' ')}`,
+      onRemove: () => onPatchFilters({ systemType: '' }),
+    })
+  }
+  if (filters.roofType) {
+    chips.push({
+      id: 'ask-roof-type',
+      label: `Roof: ${filters.roofType}`,
+      onRemove: () => onPatchFilters({ roofType: '' }),
+    })
+  }
+  if (filters.statusIndicator) {
+    chips.push({
+      id: 'ask-status-indicator',
+      label: `SLA: ${filters.statusIndicator}`,
+      onRemove: () => onPatchFilters({ statusIndicator: '' }),
+    })
+  }
+  if (filters.projectStage) {
+    chips.push({
+      id: 'ask-project-stage',
+      label: `Stage: ${filters.projectStage}`,
+      onRemove: () => onPatchFilters({ projectStage: '' }),
+    })
+  }
+  if (filters.capacityMin != null || filters.capacityMax != null) {
+    const lo = filters.capacityMin != null ? `${filters.capacityMin}` : '…'
+    const hi = filters.capacityMax != null ? `${filters.capacityMax}` : '…'
+    chips.push({
+      id: 'ask-capacity',
+      label: `Capacity: ${lo}–${hi} kW`,
+      onRemove: () => onPatchFilters({ capacityMin: null, capacityMax: null }),
+    })
+  }
+  if (filters.hubPlantLinked != null) {
+    chips.push({
+      id: 'ask-hub-plant',
+      label: filters.hubPlantLinked ? 'Hub plant linked' : 'Hub plant not linked',
+      onRemove: () => onPatchFilters({ hubPlantLinked: null }),
+    })
+  }
+  if (filters.salespersonName) {
+    chips.push({
+      id: 'ask-salesperson-name',
+      label: `Sales: ${filters.salespersonName}`,
+      onRemove: () => onPatchFilters({ salespersonName: '' }),
+    })
+  }
+  if (filters.opsName) {
+    chips.push({
+      id: 'ask-ops-name',
+      label: `Ops: ${filters.opsName}`,
+      onRemove: () => onPatchFilters({ opsName: '' }),
+    })
+  }
+  if (filters.city) {
+    chips.push({
+      id: 'ask-city',
+      label: `City: ${filters.city}`,
+      onRemove: () => onPatchFilters({ city: '' }),
+    })
+  }
+  if (filters.installationStatus) {
+    chips.push({
+      id: 'ask-installation-status',
+      label: `Install: ${filters.installationStatus.replace(/_/g, ' ')}`,
+      onRemove: () => onPatchFilters({ installationStatus: '' }),
+    })
+  }
+  if (filters.paymentMode) {
+    chips.push({
+      id: 'ask-payment-mode',
+      label: `Pay mode: ${filters.paymentMode}`,
+      onRemove: () => onPatchFilters({ paymentMode: '' }),
+    })
+  }
+  if (filters.notAvailingLoan) {
+    chips.push({
+      id: 'ask-not-loan',
+      label: 'Not on loan',
+      onRemove: () => onPatchFilters({ notAvailingLoan: false }),
     })
   }
 

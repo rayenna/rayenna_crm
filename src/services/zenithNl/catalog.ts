@@ -195,12 +195,23 @@ export type ZenithNlQueryActionSuccess = {
 
 export type ZenithNlQuerySuccess = ZenithNlQueryMetricSuccess | ZenithNlQueryActionSuccess;
 
+/** Role-filtered metric browser for clarify UX. */
+export type ZenithNlCatalogHint = {
+  metric: ZenithNlMetric;
+  title: string;
+  description: string;
+  /** Short question to run when the user picks this catalog row. */
+  ask: string;
+};
+
 export type ZenithNlQueryClarify = {
   ok: false;
   clarify: true;
   question: string;
   message: string;
   suggestedQuestions: string[];
+  /** Searchable catalog of metrics allowed for this role. */
+  catalogHints?: ZenithNlCatalogHint[];
   effectiveDateFilter?: ZenithNlEffectiveDateFilter;
 };
 
@@ -611,6 +622,37 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
 
 export function suggestedQuestionsForRole(role: UserRole): string[] {
   return EXAMPLE_QUESTIONS_BY_ROLE[role] ?? EXAMPLE_QUESTIONS_BY_ROLE.MANAGEMENT;
+}
+
+function humanizeMetric(metric: string): string {
+  return metric
+    .split('_')
+    .map((w) => (w.length ? w[0]!.toUpperCase() + w.slice(1) : w))
+    .join(' ');
+}
+
+/** Browseable catalog for clarify — one row per metric allowed for the role. */
+export function catalogHintsForRole(role: UserRole): ZenithNlCatalogHint[] {
+  const examples = suggestedQuestionsForRole(role);
+  return METRIC_CATALOG.filter((m) => m.metric !== 'clarify' && m.roles.includes(role)).map(
+    (m) => {
+      const title = humanizeMetric(m.metric);
+      const titleLower = title.toLowerCase();
+      const matchedExample = examples.find((q) => {
+        const ql = q.toLowerCase();
+        return (
+          ql.includes(titleLower) ||
+          titleLower.split(' ').every((part) => part.length < 3 || ql.includes(part))
+        );
+      });
+      return {
+        metric: m.metric,
+        title,
+        description: m.description,
+        ask: matchedExample || title,
+      };
+    },
+  );
 }
 
 export function catalogPromptBlock(role: UserRole): string {

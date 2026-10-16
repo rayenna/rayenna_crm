@@ -27,6 +27,9 @@ import { loadDataSenseGaps } from '../utils/dataSense';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 import { runZenithNlQuery } from '../services/zenithNlQueryService';
 import { resolveAskDateFilter } from '../services/zenithNl/relativeDates';
+import { parseZenithNlPriorFilters } from '../services/zenithNl/priorFilters';
+import { listUserAskHistory, persistUserAskHistory } from '../services/zenithNl/askHistory';
+import { logZenithAskEvent } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -3278,20 +3281,7 @@ router.post(
           ? {
               question: priorRaw.question.slice(0, 500),
               metric: priorRaw.metric.slice(0, 80),
-              filters:
-                priorRaw.filters && typeof priorRaw.filters === 'object'
-                  ? (priorRaw.filters as {
-                      projectStatus?: string;
-                      paymentStatus?: string;
-                      peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
-                      leadSource?: string;
-                      search?: string;
-                      panelBrand?: string;
-                      inverterBrand?: string;
-                      financingBank?: string;
-                      availingLoan?: boolean;
-                    })
-                  : undefined,
+              filters: parseZenithNlPriorFilters(priorRaw.filters),
             }
           : null;
 
@@ -3327,11 +3317,23 @@ router.post(
         dateFilter.selectedQuarters,
       );
 
+      const askStarted = Date.now();
       console.info('[zenith-nl-query]', {
         event: 'ask_submitted',
         role,
         userId,
         relativeDate: relative?.phrase || null,
+      });
+      logZenithAskEvent({
+        userId,
+        role,
+        event: 'ask_submitted',
+        summary: {
+          relativeDate: relative?.phrase || null,
+          hasPrior: Boolean(prior),
+          qLen: question.trim().length,
+        },
+        req,
       });
 
       const result = await runZenithNlQuery({
@@ -3344,9 +3346,65 @@ router.post(
         prior,
       });
 
+      const ms = Date.now() - askStarted;
+      if (!result.ok && result.clarify) {
+        logZenithAskEvent({
+          userId,
+          role,
+          event: 'ask_clarify',
+          summary: { ms, relativeDate: relative?.phrase || null },
+          req,
+        });
+      } else if (result.ok && result.kind === 'metric') {
+        logZenithAskEvent({
+          userId,
+          role,
+          event: 'ask_success',
+          summary: {
+            ms,
+            metric: result.intent.metric,
+            chipMatch: Boolean(result.chipMatch),
+            relativeDate: relative?.phrase || null,
+          },
+          req,
+        });
+        // Cross-device Ask history (best-effort; never fail the answer).
+        try {
+          await persistUserAskHistory({
+            userId,
+            question: result.question,
+            insight: result.insight,
+            metric: result.intent.metric,
+          });
+        } catch (histErr) {
+          console.warn('[zenith-ask-history] persist failed', histErr);
+        }
+      } else if (result.ok && result.kind === 'action') {
+        logZenithAskEvent({
+          userId,
+          role,
+          event: 'ask_action',
+          summary: {
+            ms,
+            action: result.action,
+            chipMatch: Boolean(result.chipMatch),
+          },
+          req,
+        });
+      }
+
       return res.json(result);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
+      if (req.user?.id && req.user?.role) {
+        logZenithAskEvent({
+          userId: req.user.id,
+          role: req.user.role,
+          event: 'ask_error',
+          summary: { message: msg.slice(0, 200) },
+          req,
+        });
+      }
       if (msg === 'ANTHROPIC_API_KEY_MISSING') {
         return res.status(503).json({
           error:
@@ -3359,6 +3417,137 @@ router.post(
       }
       console.error('[zenith-nl-query]', error);
       return res.status(500).json({ error: 'Failed to run Zenith Ask' });
+    }
+  },
+);
+
+/**
+ * Cross-device Ask history for the signed-in user (last N successful metric asks).
+ */
+router.get(
+  '/zenith-ask-history',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const items = await listUserAskHistory(userId);
+      return res.json({ items });
+    } catch (error) {
+      console.error('[zenith-ask-history]', error);
+      return res.status(500).json({ error: 'Failed to load Ask history' });
+    }
+  },
+);
+
+const ZENITH_ASK_CLIENT_EVENTS = new Set([
+  'ask_chip_click',
+  'ask_open_projects',
+  'ask_catalog_pick',
+]);
+
+/**
+ * Client-side Ask product events (chip click, drill-down, catalog pick).
+ * Server already logs submit / success / clarify / error from /zenith-nl-query.
+ */
+router.post(
+  '/zenith-ask-event',
+  authenticate,
+  rateLimit(60, 10 * 60 * 1000),
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const event = typeof req.body?.event === 'string' ? req.body.event.trim() : '';
+      if (!ZENITH_ASK_CLIENT_EVENTS.has(event)) {
+        return res.status(400).json({ error: 'Unsupported Ask event' });
+      }
+      const props =
+        req.body?.props && typeof req.body.props === 'object' && !Array.isArray(req.body.props)
+          ? (req.body.props as Record<string, unknown>)
+          : {};
+      logZenithAskEvent({
+        userId,
+        role,
+        event,
+        summary: {
+          metric: typeof props.metric === 'string' ? props.metric.slice(0, 80) : undefined,
+          source: typeof props.source === 'string' ? props.source.slice(0, 40) : undefined,
+          chipMatch: typeof props.chipMatch === 'boolean' ? props.chipMatch : undefined,
+          href: typeof props.href === 'string' ? props.href.slice(0, 200) : undefined,
+        },
+        req,
+      });
+      return res.status(204).send();
+    } catch {
+      return res.status(500).json({ error: 'Failed to record event' });
+    }
+  },
+);
+
+/**
+ * Admin/Management: recent Ask adoption counts from SecurityAuditLog.
+ */
+router.get(
+  '/zenith-ask-stats',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const daysRaw = Number(req.query.days);
+      const days = Number.isFinite(daysRaw) ? Math.min(90, Math.max(1, Math.floor(daysRaw))) : 7;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const rows = await prisma.securityAuditLog.groupBy({
+        by: ['actionType', 'role'],
+        where: {
+          entityType: 'ZenithAsk',
+          createdAt: { gte: since },
+          actionType: { startsWith: 'zenith_ask_' },
+        },
+        _count: { id: true },
+      });
+      const byEvent: Record<string, number> = {};
+      const byRole: Record<string, number> = {};
+      for (const r of rows) {
+        const event = r.actionType.replace(/^zenith_/, '');
+        byEvent[event] = (byEvent[event] || 0) + r._count.id;
+        byRole[r.role] = (byRole[r.role] || 0) + r._count.id;
+      }
+      const submitted = byEvent.ask_submitted || 0;
+      const clarify = byEvent.ask_clarify || 0;
+      return res.json({
+        days,
+        since: since.toISOString(),
+        byEvent,
+        byRole,
+        clarifyRate: submitted > 0 ? Math.round((clarify / submitted) * 1000) / 10 : null,
+      });
+    } catch (error) {
+      console.error('[zenith-ask-stats]', error);
+      return res.status(500).json({ error: 'Failed to load Ask stats' });
     }
   },
 );

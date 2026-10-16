@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import prisma from '../prisma';
 import {
+  catalogHintsForRole,
   catalogPromptBlock,
   followUpsForMetric,
   isZenithNlMetric,
@@ -578,8 +579,9 @@ function clarifyResult(question: string, role: UserRole, message?: string): Zeni
     question,
     message:
       message ||
-      'I can answer analytics questions from the Zenith catalog (revenue, pipeline, payments, PE buckets, and similar). Try one of the examples below.',
+      'I can answer analytics questions from the Zenith catalog (revenue, pipeline, payments, PE buckets, and similar). Try one of the examples below, or pick a metric from the catalog.',
     suggestedQuestions: suggestedQuestionsForRole(role),
+    catalogHints: catalogHintsForRole(role),
   };
 }
 

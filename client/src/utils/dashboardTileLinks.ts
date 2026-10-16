@@ -48,6 +48,21 @@ export function buildProjectsUrl(
     dataSenseRule?: DataSenseRuleId
     /** Free-text search (Projects list search box); used e.g. dashboard profitability word cloud drill. */
     search?: string
+    projectServiceType?: string[]
+    panelType?: string
+    systemType?: string
+    roofType?: string
+    statusIndicator?: string
+    projectStage?: string
+    capacityMin?: number
+    capacityMax?: number
+    hubPlantLinked?: boolean
+    salespersonName?: string
+    opsName?: string
+    city?: string
+    installationStatus?: string
+    paymentMode?: string
+    notAvailingLoan?: boolean
   },
   dashboardFilters: { selectedFYs: string[]; selectedQuarters: string[]; selectedMonths: string[] }
 ): string {
@@ -55,12 +70,14 @@ export function buildProjectsUrl(
   params.status?.forEach((v) => search.append('status', v))
   params.paymentStatus?.forEach((v) => search.append('paymentStatus', v))
   if (params.availingLoan) search.append('availingLoan', 'true')
+  if (params.notAvailingLoan) search.append('notAvailingLoan', 'true')
   if (params.pendingSubsidy) search.append('pendingSubsidy', 'true')
   if (params.complianceGap) search.append('complianceGap', params.complianceGap)
   if (params.peBucket) search.append('peBucket', params.peBucket)
   params.leadSource?.forEach((v) => search.append('leadSource', v))
   params.type?.forEach((v) => search.append('type', v))
   params.customerType?.forEach((v) => search.append('customerType', v))
+  params.projectServiceType?.forEach((v) => search.append('projectServiceType', v))
   params.salespersonId?.forEach((v) => search.append('salespersonId', v))
   params.financingBank?.forEach((v) => search.append('financingBank', v))
   if (params.zenithClosedFrom) search.append('zenithClosedFrom', params.zenithClosedFrom)
@@ -79,6 +96,30 @@ export function buildProjectsUrl(
   if (params.lifecycleSpecsComplete) search.append('lifecycleSpecsComplete', 'true')
   if (params.dataSenseNeedsReview) search.append('dataSenseNeedsReview', 'true')
   if (params.dataSenseRule) search.append('dataSenseRule', params.dataSenseRule)
+  if (params.panelType?.trim()) search.append('panelType', params.panelType.trim())
+  if (params.systemType?.trim()) search.append('systemType', params.systemType.trim())
+  if (params.roofType?.trim()) search.append('roofType', params.roofType.trim())
+  if (params.statusIndicator?.trim()) {
+    search.append('statusIndicator', params.statusIndicator.trim().toUpperCase())
+  }
+  if (params.projectStage?.trim()) search.append('projectStage', params.projectStage.trim())
+  if (params.capacityMin != null && Number.isFinite(params.capacityMin)) {
+    search.append('capacityMin', String(params.capacityMin))
+  }
+  if (params.capacityMax != null && Number.isFinite(params.capacityMax)) {
+    search.append('capacityMax', String(params.capacityMax))
+  }
+  if (params.hubPlantLinked === true) search.append('hubPlantLinked', 'true')
+  if (params.hubPlantLinked === false) search.append('hubPlantLinked', 'false')
+  if (params.salespersonName?.trim()) {
+    search.append('salespersonName', params.salespersonName.trim())
+  }
+  if (params.opsName?.trim()) search.append('opsName', params.opsName.trim())
+  if (params.city?.trim()) search.append('city', params.city.trim())
+  if (params.installationStatus?.trim()) {
+    search.append('installationStatus', params.installationStatus.trim())
+  }
+  if (params.paymentMode?.trim()) search.append('paymentMode', params.paymentMode.trim())
   const q = params.search != null ? String(params.search).trim() : ''
   if (q !== '') search.append('search', q)
   dashboardFilters.selectedFYs.forEach((fy) => search.append('fy', fy))

@@ -13,6 +13,19 @@ export const PROJECTS_DEEP_LINK_CHIP_IDS = new Set([
   'sales-unassigned',
   'lead-null',
   'compliance-gap',
+  'ask-panel-type',
+  'ask-system-type',
+  'ask-roof-type',
+  'ask-status-indicator',
+  'ask-project-stage',
+  'ask-capacity',
+  'ask-hub-plant',
+  'ask-salesperson-name',
+  'ask-ops-name',
+  'ask-city',
+  'ask-installation-status',
+  'ask-payment-mode',
+  'ask-not-loan',
 ])
 
 export function isProjectsDeepLinkChipId(id: string): boolean {
@@ -35,6 +48,20 @@ export type ProjectsDeepLinkFilterClearPatch = {
   salespersonUnassigned: false
   leadSourceIsNull: false
   complianceGap: null
+  panelType: ''
+  systemType: ''
+  roofType: ''
+  statusIndicator: ''
+  projectStage: ''
+  capacityMin: null
+  capacityMax: null
+  hubPlantLinked: null
+  salespersonName: ''
+  opsName: ''
+  city: ''
+  installationStatus: ''
+  paymentMode: ''
+  notAvailingLoan: false
 }
 
 export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
@@ -52,6 +79,20 @@ export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
     salespersonUnassigned: false,
     leadSourceIsNull: false,
     complianceGap: null,
+    panelType: '',
+    systemType: '',
+    roofType: '',
+    statusIndicator: '',
+    projectStage: '',
+    capacityMin: null,
+    capacityMax: null,
+    hubPlantLinked: null,
+    salespersonName: '',
+    opsName: '',
+    city: '',
+    installationStatus: '',
+    paymentMode: '',
+    notAvailingLoan: false,
   }
 }
 
@@ -69,6 +110,20 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
   salespersonUnassigned: boolean
   leadSourceIsNull: boolean
   complianceGap?: unknown
+  panelType?: string
+  systemType?: string
+  roofType?: string
+  statusIndicator?: string
+  projectStage?: string
+  capacityMin?: number | null
+  capacityMax?: number | null
+  hubPlantLinked?: boolean | null
+  salespersonName?: string
+  opsName?: string
+  city?: string
+  installationStatus?: string
+  paymentMode?: string
+  notAvailingLoan?: boolean
 }): boolean {
   return Boolean(
     filters.peBucket ||
@@ -83,6 +138,20 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
       filters.lifecycleSpecsIncomplete ||
       filters.salespersonUnassigned ||
       filters.leadSourceIsNull ||
-      filters.complianceGap,
+      filters.complianceGap ||
+      filters.panelType ||
+      filters.systemType ||
+      filters.roofType ||
+      filters.statusIndicator ||
+      filters.projectStage ||
+      filters.capacityMin != null ||
+      filters.capacityMax != null ||
+      filters.hubPlantLinked != null ||
+      filters.salespersonName ||
+      filters.opsName ||
+      filters.city ||
+      filters.installationStatus ||
+      filters.paymentMode ||
+      filters.notAvailingLoan,
   )
 }

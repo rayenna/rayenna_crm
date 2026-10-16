@@ -2,10 +2,12 @@ import { type FormEvent } from 'react'
 import { ArrowUp, Mic, MicOff, Sparkles, X } from 'lucide-react'
 import { useZenithAskSpeech } from '../../hooks/useZenithAskSpeech'
 
+type AskSubmitSource = 'typed' | 'dictate'
+
 type Props = {
   value: string
   onChange: (v: string) => void
-  onSubmit: (question: string) => void
+  onSubmit: (question: string, source?: AskSubmitSource) => void
   loading?: boolean
   isOnline?: boolean
 }
@@ -26,16 +28,22 @@ export default function ZenithAskComposer({
     onChange,
   })
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const submitCurrent = () => {
     askSpeech.stop()
     const q = value.trim()
     if (!q || loading || !isOnline) return
-    onSubmit(q)
+    const fromDictate = askSpeech.consumeDictated()
+    onSubmit(q, fromDictate ? 'dictate' : 'typed')
+  }
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    submitCurrent()
   }
 
   const handleClear = () => {
     askSpeech.stop()
+    askSpeech.markManualEdit()
     onChange('')
   }
 
@@ -68,7 +76,9 @@ export default function ZenithAskComposer({
                 <span>Clear</span>
               </button>
             ) : (
-              <span className="zenith-ask-composer__hint">Type or speak</span>
+              <span className="zenith-ask-composer__hint">
+                {isOnline ? 'Type, speak, or press /' : 'Needs connection'}
+              </span>
             )}
           </div>
         </div>
@@ -78,12 +88,15 @@ export default function ZenithAskComposer({
         </label>
         <textarea
           id="zenith-ask-input"
-          rows={2}
+          rows={1}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            askSpeech.markManualEdit()
+            onChange(e.target.value)
+          }}
           placeholder={
             !isOnline
-              ? 'Ask unavailable offline'
+              ? 'Ask needs a live connection — reconnect to query CRM data'
               : askSpeech.listening
                 ? 'Listening… speak your question'
                 : 'Ask anything about pipeline, revenue, payments…'
@@ -95,10 +108,7 @@ export default function ZenithAskComposer({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
-              askSpeech.stop()
-              const q = value.trim()
-              if (!q || loading || !isOnline) return
-              onSubmit(q)
+              submitCurrent()
             }
           }}
         />
@@ -139,6 +149,12 @@ export default function ZenithAskComposer({
           </button>
         </div>
 
+        {!isOnline ? (
+          <p className="zenith-ask-composer__status is-error" role="status">
+            Ask Zenith needs the CRM API online. Saved dashboard charts may still show; reconnect
+            (or wait for Live in the command bar) to run questions and example chips.
+          </p>
+        ) : null}
         {askSpeech.listening ? (
           <p className="zenith-ask-composer__status is-live" aria-live="polite">
             <span className="zenith-ask-composer__pulse" aria-hidden />

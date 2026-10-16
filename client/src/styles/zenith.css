@@ -1291,6 +1291,16 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
     transform: scale(0.96);
   }
 
+  .zenith-mobile-sticky-btn--ask {
+    color: var(--text-inverse);
+    background: linear-gradient(
+      135deg,
+      var(--accent-gold) 0%,
+      color-mix(in srgb, var(--accent-gold) 72%, #b8860b) 100%
+    );
+    border-color: transparent;
+  }
+
   .zenith-mobile-sticky-btn--briefing {
     color: var(--accent-gold);
     border-color: var(--accent-gold-border);
@@ -1587,6 +1597,22 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 .zenith-root .zenith-ask-page-block {
   position: relative;
   z-index: 0;
+}
+
+/* Mobile Ask tab: give the surface room above the bottom nav */
+@media (max-width: 1023px) {
+  .zenith-root .zenith-ask-page-block--mobile-surface {
+    min-height: calc(100dvh - 12rem);
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .zenith-root .zenith-ask-page-block--mobile-surface .zenith-ask-suggestions__sub {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--text-muted);
+  }
 }
 
 .zenith-root .zenith-ask-page-block__row {
@@ -2017,6 +2043,248 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   gap: 0.75rem;
 }
 
+/* Ask answer charts — donut + legend / polished bars */
+.zenith-root .zenith-ask-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.zenith-root .zenith-ask-chart__pie-wrap {
+  position: relative;
+  min-height: 220px;
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(
+      ellipse 70% 60% at 50% 45%,
+      color-mix(in srgb, var(--accent-gold) 8%, transparent) 0%,
+      transparent 70%
+    );
+}
+
+.zenith-root .zenith-ask-chart__pie-center {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -52%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  text-align: center;
+  max-width: 42%;
+}
+
+.zenith-root .zenith-ask-chart__pie-center-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.zenith-root .zenith-ask-chart__pie-center-value {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.zenith-root .zenith-ask-chart__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.zenith-root .zenith-ask-chart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--border-default) 85%, transparent);
+  background: color-mix(in srgb, var(--bg-input) 70%, transparent);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.zenith-root .zenith-ask-chart__legend-item.is-clickable {
+  cursor: pointer;
+}
+
+.zenith-root .zenith-ask-chart__legend-item.is-clickable:hover {
+  background: color-mix(in srgb, var(--accent-gold-muted) 45%, var(--bg-input));
+  border-color: color-mix(in srgb, var(--accent-gold) 35%, var(--border-default));
+}
+
+.zenith-root .zenith-ask-chart__legend-item:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.zenith-root .zenith-ask-chart__swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-default) 60%, transparent);
+}
+
+.zenith-root .zenith-ask-chart__legend-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.zenith-root .zenith-ask-chart__legend-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  flex-shrink: 0;
+}
+
+.zenith-root .zenith-ask-chart__legend-value {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-gold);
+}
+
+.zenith-root .zenith-ask-chart__legend-pct {
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+@media (min-width: 640px) {
+  .zenith-root .zenith-ask-chart__legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+}
+
+.zenith-root .zenith-ask-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.zenith-root .zenith-ask-catalog__label {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.zenith-root .zenith-ask-catalog__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.zenith-root .zenith-ask-catalog__search-icon {
+  position: absolute;
+  left: 0.65rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.zenith-root .zenith-ask-catalog__input {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem 0.4rem 2rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--border-default) 90%, transparent);
+  background: color-mix(in srgb, var(--bg-input) 85%, transparent);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.zenith-root .zenith-ask-catalog__input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-gold) 55%, var(--border-default));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-gold) 18%, transparent);
+}
+
+.zenith-root .zenith-ask-catalog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.zenith-root .zenith-ask-catalog__empty {
+  padding: 0.65rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.zenith-root .zenith-ask-catalog__row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--border-default) 85%, transparent);
+  background: color-mix(in srgb, var(--bg-input) 65%, transparent);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.zenith-root .zenith-ask-catalog__row:hover {
+  background: color-mix(in srgb, var(--accent-gold-muted) 40%, var(--bg-input));
+  border-color: color-mix(in srgb, var(--accent-gold) 35%, var(--border-default));
+}
+
+.zenith-root .zenith-ask-catalog__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.zenith-root .zenith-ask-catalog__desc {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
 .zenith-root .zenith-ask-result__insight {
   margin: 0;
   font-size: 0.95rem;
@@ -2046,35 +2314,54 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 
 .zenith-root .zenith-ask-history {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.zenith-root .zenith-ask-history__label {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .zenith-root .zenith-ask-history__list {
   display: flex;
-  gap: 0.45rem;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.15rem;
-  scrollbar-width: none;
+  padding: 0.05rem 0.1rem 0.15rem;
+  scrollbar-width: thin;
 }
 
 .zenith-root .zenith-ask-history__list::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+  display: block;
+}
+
+.zenith-root .zenith-ask-history__list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent-gold) 35%, transparent);
+  border-radius: 999px;
 }
 
 .zenith-root .zenith-ask-history__item {
   flex: 0 0 auto;
   max-width: 14rem;
-  text-align: left;
-  min-height: 40px;
-  padding: 0.45rem 0.7rem;
+  text-align: center;
+  min-height: 1.9rem;
+  padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border-default) 90%, var(--accent-gold));
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 28%, var(--border-default));
   background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg-card));
   color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.2;
   touch-action: manipulation;
   cursor: pointer;
 }
@@ -2086,20 +2373,62 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   white-space: nowrap;
 }
 
-@media (min-width: 1024px) {
-  .zenith-root .zenith-ask-history__list {
-    flex-wrap: wrap;
-    overflow: visible;
-  }
+/* History-only strip: same density as suggestion chips */
+.zenith-root .zenith-ask-result--history-only {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
 
-  .zenith-root .zenith-ask-history__item {
-    max-width: none;
-    border-radius: 0.75rem;
-  }
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__header {
+  display: contents;
+}
 
-  .zenith-root .zenith-ask-history__q {
-    white-space: normal;
-  }
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__header > .min-w-0 {
+  display: contents;
+}
+
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__eyebrow {
+  flex: 0 0 auto;
+  order: 1;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__close {
+  order: 3;
+  flex: 0 0 auto;
+  min-height: 1.75rem;
+  min-width: 1.75rem;
+  margin-left: 0;
+  border-color: color-mix(in srgb, var(--accent-gold) 25%, var(--border-default));
+  background: transparent;
+}
+
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__close svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.zenith-root .zenith-ask-result--history-only .zenith-ask-result__body {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.zenith-root .zenith-ask-result--history-only .zenith-ask-history {
+  width: 100%;
 }
 
 .zenith-root .zenith-ask-result__cta {
@@ -2146,110 +2475,257 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 }
 
 @media (min-width: 1024px) {
-  /* Laptop: Ask + suggestions share one row height; text area grows, buttons stay snug */
+  /*
+   * Desktop: compact centered Ask bar (~half width, ~two lines)
+   * + horizontal scrollable suggestion chips underneath.
+   */
+  .zenith-root .zenith-ask-page-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .zenith-root .zenith-ask-page-block__row,
   .zenith-root .zenith-ask-page-block--with-suggestions .zenith-ask-page-block__row {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(15rem, 0.72fr);
-    gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
     align-items: stretch;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 50%;
   }
 
   .zenith-root .zenith-ask-page-block__composer,
   .zenith-root .zenith-ask-composer {
-    height: 100%;
+    height: auto;
     min-height: 0;
+    width: 100%;
   }
 
   .zenith-root .zenith-ask-composer__shell {
     display: flex;
-    flex-direction: column;
-    height: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.45rem;
+    height: auto;
     min-height: 0;
-    padding: 0.5rem 0.55rem 0.5rem;
+    padding: 0.35rem 0.4rem 0.35rem 0.45rem;
+    border-radius: 1.75rem;
+    border-width: 1px;
+    animation: none;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-gold) 14%, transparent),
+      0 4px 14px color-mix(in srgb, var(--accent-gold) 10%, transparent);
   }
 
   .zenith-root .zenith-ask-composer__header {
-    flex-shrink: 0;
-    margin-bottom: 0.35rem;
+    flex: 0 0 auto;
+    width: auto;
+    margin-bottom: 0;
+    gap: 0.3rem;
+    justify-content: flex-start;
+  }
+
+  .zenith-root .zenith-ask-composer__badge {
+    padding: 0.18rem 0.5rem;
+    font-size: 0.62rem;
+    box-shadow: none;
+  }
+
+  .zenith-root .zenith-ask-composer__badge svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .zenith-root .zenith-ask-composer__hint {
+    display: none;
+  }
+
+  .zenith-root .zenith-ask-composer__header-meta {
+    min-height: 0;
+  }
+
+  .zenith-root .zenith-ask-composer__clear {
+    padding: 0.2rem;
+    font-size: 0.6rem;
+  }
+
+  .zenith-root .zenith-ask-composer__clear span {
+    display: none;
   }
 
   .zenith-root .zenith-ask-composer__input {
     flex: 1 1 auto;
-    min-height: 5.5rem;
-    height: auto;
-    padding: 0.7rem 0.8rem;
+    width: auto;
+    min-width: 0;
+    min-height: 2.25rem;
+    max-height: 2.75rem;
+    height: 2.45rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.84rem;
+    line-height: 1.3;
+    border-radius: 999px;
+    border-color: color-mix(in srgb, var(--accent-gold) 22%, var(--border-default));
+    resize: none;
+    overflow-y: auto;
+  }
+
+  .zenith-root .zenith-ask-composer__input::placeholder {
+    font-size: 0.8rem;
   }
 
   .zenith-root .zenith-ask-composer__actions {
-    flex-shrink: 0;
-    margin-top: 0.4rem;
-    gap: 0.45rem;
+    display: flex;
+    flex: 0 0 auto;
+    grid-template-columns: none;
+    margin-top: 0;
+    gap: 0.3rem;
+  }
+
+  .zenith-root .zenith-ask-composer__mic,
+  .zenith-root .zenith-ask-composer__submit {
+    min-height: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    gap: 0.3rem;
+  }
+
+  .zenith-root .zenith-ask-composer__mic-label {
+    display: none;
   }
 
   .zenith-root .zenith-ask-composer__status {
-    flex-shrink: 0;
+    flex: 1 0 100%;
+    order: 10;
+    margin-top: 0;
+    font-size: 0.65rem;
+    justify-content: flex-start;
+    padding: 0 0.35rem 0.1rem;
   }
 
   .zenith-root .zenith-ask-suggestions {
     display: flex;
-    flex-direction: column;
-    height: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+    height: auto;
     min-height: 0;
-    border-radius: 1.1rem;
-    padding: 0.7rem 0.75rem;
-    border: 1.5px solid color-mix(in srgb, var(--accent-gold) 32%, var(--border-default));
-    background:
-      linear-gradient(
-        165deg,
-        color-mix(in srgb, var(--accent-gold) 14%, var(--bg-card)) 0%,
-        var(--bg-card) 55%
-      );
-    box-shadow: var(--shadow-card);
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    padding: 0 0.15rem;
+    background: transparent;
+    box-shadow: none;
   }
 
   .zenith-root .zenith-ask-suggestions__head {
-    display: block;
-    margin-bottom: 0.65rem;
-    padding-left: 0;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .zenith-root .zenith-ask-suggestions__head .zenith-ask-examples__label {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
   }
 
   .zenith-root .zenith-ask-suggestions__sub {
-    display: block;
-    margin-top: 0.25rem;
-    font-size: 0.72rem;
-    line-height: 1.35;
-    color: var(--text-muted);
+    display: none;
   }
 
   .zenith-root .zenith-ask-examples--panel {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex-wrap: nowrap;
-    align-items: stretch;
-    gap: 0.5rem;
-    overflow: visible;
-    padding: 0;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.4rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding: 0.1rem 0.1rem 0.2rem;
+    mask-image: linear-gradient(90deg, #000 85%, transparent 100%);
+  }
+
+  .zenith-root .zenith-ask-examples--panel::-webkit-scrollbar {
+    height: 3px;
+    display: block;
+  }
+
+  .zenith-root .zenith-ask-examples--panel::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent-gold) 35%, transparent);
+    border-radius: 999px;
   }
 
   .zenith-root .zenith-ask-examples--panel .zenith-ask-examples__chip {
     flex: 0 0 auto;
-    width: 100%;
-    max-width: none;
-    white-space: normal;
-    border-radius: 0.85rem;
-    text-align: left;
-    line-height: 1.35;
+    width: auto;
+    max-width: 14rem;
+    min-height: 1.9rem;
+    padding: 0.3rem 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    text-align: center;
   }
 
   .zenith-root .zenith-ask-examples:not(.zenith-ask-examples--panel) {
-    flex-wrap: wrap;
-    overflow: visible;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .zenith-root .zenith-ask-examples:not(.zenith-ask-examples--panel) .zenith-ask-examples__chip {
-    white-space: normal;
-    border-radius: 0.85rem;
-    max-width: none;
+    white-space: nowrap;
+    border-radius: 999px;
+    max-width: 14rem;
+  }
+
+  /* Answers can be a bit wider; history-only strip matches the Ask bar */
+  .zenith-root .zenith-ask-page-block > .zenith-ask-result,
+  .zenith-root .zenith-ask-page-block > .zenith-ask-more {
+    width: 100%;
+    max-width: min(48rem, 72%);
+    align-self: center;
+  }
+
+  .zenith-root .zenith-ask-page-block > .zenith-ask-result--history-only {
+    max-width: 50%;
+  }
+
+  .zenith-root .zenith-ask-result--history-only .zenith-ask-history {
+    width: 100%;
+  }
+
+  .zenith-root .zenith-ask-result--history-only .zenith-ask-history__list {
+    mask-image: linear-gradient(90deg, #000 85%, transparent 100%);
+  }
+
+  /* Keep history chips compact when shown above an answer too */
+  .zenith-root .zenith-ask-history__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .zenith-root .zenith-ask-history__item {
+    max-width: 14rem;
+    border-radius: 999px;
+  }
+
+  .zenith-root .zenith-ask-history__q {
+    white-space: nowrap;
   }
 }
 

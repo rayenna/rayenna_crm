@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, LayoutGrid, MoreHorizontal, Target, TrendingUp } from 'lucide-react'
+import { BarChart3, LayoutGrid, MoreHorizontal, Sparkles, Target, TrendingUp } from 'lucide-react'
 import { UserRole } from '../../types'
 
-export type ZenithMobileTab = 'overview' | 'pipeline' | 'charts' | 'more'
+export type ZenithMobileTab = 'overview' | 'ask' | 'pipeline' | 'charts' | 'more'
 
 export type ZenithMobileNavItem = {
   id: ZenithMobileTab
@@ -12,11 +12,20 @@ export type ZenithMobileNavItem = {
 
 export function getZenithMobileNavItems(
   role: UserRole,
-  opts?: { showHitList?: boolean },
+  opts?: { showHitList?: boolean; showAsk?: boolean },
 ): ZenithMobileNavItem[] {
   const showHit =
     opts?.showHitList ??
     (role === UserRole.SALES || role === UserRole.MANAGEMENT || role === UserRole.ADMIN)
+  const showAsk =
+    opts?.showAsk ??
+    (role === UserRole.SALES ||
+      role === UserRole.MANAGEMENT ||
+      role === UserRole.ADMIN ||
+      role === UserRole.OPERATIONS ||
+      role === UserRole.FINANCE)
+
+  const askItem: ZenithMobileNavItem = { id: 'ask', label: 'Ask', icon: Sparkles }
 
   switch (role) {
     case UserRole.SALES:
@@ -24,6 +33,7 @@ export function getZenithMobileNavItems(
     case UserRole.ADMIN:
       return [
         { id: 'overview', label: showHit ? 'Today' : 'KPIs', icon: TrendingUp },
+        ...(showAsk ? [askItem] : []),
         { id: 'pipeline', label: 'Pipeline', icon: Target },
         { id: 'charts', label: 'Charts', icon: BarChart3 },
         { id: 'more', label: 'More', icon: MoreHorizontal },
@@ -31,12 +41,14 @@ export function getZenithMobileNavItems(
     case UserRole.OPERATIONS:
       return [
         { id: 'overview', label: 'KPIs', icon: TrendingUp },
+        ...(showAsk ? [askItem] : []),
         { id: 'pipeline', label: 'Ops', icon: Target },
         { id: 'charts', label: 'Charts', icon: BarChart3 },
       ]
     case UserRole.FINANCE:
       return [
         { id: 'overview', label: 'KPIs', icon: TrendingUp },
+        ...(showAsk ? [askItem] : []),
         { id: 'pipeline', label: 'Payments', icon: Target },
         { id: 'charts', label: 'Charts', icon: BarChart3 },
         { id: 'more', label: 'More', icon: MoreHorizontal },
@@ -44,6 +56,7 @@ export function getZenithMobileNavItems(
     default:
       return [
         { id: 'overview', label: 'Overview', icon: LayoutGrid },
+        ...(showAsk ? [askItem] : []),
         { id: 'pipeline', label: 'Pipeline', icon: Target },
         { id: 'charts', label: 'Charts', icon: BarChart3 },
       ]
@@ -59,6 +72,8 @@ export function zenithMobileTabScrollId(
   switch (tab) {
     case 'overview':
       return 'zenith-kpis'
+    case 'ask':
+      return 'zenith-ask-surface'
     case 'pipeline':
       return _role === UserRole.FINANCE ? 'zenith-focus' : 'zenith-funnel'
     case 'charts':

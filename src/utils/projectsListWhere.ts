@@ -1,10 +1,13 @@
 import type { ParsedQs } from 'qs';
 import { query } from 'express-validator';
 import {
+  InstallationStatus,
+  PaymentMode,
   ProjectStatus,
   ProjectType,
   ProjectServiceType,
   ProjectStage,
+  SystemType,
   UserRole,
   LeadSource,
   SupportTicketStatus,
@@ -57,6 +60,22 @@ export type ProjectsListFilterInput = {
   dataSenseRule: DataSenseRuleId | null;
   /** Zenith Ask subsidy compliance backlog drill-down. */
   complianceGap: ComplianceGapId | null;
+  /** Ask chart drills — optional CRM dimension filters. */
+  panelType: string | null;
+  systemType: SystemType | null;
+  roofType: string | null;
+  statusIndicator: string | null;
+  projectStage: ProjectStage | null;
+  capacityMin: number | null;
+  capacityMax: number | null;
+  hubPlantLinked: boolean | null;
+  salespersonName: string | null;
+  opsName: string | null;
+  city: string | null;
+  installationStatus: InstallationStatus | null;
+  paymentMode: PaymentMode | null;
+  /** Explicit cash / non-loan cohort (Ask loan-vs-cash). */
+  notAvailingLoan: boolean;
 };
 
 export type ProjectsListUser = { id: string; role: UserRole } | undefined;
@@ -163,6 +182,20 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     dataSenseNeedsReview,
     dataSenseRule,
     complianceGap,
+    panelType,
+    systemType,
+    roofType,
+    statusIndicator,
+    projectStage,
+    capacityMin,
+    capacityMax,
+    hubPlantLinked,
+    salespersonName,
+    opsName,
+    city,
+    installationStatus,
+    paymentMode,
+    notAvailingLoan,
   } = query;
 
   const fyArray = toStringArray(fy);
@@ -210,6 +243,51 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     dataSenseNeedsReviewActive: String(dataSenseNeedsReview) === 'true' || parseDataSenseRule(dataSenseRule) != null,
     dataSenseRule: parseDataSenseRule(dataSenseRule),
     complianceGap: parseComplianceGap(complianceGap),
+    panelType:
+      typeof panelType === 'string' && panelType.trim() !== '' ? panelType.trim() : null,
+    systemType:
+      typeof systemType === 'string' &&
+      (Object.values(SystemType) as string[]).includes(systemType)
+        ? (systemType as SystemType)
+        : null,
+    roofType: typeof roofType === 'string' && roofType.trim() !== '' ? roofType.trim() : null,
+    statusIndicator:
+      typeof statusIndicator === 'string' &&
+      ['GREEN', 'AMBER', 'RED'].includes(statusIndicator.trim().toUpperCase())
+        ? statusIndicator.trim().toUpperCase()
+        : null,
+    projectStage:
+      typeof projectStage === 'string' &&
+      (Object.values(ProjectStage) as string[]).includes(projectStage)
+        ? (projectStage as ProjectStage)
+        : null,
+    capacityMin:
+      capacityMin != null && capacityMin !== '' && Number.isFinite(Number(capacityMin))
+        ? Number(capacityMin)
+        : null,
+    capacityMax:
+      capacityMax != null && capacityMax !== '' && Number.isFinite(Number(capacityMax))
+        ? Number(capacityMax)
+        : null,
+    hubPlantLinked:
+      hubPlantLinked === 'true' ? true : hubPlantLinked === 'false' ? false : null,
+    salespersonName:
+      typeof salespersonName === 'string' && salespersonName.trim() !== ''
+        ? salespersonName.trim()
+        : null,
+    opsName: typeof opsName === 'string' && opsName.trim() !== '' ? opsName.trim() : null,
+    city: typeof city === 'string' && city.trim() !== '' ? city.trim() : null,
+    installationStatus:
+      typeof installationStatus === 'string' &&
+      (Object.values(InstallationStatus) as string[]).includes(installationStatus)
+        ? (installationStatus as InstallationStatus)
+        : null,
+    paymentMode:
+      typeof paymentMode === 'string' &&
+      (Object.values(PaymentMode) as string[]).includes(paymentMode)
+        ? (paymentMode as PaymentMode)
+        : null,
+    notAvailingLoan: String(notAvailingLoan) === 'true',
   };
 }
 
@@ -455,6 +533,11 @@ export function buildProjectsWhere(
   if (filters.availingLoanActive) {
     pushOntoWhereAnd(where, { availingLoan: true });
   }
+  if (filters.notAvailingLoan) {
+    pushOntoWhereAnd(where, {
+      OR: [{ availingLoan: false }, { availingLoan: null }],
+    });
+  }
 
   // Subsidy segment + Completed status = pending subsidy credit (not yet COMPLETED_SUBSIDY_CREDITED).
   if (filters.pendingSubsidyActive) {
@@ -468,6 +551,68 @@ export function buildProjectsWhere(
 
   if (filters.complianceGap) {
     pushOntoWhereAnd(where, complianceGapPrismaWhere(filters.complianceGap));
+  }
+
+  if (filters.panelType) {
+    pushOntoWhereAnd(where, {
+      panelType: { equals: filters.panelType, mode: 'insensitive' },
+    });
+  }
+  if (filters.systemType) pushOntoWhereAnd(where, { systemType: filters.systemType });
+  if (filters.roofType) {
+    pushOntoWhereAnd(where, {
+      roofType: { equals: filters.roofType, mode: 'insensitive' },
+    });
+  }
+  if (filters.statusIndicator) {
+    pushOntoWhereAnd(where, { statusIndicator: filters.statusIndicator });
+  }
+  if (filters.projectStage) pushOntoWhereAnd(where, { projectStage: filters.projectStage });
+  if (filters.capacityMin != null || filters.capacityMax != null) {
+    const systemCapacity: { gte?: number; lte?: number } = {};
+    if (filters.capacityMin != null) systemCapacity.gte = filters.capacityMin;
+    if (filters.capacityMax != null) systemCapacity.lte = filters.capacityMax;
+    pushOntoWhereAnd(where, { systemCapacity });
+  }
+  if (filters.hubPlantLinked === true) {
+    pushOntoWhereAnd(where, {
+      OR: [
+        { solisStationId: { not: null } },
+        { deyeStationId: { not: null } },
+        { sunwaysStationId: { not: null } },
+      ],
+    });
+  } else if (filters.hubPlantLinked === false) {
+    pushOntoWhereAnd(where, {
+      solisStationId: null,
+      deyeStationId: null,
+      sunwaysStationId: null,
+    });
+  }
+  if (filters.salespersonName && user?.role !== UserRole.SALES) {
+    pushOntoWhereAnd(where, {
+      salesperson: { name: { contains: filters.salespersonName, mode: 'insensitive' } },
+    });
+  }
+  if (filters.opsName) {
+    pushOntoWhereAnd(where, {
+      opsPerson: { name: { contains: filters.opsName, mode: 'insensitive' } },
+    });
+  }
+  if (filters.city) {
+    pushOntoWhereAnd(where, {
+      customer: { city: { equals: filters.city, mode: 'insensitive' } },
+    });
+  }
+  if (filters.installationStatus) {
+    pushOntoWhereAnd(where, {
+      installations: { some: { status: filters.installationStatus } },
+    });
+  }
+  if (filters.paymentMode) {
+    pushOntoWhereAnd(where, {
+      invoices: { some: { payments: { some: { mode: filters.paymentMode } } } },
+    });
   }
 
   if (!skipDateFilters && filters.fyFilters.length > 0) {
@@ -658,5 +803,19 @@ export const projectsListQueryValidators = [
   query('dataSenseNeedsReview').optional().isIn(['true']),
   query('dataSenseRule').optional().isIn([...DATA_SENSE_RULE_IDS]),
   query('complianceGap').optional().isIn([...COMPLIANCE_GAP_IDS]),
+  query('panelType').optional().isString(),
+  query('systemType').optional().isIn(Object.values(SystemType)),
+  query('roofType').optional().isString(),
+  query('statusIndicator').optional().isIn(['GREEN', 'AMBER', 'RED']),
+  query('projectStage').optional().isIn(Object.values(ProjectStage)),
+  query('capacityMin').optional().isFloat(),
+  query('capacityMax').optional().isFloat(),
+  query('hubPlantLinked').optional().isIn(['true', 'false']),
+  query('salespersonName').optional().isString(),
+  query('opsName').optional().isString(),
+  query('city').optional().isString(),
+  query('installationStatus').optional().isIn(Object.values(InstallationStatus)),
+  query('paymentMode').optional().isIn(Object.values(PaymentMode)),
+  query('notAvailingLoan').optional().isIn(['true']),
   query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
 ];

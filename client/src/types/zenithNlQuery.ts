@@ -119,18 +119,26 @@ export type ZenithNlQueryActionSuccess = {
 
 export type ZenithNlQuerySuccess = ZenithNlQueryMetricSuccess | ZenithNlQueryActionSuccess
 
+export type ZenithNlCatalogHint = {
+  metric: string
+  title: string
+  description: string
+  ask: string
+}
+
 export type ZenithNlQueryClarify = {
   ok: false
   clarify: true
   question: string
   message: string
   suggestedQuestions: string[]
+  catalogHints?: ZenithNlCatalogHint[]
   effectiveDateFilter?: ZenithNlEffectiveDateFilter
 }
 
 export type ZenithNlQueryResult = ZenithNlQuerySuccess | ZenithNlQueryClarify
 
-/** Ask history entry — persisted per user in localStorage for this browser. */
+/** Ask history entry — server-backed (Neon) with localStorage cache for this browser. */
 export type ZenithAskHistoryItem = {
   id: string
   question: string

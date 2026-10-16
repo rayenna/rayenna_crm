@@ -6,7 +6,7 @@ import type { ZenithMobileTab } from '../components/zenith/zenithMobileNav'
 
 const STORAGE_KEY = 'rayenna_zenith_mobile_tab_v1'
 
-const VALID: ZenithMobileTab[] = ['overview', 'pipeline', 'charts', 'more']
+const VALID: ZenithMobileTab[] = ['overview', 'ask', 'pipeline', 'charts', 'more']
 
 function userKey(userId: string): string {
   return `${STORAGE_KEY}_${userId}`

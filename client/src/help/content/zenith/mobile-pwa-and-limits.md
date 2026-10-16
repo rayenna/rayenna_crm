@@ -10,12 +10,13 @@ On viewports **narrower than `lg` (~1024px)**, Zenith uses a **simplified layout
 | :-- | :-- |
 | **Today** (Sales / Management / Admin) | **Today’s Hit List**, **KPI strip**, **Revenue forecast**, and **The Board** |
 | **Today** (Operations / Finance label may read **KPIs**) | **KPI strip** only |
+| **Ask** | **Ask Zenith** composer, example chips, answers, and recent asks (server-backed across devices) |
 | **Pipeline** | **Deal flow funnel** and **Your Focus** (role-specific panels) |
 | **Charts** | **Explore the landscape** (stage, FY, lead source, sales team, **Revenue by Customer Type** on Operations, loans on Finance, etc.) |
-| **More** (Finance only) | **Revenue by Customer Type** donut and **Customer profitability** |
+| **More** (Finance / exec) | Extra segments (e.g. **Revenue by Customer Type**, **Customer profitability**) |
 
 - **Bottom tab bar** — Fixed above the safe area at the bottom; switching tabs **scrolls** to that section and shows **only** that tab’s content (desktop still shows everything in one scroll).
-- **Floating actions** (mobile only) — **✦ Briefing** (opens the daily briefing) and **back to top**, sitting above the tab bar.
+- **Floating actions** (mobile only) — **Ask** (jumps to the Ask tab when you are on another tab), **✦ Briefing** (opens the daily briefing), and **back to top**, sitting above the tab bar.
 - **Queued sync badge** — When offline with pending drawer actions, the **Today** tab can show a **count badge** on the tab icon.
 - **Wide tables** — Pipeline, Hit List, and similar blocks may **scroll horizontally**; a light edge fade hints at more columns. **Tap to explore →** on charts; on **md+** widths, **Swipe sideways for more columns →** may appear on some tables.
 
@@ -38,12 +39,14 @@ Rayenna CRM can be **installed** on a phone or laptop (**Add to Home Screen** / 
 - Loading **new** filter combinations you have never fetched online.
 - **My Day**, **Solar News**, and other modules outside the Zenith drawer queue.
 - **Open in Projects →** (needs the live **Projects** API).
+- **Ask Zenith** (typed questions, **Dictate**, and example chips) — Ask always needs a live CRM API. Saved dashboard charts may still appear while Ask stays disabled until the command bar shows **Live**.
 
 **Tips**
 
 - Open Zenith once on Wi‑Fi with your usual filters before going to a site with weak signal.
 - If numbers look stale, reconnect and pull to refresh or change a filter to refetch.
 - Failed sync items stay in the queue with **Retry** on the status strip.
+- For Ask Zenith offline behaviour and shortcuts (**/** or **A** to focus Ask), see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
 
 ---
 

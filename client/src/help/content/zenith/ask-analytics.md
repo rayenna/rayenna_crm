@@ -1,6 +1,6 @@
 # Ask Zenith (natural language)
 
-**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** near the top of Zenith (under **Solar News**) for two kinds of requests:
+**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for two kinds of requests. On **desktop**, Ask sits under **Solar News**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button).
 
 1. **Analytics** — maps the question to a known metric, computes numbers from the same CRM data as the rest of Zenith, and shows **one insight** plus **one chart or table**.
 2. **Tasks** — phrases like **New Customer**, **Open My Day**, **Pending Subsidy**, or **find customer Ramesh** navigate to the matching CRM screen. The same task set is in the global **command palette** (**Ctrl+K** / **⌘K**) from any page — see [Command palette](/help/getting-started#command-palette-anywhere).
@@ -8,13 +8,13 @@
 ## How to use Ask
 
 1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this quarter**, **this month**, **FY 2024-25**). The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
-2. Type a question or task in **Ask Zenith…**, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself.
-3. For analytics: read the insight and the chart/table. Use **Follow up** or **More questions** chips to refine without starting over.
+2. Focus the Ask box with **/** or **A** (when you are not already typing in a field), or open **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to jump here and run it.
+3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
-5. **Recent asks** (analytics) are remembered for your login in this browser (up to 12). They are not synced across devices.
+5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. Close the answer with **×**; history stays for your next ask.
 6. When available, use **Open in Projects →** or **Open Support Tickets →** for the matching cohort.
 
-Ask is disabled while **Offline**. It needs the CRM API and **Anthropic** credentials on the server: `ANTHROPIC_API_KEY`, and often `ANTHROPIC_WORKSPACE_ID` when the key is not scoped to one workspace.
+Ask is **disabled while Offline** (typed questions, Dictate, and example chips). Saved Zenith dashboard charts may still show from cache — wait for **Live** in the command bar before asking. Free-text analytics also needs **Anthropic** credentials on the server: `ANTHROPIC_API_KEY`, and often `ANTHROPIC_WORKSPACE_ID` when the key is not scoped to one workspace. Exact example chips and some entity matches can still run when Claude is unavailable.
 
 ## Analytics you can ask
 

@@ -39,8 +39,9 @@
 | 11 | Log activity on **your** project (if allowed) | Remark on project |
 | 12 | **Reset** filters | Broader KPIs |
 | 13 | Optional: `Ctrl+Shift+Z` from Dashboard | Zenith opens |
+| 14 | **Ask Zenith:** press `/` (or **A**) to focus Ask; run one example chip; click a chart bar or table row | Opens matching **Projects** (or Support Tickets) list |
 
-**Facilitator:** Management trainees — steps 1–8; confirm **no** drawer edits on others’ projects.
+**Facilitator:** Management trainees — steps 1–8; confirm **no** drawer edits on others’ projects. Note Ask needs **Live** (not offline snapshot).
 
 ---
 

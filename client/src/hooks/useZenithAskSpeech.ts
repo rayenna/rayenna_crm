@@ -46,6 +46,7 @@ export function useZenithAskSpeech(opts: {
   const [speechError, setSpeechError] = useState<string | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const baseTextRef = useRef('')
+  const dictatedRef = useRef(false)
   const onChangeRef = useRef(opts.onChange)
   onChangeRef.current = opts.onChange
 
@@ -63,6 +64,18 @@ export function useZenithAskSpeech(opts: {
       recognitionRef.current = null
     }
     setListening(false)
+  }, [])
+
+  /** True if the current Ask text came from a dictate session; clears the flag. */
+  const consumeDictated = useCallback((): boolean => {
+    const was = dictatedRef.current
+    dictatedRef.current = false
+    return was
+  }, [])
+
+  /** Call when the user types manually so the next Ask is not tagged as dictate. */
+  const markManualEdit = useCallback(() => {
+    dictatedRef.current = false
   }, [])
 
   useEffect(() => () => stop(), [stop])
@@ -107,6 +120,7 @@ export function useZenithAskSpeech(opts: {
       } else if (base) {
         next = base
       }
+      if (spoken) dictatedRef.current = true
       onChangeRef.current(next)
     }
 
@@ -145,5 +159,5 @@ export function useZenithAskSpeech(opts: {
     else start()
   }, [listening, start, stop])
 
-  return { supported, listening, speechError, toggle, stop }
+  return { supported, listening, speechError, toggle, stop, consumeDictated, markManualEdit }
 }

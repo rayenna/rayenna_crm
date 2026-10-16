@@ -37,4 +37,21 @@ describe('filterCommandPaletteItems', () => {
     expect(items.map((i) => i.id)).toContain('create_support_ticket')
     expect(items.map((i) => i.id)).toContain('overdue_support_tickets')
   })
+
+  it('exposes Ask Zenith entry and dynamic ask run', () => {
+    const idle = filterCommandPaletteItems(UserRole.MANAGEMENT, '').map((i) => i.id)
+    expect(idle).toContain('ask_zenith')
+    expect(resolveCommandHref(
+      filterCommandPaletteItems(UserRole.MANAGEMENT, '').find((i) => i.id === 'ask_zenith')!,
+      '',
+    )).toBe('/zenith?askFocus=1')
+
+    const typed = filterCommandPaletteItems(UserRole.MANAGEMENT, 'Revenue by city')
+    const askRow = typed.find((i) => i.id === 'ask_zenith_query')
+    expect(askRow?.label).toContain('Revenue by city')
+    expect(resolveCommandHref(askRow!, 'Revenue by city')).toBe(
+      `/zenith?ask=${encodeURIComponent('Revenue by city')}&askRun=1`,
+    )
+  })
 })
+

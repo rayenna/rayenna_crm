@@ -1,13 +1,31 @@
-import { ArrowUp, Sparkles } from 'lucide-react'
+import { ArrowUp, MessageSquareText, Sparkles } from 'lucide-react'
 import { scrollToZenithElementId } from './zenithScrollToSection'
 
 type Props = {
   onShowBriefing?: () => void
+  /** Open the mobile Ask tab (shown when Ask is available and not already on that tab). */
+  onOpenAsk?: () => void
+  showAskLauncher?: boolean
 }
 
-export default function ZenithMobileStickyActions({ onShowBriefing }: Props) {
+export default function ZenithMobileStickyActions({
+  onShowBriefing,
+  onOpenAsk,
+  showAskLauncher = false,
+}: Props) {
   return (
     <div className="zenith-mobile-sticky-actions lg:hidden" aria-label="Quick actions">
+      {showAskLauncher && onOpenAsk ? (
+        <button
+          type="button"
+          onClick={onOpenAsk}
+          title="Ask Zenith"
+          className="zenith-mobile-sticky-btn zenith-mobile-sticky-btn--ask touch-manipulation"
+        >
+          <MessageSquareText className="h-5 w-5" aria-hidden />
+          <span className="sr-only">Ask Zenith</span>
+        </button>
+      ) : null}
       {onShowBriefing ? (
         <button
           type="button"

@@ -6,6 +6,7 @@ type Props = {
   activeTab: ZenithMobileTab
   onTabChange: (tab: ZenithMobileTab) => void
   showHitList?: boolean
+  showAsk?: boolean
   pendingSyncCount?: number
   isOnline?: boolean
 }
@@ -15,10 +16,11 @@ export default function ZenithMobileBottomNav({
   activeTab,
   onTabChange,
   showHitList,
+  showAsk = true,
   pendingSyncCount = 0,
   isOnline = true,
 }: Props) {
-  const items = getZenithMobileNavItems(role, { showHitList })
+  const items = getZenithMobileNavItems(role, { showHitList, showAsk })
 
   return (
     <nav

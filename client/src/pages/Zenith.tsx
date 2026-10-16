@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
@@ -59,10 +59,12 @@ import {
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
 import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
-import { zenithAskExampleChips } from '../constants/zenithAskExamples'
+import { zenithAskExampleChips, zenithAskMoreChips } from '../constants/zenithAskExamples'
 import {
+  mergeZenithAskHistory,
   readZenithAskHistory,
   writeZenithAskHistory,
+  ZENITH_ASK_HISTORY_MAX,
 } from '../utils/zenithAskHistoryStorage'
 import { trackZenithAskEvent } from '../utils/zenithAskAnalytics'
 import type {
@@ -72,10 +74,9 @@ import type {
   ZenithNlQueryResult,
 } from '../types/zenithNlQuery'
 
-const ZENITH_ASK_HISTORY_MAX = 12
-
 const Zenith = () => {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
@@ -91,6 +92,8 @@ const Zenith = () => {
   const [askResult, setAskResult] = useState<ZenithNlQueryResult | null>(null)
   const [askError, setAskError] = useState<string | null>(null)
   const [askHistory, setAskHistory] = useState<ZenithAskHistoryItem[]>([])
+  /** Close hides the panel; history is kept for the next ask. */
+  const [askPanelDismissed, setAskPanelDismissed] = useState(false)
   const askPriorRef = useRef<ZenithNlPriorContext | null>(null)
   const askHistoryHydratedRef = useRef<string | null>(null)
 
@@ -113,8 +116,25 @@ const Zenith = () => {
   useEffect(() => {
     if (!user?.id) return
     if (askHistoryHydratedRef.current === user.id) return
-    askHistoryHydratedRef.current = user.id
-    setAskHistory(readZenithAskHistory(user.id))
+    const local = readZenithAskHistory(user.id)
+    setAskHistory(local)
+    let cancelled = false
+    void axiosInstance
+      .get<{ items: ZenithAskHistoryItem[] }>('/api/dashboard/zenith-ask-history')
+      .then((res) => {
+        if (cancelled) return
+        const server = Array.isArray(res.data?.items) ? res.data.items : []
+        const merged = mergeZenithAskHistory(local, server)
+        setAskHistory(merged)
+        writeZenithAskHistory(user.id, merged)
+        askHistoryHydratedRef.current = user.id
+      })
+      .catch(() => {
+        /* keep local cache when offline / API unavailable; allow retry on remount */
+      })
+    return () => {
+      cancelled = true
+    }
   }, [user?.id])
 
   const execZenithRole =
@@ -132,13 +152,76 @@ const Zenith = () => {
     selectedQuarters,
     selectedMonths,
   )
-  const askExampleChips = zenithAskExampleChips(user?.role, 3)
+  const askExampleChips = zenithAskExampleChips(user?.role)
+  const askMoreChips = zenithAskMoreChips(user?.role)
   const showAskSideSuggestions = Boolean(
     showZenithAsk && user?.role && !askResult && !askLoading && !askError,
   )
   const showAskMoreChips = Boolean(
-    showZenithAsk && user?.role && (askResult || askError) && !askLoading,
+    showZenithAsk && user?.role && (askResult || askError) && !askLoading && !askPanelDismissed,
   )
+
+  const narrow = useZenithNarrowLayout()
+  const [mobileTab, setMobileTab] = useState<ZenithMobileTab>('overview')
+  const [mobileTabHydrated, setMobileTabHydrated] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id || mobileTabHydrated) return
+    const saved = readZenithMobileTab(user.id)
+    if (saved) setMobileTab(saved)
+    setMobileTabHydrated(true)
+  }, [user?.id, mobileTabHydrated])
+
+  const handleMobileTabChange = useCallback(
+    (tab: ZenithMobileTab) => {
+      setMobileTab(tab)
+      if (user?.id) writeZenithMobileTab(user.id, tab)
+    },
+    [user?.id],
+  )
+
+  /** On mobile, Ask lives on its own tab; desktop always shows the composer. */
+  const showAskSurface = Boolean(showZenithAsk && (!narrow || mobileTab === 'ask'))
+
+  const focusAskInput = useCallback(() => {
+    if (narrow) handleMobileTabChange('ask')
+    const tryFocus = (attemptsLeft: number) => {
+      const input = document.getElementById('zenith-ask-input') as HTMLTextAreaElement | null
+      if (input) {
+        input.focus()
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+      if (attemptsLeft > 0) {
+        window.requestAnimationFrame(() => tryFocus(attemptsLeft - 1))
+      }
+    }
+    window.requestAnimationFrame(() => tryFocus(10))
+  }, [narrow, handleMobileTabChange])
+
+  /** Focus Ask composer — `/` or `A` when not typing in a field. */
+  useEffect(() => {
+    if (!showZenithAsk) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+      const key = event.key
+      if (key !== '/' && key !== 'a' && key !== 'A') return
+      event.preventDefault()
+      focusAskInput()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [showZenithAsk, focusAskInput])
 
   const pushAskHistory = useCallback(
     (success: ZenithNlQueryMetricSuccess) => {
@@ -169,11 +252,13 @@ const Zenith = () => {
   const runZenithAsk = useCallback(
     async (
       question: string,
-      source: 'typed' | 'chip' | 'follow_up' | 'history' | 'dictate' = 'typed',
+      source: 'typed' | 'chip' | 'follow_up' | 'history' | 'dictate' | 'palette' | 'catalog' = 'typed',
     ) => {
       const q = question.trim()
       if (!q || !showZenithAsk || !isOnline) return
+      if (narrow) handleMobileTabChange('ask')
       const started = Date.now()
+      setAskPanelDismissed(false)
       setAskLoading(true)
       setAskError(null)
       setAskResult(null)
@@ -240,6 +325,8 @@ const Zenith = () => {
     [
       showZenithAsk,
       isOnline,
+      narrow,
+      handleMobileTabChange,
       selectedFYs,
       selectedQuarters,
       selectedMonths,
@@ -248,6 +335,38 @@ const Zenith = () => {
       navigate,
     ],
   )
+
+  /** Command palette deep-link: /zenith?askFocus=1 or /zenith?ask=…&askRun=1 */
+  useEffect(() => {
+    if (!showZenithAsk) return
+    const askFocus = searchParams.get('askFocus') === '1'
+    const askQ = searchParams.get('ask')?.trim() || ''
+    const askRun = searchParams.get('askRun') === '1'
+    if (!askFocus && !askQ) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('askFocus')
+    next.delete('ask')
+    next.delete('askRun')
+    setSearchParams(next, { replace: true })
+    setAskPanelDismissed(false)
+    if (askQ) {
+      setAskValue(askQ)
+      if (askRun && isOnline) {
+        void runZenithAsk(askQ, 'palette')
+      } else {
+        window.requestAnimationFrame(() => focusAskInput())
+      }
+    } else {
+      window.requestAnimationFrame(() => focusAskInput())
+    }
+  }, [
+    showZenithAsk,
+    searchParams,
+    isOnline,
+    focusAskInput,
+    setSearchParams,
+    runZenithAsk,
+  ])
 
   const showQuickActionDrawer =
     execZenithRole || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
@@ -263,24 +382,6 @@ const Zenith = () => {
     user?.role === UserRole.ADMIN
 
   const myDaySnapQ = useMyDaySnapshotQuery(!!user)
-  const narrow = useZenithNarrowLayout()
-  const [mobileTab, setMobileTab] = useState<ZenithMobileTab>('overview')
-  const [mobileTabHydrated, setMobileTabHydrated] = useState(false)
-
-  useEffect(() => {
-    if (!user?.id || mobileTabHydrated) return
-    const saved = readZenithMobileTab(user.id)
-    if (saved) setMobileTab(saved)
-    setMobileTabHydrated(true)
-  }, [user?.id, mobileTabHydrated])
-
-  const handleMobileTabChange = useCallback(
-    (tab: ZenithMobileTab) => {
-      setMobileTab(tab)
-      if (user?.id) writeZenithMobileTab(user.id, tab)
-    },
-    [user?.id],
-  )
 
   const handlePriorityNavigate = useCallback(
     (targetId: string) => {
@@ -648,12 +749,13 @@ const Zenith = () => {
       {/* Solar news — above Ask; AI Insights stays under KPI tiles in role bodies */}
       {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
 
-      {/* Ask scrolls with page content (not sticky with command bar). */}
-      {showZenithAsk ? (
+      {/* Desktop: Ask in page flow. Mobile: dedicated Ask tab surface. */}
+      {showAskSurface ? (
         <section
+          id="zenith-ask-surface"
           className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-3 pb-1${
             showAskSideSuggestions ? ' zenith-ask-page-block--with-suggestions' : ''
-          }`}
+          }${narrow ? ' zenith-ask-page-block--mobile-surface' : ''}`}
           aria-label="Zenith Ask"
         >
           <div className="zenith-ask-page-block__row">
@@ -661,7 +763,9 @@ const Zenith = () => {
               <ZenithAskComposer
                 value={askValue}
                 onChange={setAskValue}
-                onSubmit={runZenithAsk}
+                onSubmit={(q, source) => {
+                  void runZenithAsk(q, source ?? 'typed')
+                }}
                 loading={askLoading}
                 isOnline={isOnline}
               />
@@ -672,6 +776,9 @@ const Zenith = () => {
                   <span className="zenith-ask-examples__label">Try asking</span>
                   <p className="zenith-ask-suggestions__sub">
                     Tap a prompt to run it with your current filters ({askFilterSummary})
+                    {!isOnline
+                      ? ' — reconnect to run Ask'
+                      : ' · Press / or A to focus Ask'}
                   </p>
                 </div>
                 <div className="zenith-ask-examples zenith-ask-examples--panel">
@@ -693,29 +800,32 @@ const Zenith = () => {
               </aside>
             ) : null}
           </div>
-          <ZenithAskPanel
-            result={askResult}
-            error={askError}
-            loading={askLoading}
-            history={askHistory}
-            filterSummary={askFilterSummary}
-            role={user?.role}
-            onClose={() => {
-              setAskResult(null)
-              setAskError(null)
-            }}
-            onAskSuggestion={(q) => {
-              void runZenithAsk(q, 'follow_up')
-            }}
-            onReplayHistory={(item) => {
-              void runZenithAsk(item.question, 'history')
-            }}
-          />
+          {!askPanelDismissed ? (
+            <ZenithAskPanel
+              result={askResult}
+              error={askError}
+              loading={askLoading}
+              history={askHistory}
+              filterSummary={askFilterSummary}
+              role={user?.role}
+              onClose={() => {
+                setAskResult(null)
+                setAskError(null)
+                setAskPanelDismissed(true)
+              }}
+              onAskSuggestion={(q, source) => {
+                void runZenithAsk(q, source === 'catalog' ? 'catalog' : 'follow_up')
+              }}
+              onReplayHistory={(item) => {
+                void runZenithAsk(item.question, 'history')
+              }}
+            />
+          ) : null}
           {showAskMoreChips ? (
             <div className="zenith-ask-more" aria-label="More example questions">
               <span className="zenith-ask-more__label">More questions</span>
               <div className="zenith-ask-examples">
-                {askExampleChips.map((q) => (
+                {askMoreChips.map((q) => (
                   <button
                     key={q}
                     type="button"
@@ -852,12 +962,17 @@ const Zenith = () => {
 
       {narrow && user?.role ? (
         <>
-          <ZenithMobileStickyActions onShowBriefing={showBriefing} />
+          <ZenithMobileStickyActions
+            onShowBriefing={showBriefing}
+            showAskLauncher={showZenithAsk && mobileTab !== 'ask'}
+            onOpenAsk={focusAskInput}
+          />
           <ZenithMobileBottomNav
             role={user.role}
             activeTab={mobileTab}
             onTabChange={handleMobileTabChange}
             showHitList={showExecHitList}
+            showAsk={showZenithAsk}
             pendingSyncCount={pendingCount}
             isOnline={isOnline}
           />

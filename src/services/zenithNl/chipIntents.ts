@@ -435,6 +435,401 @@ export function matchEquipmentMixIntent(
 }
 
 /**
+ * Phrase salvage — free-text paraphrases that commonly hit clarify when Claude
+ * is slow/unavailable. Ordered: first match wins (more specific patterns first).
+ */
+type PhraseSalvage = {
+  test: (q: string) => boolean;
+  intent: ZenithNlIntent;
+};
+
+const PHRASE_SALVAGE: PhraseSalvage[] = [
+  {
+    test: (q) =>
+      /\b(profit\s+summary|gross\s+profit|margin\s+summary|how\s+(much|is)\s+(our\s+)?profit|what('?s|\s+is)\s+(our\s+)?profit)\b/.test(
+        q,
+      ) || /\b(show|give)\s+(me\s+)?(the\s+)?profit\b/.test(q),
+    intent: { metric: 'profit_summary', viz: 'table', insightHints: 'profit summary' },
+  },
+  {
+    test: (q) =>
+      /\b(ops\s+workload|operations?\s+workload|ops\s+(load|capacity)|how\s+(busy|loaded)\s+(is\s+)?ops)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'ops_workload',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'ops workload',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(compliance\s+backlog|compliance\s+gaps?|kseb\s+(backlog|gaps?|pending)|mnre\s+(backlog|pending)|subsidy\s+compliance)\b/.test(
+        q,
+      ),
+    intent: { metric: 'compliance_backlog', viz: 'table', insightHints: 'compliance' },
+  },
+  {
+    test: (q) =>
+      /\b(hub\s+plant|plant\s+link|linked\s+plants?|hub\s+plants?\s+(link\s+)?status|plants?\s+linked\s+to\s+(the\s+)?hub)\b/.test(
+        q,
+      ) ||
+      (/\b(solis|deye|sunways)\b/.test(q) &&
+        /\b(hub|station\s+id|plant\s+link|linked\s+to\s+hub)\b/.test(q)),
+    intent: {
+      metric: 'hub_plant_link_summary',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'hub plants',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(outstanding\s+by\s+sales|ar\s+by\s+sales|receivables?\s+by\s+sales|who\s+has\s+(the\s+)?(most\s+)?outstanding)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'outstanding_by_salesperson',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'AR by sales',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(loan\s+vs\s+cash|cash\s+vs\s+loan|loan\s+share|financing\s+mix|how\s+much\s+(is\s+)?on\s+loan)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'loan_vs_cash_revenue',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'loan share',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(payment\s+mode|upi\s+vs\s+bank|how\s+(did|do)\s+(customers?\s+)?pay|cheque\s+vs\s+upi)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'payment_mode_mix',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'payment modes',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(unpaid\s+invoices?|invoices?\s+(that\s+are\s+)?unpaid|open\s+invoices?|part[- ]?paid\s+invoices?)\b/.test(
+        q,
+      ),
+    intent: { metric: 'unpaid_invoices', viz: 'table', insightHints: 'unpaid invoices' },
+  },
+  {
+    test: (q) =>
+      /\b(amcs?\s+expir|expir\w*\s+amcs?|amc\s+(ending|due)|warranty\s+expir)/.test(q),
+    intent: { metric: 'amc_expiring', viz: 'table', insightHints: 'AMC expiring' },
+  },
+  {
+    test: (q) =>
+      /\b(subsidy\s+funnel|subsidy\s+(pipeline|status|stages?)|where\s+are\s+subsidy\s+projects)\b/.test(
+        q,
+      ),
+    intent: { metric: 'subsidy_funnel', viz: 'table', insightHints: 'subsidy funnel' },
+  },
+  {
+    test: (q) =>
+      /\b(revenue\s+by\s+cit(y|ies)|city\s+revenue|which\s+cit(y|ies)\s+(drove|sold|earned))\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'revenue_by_city',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'city revenue',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(sla\s+(status|mix|indicators?)|red\s+sla|amber\s+sla|projects?\s+on\s+(red|amber)\s+sla)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'sla_indicator_mix',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'SLA mix',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(project\s+stage\s+mix|stage\s+mix|mix\s+by\s+stage|breakdown\s+by\s+project\s+stage)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'project_stage_mix',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'stage mix',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(ticket\s+resolution|resolution\s+time|how\s+long\s+to\s+(close|resolve)\s+tickets?|avg(erage)?\s+ticket\s+(close|resolve))\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'ticket_resolution_time',
+      viz: 'table',
+      insightHints: 'resolution time',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(tickets?\s+by\s+sales|support\s+by\s+sales|which\s+salesperson\s+has\s+(the\s+)?most\s+tickets?)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'tickets_by_salesperson',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'tickets by sales',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(subsidy\s+vs\s+non[- ]?subsidy|non[- ]?subsidy\s+vs\s+subsidy|subsidy\s+mix\s+revenue)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'revenue_by_project_type',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'subsidy vs non-subsidy',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(dcr\s+vs\s+non[- ]?dcr|panel\s+type\s+mix|dcr\s+mix)\b/.test(q),
+    intent: {
+      metric: 'panel_type_mix',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'DCR mix',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(lead\s+sources?\s+(drove|revenue|mix)|revenue\s+by\s+lead\s+source|which\s+lead\s+sources?)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'revenue_by_lead_source',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'revenue by lead source',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(pipeline\s+by\s+stage|show\s+(my\s+)?pipeline|deals?\s+by\s+stage)\b/.test(q) &&
+      !/\blost\b/.test(q),
+    intent: {
+      metric: 'pipeline_by_stage',
+      viz: 'table',
+      insightHints: 'pipeline by stage',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(lost\s+deals?\s+by\s+reason|summaris[ea]\s+(my\s+)?lost\s+deals?|why\s+(did\s+we\s+)?lose)\b/.test(
+        q,
+      ) ||
+      (/\blost\s+deals?\b/.test(q) && /\b(reason|summary|summar)/.test(q)),
+    intent: {
+      metric: 'lost_deals_summary',
+      viz: 'table',
+      insightHints: 'lost deals by reason',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(outstanding\s+balance|projects?\s+with\s+outstanding|who\s+owes|balance\s+outstanding)\b/.test(
+        q,
+      ) && !/\bby\s+sales/.test(q),
+    intent: {
+      metric: 'outstanding_balance',
+      viz: 'table',
+      insightHints: 'outstanding balance',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(payment\s+status|payments?\s+breakdown|paid\s+vs\s+pending)\b/.test(q) &&
+      !/\bmode\b/.test(q),
+    intent: {
+      metric: 'payment_status_breakdown',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'payment status',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(pending\s+subsidy|subsidy\s+credit\s+pending|awaiting\s+subsidy)\b/.test(q),
+    intent: {
+      metric: 'pending_subsidy',
+      viz: 'table',
+      insightHints: 'pending subsidy',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(availing\s+loan|on\s+loan|loan\s+projects?|projects?\s+(that\s+are\s+)?financed)\b/.test(
+        q,
+      ) && !/\b(vs\s+cash|share|bank)\b/.test(q),
+    intent: {
+      metric: 'availing_loan',
+      viz: 'table',
+      filters: { availingLoan: true },
+      insightHints: 'availing loan',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(loan\s+bank|which\s+banks?\s+(are\s+)?financ|financing\s+banks?|bank\s+breakdown)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'loan_bank_breakdown',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'loan bank mix',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(top\s+customers?\s+by\s+profit|highest\s+profit\s+customers?|most\s+profitable\s+customers?)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'top_customers_by_profit',
+      viz: 'table',
+      insightHints: 'top customers by profit',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(revenue\s+by\s+sales|which\s+salesperson\s+(drove|sold|earned)|sales\s+team\s+revenue)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'revenue_by_salesperson',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'revenue by salesperson',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(proposal\s+engine|pe\s+(status|buckets?)|proposal[- ]ready)\b/.test(q),
+    intent: {
+      metric: 'proposal_engine_buckets',
+      viz: 'table',
+      insightHints: 'proposal engine buckets',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(install(ation)?\s+(status|breakdown)|install\s+by\s+status)\b/.test(q),
+    intent: {
+      metric: 'install_by_status',
+      viz: 'table',
+      insightHints: 'installation by status',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(lost\s+to\s+competition|competition\s+(lost|reasons?))\b/.test(q),
+    intent: {
+      metric: 'lost_competition_breakdown',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'competition lost',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(capacity\s+(sold\s+)?by\s+(size\s+)?band|kw\s+bands?|size\s+band)\b/.test(q),
+    intent: {
+      metric: 'capacity_by_band',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'capacity bands',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(customer\s+type\s+(mix|revenue)|revenue\s+by\s+customer\s+type)\b/.test(q),
+    intent: {
+      metric: 'revenue_by_customer_type',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'customer type revenue',
+    },
+  },
+  {
+    test: (q) => /\b(roof\s+type\s+mix|mix\s+by\s+roof)\b/.test(q),
+    intent: {
+      metric: 'roof_type_mix',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'roof type mix',
+    },
+  },
+  {
+    test: (q) => /\b(system\s+type\s+mix|on[- ]grid\s+vs\s+off[- ]grid|hybrid\s+mix)\b/.test(q),
+    intent: {
+      metric: 'system_type_mix',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'system type mix',
+    },
+  },
+  {
+    test: (q) => /\b(service\s+type\s+mix|mix\s+by\s+service\s+type)\b/.test(q),
+    intent: {
+      metric: 'service_type_mix',
+      viz: 'chart',
+      chartType: 'bar',
+      insightHints: 'service type mix',
+    },
+  },
+];
+
+/**
+ * Fuzzy paraphrase → catalog metric (skip Claude when confident).
+ */
+export function matchPhraseChipIntent(
+  question: string,
+  role: UserRole,
+): ZenithNlIntent | null {
+  const q = norm(question);
+  if (!q || q.length < 4) return null;
+  for (const row of PHRASE_SALVAGE) {
+    if (!row.test(q)) continue;
+    if (!metricAllowedForRole(row.intent.metric, role)) return null;
+    return {
+      ...row.intent,
+      filters: row.intent.filters ? { ...row.intent.filters } : undefined,
+    };
+  }
+  return null;
+}
+
+/**
  * Exact (case/whitespace-insensitive) match against known Ask chips.
  * Returns null when Claude (or entity salvage) should run.
  */
@@ -455,7 +850,9 @@ export function matchExactChipIntent(
       }
     }
     return (
-      matchSupportTicketIntent(question, role) || matchEquipmentMixIntent(question, role)
+      matchSupportTicketIntent(question, role) ||
+      matchEquipmentMixIntent(question, role) ||
+      matchPhraseChipIntent(question, role)
     );
   }
   if (!metricAllowedForRole(intent.metric, role)) return null;

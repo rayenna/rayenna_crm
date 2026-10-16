@@ -41,8 +41,52 @@ export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   ],
 }
 
-/** Side panel / “More questions” — keep short so the row stays scannable. */
-export function zenithAskExampleChips(role: string | undefined, limit = 3): string[] {
+/**
+ * Extra prompts for the post-answer “More questions” row (not shown in Try asking).
+ * Keep short and role-relevant; avoid duplicating primary examples.
+ */
+export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
+  SALES: [
+    'Payment status breakdown',
+    'Panel brand mix',
+    'Support tickets by salesperson',
+    'Capacity sold',
+  ],
+  MANAGEMENT: [
+    'Revenue by salesperson',
+    'Pipeline by stage',
+    'Ops workload',
+    'Hub plant link status',
+  ],
+  ADMIN: [
+    'Revenue by city',
+    'SLA status indicators',
+    'Loan vs cash revenue',
+    'Subsidy funnel',
+  ],
+  OPERATIONS: [
+    'Installation status breakdown',
+    'Show me the total support tickets raised',
+    'Hub plant link status',
+    'Pending subsidy',
+  ],
+  FINANCE: [
+    'Payment status breakdown',
+    'Availing loan',
+    'Revenue by project type',
+    'Pending subsidy',
+  ],
+}
+
+/** Side panel “Try asking” — full role pack (default all 5). */
+export function zenithAskExampleChips(role: string | undefined, limit?: number): string[] {
   const list = ZENITH_ASK_EXAMPLES[role ?? ''] ?? ZENITH_ASK_EXAMPLES.MANAGEMENT
+  if (limit == null || limit <= 0) return [...list]
+  return list.slice(0, limit)
+}
+
+/** After an answer — secondary prompts distinct from the primary pack. */
+export function zenithAskMoreChips(role: string | undefined, limit = 4): string[] {
+  const list = ZENITH_ASK_MORE_EXAMPLES[role ?? ''] ?? ZENITH_ASK_MORE_EXAMPLES.MANAGEMENT
   return list.slice(0, limit)
 }
