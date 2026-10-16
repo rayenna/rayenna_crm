@@ -1,3 +1,4 @@
+import type { ComplianceGapId } from './complianceGaps'
 import type { DataSenseRuleId } from './dataSense'
 
 export type PeDashboardBucket = 'proposal-ready' | 'draft' | 'not-started' | 'rest'
@@ -17,6 +18,8 @@ export function buildProjectsUrl(
      * excludes Completed – Subsidy Credited).
      */
     pendingSubsidy?: boolean
+    /** Zenith Ask subsidy compliance backlog row. */
+    complianceGap?: ComplianceGapId
     peBucket?: PeDashboardBucket
     leadSource?: string[]
     type?: string[]
@@ -53,6 +56,7 @@ export function buildProjectsUrl(
   params.paymentStatus?.forEach((v) => search.append('paymentStatus', v))
   if (params.availingLoan) search.append('availingLoan', 'true')
   if (params.pendingSubsidy) search.append('pendingSubsidy', 'true')
+  if (params.complianceGap) search.append('complianceGap', params.complianceGap)
   if (params.peBucket) search.append('peBucket', params.peBucket)
   params.leadSource?.forEach((v) => search.append('leadSource', v))
   params.type?.forEach((v) => search.append('type', v))

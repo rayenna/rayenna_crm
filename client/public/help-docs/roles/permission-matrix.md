@@ -22,8 +22,10 @@ Roles: **ADMIN** · **SALES** · **OPS** (Operations) · **FINANCE** · **MGMT**
 | **My Day** (tasks, journal, reminders) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Customers** | ✓ | ◐ | 👁 | 👁 | ◐ |
 | **Projects** | ✓ | ◐ | ◐ | ◐ | 👁 |
+| **Lost Deals** (analytics) | ✓ | — | — | — | ✓ |
 | **Support tickets** | ✓ | ✓ | ✓ | — | ✓ |
 | **Tally export** | ✓ | — | — | ✓ | — |
+| **Solar Hub** (Users / Maintenance / Provisioning / Help) | ✓ | — | ✓ | — | — |
 | **Users** | ✓ | — | — | — | — |
 | **Audit & Security** | ✓ | — | — | — | — |
 | **Help** | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -103,6 +105,8 @@ When **Edit** is available, which sections are writable:
 
 | Shortcut | Action | Roles |
 | :-- | :-- | :-- |
+| **Ctrl+K** / **⌘K** | Command palette (create / lists / search / go to) | All staff — items filtered by role |
+| **Ask Zenith** (on Zenith) | Analytics metrics + same task jumps as palette | Sales, Ops, Finance, Mgmt, Admin — metrics and actions filtered by role |
 | **Ctrl+Shift+C** / **⌘⇧C** | Customers | All except none — all five + Admin |
 | **Ctrl+Shift+P** / **⌘⇧P** | Projects | Same as Customers |
 | **Ctrl+Shift+K** / **⌘⇧K** | Support tickets | ADMIN, SALES, OPS, MGMT |

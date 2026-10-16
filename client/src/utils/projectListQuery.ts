@@ -1,3 +1,4 @@
+import type { ComplianceGapId } from './complianceGaps'
 import type { DataSenseRuleId } from './dataSense'
 
 /** Build query params for GET /api/projects and export endpoints (same filters; optional pagination). */
@@ -16,6 +17,7 @@ export type ProjectsListFiltersState = {
   hasDocuments: boolean
   availingLoan: boolean
   pendingSubsidy: boolean
+  complianceGap: ComplianceGapId | null
   peBucket: PeBucketParam | null
   financingBank: string[]
   zenithClosedFrom: string | null
@@ -64,6 +66,7 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.hasDocuments) params.append('hasDocuments', 'true')
   if (filters.availingLoan) params.append('availingLoan', 'true')
   if (filters.pendingSubsidy) params.append('pendingSubsidy', 'true')
+  if (filters.complianceGap) params.append('complianceGap', filters.complianceGap)
   if (filters.peBucket) params.append('peBucket', filters.peBucket)
   filters.financingBank.forEach((v) => params.append('financingBank', v))
   if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)

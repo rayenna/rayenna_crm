@@ -26,9 +26,10 @@ Menu items are displayed based on your user role:
 - **Dashboard**: Your personalized overview page
 - **Customers**: Customer database and management
 - **Projects**: Project management and tracking
+- **Lost Deals**: Lost analytics (Admin and Management)
 - **Support Tickets**: Customer service ticket management (Sales, Operations, Admin only)
 - **Tally Export**: Financial data export (Finance and Admin only)
-- **Solar Hub**: Homeowner accounts, plant mapping, Help Center (Operations and Admin)
+- **Solar Hub**: Homeowner accounts, plant mapping, Help Center (Operations and Admin) — Users / Maintenance / Provisioning
 - **Users**: User management (Admin only)
 
 ### Active Page Indicator
@@ -48,7 +49,7 @@ Located in the top navigation bar:
 
 ### Keyboard shortcuts
 
-See **[Keyboard shortcuts](#keyboard-shortcuts)** on this page for the full table (**?**, **Ctrl+Shift+** letters, **My Day**, **Esc** on Help). The same table is also under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
+See **[Keyboard shortcuts](#keyboard-shortcuts)** for **Ctrl+K** / **⌘K** command palette, **?**, **Ctrl+Shift+** letters, **My Day**, and **Esc** on Help.
 
 ### User Actions Menu
 
@@ -160,11 +161,13 @@ The main projects page displays all projects you have access to.
 
 - **Filter Section**:
   - **Search** bar and **Show Filters** / **Hide Filters** / **Clear All**
+  - **Quick views** — one-tap presets (Open pipeline, Needs review, Availing loan, Pending subsidy, Outstanding payment)
   - **Active filter chips** under search (remove one filter at a time; admins see export hint)
-  - Expanded grid: FY/quarter/month, status, **Segment**, **Customer type**, service type, payment, tickets, pipeline, PE bucket, etc.
+  - Expanded grid: FY/quarter/month, status, **Segment**, **Customer type**, service type, payment, tickets, pipeline, PE bucket, **Pending subsidy**, etc.
 
-- **Table Section**:
-  - Project list with sortable columns
+- **List Section**:
+  - **Phones (under ~744px):** **cards** by default (tap to open); optional Cards / Table toggle
+  - **Wider screens:** sortable table
   - Pagination controls at the bottom
   - 25 projects per page
 

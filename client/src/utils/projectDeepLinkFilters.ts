@@ -12,6 +12,7 @@ export const PROJECTS_DEEP_LINK_CHIP_IDS = new Set([
   'lifecycle-complete',
   'sales-unassigned',
   'lead-null',
+  'compliance-gap',
 ])
 
 export function isProjectsDeepLinkChipId(id: string): boolean {
@@ -33,6 +34,7 @@ export type ProjectsDeepLinkFilterClearPatch = {
   lifecycleSpecsIncomplete: false
   salespersonUnassigned: false
   leadSourceIsNull: false
+  complianceGap: null
 }
 
 export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
@@ -49,6 +51,7 @@ export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
     lifecycleSpecsIncomplete: false,
     salespersonUnassigned: false,
     leadSourceIsNull: false,
+    complianceGap: null,
   }
 }
 
@@ -65,6 +68,7 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
   lifecycleSpecsIncomplete: boolean
   salespersonUnassigned: boolean
   leadSourceIsNull: boolean
+  complianceGap?: unknown
 }): boolean {
   return Boolean(
     filters.peBucket ||
@@ -78,6 +82,7 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
       filters.lifecycleSpecsComplete ||
       filters.lifecycleSpecsIncomplete ||
       filters.salespersonUnassigned ||
-      filters.leadSourceIsNull,
+      filters.leadSourceIsNull ||
+      filters.complianceGap,
   )
 }

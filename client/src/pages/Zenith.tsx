@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
@@ -67,13 +68,14 @@ import { trackZenithAskEvent } from '../utils/zenithAskAnalytics'
 import type {
   ZenithAskHistoryItem,
   ZenithNlPriorContext,
+  ZenithNlQueryMetricSuccess,
   ZenithNlQueryResult,
-  ZenithNlQuerySuccess,
 } from '../types/zenithNlQuery'
 
 const ZENITH_ASK_HISTORY_MAX = 12
 
 const Zenith = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
@@ -139,7 +141,7 @@ const Zenith = () => {
   )
 
   const pushAskHistory = useCallback(
-    (success: ZenithNlQuerySuccess) => {
+    (success: ZenithNlQueryMetricSuccess) => {
       const entry: ZenithAskHistoryItem = {
         id: `${Date.now()}-${success.intent.metric}`,
         question: success.question,
@@ -186,7 +188,20 @@ const Zenith = () => {
           prior: askPriorRef.current,
         })
         setAskResult(res.data)
-        if (res.data.ok) {
+        if (res.data.ok && res.data.kind === 'action') {
+          trackZenithAskEvent('ask_action', {
+            role: user?.role,
+            action: res.data.action,
+            href: res.data.href,
+            chipMatch: res.data.chipMatch,
+            source,
+            ms: Date.now() - started,
+          })
+          if (res.data.autoNavigate && res.data.href) {
+            navigate(res.data.href)
+            return
+          }
+        } else if (res.data.ok && res.data.kind === 'metric') {
           pushAskHistory(res.data)
           trackZenithAskEvent('ask_success', {
             role: user?.role,
@@ -196,7 +211,7 @@ const Zenith = () => {
             source,
             ms: Date.now() - started,
           })
-        } else {
+        } else if (!res.data.ok) {
           trackZenithAskEvent('ask_clarify', {
             role: user?.role,
             source,
@@ -230,6 +245,7 @@ const Zenith = () => {
       selectedMonths,
       pushAskHistory,
       user?.role,
+      navigate,
     ],
   )
 

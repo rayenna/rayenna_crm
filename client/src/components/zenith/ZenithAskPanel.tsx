@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bar,
   BarChart,
@@ -40,11 +40,23 @@ function formatCell(v: string | number | null): string {
   return String(v)
 }
 
-function AskViz({ viz }: { viz: ZenithNlViz }) {
+function AskViz({
+  viz,
+  onDrill,
+}: {
+  viz: ZenithNlViz
+  onDrill?: (href: string) => void
+}) {
   if (viz.kind === 'table') {
+    const anyClickable = viz.rows.some((r) => typeof r.href === 'string' && r.href.length > 0)
     return (
       <ChartPanel title={viz.title} contentClassName="min-h-0">
         <div className="overflow-x-auto max-h-[280px] overflow-y-auto">
+          {anyClickable ? (
+            <p className="mb-1.5 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
+              Click a row to open matching projects
+            </p>
+          ) : null}
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead className="sticky top-0 bg-[color:var(--bg-card)]">
               <tr className="border-b border-[color:var(--border-default)] text-[color:var(--text-muted)]">
@@ -66,18 +78,52 @@ function AskViz({ viz }: { viz: ZenithNlViz }) {
                   </td>
                 </tr>
               ) : (
-                viz.rows.map((row, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-[color:var(--border-default)] text-[color:var(--text-primary)]"
-                  >
-                    {viz.columns.map((c) => (
-                      <td key={c.key} className="py-2 pr-3 whitespace-nowrap">
-                        {formatCell(row[c.key] ?? null)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                viz.rows.map((row, i) => {
+                  const href = typeof row.href === 'string' ? row.href : ''
+                  const clickable = Boolean(href)
+                  return (
+                    <tr
+                      key={i}
+                      className={
+                        clickable
+                          ? 'border-b border-[color:var(--border-default)] text-[color:var(--text-primary)] cursor-pointer hover:bg-[color:var(--bg-elevated,rgba(255,255,255,0.04))] transition-colors'
+                          : 'border-b border-[color:var(--border-default)] text-[color:var(--text-primary)]'
+                      }
+                      onClick={
+                        clickable
+                          ? () => {
+                              onDrill?.(href)
+                            }
+                          : undefined
+                      }
+                      onKeyDown={
+                        clickable
+                          ? (e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                onDrill?.(href)
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={clickable ? 0 : undefined}
+                      role={clickable ? 'link' : undefined}
+                    >
+                      {viz.columns.map((c) => (
+                        <td
+                          key={c.key}
+                          className={
+                            clickable && c.key === 'count'
+                              ? 'py-2 pr-3 whitespace-nowrap font-semibold text-[color:var(--accent-gold)] underline-offset-2 hover:underline'
+                              : 'py-2 pr-3 whitespace-nowrap'
+                          }
+                        >
+                          {formatCell(row[c.key] ?? null)}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -86,11 +132,22 @@ function AskViz({ viz }: { viz: ZenithNlViz }) {
     )
   }
 
-  const data = viz.series.map((s) => ({ name: s.label, value: s.value, count: s.count }))
+  const data = viz.series.map((s) => ({
+    name: s.label,
+    value: s.value,
+    count: s.count,
+    href: s.href,
+  }))
+  const anyChartClickable = data.some((d) => Boolean(d.href))
 
   if (viz.chartType === 'pie') {
     return (
       <ChartPanel title={viz.title} contentClassName="min-h-[240px]">
+        {anyChartClickable ? (
+          <p className="mb-1 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
+            Click a slice to open matching projects
+          </p>
+        ) : null}
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie
@@ -101,6 +158,11 @@ function AskViz({ viz }: { viz: ZenithNlViz }) {
               cy="50%"
               outerRadius={80}
               label={({ name }) => String(name)}
+              cursor={anyChartClickable ? 'pointer' : undefined}
+              onClick={(_, index) => {
+                const href = data[index]?.href
+                if (href) onDrill?.(href)
+              }}
             >
               {data.map((_, i) => (
                 <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -120,6 +182,11 @@ function AskViz({ viz }: { viz: ZenithNlViz }) {
 
   return (
     <ChartPanel title={viz.title} contentClassName="min-h-[240px]">
+      {anyChartClickable ? (
+        <p className="mb-1 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
+          Click a bar to open matching projects
+        </p>
+      ) : null}
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 48 }}>
           <XAxis
@@ -142,7 +209,17 @@ function AskViz({ viz }: { viz: ZenithNlViz }) {
               viz.valueLabel || 'Value',
             ]}
           />
-          <Bar dataKey="value" fill="var(--accent-gold)" radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey="value"
+            fill="var(--accent-gold)"
+            radius={[4, 4, 0, 0]}
+            cursor={anyChartClickable ? 'pointer' : undefined}
+            onClick={(entry) => {
+              const payload = entry as { payload?: { href?: string }; href?: string }
+              const href = payload.payload?.href || payload.href
+              if (href) onDrill?.(href)
+            }}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartPanel>
@@ -173,6 +250,7 @@ export default function ZenithAskPanel({
   onAskSuggestion,
   onReplayHistory,
 }: Props) {
+  const navigate = useNavigate()
   if (!result && !error && !loading && history.length === 0) return null
 
   const datePhrase =
@@ -258,10 +336,40 @@ export default function ZenithAskPanel({
           </>
         ) : null}
 
-        {result && result.ok ? (
+        {result && result.ok && result.kind === 'action' ? (
+          <>
+            <p className="zenith-ask-result__insight">{result.message}</p>
+            <Link
+              to={result.href}
+              className="zenith-ask-result__cta"
+              onClick={() =>
+                trackZenithAskEvent('ask_action', {
+                  role,
+                  action: result.action,
+                  href: result.href,
+                  chipMatch: result.chipMatch,
+                })
+              }
+            >
+              {result.label} →
+            </Link>
+          </>
+        ) : null}
+
+        {result && result.ok && result.kind === 'metric' ? (
           <>
             <p className="zenith-ask-result__insight">{result.insight}</p>
-            <AskViz viz={result.viz} />
+            <AskViz
+              viz={result.viz}
+              onDrill={(href) => {
+                trackZenithAskEvent('ask_open_projects', {
+                  role,
+                  metric: result.intent.metric,
+                  chipMatch: result.chipMatch,
+                })
+                navigate(href)
+              }}
+            />
             {result.followUps && result.followUps.length > 0 ? (
               <div className="zenith-ask-followups">
                 <p className="zenith-ask-followups__label">Follow up</p>
@@ -291,7 +399,9 @@ export default function ZenithAskPanel({
                   })
                 }
               >
-                Open in Projects →
+                {result.projectsHref.startsWith('/support-tickets')
+                  ? 'Open Support Tickets →'
+                  : 'Open in Projects →'}
               </Link>
             ) : null}
           </>

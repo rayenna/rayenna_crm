@@ -17,6 +17,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Navigation', hash: 'navigation-guide' },
     { label: 'Common actions', hash: 'common-actions-guide' },
     { label: 'Shortcuts', hash: 'keyboard-shortcuts' },
+    { label: 'Command palette', hash: 'command-palette-anywhere' },
   ],
   roles: [
     { label: 'Overview', hash: 'user-roles-permissions' },
@@ -54,6 +55,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
   zenith: [
     { label: 'Overview', hash: 'zenith-command-center' },
     { label: 'Command bar', hash: 'command-bar-and-filters' },
+    { label: 'Ask Zenith', hash: 'ask-zenith-natural-language' },
     { label: 'Ribbons & KPIs', hash: 'ribbons-and-kpis' },
     { label: 'Pipeline & Hit List', hash: 'pipeline-and-hit-list' },
     { label: 'Your Focus', hash: 'your-focus' },

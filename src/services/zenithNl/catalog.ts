@@ -14,10 +14,36 @@ export const ZENITH_NL_METRICS = [
   'projects_list_slice',
   'cohort_summary',
   'panel_brand_mix',
+  'inverter_brand_mix',
   'loan_bank_breakdown',
+  'support_tickets_summary',
   'install_by_status',
   'pending_subsidy',
   'availing_loan',
+  'revenue_by_project_type',
+  'revenue_by_customer_type',
+  'service_type_mix',
+  'panel_type_mix',
+  'roof_type_mix',
+  'system_type_mix',
+  'capacity_by_band',
+  'revenue_by_city',
+  'ops_workload',
+  'project_stage_mix',
+  'sla_indicator_mix',
+  'lost_competition_breakdown',
+  'loan_vs_cash_revenue',
+  'outstanding_by_salesperson',
+  'profit_summary',
+  'tickets_by_salesperson',
+  'compliance_backlog',
+  'subsidy_funnel',
+  'installation_model_status',
+  'payment_mode_mix',
+  'unpaid_invoices',
+  'amc_expiring',
+  'ticket_resolution_time',
+  'hub_plant_link_summary',
   'clarify',
 ] as const;
 
@@ -44,6 +70,49 @@ export type ZenithNlIntent = {
     financingBank?: string;
     /** Restrict to projects availing loan. */
     availingLoan?: boolean;
+    /** Support ticket status: OPEN | IN_PROGRESS | CLOSED | OVERDUE (queue focus) */
+    ticketStatus?: string;
+    /** Support ticket source: CRM | CONSUMER_APP */
+    ticketSource?: string;
+    /** Project.type: SUBSIDY | NON_SUBSIDY */
+    projectType?: string;
+    /** Project.projectServiceType enum */
+    projectServiceType?: string;
+    /** Customer.customerType enum */
+    customerType?: string;
+    /** Panel type: DCR | Non-DCR */
+    panelType?: string;
+    /** SystemType: ON_GRID | OFF_GRID | HYBRID */
+    systemType?: string;
+    /** Roof type label (e.g. Metal, Concrete-Flat) */
+    roofType?: string;
+    /** System capacity kW inclusive bounds */
+    capacityMin?: number;
+    capacityMax?: number;
+    /** Salesperson display name (resolved to id at exec) */
+    salespersonName?: string;
+    /** Projects with no salesperson */
+    salespersonUnassigned?: boolean;
+    /** Customer city contains */
+    city?: string;
+    /** Ops person display name (resolved at exec) */
+    opsName?: string;
+    /** Project.projectStage enum */
+    projectStage?: string;
+    /** SLA statusIndicator: GREEN | AMBER | RED */
+    statusIndicator?: string;
+    /** Projects with null leadSource */
+    leadSourceIsNull?: boolean;
+    incentiveEligible?: boolean;
+    hasDocuments?: boolean;
+    lifecycleSpecsIncomplete?: boolean;
+    dataSenseNeedsReview?: boolean;
+    /** Any of solis/deye/sunways station ids set */
+    hubPlantLinked?: boolean;
+    panelCapacityWMin?: number;
+    panelCapacityWMax?: number;
+    inverterCapacityKwMin?: number;
+    inverterCapacityKwMax?: number;
   };
   insightHints?: string;
 };
@@ -55,12 +124,18 @@ export type ZenithNlPriorContext = {
 };
 
 export type ZenithNlTableColumn = { key: string; label: string };
-export type ZenithNlTableRow = Record<string, string | number | null>;
+/** Row cells plus optional drill-down `href` (not rendered as a column). */
+export type ZenithNlTableRow = {
+  href?: string;
+  [key: string]: string | number | null | undefined;
+};
 
 export type ZenithNlChartSeriesPoint = {
   label: string;
   value: number;
   count?: number;
+  /** Optional Projects / Tickets drill-down for this slice. */
+  href?: string;
 };
 
 export type ZenithNlViz =
@@ -88,8 +163,9 @@ export type ZenithNlEffectiveDateFilter = {
   phrase?: string;
 };
 
-export type ZenithNlQuerySuccess = {
+export type ZenithNlQueryMetricSuccess = {
   ok: true;
+  kind: 'metric';
   question: string;
   insight: string;
   viz: ZenithNlViz;
@@ -101,6 +177,23 @@ export type ZenithNlQuerySuccess = {
   /** True when intent came from an exact example-chip match (no Claude). */
   chipMatch?: boolean;
 };
+
+/** Navigate / create from the Ask box (not an analytics answer). */
+export type ZenithNlQueryActionSuccess = {
+  ok: true;
+  kind: 'action';
+  question: string;
+  action: string;
+  label: string;
+  message: string;
+  href: string;
+  autoNavigate: boolean;
+  suggestedQuestions?: string[];
+  chipMatch?: boolean;
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter;
+};
+
+export type ZenithNlQuerySuccess = ZenithNlQueryMetricSuccess | ZenithNlQueryActionSuccess;
 
 export type ZenithNlQueryClarify = {
   ok: false;
@@ -145,6 +238,13 @@ const MIX_CHART_ROLES: UserRole[] = [
   UserRole.MANAGEMENT,
   UserRole.ADMIN,
   UserRole.FINANCE,
+];
+/** Support Tickets module roles (Finance has no tickets queue). */
+const SUPPORT_TICKET_ROLES: UserRole[] = [
+  UserRole.SALES,
+  UserRole.OPERATIONS,
+  UserRole.MANAGEMENT,
+  UserRole.ADMIN,
 ];
 
 export type MetricCatalogEntry = {
@@ -231,7 +331,15 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'panel_brand_mix',
     description:
-      'Project count and order value grouped by panel brand (mix / share chart)',
+      'Project count and order value grouped by panel brand (mix / share chart). Use for panel brands sold most — NOT for inverters.',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'inverter_brand_mix',
+    description:
+      'Project count and order value grouped by inverter brand (mix / share chart). Use for inverter brands sold most / which inverter sold most — NOT for panels.',
     defaultViz: 'chart',
     defaultChartType: 'bar',
     roles: MIX_CHART_ROLES,
@@ -243,6 +351,182 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     defaultViz: 'chart',
     defaultChartType: 'bar',
     roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'support_tickets_summary',
+    description:
+      'Support tickets raised: total count, status breakdown (Open / In progress / Closed), overdue open queue, and Solar Hub (consumer app) share. Date filters apply to ticket created date.',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: SUPPORT_TICKET_ROLES,
+  },
+  {
+    metric: 'revenue_by_project_type',
+    description:
+      'Revenue (order value) and deal counts for Subsidy vs Non-Subsidy projects',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'revenue_by_customer_type',
+    description:
+      'Revenue (order value) by customer type: Residential, Apartment, Commercial',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'service_type_mix',
+    description:
+      'Projects grouped by service type (EPC, Panel Cleaning, Maintenance, Repair, etc.)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: [...OPS_PLUS, UserRole.SALES, UserRole.FINANCE],
+  },
+  {
+    metric: 'panel_type_mix',
+    description: 'DCR vs Non-DCR panel type mix (count and order value)',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'roof_type_mix',
+    description: 'Projects grouped by roof type (Concrete-Flat, Metal, Tile, etc.)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: [...OPS_PLUS, UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'system_type_mix',
+    description: 'On-grid vs Off-grid vs Hybrid system type mix',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'capacity_by_band',
+    description:
+      'Projects and capacity sold by system size band (under 3 kW, 3–5, 6–10, above 10 kW)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: [...MIX_CHART_ROLES, UserRole.OPERATIONS, UserRole.SALES],
+  },
+  {
+    metric: 'revenue_by_city',
+    description: 'Revenue (order value) grouped by customer city',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: MIX_CHART_ROLES,
+  },
+  {
+    metric: 'ops_workload',
+    description: 'Active install-stage projects counted by assigned ops person',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: [...OPS_PLUS, UserRole.ADMIN],
+  },
+  {
+    metric: 'project_stage_mix',
+    description: 'Projects grouped by lifecycle projectStage (Survey → AMC)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: [...OPS_PLUS, UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'sla_indicator_mix',
+    description: 'SLA status indicators GREEN / AMBER / RED on open projects',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: [...OPS_PLUS, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'lost_competition_breakdown',
+    description: 'Lost-to-competition deals by subtype (price, features, timeline, brand, relationship)',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: LOST_DEALS_ROLES,
+  },
+  {
+    metric: 'loan_vs_cash_revenue',
+    description: 'Share of revenue on availing-loan vs not-on-loan projects',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: FINANCE_PLUS,
+  },
+  {
+    metric: 'outstanding_by_salesperson',
+    description: 'Outstanding balance grouped by salesperson',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: FINANCE_PLUS,
+  },
+  {
+    metric: 'profit_summary',
+    description:
+      'Totals: order value, gross profit, avg margin %, collected, outstanding, capacity',
+    defaultViz: 'table',
+    roles: FINANCE_PLUS,
+  },
+  {
+    metric: 'tickets_by_salesperson',
+    description: 'Support ticket volume grouped by project salesperson',
+    defaultViz: 'chart',
+    defaultChartType: 'bar',
+    roles: SUPPORT_TICKET_ROLES,
+  },
+  {
+    metric: 'compliance_backlog',
+    description:
+      'Subsidy compliance gaps: KSEB feasibility/registration, install, MNRE portal, subsidy credit',
+    defaultViz: 'table',
+    roles: [...OPS_PLUS, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'subsidy_funnel',
+    description: 'Subsidy projects by late status (Confirmed → Subsidy credited)',
+    defaultViz: 'table',
+    roles: [...OPS_PLUS, UserRole.FINANCE, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'installation_model_status',
+    description: 'Installation table records by status (Pending / In progress / Completed)',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: INSTALL_ROLES,
+  },
+  {
+    metric: 'payment_mode_mix',
+    description: 'Invoice payment amounts by mode (UPI / Bank / Cheque)',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: FINANCE_PLUS,
+  },
+  {
+    metric: 'unpaid_invoices',
+    description: 'Unpaid and part-paid invoices list with totals',
+    defaultViz: 'table',
+    roles: FINANCE_PLUS,
+  },
+  {
+    metric: 'amc_expiring',
+    description: 'AMC contracts ending in the next 90 days',
+    defaultViz: 'table',
+    roles: [...OPS_PLUS, UserRole.FINANCE, UserRole.MANAGEMENT, UserRole.ADMIN],
+  },
+  {
+    metric: 'ticket_resolution_time',
+    description: 'Average / median days to close support tickets',
+    defaultViz: 'table',
+    roles: SUPPORT_TICKET_ROLES,
+  },
+  {
+    metric: 'hub_plant_link_summary',
+    description: 'Projects with vs without Solis/Deye/Sunways Hub plant station ids',
+    defaultViz: 'chart',
+    defaultChartType: 'pie',
+    roles: [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT],
   },
   {
     metric: 'install_by_status',
@@ -291,36 +575,37 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Which lead sources drove the most revenue?',
     'Show my pipeline by stage',
+    'Show me the total support tickets raised',
     'Summarise my lost deals by reason',
-    'Show installation status breakdown',
     'How many of my projects used Adani panels?',
   ],
   MANAGEMENT: [
-    'Which lead sources drove the most revenue?',
-    'How many projects used Adani panels?',
-    'Which panel brands sold most?',
-    'Which banks are financing loans?',
-    'Summarise lost deals by reason',
+    'Subsidy vs non-subsidy revenue',
+    'Revenue by city',
+    'Profit summary',
+    'Compliance backlog',
+    'Loan vs cash revenue',
   ],
   ADMIN: [
-    'Which lead sources drove the most revenue?',
-    'How many projects used Adani panels?',
-    'Which panel brands sold most?',
-    'Which banks are financing loans?',
-    'Payment status breakdown',
+    'Profit summary',
+    'Ops workload',
+    'Compliance backlog',
+    'Hub plant link status',
+    'Outstanding by salesperson',
   ],
   OPERATIONS: [
-    'Show installation status breakdown',
-    'How many projects used Adani panels?',
-    'Projects with Deye inverters',
-    'Projects pending subsidy credit',
+    'Ops workload',
+    'SLA status indicators',
+    'Compliance backlog',
+    'Subsidy funnel',
+    'AMCs expiring',
   ],
   FINANCE: [
-    'Payment status breakdown',
-    'Which banks are financing loans?',
-    'How many customers have SBI loans?',
-    'Which panel brands sold most?',
-    'Projects with outstanding balance',
+    'Profit summary',
+    'Loan vs cash revenue',
+    'Outstanding by salesperson',
+    'Payment mode mix',
+    'Unpaid invoices',
   ],
 };
 
@@ -393,14 +678,24 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Which projects are availing loan?',
     ],
     panel_brand_mix: [
+      'Which inverter brands sold most?',
       'How many projects used Adani panels?',
-      'Revenue of projects with Deye inverters',
+      'Which banks are financing loans?',
+    ],
+    inverter_brand_mix: [
+      'Which panel brands sold most?',
+      'Projects with Deye inverters',
       'Which banks are financing loans?',
     ],
     loan_bank_breakdown: [
       'How many customers have SBI loans?',
       'Payment status breakdown',
-      'Which panel brands sold most?',
+      'Which inverter brands sold most?',
+    ],
+    support_tickets_summary: [
+      'Show open support tickets',
+      'Show overdue support tickets',
+      'Show installation status breakdown',
     ],
     install_by_status: [
       'Projects pending subsidy credit',
@@ -416,6 +711,126 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Payment status breakdown',
       'Projects with outstanding balance',
       'How many customers have SBI loans?',
+    ],
+    revenue_by_project_type: [
+      'DCR vs Non-DCR mix',
+      'Revenue by customer type',
+      'Capacity sold by size band',
+    ],
+    revenue_by_customer_type: [
+      'Subsidy vs non-subsidy revenue',
+      'Which lead sources drove the most revenue?',
+      'Service type mix',
+    ],
+    service_type_mix: [
+      'Show installation status breakdown',
+      'Roof type mix',
+      'Pipeline by stage',
+    ],
+    panel_type_mix: [
+      'Subsidy vs non-subsidy revenue',
+      'Which panel brands sold most?',
+      'Capacity sold by size band',
+    ],
+    roof_type_mix: [
+      'System type mix',
+      'Service type mix',
+      'Show installation status breakdown',
+    ],
+    system_type_mix: [
+      'Capacity sold by size band',
+      'Roof type mix',
+      'Which inverter brands sold most?',
+    ],
+    capacity_by_band: [
+      'Subsidy vs non-subsidy revenue',
+      'What capacity have we sold?',
+      'DCR vs Non-DCR mix',
+    ],
+    revenue_by_city: [
+      'Profit summary',
+      'Loan vs cash revenue',
+      'Subsidy vs non-subsidy revenue',
+    ],
+    ops_workload: [
+      'SLA status indicators',
+      'Compliance backlog',
+      'Project stage mix',
+    ],
+    project_stage_mix: [
+      'Ops workload',
+      'SLA status indicators',
+      'Show my pipeline by stage',
+    ],
+    sla_indicator_mix: [
+      'Ops workload',
+      'Compliance backlog',
+      'Project stage mix',
+    ],
+    lost_competition_breakdown: [
+      'Summarise lost deals by reason',
+      'Revenue by salesperson',
+      'Pipeline by stage',
+    ],
+    loan_vs_cash_revenue: [
+      'Which banks are financing loans?',
+      'Outstanding by salesperson',
+      'Profit summary',
+    ],
+    outstanding_by_salesperson: [
+      'Profit summary',
+      'Unpaid invoices',
+      'Payment mode mix',
+    ],
+    profit_summary: [
+      'Outstanding by salesperson',
+      'Loan vs cash revenue',
+      'Revenue by city',
+    ],
+    tickets_by_salesperson: [
+      'Ticket resolution time',
+      'Show me the total support tickets raised',
+      'Show overdue support tickets',
+    ],
+    compliance_backlog: [
+      'Subsidy funnel',
+      'SLA status indicators',
+      'Projects pending subsidy credit',
+    ],
+    subsidy_funnel: [
+      'Compliance backlog',
+      'Projects pending subsidy credit',
+      'Show installation status breakdown',
+    ],
+    installation_model_status: [
+      'Show installation status breakdown',
+      'Ops workload',
+      'AMCs expiring',
+    ],
+    payment_mode_mix: [
+      'Unpaid invoices',
+      'Payment status breakdown',
+      'Outstanding by salesperson',
+    ],
+    unpaid_invoices: [
+      'Payment mode mix',
+      'Projects with outstanding balance',
+      'Profit summary',
+    ],
+    amc_expiring: [
+      'Ops workload',
+      'Hub plant link status',
+      'Show installation status breakdown',
+    ],
+    ticket_resolution_time: [
+      'Support tickets by salesperson',
+      'Show open support tickets',
+      'Show overdue support tickets',
+    ],
+    hub_plant_link_summary: [
+      'AMCs expiring',
+      'Ops workload',
+      'Compliance backlog',
     ],
   };
   const list = (common[metric] ?? suggestedQuestionsForRole(role)).filter((q) => {

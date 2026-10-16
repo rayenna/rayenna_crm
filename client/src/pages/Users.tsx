@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,6 +20,7 @@ const usersHeaderInner =
 const Users = () => {
   const { hasRole, user } = useAuth()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -59,6 +60,16 @@ const Users = () => {
       return () => cancelAnimationFrame(id)
     }
   }, [showForm])
+
+  // Open create form from Ask / palette: /users?new=1
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return
+    const next = new URLSearchParams(searchParams)
+    next.delete('new')
+    setSearchParams(next, { replace: true })
+    if (!hasRole([UserRole.ADMIN])) return
+    setShowForm(true)
+  }, [searchParams, setSearchParams, hasRole])
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],

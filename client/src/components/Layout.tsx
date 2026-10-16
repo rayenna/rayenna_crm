@@ -5,15 +5,18 @@ import { UserRole } from '../types'
 import { ROUTE_ROLES } from '../constants/routeRoles'
 import ThemeToggle from './ThemeToggle'
 import TipOfTheDay from './TipOfTheDay'
+import CommandPalette from './CommandPalette'
 import { getHelpPathForRoute } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import '../styles/zenith.css'
+import '../styles/commandPalette.css'
 import VictoryToast from './zenith/VictoryToast'
 import { useVictoryToast } from '../hooks/useVictoryToast'
 import { MyDayProvider } from '../contexts/MyDayContext'
 import MyDayDrawer from './my-day/MyDayDrawer'
 import MyDayNavEntry from './my-day/MyDayNavEntry'
 import MyDayJournalNudge from './my-day/MyDayJournalNudge'
+import MyDayUrlBridge from './my-day/MyDayUrlBridge'
 import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
@@ -54,6 +57,7 @@ const Layout = () => {
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const helpDropdownRef = useRef<HTMLDivElement>(null)
   const moreDropdownRef = useRef<HTMLDivElement>(null)
   const profileDropdownRef = useRef<HTMLDivElement>(null)
@@ -125,7 +129,7 @@ const Layout = () => {
     setHelpDropdownOpen(false)
   }
 
-  // Keyboard: ? → Help · Ctrl/Cmd+Shift+ D C P K Z M(MyDay) N(NewCustomer) E(NewProject) → routes (see help docs) · Esc → leave Help
+  // Keyboard: ⌘/Ctrl+K palette · ? → Help · Ctrl/Cmd+Shift+ D C P K Z N E · Esc → leave Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement
@@ -135,6 +139,26 @@ const Layout = () => {
         target.tagName === 'SELECT' ||
         target.isContentEditable ||
         target.closest('[contenteditable="true"]') !== null
+
+      const mod = event.ctrlKey || event.metaKey
+
+      // Command palette — ⌘K / Ctrl+K (no Shift; Shift+K remains Support Tickets)
+      if (
+        mod &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'k'
+      ) {
+        event.preventDefault()
+        setCommandPaletteOpen((open) => !open)
+        setMobileMenuOpen(false)
+        setHelpDropdownOpen(false)
+        setMoreDropdownOpen(false)
+        setProfileDropdownOpen(false)
+        return
+      }
+
+      if (commandPaletteOpen) return
 
       const isQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey)
       if (isQuestionMark && !isInputFocused && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -146,7 +170,6 @@ const Layout = () => {
         return
       }
 
-      const mod = event.ctrlKey || event.metaKey
       const isModShiftLetter =
         mod && event.shiftKey && !event.altKey && event.key.length === 1 && !isInputFocused
 
@@ -206,7 +229,14 @@ const Layout = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [location.pathname, navigate, canAccessDashboardMenu, hasRole, getHelpPath])
+  }, [
+    location.pathname,
+    navigate,
+    canAccessDashboardMenu,
+    hasRole,
+    getHelpPath,
+    commandPaletteOpen,
+  ])
 
   // Below lg: hamburger only (all orientations) — avoids landscape cramming with inline nav + menus.
   useEffect(() => {
@@ -676,7 +706,15 @@ const Layout = () => {
 
       <TipOfTheDay />
 
+      {user ? (
+        <CommandPalette
+          open={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+        />
+      ) : null}
+
       {/* My Day drawer — mounted once at layout level; persists state across route changes */}
+      {user ? <MyDayUrlBridge /> : null}
       {user ? <MyDayJournalNudge /> : null}
       {user ? <MyDayDrawer /> : null}
     </div>

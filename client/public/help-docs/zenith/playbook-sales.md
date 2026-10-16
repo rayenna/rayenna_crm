@@ -9,11 +9,12 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 3. Glance at **Live** vs **Offline** — My Day and fresh CRM writes need **Live**; cached KPIs may still show offline on PWA.
 4. If the **Smart daily briefing** appears, scan **Your My Day**, any **Needs review** line, and any **lifecycle brand** reminder ([Daily briefing](#daily-briefing-zenith) · [Needs review](/help/modules#needs-review-data-sense)). Dismiss or **Don’t show again today** as you prefer.
 
-## 2. Scan ribbons and KPIs (~3 min)
+## 2. Scan ribbons, Ask, and KPIs (~3 min)
 
 1. Skim **Solar News** — optional industry context; click a headline to read externally.
-2. Read **AI Insights** — click a line to jump to KPIs, **The Board**, or **Your Focus** ([AI Insights](#ai-insights-ticker)).
-3. On the **KPI strip**, note pipeline value, capacity, and any red trend badges ([KPI strip](#kpi-strip-and-year-on-year)).
+2. Try **Ask Zenith** for a quick question (e.g. pipeline by stage or support tickets) or a task jump (**New Customer**, **Open My Day**) — same tasks as **Ctrl+K** / **⌘K** ([Ask Zenith](#ask-zenith-natural-language)).
+3. Read **AI Insights** — click a line to jump to KPIs, **The Board**, or **Your Focus** ([AI Insights](#ai-insights-ticker)).
+4. On the **KPI strip**, note pipeline value, capacity, and any red trend badges ([KPI strip](#kpi-strip-and-year-on-year)).
 
 **Phone:** stay on the **Today** tab for Hit List + KPIs ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
 

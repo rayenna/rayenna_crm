@@ -15,6 +15,32 @@ export type ZenithNlIntent = {
     inverterBrand?: string
     financingBank?: string
     availingLoan?: boolean
+    ticketStatus?: string
+    ticketSource?: string
+    projectType?: string
+    projectServiceType?: string
+    customerType?: string
+    panelType?: string
+    systemType?: string
+    roofType?: string
+    capacityMin?: number
+    capacityMax?: number
+    salespersonName?: string
+    salespersonUnassigned?: boolean
+    city?: string
+    opsName?: string
+    projectStage?: string
+    statusIndicator?: string
+    leadSourceIsNull?: boolean
+    incentiveEligible?: boolean
+    hasDocuments?: boolean
+    lifecycleSpecsIncomplete?: boolean
+    dataSenseNeedsReview?: boolean
+    hubPlantLinked?: boolean
+    panelCapacityWMin?: number
+    panelCapacityWMax?: number
+    inverterCapacityKwMin?: number
+    inverterCapacityKwMax?: number
   }
   insightHints?: string
 }
@@ -26,12 +52,18 @@ export type ZenithNlPriorContext = {
 }
 
 export type ZenithNlTableColumn = { key: string; label: string }
-export type ZenithNlTableRow = Record<string, string | number | null>
+/** Row cells plus optional drill-down `href` (not rendered as a column). */
+export type ZenithNlTableRow = {
+  href?: string
+  [key: string]: string | number | null | undefined
+}
 
 export type ZenithNlChartSeriesPoint = {
   label: string
   value: number
   count?: number
+  /** Optional Projects / Tickets drill-down for this slice. */
+  href?: string
 }
 
 export type ZenithNlViz =
@@ -57,8 +89,9 @@ export type ZenithNlEffectiveDateFilter = {
   phrase?: string
 }
 
-export type ZenithNlQuerySuccess = {
+export type ZenithNlQueryMetricSuccess = {
   ok: true
+  kind: 'metric'
   question: string
   insight: string
   viz: ZenithNlViz
@@ -69,6 +102,22 @@ export type ZenithNlQuerySuccess = {
   effectiveDateFilter?: ZenithNlEffectiveDateFilter
   chipMatch?: boolean
 }
+
+export type ZenithNlQueryActionSuccess = {
+  ok: true
+  kind: 'action'
+  question: string
+  action: string
+  label: string
+  message: string
+  href: string
+  autoNavigate: boolean
+  suggestedQuestions?: string[]
+  chipMatch?: boolean
+  effectiveDateFilter?: ZenithNlEffectiveDateFilter
+}
+
+export type ZenithNlQuerySuccess = ZenithNlQueryMetricSuccess | ZenithNlQueryActionSuccess
 
 export type ZenithNlQueryClarify = {
   ok: false

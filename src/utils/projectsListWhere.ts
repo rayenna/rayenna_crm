@@ -17,6 +17,12 @@ import {
   parseDataSenseRule,
   type DataSenseRuleId,
 } from './dataSense';
+import {
+  COMPLIANCE_GAP_IDS,
+  complianceGapPrismaWhere,
+  parseComplianceGap,
+  type ComplianceGapId,
+} from './complianceGaps';
 
 export type ProjectsListFilterInput = {
   statusArray: string[];
@@ -49,6 +55,8 @@ export type ProjectsListFilterInput = {
   lifecycleSpecsIncompleteActive: boolean;
   dataSenseNeedsReviewActive: boolean;
   dataSenseRule: DataSenseRuleId | null;
+  /** Zenith Ask subsidy compliance backlog drill-down. */
+  complianceGap: ComplianceGapId | null;
 };
 
 export type ProjectsListUser = { id: string; role: UserRole } | undefined;
@@ -154,6 +162,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     lifecycleSpecsIncomplete,
     dataSenseNeedsReview,
     dataSenseRule,
+    complianceGap,
   } = query;
 
   const fyArray = toStringArray(fy);
@@ -200,6 +209,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
       (String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== ''),
     dataSenseNeedsReviewActive: String(dataSenseNeedsReview) === 'true' || parseDataSenseRule(dataSenseRule) != null,
     dataSenseRule: parseDataSenseRule(dataSenseRule),
+    complianceGap: parseComplianceGap(complianceGap),
   };
 }
 
@@ -456,6 +466,10 @@ export function buildProjectsWhere(
     });
   }
 
+  if (filters.complianceGap) {
+    pushOntoWhereAnd(where, complianceGapPrismaWhere(filters.complianceGap));
+  }
+
   if (!skipDateFilters && filters.fyFilters.length > 0) {
     where.year = { in: filters.fyFilters };
   }
@@ -643,5 +657,6 @@ export const projectsListQueryValidators = [
   query('lifecycleSpecsIncomplete').optional().isIn(['true']),
   query('dataSenseNeedsReview').optional().isIn(['true']),
   query('dataSenseRule').optional().isIn([...DATA_SENSE_RULE_IDS]),
+  query('complianceGap').optional().isIn([...COMPLIANCE_GAP_IDS]),
   query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
 ];

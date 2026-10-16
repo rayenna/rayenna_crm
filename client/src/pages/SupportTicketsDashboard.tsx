@@ -108,6 +108,16 @@ const SupportTicketsDashboard = () => {
     }
   }, [searchParams])
 
+  // Open create modal from Ask / deep-link: /support-tickets?new=1
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return
+    const next = new URLSearchParams(searchParams)
+    next.delete('new')
+    setSearchParams(next, { replace: true })
+    if (!canCreate) return
+    setShowCreateModal(true)
+  }, [searchParams, setSearchParams, canCreate])
+
   // Build query params - fetch all tickets for stats, filter in frontend for table
   const params = new URLSearchParams()
   // Don't filter by status in API - we'll filter in frontend for table display

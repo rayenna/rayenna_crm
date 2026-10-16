@@ -225,6 +225,17 @@ describe('buildProjectsWhere', () => {
     expect(filters.dataSenseNeedsReviewActive).toBe(true);
   });
 
+  it('filters Ask compliance gap (no KSEB feasibility)', () => {
+    const filters = parseProjectsListFilters({ complianceGap: 'no_feasibility' });
+    expect(filters.complianceGap).toBe('no_feasibility');
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const json = JSON.stringify(built.where);
+    expect(json).toContain('feasibilityDate');
+    expect(json).toContain('SUBSIDY');
+  });
+
   it('filters late-stage projects with missing lifecycle brands', () => {
     const filters = parseProjectsListFilters({ lifecycleSpecsIncomplete: 'true' });
     const built = buildProjectsWhere(filters, adminUser);

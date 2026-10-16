@@ -87,6 +87,7 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 
 | Shortcut | Action |
 | :-- | :-- |
+| `Ctrl+K` / `⌘K` | **Command palette** — create, lists, search, Go to ([details](/help/getting-started#command-palette-anywhere)) |
 | `?` | Help (context-sensitive: Zenith or Dashboard) |
 | `Ctrl+Shift+D` / `⌘⇧D` | **Dashboard** |
 | `Ctrl+Shift+C` / `⌘⇧C` | **Customers** |

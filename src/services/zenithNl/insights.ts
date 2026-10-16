@@ -32,7 +32,32 @@ export function enrichInsight(
     metric === 'availing_loan' ||
     metric === 'outstanding_balance' ||
     metric === 'pending_subsidy' ||
-    metric === 'top_customers_by_profit'
+    metric === 'top_customers_by_profit' ||
+    metric === 'support_tickets_summary' ||
+    metric === 'capacity_by_band' ||
+    metric === 'service_type_mix' ||
+    metric === 'roof_type_mix' ||
+    metric === 'panel_type_mix' ||
+    metric === 'system_type_mix' ||
+    metric === 'revenue_by_project_type' ||
+    metric === 'revenue_by_customer_type' ||
+    metric === 'revenue_by_city' ||
+    metric === 'ops_workload' ||
+    metric === 'project_stage_mix' ||
+    metric === 'sla_indicator_mix' ||
+    metric === 'lost_competition_breakdown' ||
+    metric === 'loan_vs_cash_revenue' ||
+    metric === 'outstanding_by_salesperson' ||
+    metric === 'profit_summary' ||
+    metric === 'tickets_by_salesperson' ||
+    metric === 'compliance_backlog' ||
+    metric === 'subsidy_funnel' ||
+    metric === 'installation_model_status' ||
+    metric === 'payment_mode_mix' ||
+    metric === 'unpaid_invoices' ||
+    metric === 'amc_expiring' ||
+    metric === 'ticket_resolution_time' ||
+    metric === 'hub_plant_link_summary'
   ) {
     return fallback;
   }

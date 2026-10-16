@@ -1,5 +1,28 @@
 # Keyboard Shortcuts
 
+## Command palette (anywhere)
+
+| Shortcut (Win/Linux) | Mac | Action |
+| :-- | :-- | :-- |
+| **Ctrl+K** | **⌘K** | **Command palette** — search and jump to create, lists, and common screens. Works even while typing in a field. (**Ctrl+Shift+K** / **⌘⇧K** still opens Support Tickets.) |
+
+Press **Ctrl+K** (Windows/Linux) or **⌘K** (Mac) from **any** CRM page. Type to filter; **Enter** runs the highlighted row; **Esc** closes. Items are **filtered by your role** — you only see actions you are allowed to use.
+
+The same task set also works from **Ask Zenith** on the Zenith page (type the phrase and press Ask). Analytics questions (charts/tables) are Ask-only — see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
+
+### What you can run from the palette
+
+| Group | Actions (when your role allows) |
+| :-- | :-- |
+| **Create** | New Customer · New Project · Create Support Ticket · New User |
+| **Lists** | Overdue Support Tickets · Open Support Tickets (queue) · Solar Hub Support Tickets · Proposal-stage / Confirmed / Under Installation projects · Pending Subsidy · Availing Loan · Projects Needing Review · Proposal Engine — Not Started / Drafts / Proposal Ready |
+| **Go to** | Zenith · Customers · Projects · Support Tickets · Dashboard (classic) · Solar Hub · Solar Hub Provisioning · Solar Hub — Unlinked Plants · Solar Hub Maintenance · Lost Deals · Tally Export · Users · Audit & Security · Change Password · Open Help · Open My Day · Open My Day Journal · Show Tip of the Day |
+| **Search** | Type a name or keyword to also get **Search customers for…** / **Search projects for…** |
+
+**Tip:** Palette is fastest for navigation and creates. Use **Ask Zenith** when you want an insight, chart, or table from CRM data.
+
+## Letter shortcuts
+
 When focus is **not** in a text field, **textarea**, **select**, or **contenteditable** area:
 
 - **?** — Open **Help** for the current area (from **Dashboard** → Dashboard help; from **Zenith** → Zenith help at **Command Center**).
@@ -17,8 +40,6 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 
 On a **Help** page, **Esc** returns you to the **Dashboard**.
 
-The same table is maintained under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
-
 ## My Day shortcut
 
-**Ctrl+Shift+M** (⌘⇧M) or the **☀** icon in the top nav opens **My Day** — your private tasks, journal, and reminders. Pin follow-ups from **Today's plan**, **Things needing attention**, or Zenith **Hit List** with **+ My Day**. Full behaviour: [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).
+**Ctrl+Shift+M** (⌘⇧M) or the **☀** icon in the top nav opens **My Day** — your private tasks, journal, and reminders. You can also open it from the **command palette** (**Open My Day**). Pin follow-ups from **Today's plan**, **Things needing attention**, or Zenith **Hit List** with **+ My Day**. Full behaviour: [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).

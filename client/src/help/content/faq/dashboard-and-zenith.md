@@ -4,13 +4,16 @@
 Use the **top navigation menu**. Options depend on your role. Module guides: [Modules](/help/modules).
 
 ### What keyboard shortcuts are available?
-Press **?** (outside text fields) for context-sensitive Help. **Ctrl+Shift+** + letter (**⌘⇧** on Mac): **D** Dashboard, **C** Customers, **P** Projects, **K** Support Tickets, **Z** Zenith, **N** new customer, **E** new project — when your role allows. **Ctrl+Shift+M** opens **My Day**. **Esc** on Help returns to Dashboard. Full table: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
+**Ctrl+K** / **⌘K** opens the **command palette** (create, search, queues, Go to — filtered by role). Press **?** (outside text fields) for context-sensitive Help. **Ctrl+Shift+** + letter (**⌘⇧** on Mac): **D** Dashboard, **C** Customers, **P** Projects, **K** Support Tickets, **Z** Zenith, **N** new customer, **E** new project — when your role allows. **Ctrl+Shift+M** opens **My Day**. **Esc** on Help returns to Dashboard. Full table: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
 
 ### What is the Dashboard?
 The **classic Dashboard** is your in-menu analytics home: FY filters, role-specific KPIs, **Quick Access** tiles, and charts. Layout differs by role. Overview: [Dashboard help](/help/dashboard).
 
 ### What is Zenith?
-**Zenith ✦** is the full-screen **command center** (Dashboard menu → **Zenith ✦**). Same **FY / Quarter / Month** rules as the Dashboard, plus Hit List, AI Insights, **Quick Actions** drawers, and optional offline PWA. Overview: [Zenith command center](/help/zenith#zenith-command-center).
+**Zenith ✦** is the full-screen **command center** (Dashboard menu → **Zenith ✦**). Same **FY / Quarter / Month** rules as the Dashboard, plus **Ask Zenith**, Hit List, AI Insights, **Quick Actions** drawers, and optional offline PWA. Overview: [Zenith command center](/help/zenith#zenith-command-center).
+
+### What is Ask Zenith?
+On Zenith (under Solar News), **Ask** answers **analytics** questions with an insight plus a chart or table, and can also run **tasks** (New Customer, My Day, pending subsidy, search, etc.). Tasks match the **Ctrl+K** / **⌘K** palette. Guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
 
 ### What are the Dashboard filters (FY, Quarter, Month)?
 **Financial Year** is always available; **Quarter** and **Month** unlock when **exactly one** FY is selected. Tiles and most charts respect these filters. Details: [Dashboard → Filters](/help/dashboard#dashboard-filters) · [Year-on-Year KPIs](/help/dashboard#year-on-year-kpis).

@@ -6,6 +6,7 @@
 export type ZenithAskAnalyticsEvent =
   | 'ask_submitted'
   | 'ask_success'
+  | 'ask_action'
   | 'ask_clarify'
   | 'ask_error'
   | 'ask_open_projects'

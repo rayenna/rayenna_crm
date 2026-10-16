@@ -16,6 +16,7 @@ import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
 import { projectDetailToHealthProject } from '../utils/dealHealthScore'
+import { parseComplianceGap, type ComplianceGapId } from '../utils/complianceGaps'
 import { parseDataSenseRule, type DataSenseRuleId } from '../utils/dataSense'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
 import CapacitySpecsPopover from '../components/projects/CapacitySpecsPopover'
@@ -105,6 +106,7 @@ function getInitialFiltersFromUrl(): {
   paymentStatus: string[]
   availingLoan: boolean
   pendingSubsidy: boolean
+  complianceGap: ComplianceGapId | null
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
@@ -131,6 +133,7 @@ function getInitialFiltersFromUrl(): {
   const paymentStatus = p.getAll('paymentStatus')
   const availingLoan = p.get('availingLoan') === 'true'
   const pendingSubsidy = p.get('pendingSubsidy') === 'true'
+  const complianceGap = parseComplianceGap(p.get('complianceGap'))
   const fy = p.getAll('fy')
   const quarter = p.getAll('quarter')
   const month = p.getAll('month')
@@ -160,6 +163,7 @@ function getInitialFiltersFromUrl(): {
     paymentStatus.length > 0 ||
     availingLoan ||
     pendingSubsidy ||
+    complianceGap != null ||
     fy.length > 0 ||
     quarter.length > 0 ||
     month.length > 0 ||
@@ -191,6 +195,7 @@ function getInitialFiltersFromUrl(): {
     paymentStatus: validPayment,
     availingLoan,
     pendingSubsidy,
+    complianceGap,
     selectedFYs: fy,
     selectedQuarters: quarter,
     selectedMonths: month,
@@ -621,6 +626,7 @@ const Projects = () => {
     hasDocuments: false,
     availingLoan: urlInit?.availingLoan ?? false,
     pendingSubsidy: urlInit?.pendingSubsidy ?? false,
+    complianceGap: (urlInit?.complianceGap ?? null) as ComplianceGapId | null,
     peBucket: (urlInit?.peBucket ?? null) as PeBucketParam | null,
     financingBank: (urlInit?.financingBank ?? []) as string[],
     zenithClosedFrom: urlInit?.zenithClosedFrom ?? null,
@@ -650,6 +656,7 @@ const Projects = () => {
     const paymentStatusFromUrl = searchParams.getAll('paymentStatus')
     const availingLoanFromUrl = searchParams.get('availingLoan') === 'true'
     const pendingSubsidyFromUrl = searchParams.get('pendingSubsidy') === 'true'
+    const complianceGapFromUrl = parseComplianceGap(searchParams.get('complianceGap'))
     const fyFromUrl = searchParams.getAll('fy')
     const quarterFromUrl = searchParams.getAll('quarter')
     const monthFromUrl = searchParams.getAll('month')
@@ -707,7 +714,8 @@ const Projects = () => {
       lifecycleSpecsFromUrl ||
       lifecycleSpecsIncompleteFromUrl ||
       dataSenseNeedsReviewFromUrl ||
-      dataSenseRuleFromUrl != null
+      dataSenseRuleFromUrl != null ||
+      complianceGapFromUrl != null
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -721,6 +729,7 @@ const Projects = () => {
         validPayment.length > 0 ||
         availingLoanFromUrl ||
         pendingSubsidyFromUrl ||
+        complianceGapFromUrl != null ||
         hasDateParams ||
         hasExtendedTileParams ||
         hasSearchParam)
@@ -731,12 +740,16 @@ const Projects = () => {
         peBucket: peBucketValid,
         ...(validStatus.length > 0
           ? { status: validStatus }
-          : peBucketValid != null
+          : peBucketValid != null || complianceGapFromUrl != null
             ? { status: [] as string[] }
             : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
         ...(pendingSubsidyFromUrl && { pendingSubsidy: true }),
+        ...(complianceGapFromUrl != null && {
+          complianceGap: complianceGapFromUrl,
+          type: ['SUBSIDY'] as string[],
+        }),
         ...(validTypeFromUrl.length > 0 && { type: validTypeFromUrl }),
         ...(validCustomerTypeFromUrl.length > 0 && { customerType: validCustomerTypeFromUrl }),
         ...(leadSourceIsNullFromUrl
@@ -868,6 +881,7 @@ const Projects = () => {
     filters.hasDocuments,
     filters.availingLoan,
     filters.pendingSubsidy,
+    filters.complianceGap,
     filters.peBucket,
     filters.financingBank,
     filters.zenithClosedFrom,
@@ -918,6 +932,7 @@ const Projects = () => {
       hasDocuments: false,
       availingLoan: false,
       pendingSubsidy: false,
+      complianceGap: null,
       peBucket: null,
       financingBank: [],
       zenithClosedFrom: null,
@@ -997,6 +1012,7 @@ const Projects = () => {
       (filters.hasDocuments ? 1 : 0) +
       (filters.availingLoan ? 1 : 0) +
       (filters.pendingSubsidy ? 1 : 0) +
+      (filters.complianceGap ? 1 : 0) +
       (filters.peBucket ? 1 : 0) +
       (filters.financingBank.length > 0 ? 1 : 0) +
       (filters.zenithClosedFrom || filters.zenithClosedTo ? 1 : 0) +
@@ -1023,6 +1039,7 @@ const Projects = () => {
     filters.hasDocuments,
     filters.availingLoan,
     filters.pendingSubsidy,
+    filters.complianceGap,
     filters.peBucket,
     filters.financingBank,
     filters.zenithClosedFrom,
@@ -1082,7 +1099,8 @@ const Projects = () => {
     searchParams.get('lifecycleSpecsComplete') === 'true' ||
     searchParams.get('lifecycleSpecsIncomplete') === 'true' ||
     searchParams.get('dataSenseNeedsReview') === 'true' ||
-    Boolean(parseDataSenseRule(searchParams.get('dataSenseRule')))
+    Boolean(parseDataSenseRule(searchParams.get('dataSenseRule'))) ||
+    Boolean(parseComplianceGap(searchParams.get('complianceGap')))
 
   const listQueryInput = {
     filters,

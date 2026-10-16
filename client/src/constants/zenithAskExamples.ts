@@ -1,45 +1,43 @@
 /**
  * Canonical Ask example chips by role.
- * Keep in sync with `EXAMPLE_QUESTIONS_BY_ROLE` in `src/services/zenithNl/catalog.ts`
- * (server clarify suggestions + exact chip intents use that list).
- *
- * Dates come from the Zenith command bar or relative phrases in the question
- * (“last FY”, “this quarter”) — avoid misleading “this FY” chip copy.
+ * Keep analytics list in sync with `EXAMPLE_QUESTIONS_BY_ROLE` in
+ * `src/services/zenithNl/catalog.ts`.
  */
 export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Which lead sources drove the most revenue?',
     'Show my pipeline by stage',
+    'Show me the total support tickets raised',
     'Summarise my lost deals by reason',
-    'Show installation status breakdown',
     'How many of my projects used Adani panels?',
   ],
   MANAGEMENT: [
-    'Which lead sources drove the most revenue?',
-    'How many projects used Adani panels?',
-    'Which panel brands sold most?',
-    'Which banks are financing loans?',
-    'Summarise lost deals by reason',
+    'Subsidy vs non-subsidy revenue',
+    'Revenue by city',
+    'Profit summary',
+    'Compliance backlog',
+    'Loan vs cash revenue',
   ],
   ADMIN: [
-    'Which lead sources drove the most revenue?',
-    'How many projects used Adani panels?',
-    'Which panel brands sold most?',
-    'Which banks are financing loans?',
-    'Payment status breakdown',
+    'Profit summary',
+    'Ops workload',
+    'Compliance backlog',
+    'Hub plant link status',
+    'Outstanding by salesperson',
   ],
   OPERATIONS: [
-    'Show installation status breakdown',
-    'How many projects used Adani panels?',
-    'Projects with Deye inverters',
-    'Projects pending subsidy credit',
+    'Ops workload',
+    'SLA status indicators',
+    'Compliance backlog',
+    'Subsidy funnel',
+    'AMCs expiring',
   ],
   FINANCE: [
-    'Payment status breakdown',
-    'Which banks are financing loans?',
-    'How many customers have SBI loans?',
-    'Which panel brands sold most?',
-    'Projects with outstanding balance',
+    'Profit summary',
+    'Loan vs cash revenue',
+    'Outstanding by salesperson',
+    'Payment mode mix',
+    'Unpaid invoices',
   ],
 }
 

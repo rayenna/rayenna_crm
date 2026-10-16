@@ -49,7 +49,7 @@ Located in the top navigation bar:
 
 ### Keyboard shortcuts
 
-See **[Keyboard shortcuts](#keyboard-shortcuts)** on this page for the full table (**?**, **Ctrl+Shift+** letters, **My Day**, **Esc** on Help). The same table is also under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
+See **[Keyboard shortcuts](#keyboard-shortcuts)** for **Ctrl+K** / **⌘K** command palette, **?**, **Ctrl+Shift+** letters, **My Day**, and **Esc** on Help.
 
 ### User Actions Menu
 

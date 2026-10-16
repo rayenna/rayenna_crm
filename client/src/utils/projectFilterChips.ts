@@ -1,4 +1,9 @@
 import { LeadSource, UserRole } from '../types'
+import {
+  COMPLIANCE_GAP_LABELS,
+  parseComplianceGap,
+  type ComplianceGapId,
+} from './complianceGaps'
 import type { PeBucketParam } from './projectListQuery'
 import { DATA_SENSE_RULE_SHORT_LABEL, type DataSenseRuleId } from './dataSense'
 import { getProjectSegmentLabel } from './projectSegment'
@@ -106,6 +111,7 @@ export type BuildProjectFilterChipsInput = {
     hasDocuments: boolean
     availingLoan: boolean
     pendingSubsidy: boolean
+    complianceGap?: ComplianceGapId | null
     peBucket: PeBucketParam | null
     financingBank: string[]
     zenithClosedFrom: string | null
@@ -334,6 +340,15 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'pending-subsidy',
       label: 'Pending subsidy',
       onRemove: () => onPatchFilters({ pendingSubsidy: false }),
+    })
+  }
+
+  const complianceGap = parseComplianceGap(filters.complianceGap)
+  if (complianceGap) {
+    chips.push({
+      id: 'compliance-gap',
+      label: `Compliance: ${COMPLIANCE_GAP_LABELS[complianceGap]}`,
+      onRemove: () => onPatchFilters({ complianceGap: null }),
     })
   }
 
