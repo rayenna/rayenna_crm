@@ -110,7 +110,8 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
-- **Above** **AI Insights**, under the command bar: **horizontal marquee** of **RSS** headlines (solar / energy sources). Server-backed cache (~**30 minutes**); not the same as your pipeline numbers.
+- Under the command bar (above Ask / KPIs): **horizontal marquee** of **RSS** headlines (solar / energy sources). Server-backed cache (~**30 minutes**); not the same as your pipeline numbers.
+- On **phones**, Solar News appears only on the **Today** tab (not Ask / Pipeline / Charts / More).
 - **Click** a headline → **new tab** to the article. **Hover** (desktop) pauses the marquee.
 - **Colour tags** (policy, grid, market, tech, agri) are for scanning only.
 
@@ -124,7 +125,8 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
-- Short highlights from **data already loaded** for your filters (**below** **Solar News**).
+- Short highlights from **data already loaded** for your filters (**directly under** the **KPI tiles**; **The Board** follows on executive roles).
+- On **phones**, AI Insights appears only on the **Today** tab.
 - **Hover** (mouse) pauses scroll; **tap** an insight **jumps** the page to a related block.
 - On touch-only devices there is no hover pause — tap to navigate.
 
@@ -184,7 +186,7 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
-- Below KPI / forecast; **above** Deal flow funnel.
+- **Under AI Insights** on Today / overview; **starts collapsed** on all screen sizes — expand the header for ranking rows.
 - **Month / Quarter / FY** on the **card** — uses **stage entered / confirmation** (can differ from command-bar FY).
 - **Click** header total or row value → **Quick Actions** list → **Open in Projects →** optional.
 

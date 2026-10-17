@@ -4,16 +4,16 @@
 
 ## Mobile navigation and layout (Zenith)
 
-On viewports **narrower than `lg` (~1024px)**, Zenith uses a **simplified layout** so you scroll less and tap larger targets:
+On viewports **narrower than `lg` (~1024px)**, Zenith uses a **simplified layout** so you scroll less and tap larger targets. After login, Zenith **opens on the Today** (or **KPIs**) tab — not the last tab you used.
 
 | Tab | What you see |
 | :-- | :-- |
-| **Today** (Sales / Management / Admin) | **Today’s Hit List**, **KPI strip**, **Revenue forecast**, and **The Board** |
-| **Today** (Operations / Finance label may read **KPIs**) | **KPI strip** only |
-| **Ask** | **Ask Zenith** composer, example chips, answers, and recent asks (server-backed across devices) |
-| **Pipeline** | **Deal flow funnel** and **Your Focus** (role-specific panels) |
-| **Charts** | **Explore the landscape** (stage, FY, lead source, sales team, **Revenue by Customer Type** on Operations, loans on Finance, etc.) |
-| **More** (Finance / exec) | Extra segments (e.g. **Revenue by Customer Type**, **Customer profitability**) |
+| **Today** (Sales / Management / Admin) | **Solar News**, **KPI strip**, **AI Insights**, **The Board** (collapsed by default), Things needing attention, **Today’s Hit List**, **Revenue forecast**, and related overview cards |
+| **Today** (Operations / Finance label may read **KPIs**) | **Solar News**, **KPI strip**, **AI Insights**, and overview cards (no Board) |
+| **Ask** | **Ask Zenith** composer (~three-line input), example chips, answers, and recent asks (server-backed across devices) — **no** Solar News / AI Insights tickers |
+| **Pipeline** | **Deal flow funnel** and **Your Focus** (role-specific panels) — **no** Solar News / AI Insights tickers |
+| **Charts** | **Explore the landscape** (stage, FY, lead source, sales team, **Revenue by Customer Type** on Operations, loans on Finance, etc.) — **no** tickers |
+| **More** (Finance / exec) | Extra segments (e.g. **Revenue by Customer Type**, **Customer profitability**) — **no** tickers |
 
 - **Bottom tab bar** — Fixed above the safe area at the bottom; switching tabs **scrolls** to that section and shows **only** that tab’s content (desktop still shows everything in one scroll).
 - **Floating actions** (mobile only) — **Ask** (jumps to the Ask tab when you are on another tab), **✦ Briefing** (opens the daily briefing), and **back to top**, sitting above the tab bar.

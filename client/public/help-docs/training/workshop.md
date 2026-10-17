@@ -56,7 +56,7 @@ If you are building slides with screenshots, capture these **labeled** views:
 4. **Revenue forecast** with **Stage** tab selected.
 4b. **Today’s Hit List** with **filter** row and **sort** indicator on a column header.
 5. **Quick Actions** single-project view showing **Recent remarks** above **Log activity** and **Payment** after **Deal value**.
-6. **The Board** expanded with drill-down drawer **open**.
+6. **The Board** — start from **collapsed** header, expand, then drill-down drawer **open**.
 7. **Your Focus** expanded — **Proposal Engine** row.
 8. **Explore** chart with tooltip + **Quick Actions** list.
 9. **FY chart** with orange point and teal bar called out.

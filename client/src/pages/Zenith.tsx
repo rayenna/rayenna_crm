@@ -45,10 +45,6 @@ import {
   requestZenithPanelExpand,
   resolveZenithSectionMobileTab,
 } from '../components/zenith/zenithSectionNavigation'
-import {
-  readZenithMobileTab,
-  writeZenithMobileTab,
-} from '../utils/zenithMobileTabPreferences'
 import ZenithOfflineSnapshotBanner from '../components/zenith/ZenithOfflineSnapshotBanner'
 import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
 import {
@@ -162,23 +158,12 @@ const Zenith = () => {
   )
 
   const narrow = useZenithNarrowLayout()
+  /** Mobile always opens on Today (overview); do not restore last tab across login/sessions. */
   const [mobileTab, setMobileTab] = useState<ZenithMobileTab>('overview')
-  const [mobileTabHydrated, setMobileTabHydrated] = useState(false)
 
-  useEffect(() => {
-    if (!user?.id || mobileTabHydrated) return
-    const saved = readZenithMobileTab(user.id)
-    if (saved) setMobileTab(saved)
-    setMobileTabHydrated(true)
-  }, [user?.id, mobileTabHydrated])
-
-  const handleMobileTabChange = useCallback(
-    (tab: ZenithMobileTab) => {
-      setMobileTab(tab)
-      if (user?.id) writeZenithMobileTab(user.id, tab)
-    },
-    [user?.id],
-  )
+  const handleMobileTabChange = useCallback((tab: ZenithMobileTab) => {
+    setMobileTab(tab)
+  }, [])
 
   /** On mobile, Ask lives on its own tab; desktop always shows the composer. */
   const showAskSurface = Boolean(showZenithAsk && (!narrow || mobileTab === 'ask'))
@@ -628,9 +613,11 @@ const Zenith = () => {
   const openDrawerListMode = quickAction.openDrawerListMode
 
   const mobileTabProp = narrow ? mobileTab : null
+  /** Solar News + AI Insights: desktop always; mobile only on Today (overview). */
+  const showTickers = !narrow || mobileTab === 'overview'
 
   const insightsBar =
-    !isFyError && user?.role && (hasZenithBodyData || !isError) ? (
+    showTickers && !isFyError && user?.role && (hasZenithBodyData || !isError) ? (
       <ZenithAiInsightsTicker
         items={tickerItems}
         isLoading={isLoading && !hasZenithBodyData}
@@ -652,6 +639,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenFinanceDrawer={
               user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
                 ? financeQuickDrawer.open
@@ -670,6 +658,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
             onPriorityNavigate={handlePriorityNavigate}
@@ -683,6 +672,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenFinanceDrawer={financeQuickDrawer.open}
             onPriorityNavigate={handlePriorityNavigate}
           />
@@ -704,6 +694,7 @@ const Zenith = () => {
     operationsQuickDrawer.open,
     openZenithProjectQuickDrawer,
     mobileTabProp,
+    insightsBar,
     handlePriorityNavigate,
   ])
 
@@ -746,8 +737,8 @@ const Zenith = () => {
 
       <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
-      {/* Solar news — above Ask; AI Insights stays under KPI tiles in role bodies */}
-      {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
+      {/* Solar news — Today tab only on mobile; always on desktop */}
+      {user?.role && showTickers ? <SolarNewsTicker deferLoadMs={2000} /> : null}
 
       {/* Desktop: Ask in page flow. Mobile: dedicated Ask tab surface. */}
       {showAskSurface ? (
@@ -844,9 +835,6 @@ const Zenith = () => {
           ) : null}
         </section>
       ) : null}
-
-      {/* AI Insights — under Ask (or under Solar News when Ask is hidden for Ops/Finance) */}
-      {insightsBar}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
         <div

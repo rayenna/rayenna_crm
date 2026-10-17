@@ -11,10 +11,11 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 ## 2. Executive KPIs and forecast (~5 min)
 
 1. Scan the **KPI strip** with YoY badges and sparklines ([KPI strip](#kpi-strip-and-year-on-year)).
-2. Read the **Weighted open pipeline** tile when shown ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
-3. Click **AI Insights** lines that point to revenue, pipeline, or concentration risks ([AI Insights](#ai-insights-ticker)).
+2. Click **AI Insights** lines under the tiles that point to revenue, pipeline, or concentration risks ([AI Insights](#ai-insights-ticker)).
+3. Expand **The Board** if needed (starts collapsed) ([The Board](#the-board-leaderboard)).
+4. Read the **Weighted open pipeline** tile when shown ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
 
-**Phone:** **Today** tab — **Hit List** plus KPIs ([Executive layout](#executive-sales-management-admin)).
+**Phone:** Zenith opens on **Today** — KPIs, AI Insights, Board, Hit List ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
 
 ## 3. Hit List and pipeline (~5 min)
 
@@ -22,10 +23,10 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 2. Expand **Your Focus** executive buckets — **Your pipeline today** by stage or owner.
 3. Drill via **Quick Actions**; avoid editing in drawer — use **Open in Projects →** only when delegating follow-up with full context.
 
-## 4. The Board and funnel (~5 min)
+## 4. Funnel (~5 min)
 
-1. **The Board** — salesperson ranking for the filtered period ([The Board](#the-board-leaderboard)).
-2. **Deal flow funnel** — stage mix and conversion; click stages for underlying lists ([Deal flow funnel](#deal-flow-funnel-zenith)).
+1. **Deal flow funnel** — stage mix and conversion; click stages for underlying lists ([Deal flow funnel](#deal-flow-funnel-zenith)).
+2. Re-check **The Board** on Today if rankings matter for the meeting ([The Board](#the-board-leaderboard)).
 3. Celebrate **Victory toast** wins with the team when you are live in Zenith ([Victory toast](#victory-toast-stage-wins)).
 
 ## 5. Landscape charts (~8 min)

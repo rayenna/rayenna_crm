@@ -49,9 +49,7 @@ export default function Leaderboard({
 }: Props) {
   const isMobile = useIsMobile()
   const [period, setPeriod] = useState<LeaderboardPeriod>('month')
-  const [isOpen, setIsOpen] = useState(() =>
-    defaultOpen !== undefined ? defaultOpen : typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
-  )
+  const [isOpen, setIsOpen] = useState(() => defaultOpen ?? false)
   const [barsReady, setBarsReady] = useState(false)
 
   const { ranked, topRevenue, periodRevenue, periodDeals } = useMemo(

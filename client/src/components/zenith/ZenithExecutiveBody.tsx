@@ -650,6 +650,18 @@ export default function ZenithExecutiveBody({
             ) : null}
           </div>
           {insightsBar}
+          {(role === UserRole.SALES ||
+            role === UserRole.ADMIN ||
+            role === UserRole.MANAGEMENT) && (
+            <div id="zenith-leaderboard" className="w-full scroll-mt-28 shrink-0 min-w-0">
+              <Leaderboard
+                projects={explorerProjects}
+                currentUser={{ id: user?.id ?? '', name: user?.name ?? '' }}
+                dateFilter={dateFilter}
+                onOpenListMode={onOpenDrawerListMode}
+              />
+            </div>
+          )}
           <ZenithPriorityRibbon
             items={priorityItems}
             isLoading={focusLoading && showHitList}
@@ -718,18 +730,6 @@ export default function ZenithExecutiveBody({
       ) : (
         insightsBar
       )}
-
-      {showOverview &&
-      (role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT) ? (
-        <div id="zenith-leaderboard" className="w-full scroll-mt-28 shrink-0 min-w-0">
-          <Leaderboard
-            projects={explorerProjects}
-            currentUser={{ id: user?.id ?? '', name: user?.name ?? '' }}
-            dateFilter={dateFilter}
-            onOpenListMode={onOpenDrawerListMode}
-          />
-        </div>
-      ) : null}
 
       {showPipeline ? (
       <section className="zenith-exec-section space-y-4" aria-label="Pipeline and priorities">

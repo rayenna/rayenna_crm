@@ -1,10 +1,12 @@
 # Ribbons and KPIs
 
-Below the sticky command bar: **Solar News**, then the **KPI strip**, then **AI Insights**, then the rest of the overview (including **Weighted open pipeline** on executive roles).
+Below the sticky command bar on **desktop**: **Solar News**, then **Ask Zenith**, then the **KPI strip**, then **AI Insights**, then **The Board** (Sales / Management / Admin), then the rest of the overview (Things needing attention, Hit List, forecast, etc.).
+
+On **phones / narrow** layouts, **Solar News** and **AI Insights** appear only on the **Today** (or **KPIs**) tab — not on Ask, Pipeline, Charts, or More. See [Mobile navigation](#mobile-navigation-and-layout-zenith).
 
 ## Solar News ticker
 
-**Where** — Full-width strip **below** the command bar and **above** the KPI tiles.
+**Where** — Full-width strip **below** the command bar and **above** Ask / the KPI tiles. On **mobile**, only while the **Today** (or **KPIs**) tab is selected.
 
 **What** — Short **headlines** from a fixed set of **solar / energy RSS feeds** (no HTML scraping). The CRM server fetches and normalises feeds on a **~30 minute** cache (`/api/solar-news`); the browser loads the ticker from that API after login.
 
@@ -16,7 +18,7 @@ Below the sticky command bar: **Solar News**, then the **KPI strip**, then **AI 
 
 ## AI Insights ticker
 
-Directly **below** the **KPI tiles**, Zenith shows an **AI Insights** ribbon: a **horizontal scrolling strip** of short, plain-English highlights derived from the **same dashboard data** already loaded for your filters (no external AI service). The KPI strip sits **between** Solar News (above) and AI Insights (below) for every role.
+Directly **below** the **KPI tiles**, Zenith shows an **AI Insights** ribbon: a **horizontal scrolling strip** of short, plain-English highlights derived from the **same dashboard data** already loaded for your filters (no external AI service). On **executive** roles, **The Board** sits immediately under this ribbon. On **mobile**, AI Insights appears only on the **Today** (or **KPIs**) tab.
 
 - **Content** — Examples include conversion vs a simple benchmark, top pipeline or revenue by salesperson, stale pipeline signals, revenue vs a prior period, loan concentration by bank, and role-relevant finance or operations notes. The exact lines change with your **role** and **filters**.
 - **Motion** — Text scrolls continuously; **hover** over the strip to **pause** scrolling.

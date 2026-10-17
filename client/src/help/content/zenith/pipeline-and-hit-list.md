@@ -51,7 +51,7 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 If a day has no qualifying deals, the card shows **All clear**.
 
-**The Board** — Full-width **sales leaderboard** (**Sales**, **Management**, **Admin** only) sits **below** the **KPI / Hit List / Revenue forecast** band and **above** the **Deal flow funnel**. See [The Board (leaderboard)](#the-board-leaderboard).
+**The Board** — Full-width **sales leaderboard** (**Sales**, **Management**, **Admin** only) sits **under AI Insights** on the Today / overview band (**collapsed** until you expand it). The **Deal flow funnel** stays under **Pipeline**. See [The Board (leaderboard)](#the-board-leaderboard).
 
 **Deal flow funnel** — See [Deal flow funnel (Zenith)](#deal-flow-funnel-zenith): stage rows and **payment status** pills open the **Quick Actions** list for that slice; counts and lists use the **same rules** as the funnel tile.
 

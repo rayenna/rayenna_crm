@@ -13,10 +13,11 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 
 1. Skim **Solar News** — optional industry context; click a headline to read externally.
 2. Try **Ask Zenith** for a quick question (e.g. pipeline by stage or support tickets) or a task jump (**New Customer**, **Open My Day**) — same tasks as **Ctrl+K** / **⌘K** ([Ask Zenith](#ask-zenith-natural-language)).
-3. Read **AI Insights** — click a line to jump to KPIs, **The Board**, or **Your Focus** ([AI Insights](#ai-insights-ticker)).
-4. On the **KPI strip**, note pipeline value, capacity, and any red trend badges ([KPI strip](#kpi-strip-and-year-on-year)).
+3. On the **KPI strip**, note pipeline value, capacity, and any red trend badges ([KPI strip](#kpi-strip-and-year-on-year)).
+4. Read **AI Insights** under the tiles — click a line to jump to **The Board**, funnel, or **Your Focus** ([AI Insights](#ai-insights-ticker)).
+5. Optionally expand **The Board** (starts collapsed) for this period’s ranking ([The Board](#the-board-leaderboard)).
 
-**Phone:** stay on the **Today** tab for Hit List + KPIs ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
+**Phone:** Zenith opens on the **Today** tab (Solar News, KPIs, AI Insights, Board, Hit List). Other tabs hide the news/insights tickers ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
 
 ## 3. Work the Hit List (~5 min)
 
@@ -36,10 +37,10 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 4. If the **Support tickets** strip shows overdue or Solar Hub counts, open it and work those customers the same morning.
 5. Optional: open **☀ My Day** (**Ctrl+Shift+M**) and tick off pinned tasks; leave **Log to project remarks when done** on if the team should see completion.
 
-## 5. Competitive pulse and funnel (~3 min)
+## 5. Funnel and competitive pulse (~3 min)
 
-1. Scroll to **The Board** — see where you rank this period ([The Board](#the-board-leaderboard)).
-2. Open the **Deal flow funnel** — click a stage to open the matching **Quick Actions** list ([Deal flow funnel](#deal-flow-funnel-zenith)).
+1. Open the **Deal flow funnel** (Pipeline tab on phone) — click a stage to open the matching **Quick Actions** list ([Deal flow funnel](#deal-flow-funnel-zenith)).
+2. If you skipped it earlier, expand **The Board** on Today for ranking ([The Board](#the-board-leaderboard)).
 3. Watch for a **Victory toast** when a deal hits a winning stage ([Victory toast](#victory-toast-stage-wins)).
 
 ## 6. Before you leave Zenith

@@ -7,7 +7,7 @@
 
 **Who sees it** — **Sales**, **Management**, and **Admin** on the **executive** Zenith layout.
 
-**Where** — Full-width card **below** the KPI / Hit List / forecast row and **above** the **Deal flow funnel**.
+**Where** — Full-width card on the **Today / overview** band, **directly under** the **AI Insights** ticker and **above** Things needing attention / Hit List / forecast. On **mobile**, it stays on the **Today** tab with those ribbons. The **Deal flow funnel** remains later under **Pipeline**.
 
 **What it shows** — Rankings by **assigned salesperson** for **won-path** projects (Confirmed, Under Installation, Completed, Subsidy Credited) counted in a **calendar period** you choose on the board itself:
 
@@ -17,7 +17,7 @@
 
 Deal credit uses **stage entered** and **confirmation** dates from CRM when present (not “any save” on the project), so **Month**, **Quarter**, and **FY** can show different totals.
 
-**Collapsible** — Like other Zenith panels, the board can be collapsed from the header (**collapsed by default on small phones**, **expanded by default on wider screens**). The header still shows the period label and summary totals when collapsed.
+**Collapsible** — The board **starts collapsed** on every screen size. Expand from the header when you want the ranking rows. The header still shows the period label and summary totals when collapsed.
 
 **Transparency — open the deals** — **Click** the **period total** (revenue and deal count in the header on desktop, or **View N deals** on mobile) or **click a row’s revenue / deal count** to open the same **Quick Actions** drawer **list mode** used for **Explore** chart drill-downs. The list is filtered to the deals that make up that total or that salesperson’s slice for the selected **Month / Quarter / FY** (not the command-bar FY alone). From the list, use **Open →** to jump to **Project detail** or drill into **Quick Actions** for a single project. Use **Open in Projects →** in the drawer footer when you want the full **Projects** page with the same slice and filters.
 

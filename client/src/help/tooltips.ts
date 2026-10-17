@@ -150,7 +150,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: Solar News (RSS industry headlines above AI Insights), AI Insights from your loaded CRM data, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar (Top overdue, Latest payments received, shared payment-status legend), and Quick Actions lists. Drawer list rows and single-project headers show Sales (assigned salesperson). Single-project Quick Actions and Operations drawers show Recent remarks (read-only) above Log activity and a Payment snapshot (status, total received, balance) after Deal value when payment applies — N/A when not applicable. Finance drawer from Payment radar already includes payment context. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: Solar News, Ask Zenith, KPI tiles, then AI Insights from your loaded CRM data, then The Board (executive roles; starts collapsed). On phones, Zenith opens on Today and shows Solar News / AI Insights only on that tab. Also: collapsible Your Focus, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar, and Quick Actions lists with Open in Projects →. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',
@@ -180,7 +180,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.the-board',
     title: 'The Board',
     content:
-      'Sales leaderboard by Month, Quarter (Indian FY quarters), or FY. Rankings use winning-stage deals credited by stage entered / confirmation dates. Click header totals or a row’s value to open the same Quick Actions list drawer as chart drill-down. Use Open in Projects → for the full Projects list with matching filters.',
+      'Sales leaderboard by Month, Quarter (Indian FY quarters), or FY — sits under AI Insights on Today and starts collapsed. Rankings use winning-stage deals credited by stage entered / confirmation dates. Click header totals or a row’s value to open the same Quick Actions list drawer as chart drill-down. Use Open in Projects → for the full Projects list with matching filters.',
   },
   'zenith.victory-toast': {
     key: 'zenith.victory-toast',
@@ -234,7 +234,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.solar-news',
     title: 'Solar News ticker',
     content:
-      'Industry headlines from RSS feeds aggregated on the server (~30 min cache, /api/solar-news). Click a headline to open the article in a new tab. Hover the strip on desktop to pause scrolling. Not CRM data — use AI Insights below for numbers from your filters.',
+      'Industry headlines from RSS feeds aggregated on the server (~30 min cache, /api/solar-news). On phones, shown only on the Today tab. Click a headline to open the article in a new tab. Hover the strip on desktop to pause scrolling. Not CRM data — use AI Insights under the KPI tiles for numbers from your filters.',
   },
   'zenith.proposal-engine-focus': {
     key: 'zenith.proposal-engine-focus',
