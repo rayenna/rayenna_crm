@@ -8,6 +8,7 @@ import { useZenithMainQuery } from '../hooks/useZenithMainQuery'
 import { useZenithExplorerQuery } from '../hooks/useZenithExplorerQuery'
 import '../styles/zenith.css'
 import CommandBar from '../components/zenith/CommandBar'
+import ZenithFilterSegments from '../components/zenith/ZenithFilterSegments'
 import ZenithAskComposer from '../components/zenith/ZenithAskComposer'
 import ZenithAskPanel from '../components/zenith/ZenithAskPanel'
 import DailyBriefing from '../components/zenith/DailyBriefing'
@@ -706,6 +707,7 @@ const Zenith = () => {
       <div className="zenith-command-offline-stack">
         <CommandBar
           stacked
+          deferDesktopFilters
           availableFYs={availableFYs}
           selectedFYs={selectedFYs}
           selectedQuarters={selectedQuarters}
@@ -719,6 +721,21 @@ const Zenith = () => {
           filterSummary={filterSummary}
           dataUpdatedAt={dataUpdatedAt}
           isRefreshing={isFetching && !isLoading}
+          desktopCenterSlot={
+            !narrow && showZenithAsk ? (
+              <div id="zenith-ask-surface" className="zenith-ask-command-wrap">
+                <ZenithAskComposer
+                  value={askValue}
+                  onChange={setAskValue}
+                  onSubmit={(q, source) => {
+                    void runZenithAsk(q, source ?? 'typed')
+                  }}
+                  loading={askLoading}
+                  isOnline={isOnline}
+                />
+              </div>
+            ) : null
+          }
         />
 
         <OfflineBanner
@@ -737,31 +754,68 @@ const Zenith = () => {
 
       <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
-      {/* Solar news — Today tab only on mobile; always on desktop */}
-      {user?.role && showTickers ? <SolarNewsTicker deferLoadMs={2000} /> : null}
+      {/* Mobile Today: Solar News above KPIs (Ask lives on its own tab). */}
+      {narrow && user?.role && showTickers ? (
+        <SolarNewsTicker deferLoadMs={2000} />
+      ) : null}
 
-      {/* Desktop: Ask in page flow. Mobile: dedicated Ask tab surface. */}
+      {/*
+        Desktop: composer lives in the sticky command bar; chips + answer panel sit below.
+        Mobile: full Ask tab surface (composer + chips + panel).
+      */}
       {showAskSurface ? (
         <section
-          id="zenith-ask-surface"
-          className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-3 pb-1${
+          id={narrow ? 'zenith-ask-surface' : 'zenith-ask-follow'}
+          className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-2 pb-1${
             showAskSideSuggestions ? ' zenith-ask-page-block--with-suggestions' : ''
-          }${narrow ? ' zenith-ask-page-block--mobile-surface' : ''}`}
+          }${narrow ? ' zenith-ask-page-block--mobile-surface' : ' zenith-ask-page-block--desktop-follow'}`}
           aria-label="Zenith Ask"
         >
-          <div className="zenith-ask-page-block__row">
-            <div className="zenith-ask-page-block__composer">
-              <ZenithAskComposer
-                value={askValue}
-                onChange={setAskValue}
-                onSubmit={(q, source) => {
-                  void runZenithAsk(q, source ?? 'typed')
-                }}
-                loading={askLoading}
-                isOnline={isOnline}
-              />
+          {narrow ? (
+            <div className="zenith-ask-page-block__row">
+              <div className="zenith-ask-page-block__composer">
+                <ZenithAskComposer
+                  value={askValue}
+                  onChange={setAskValue}
+                  onSubmit={(q, source) => {
+                    void runZenithAsk(q, source ?? 'typed')
+                  }}
+                  loading={askLoading}
+                  isOnline={isOnline}
+                />
+              </div>
+              {showAskSideSuggestions ? (
+                <aside className="zenith-ask-suggestions" aria-label="Example questions">
+                  <div className="zenith-ask-suggestions__head">
+                    <span className="zenith-ask-examples__label">Try asking</span>
+                    <p className="zenith-ask-suggestions__sub">
+                      Tap a prompt to run it with your current filters ({askFilterSummary})
+                      {!isOnline
+                        ? ' — reconnect to run Ask'
+                        : ' · Press / or A to focus Ask'}
+                    </p>
+                  </div>
+                  <div className="zenith-ask-examples zenith-ask-examples--panel">
+                    {askExampleChips.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        disabled={!isOnline}
+                        onClick={() => {
+                          trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
+                          void runZenithAsk(q, 'chip')
+                        }}
+                        className="zenith-ask-examples__chip"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </aside>
+              ) : null}
             </div>
-            {showAskSideSuggestions ? (
+          ) : showAskSideSuggestions ? (
+            <div className="zenith-ask-page-block__row zenith-ask-page-block__row--follow-only">
               <aside className="zenith-ask-suggestions" aria-label="Example questions">
                 <div className="zenith-ask-suggestions__head">
                   <span className="zenith-ask-examples__label">Try asking</span>
@@ -789,8 +843,8 @@ const Zenith = () => {
                   ))}
                 </div>
               </aside>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
           {!askPanelDismissed ? (
             <ZenithAskPanel
               result={askResult}
@@ -834,6 +888,34 @@ const Zenith = () => {
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {/* Desktop / laptop: Solar News under Ask, then FY filters, then KPI tiles */}
+      {!narrow && user?.role && showTickers ? (
+        <SolarNewsTicker deferLoadMs={2000} />
+      ) : null}
+
+      {!narrow ? (
+        <div
+          className="zenith-exec-main mx-auto w-full max-w-3xl px-3 sm:px-5 pt-2 pb-1"
+          aria-label="Date filters"
+        >
+          <ZenithFilterSegments
+            availableFYs={availableFYs}
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            onFYChange={setSelectedFYs}
+            onQuarterChange={setSelectedQuarters}
+            onMonthChange={setSelectedMonths}
+            onResetAll={handleResetFilters}
+          />
+          {filterSummary ? (
+            <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
+              {filterSummary}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (

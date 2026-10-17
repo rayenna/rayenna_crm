@@ -66,6 +66,24 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     filters: { inverterBrand: 'Deye' },
     insightHints: 'Deye inverter projects',
   },
+  [norm('List all Under Installation Projects where Payment is pending')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: {
+      projectStatus: 'UNDER_INSTALLATION',
+      paymentStatus: 'NOT_FULLY_PAID',
+    },
+    insightHints: 'under installation not fully paid',
+  },
+  [norm('Under installation projects not fully paid')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: {
+      projectStatus: 'UNDER_INSTALLATION',
+      paymentStatus: 'NOT_FULLY_PAID',
+    },
+    insightHints: 'under installation not fully paid',
+  },
   [norm('How many customers have SBI loans?')]: {
     metric: 'availing_loan',
     viz: 'table',
@@ -281,6 +299,43 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     insightHints: 'profit summary',
   },
+  [norm('Profit summary this quarter')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'profit summary this quarter',
+  },
+  [norm('Profit summary last quarter')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'profit summary last quarter',
+  },
+  [norm('Profit summary next quarter')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'profit summary next quarter',
+  },
+  [norm('Revenue this quarter')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'revenue this quarter',
+  },
+  [norm('Revenue last quarter')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'revenue last quarter',
+  },
+  [norm('Quarter on quarter revenue growth')]: {
+    metric: 'period_compare',
+    viz: 'table',
+    filters: { compareFocus: 'revenue' },
+    insightHints: 'QoQ revenue',
+  },
+  [norm('Year on year revenue growth')]: {
+    metric: 'period_compare',
+    viz: 'table',
+    filters: { compareFocus: 'revenue' },
+    insightHints: 'YoY revenue',
+  },
   [norm('Support tickets by salesperson')]: {
     metric: 'tickets_by_salesperson',
     viz: 'chart',
@@ -445,10 +500,37 @@ type PhraseSalvage = {
 
 const PHRASE_SALVAGE: PhraseSalvage[] = [
   {
+    // Under installation where payment is not complete (PENDING + PARTIAL).
     test: (q) =>
-      /\b(profit\s+summary|gross\s+profit|margin\s+summary|how\s+(much|is)\s+(our\s+)?profit|what('?s|\s+is)\s+(our\s+)?profit)\b/.test(
+      /\bunder\s+installation\b/.test(q) &&
+      /\b(not\s+(yet\s+)?(fully\s+)?paid|not\s+received\s+full\s+payment|haven'?t\s+received\s+full\s+payment|full\s+payment\s+not\s+received|incomplete\s+payment|payment\s+(is\s+)?pending|pending\s+payment|partial(ly)?\s+(paid|payment)|payment\s+partial|outstanding(\s+balance|\s+payment)?|balance\s+(due|pending|outstanding)|unpaid)\b/.test(
         q,
-      ) || /\b(show|give)\s+(me\s+)?(the\s+)?profit\b/.test(q),
+      ),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: {
+        projectStatus: 'UNDER_INSTALLATION',
+        paymentStatus: 'NOT_FULLY_PAID',
+      },
+      insightHints: 'under installation not fully paid',
+    },
+  },
+  {
+    // Single-period revenue / profitability (dates come from relativeDates on the question).
+    test: (q) =>
+      !/\b(quarter[\s-]?on[\s-]?quarter|quarter[\s-]?over[\s-]?quarter|\bqoq\b|year[\s-]?on[\s-]?year|\byoy\b|versus|vs\.?|compared\s+to)\b/.test(
+        q,
+      ) &&
+      ((/\b(profit\s+summary|gross\s+profit|margin\s+summary|how\s+(much|is)\s+(our\s+)?profit|what('?s|\s+is)\s+(our\s+)?profit)\b/.test(
+        q,
+      ) ||
+        /\b(show|give)\s+(me\s+)?(the\s+)?profit\b/.test(q) ||
+        (/\b(revenue|order\s+value|profitability)\b/.test(q) &&
+          /\b(this|last|next|current|previous|prior|upcoming)\s+(quarter|fy|financial\s+year|month)\b/.test(
+            q,
+          ))) &&
+        !/\b(by\s+(city|sales|lead|type)|loan\s+vs|panel|inverter)\b/.test(q)),
     intent: { metric: 'profit_summary', viz: 'table', insightHints: 'profit summary' },
   },
   {

@@ -12,7 +12,12 @@ export const PRODUCT_ANNOUNCEMENTS: ProductAnnouncementDef[] = [
     showNewBadge: true,
   },
   {
-    id: 'zenith-default',
-    text: 'Zenith is now your default Command Centre & Dashboard! 🚀 Prefer the old view? You can still find the Legacy Dashboard under the More section',
+    id: 'ask-zenith',
+    text: 'Ask Zenith — type a question or tap a chip for charts and project lists from your CRM data; on Zenith press / or A to focus the Ask box.',
+    showNewBadge: true,
+  },
+  {
+    id: 'command-palette',
+    text: 'Palette shortcut — press Ctrl+K (⌘K on Mac) anywhere to create, search, and jump to lists without digging through menus.',
   },
 ]

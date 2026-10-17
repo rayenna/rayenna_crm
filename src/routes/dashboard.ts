@@ -3291,7 +3291,7 @@ router.post(
         selectedQuarters: quarterFilters,
         selectedMonths: monthFilters,
       };
-      // YoY / vs-last before single-period relative dates (avoid collapsing to this FY only).
+      // YoY / QoQ / vs-last before single-period relative dates (avoid collapsing to one period only).
       const periodCompare = parsePeriodCompare(question);
       let dateFilter = commandBarDates;
       let relative: { phrase: string } | null = null;
@@ -3367,8 +3367,11 @@ router.post(
         compareWhere,
         compareMeta: periodCompare
           ? {
+              mode: periodCompare.mode,
               primaryFy: periodCompare.primaryFy,
               priorFy: periodCompare.priorFy,
+              primaryQuarter: periodCompare.primaryQuarter,
+              priorQuarter: periodCompare.priorQuarter,
               focus: periodCompare.focus,
             }
           : undefined,

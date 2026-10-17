@@ -38,11 +38,35 @@ describe('parsePeriodCompare', () => {
   it('detects YoY shorthand', () => {
     const r = parsePeriodCompare('YoY revenue growth', NOW);
     expect(r?.focus).toBe('revenue');
+    expect(r?.mode).toBe('yoy');
+  });
+
+  it('detects quarter on quarter revenue growth', () => {
+    const r = parsePeriodCompare('Quarter on quarter revenue growth', NOW);
+    expect(r).not.toBeNull();
+    expect(r!.mode).toBe('qoq');
+    expect(r!.focus).toBe('revenue');
+    expect(r!.primaryFy).toBe('2025-26');
+    expect(r!.primaryQuarter).toBe('Q3');
+    expect(r!.priorFy).toBe('2025-26');
+    expect(r!.priorQuarter).toBe('Q2');
+    expect(r!.primary.selectedQuarters).toEqual(['Q3']);
+    expect(r!.prior.selectedQuarters).toEqual(['Q2']);
+  });
+
+  it('detects this quarter vs last quarter', () => {
+    const r = parsePeriodCompare(
+      'compare profit this quarter versus last quarter',
+      NOW,
+    );
+    expect(r?.mode).toBe('qoq');
+    expect(r?.focus).toBe('profit');
   });
 
   it('returns null for non-compare questions', () => {
     expect(parsePeriodCompare('Profit summary', NOW)).toBeNull();
     expect(parsePeriodCompare('loan vs cash revenue', NOW)).toBeNull();
+    expect(parsePeriodCompare('Profit summary this quarter', NOW)).toBeNull();
   });
 });
 

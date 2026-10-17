@@ -268,10 +268,23 @@ export function projectsHrefForIntent(
       const pe = intent.filters?.peBucket;
       const lsRaw = intent.filters?.leadSource?.trim();
       const search = intent.filters?.search?.trim();
+      let paymentStatuses: string[] | undefined;
+      if (ps) {
+        const upper = ps.toUpperCase().replace(/\s+/g, '_');
+        if (
+          upper === 'NOT_FULLY_PAID' ||
+          upper === 'PENDING,PARTIAL' ||
+          upper === 'PARTIAL,PENDING'
+        ) {
+          paymentStatuses = ['PENDING', 'PARTIAL'];
+        } else {
+          paymentStatuses = [ps];
+        }
+      }
       return buildZenithNlProjectsHref(
         {
           status: st ? [st] : undefined,
-          paymentStatus: ps ? [ps] : undefined,
+          paymentStatus: paymentStatuses,
           peBucket: pe,
           leadSource: lsRaw ? [LEAD_LABEL_TO_ENUM[lsRaw] ?? lsRaw] : undefined,
           search,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Binoculars } from 'lucide-react'
 import ZenithFilterSegments from './ZenithFilterSegments'
 import ZenithFilterMobileRow from './ZenithFilterMobileRow'
@@ -23,6 +23,15 @@ interface Props {
   dataUpdatedAt?: number | null
   /** True while Zenith queries are refetching. */
   isRefreshing?: boolean
+  /**
+   * When true, desktop (lg+) FY/Qtr/Mo segment filters are not rendered in the sticky bar
+   * (caller places them elsewhere, e.g. under Solar News). Mobile filters stay in the bar.
+   */
+  deferDesktopFilters?: boolean
+  /**
+   * Optional desktop (lg+) center slot — e.g. Ask Zenith chat composer where filters used to sit.
+   */
+  desktopCenterSlot?: ReactNode
 }
 
 export default function CommandBar({
@@ -40,6 +49,8 @@ export default function CommandBar({
   filterSummary,
   dataUpdatedAt = null,
   isRefreshing = false,
+  deferDesktopFilters = false,
+  desktopCenterSlot = null,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0)
   const [filterAnchor, setFilterAnchor] = useState(() => new Date())
@@ -75,6 +86,8 @@ export default function CommandBar({
 
   const hasAnyFilter =
     selectedFYs.length > 0 || selectedQuarters.length > 0 || selectedMonths.length > 0
+
+  const showDesktopCenter = Boolean(desktopCenterSlot) || !deferDesktopFilters
 
   const briefingAndLive = (
     <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 text-[10px] sm:text-[11px] font-sans text-[color:var(--text-muted)]">
@@ -120,7 +133,11 @@ export default function CommandBar({
       }
     >
       <div
-        className="zenith-exec-main mx-auto px-3 sm:px-5 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 sm:pb-2.5 grid grid-cols-[1fr_auto] lg:grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 gap-y-1.5 lg:gap-x-4 lg:gap-y-0 lg:items-center"
+        className={
+          showDesktopCenter
+            ? 'zenith-exec-main mx-auto px-3 sm:px-5 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 sm:pb-2.5 grid grid-cols-[1fr_auto] lg:grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 gap-y-1.5 lg:gap-x-4 lg:gap-y-0 lg:items-center'
+            : 'zenith-exec-main mx-auto px-3 sm:px-5 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 sm:pb-2.5 grid grid-cols-[1fr_auto] gap-x-2 gap-y-1.5 lg:items-center'
+        }
       >
         <div className="flex items-center gap-2.5 min-w-0 col-start-1 row-start-1 self-center">
           <Binoculars className="w-5 h-5 sm:w-6 sm:h-6 text-[color:var(--accent-gold)] flex-shrink-0" strokeWidth={2} aria-hidden />
@@ -134,12 +151,19 @@ export default function CommandBar({
           </div>
         </div>
 
-        <div className="col-start-2 row-start-1 justify-self-end self-center lg:col-start-3 lg:row-start-1">
+        <div
+          className={
+            showDesktopCenter
+              ? 'col-start-2 row-start-1 justify-self-end self-center lg:col-start-3 lg:row-start-1'
+              : 'col-start-2 row-start-1 justify-self-end self-center'
+          }
+        >
           {briefingAndLive}
         </div>
 
-        <div className="col-span-2 col-start-1 row-start-2 min-w-0 w-full flex flex-col items-center lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:px-2">
-          <div className="lg:hidden w-full max-w-lg mx-auto">
+        {/* Mobile filters — always in the sticky bar */}
+        <div className="col-span-2 col-start-1 row-start-2 min-w-0 w-full flex flex-col items-center lg:hidden">
+          <div className="w-full max-w-lg mx-auto">
             <ZenithFilterMobileRow
               availableFYs={availableFYs}
               selectedFYs={selectedFYs}
@@ -160,24 +184,34 @@ export default function CommandBar({
               </p>
             ) : null}
           </div>
-          <div className="hidden lg:block w-full max-w-3xl mx-auto">
-            <ZenithFilterSegments
-              availableFYs={availableFYs}
-              selectedFYs={selectedFYs}
-              selectedQuarters={selectedQuarters}
-              selectedMonths={selectedMonths}
-              onFYChange={onFYChange}
-              onQuarterChange={onQuarterChange}
-              onMonthChange={onMonthChange}
-              onResetAll={onResetFilters}
-            />
-            {filterSummary ? (
-              <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
-                {filterSummary}
-              </p>
-            ) : null}
-          </div>
         </div>
+
+        {/* Desktop center: Ask chat slot, or inline FY filters when not deferred */}
+        {desktopCenterSlot ? (
+          <div className="hidden lg:block min-w-0 w-full col-start-2 row-start-1 self-center px-1">
+            <div className="zenith-command-ask-slot w-full max-w-3xl mx-auto">{desktopCenterSlot}</div>
+          </div>
+        ) : !deferDesktopFilters ? (
+          <div className="hidden lg:block min-w-0 w-full col-start-2 row-start-1 self-center px-2">
+            <div className="w-full max-w-3xl mx-auto">
+              <ZenithFilterSegments
+                availableFYs={availableFYs}
+                selectedFYs={selectedFYs}
+                selectedQuarters={selectedQuarters}
+                selectedMonths={selectedMonths}
+                onFYChange={onFYChange}
+                onQuarterChange={onQuarterChange}
+                onMonthChange={onMonthChange}
+                onResetAll={onResetFilters}
+              />
+              {filterSummary ? (
+                <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
+                  {filterSummary}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </header>
   )

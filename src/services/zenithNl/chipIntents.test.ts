@@ -54,12 +54,12 @@ describe('matchExactChipIntent', () => {
     expect(matchExactChipIntent('Revenue by city', UserRole.MANAGEMENT)?.metric).toBe(
       'revenue_by_city',
     );
-    expect(matchExactChipIntent('Profit summary', UserRole.MANAGEMENT)?.metric).toBe(
+    expect(matchExactChipIntent('Profit summary this quarter', UserRole.MANAGEMENT)?.metric).toBe(
       'profit_summary',
     );
-    expect(matchExactChipIntent('Compliance backlog', UserRole.MANAGEMENT)?.metric).toBe(
-      'compliance_backlog',
-    );
+    expect(
+      matchExactChipIntent('Quarter on quarter revenue growth', UserRole.MANAGEMENT)?.metric,
+    ).toBe('period_compare');
   });
 
   it('matches Finance unpaid invoices and payment mode', () => {
@@ -154,5 +154,21 @@ describe('matchPhraseChipIntent', () => {
     expect(matchExactChipIntent('show me the profit summary please', UserRole.ADMIN)?.metric).toBe(
       'profit_summary',
     );
+  });
+
+  it('salvages under installation + not fully paid as projects list', () => {
+    const intent = matchExactChipIntent(
+      'List all Under Installation Projects where Payment is pending',
+      UserRole.ADMIN,
+    );
+    expect(intent?.metric).toBe('projects_list_slice');
+    expect(intent?.filters?.projectStatus).toBe('UNDER_INSTALLATION');
+    expect(intent?.filters?.paymentStatus).toBe('NOT_FULLY_PAID');
+    expect(
+      matchPhraseChipIntent(
+        'under installation where we have not received full payment',
+        UserRole.MANAGEMENT,
+      )?.filters?.paymentStatus,
+    ).toBe('NOT_FULLY_PAID');
   });
 });

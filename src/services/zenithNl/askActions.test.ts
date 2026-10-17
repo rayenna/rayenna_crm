@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { UserRole } from '@prisma/client';
-import { matchAskActionIntent } from './askActions';
+import { matchAskActionIntent, wantsNotFullyPaidPayment } from './askActions';
 
 describe('matchAskActionIntent', () => {
   it('opens new customer for Sales', () => {
@@ -55,5 +55,32 @@ describe('matchAskActionIntent', () => {
 
   it('opens new project', () => {
     expect(matchAskActionIntent('new project', UserRole.SALES)?.href).toBe('/projects/new');
+  });
+
+  it('opens bare under-installation list', () => {
+    expect(matchAskActionIntent('Under Installation Projects', UserRole.ADMIN)?.href).toBe(
+      '/projects?status=UNDER_INSTALLATION',
+    );
+  });
+
+  it('does not steal under-installation + payment pending into bare stage nav', () => {
+    expect(
+      matchAskActionIntent(
+        'List all Under Installation Projects where Payment is pending',
+        UserRole.ADMIN,
+      ),
+    ).toBeNull();
+    expect(
+      matchAskActionIntent(
+        'under installation projects where we have not received full payment',
+        UserRole.MANAGEMENT,
+      ),
+    ).toBeNull();
+  });
+
+  it('detects not-fully-paid payment phrasing', () => {
+    expect(wantsNotFullyPaidPayment('payment is pending')).toBe(true);
+    expect(wantsNotFullyPaidPayment('not fully paid')).toBe(true);
+    expect(wantsNotFullyPaidPayment('under installation only')).toBe(false);
   });
 });

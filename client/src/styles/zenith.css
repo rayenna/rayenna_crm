@@ -2478,9 +2478,105 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 
 @media (min-width: 1024px) {
   /*
-   * Desktop: compact centered Ask bar (~half width, ~three lines)
-   * + horizontal scrollable suggestion chips underneath.
+   * Desktop: Ask chat composer sits in the sticky command bar (center slot).
+   * Suggestion / recent chips + answer panel sit in the page flow below.
    */
+  .zenith-root .zenith-command-ask-slot {
+    width: 100%;
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer {
+    width: 100%;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__shell {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.4rem;
+    padding: 0.3rem 0.35rem 0.3rem 0.4rem;
+    border-radius: 1.5rem;
+    border-width: 1px;
+    animation: none;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-gold) 14%, transparent),
+      0 3px 12px color-mix(in srgb, var(--accent-gold) 10%, transparent);
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__header {
+    flex: 0 0 auto;
+    width: auto;
+    margin-bottom: 0;
+    gap: 0.25rem;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__badge {
+    padding: 0.16rem 0.45rem;
+    font-size: 0.6rem;
+    box-shadow: none;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__badge svg {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__hint {
+    display: none;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__clear span {
+    display: none;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    min-height: 2.65rem;
+    max-height: 3.25rem;
+    height: 2.85rem;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    border-radius: 1rem;
+    resize: none;
+    overflow-y: auto;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__actions {
+    display: flex;
+    flex: 0 0 auto;
+    grid-template-columns: none;
+    margin-top: 0;
+    gap: 0.28rem;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__mic,
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__submit {
+    min-height: 2.15rem;
+    min-width: 2.15rem;
+    padding: 0 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__mic-label {
+    display: none;
+  }
+
+  .zenith-root .zenith-command-ask-slot .zenith-ask-composer__status {
+    flex: 1 0 100%;
+    order: 10;
+    margin-top: 0;
+    font-size: 0.62rem;
+    padding: 0 0.3rem;
+  }
+
   .zenith-root .zenith-ask-page-block {
     display: flex;
     flex-direction: column;
@@ -2489,14 +2585,20 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
     padding-right: 1rem;
   }
 
+  .zenith-root .zenith-ask-page-block--desktop-follow {
+    padding-top: 0.35rem;
+    padding-bottom: 0.15rem;
+  }
+
   .zenith-root .zenith-ask-page-block__row,
-  .zenith-root .zenith-ask-page-block--with-suggestions .zenith-ask-page-block__row {
+  .zenith-root .zenith-ask-page-block--with-suggestions .zenith-ask-page-block__row,
+  .zenith-root .zenith-ask-page-block__row--follow-only {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.4rem;
+    gap: 0.35rem;
     width: 100%;
-    max-width: 50%;
+    max-width: min(48rem, 72%);
   }
 
   .zenith-root .zenith-ask-page-block__composer,

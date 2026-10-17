@@ -114,7 +114,7 @@ export type ZenithNlIntent = {
     panelCapacityWMax?: number;
     inverterCapacityKwMin?: number;
     inverterCapacityKwMax?: number;
-    /** YoY / FY compare focus for period_compare */
+    /** YoY / QoQ compare focus for period_compare */
     compareFocus?: 'revenue' | 'margin' | 'profit' | 'all';
   };
   insightHints?: string;
@@ -486,7 +486,7 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'period_compare',
     description:
-      'Year-on-year or this FY vs last FY comparison for revenue (order value), gross profit, and avg margin %',
+      'YoY (this FY vs last FY) or QoQ (this quarter vs last quarter) comparison for revenue (order value), gross profit, and avg margin %',
     defaultViz: 'table',
     roles: FINANCE_PLUS,
   },
@@ -603,14 +603,14 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   MANAGEMENT: [
     'Subsidy vs non-subsidy revenue',
     'Revenue by city',
-    'Profit summary',
-    'Compliance backlog',
+    'Profit summary this quarter',
+    'Quarter on quarter revenue growth',
     'Loan vs cash revenue',
   ],
   ADMIN: [
-    'Profit summary',
+    'Profit summary this quarter',
+    'Quarter on quarter revenue growth',
     'Ops workload',
-    'Compliance backlog',
     'Hub plant link status',
     'Outstanding by salesperson',
   ],
@@ -622,8 +622,8 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
     'AMCs expiring',
   ],
   FINANCE: [
-    'Profit summary',
-    'Loan vs cash revenue',
+    'Profit summary this quarter',
+    'Quarter on quarter revenue growth',
     'Outstanding by salesperson',
     'Payment mode mix',
     'Unpaid invoices',
@@ -721,7 +721,7 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
     ],
     projects_list_slice: [
       'Pipeline by stage',
-      'Payment status breakdown',
+      'Under installation projects not fully paid',
       'Show projects with outstanding balance',
     ],
     cohort_summary: [
@@ -840,9 +840,9 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Revenue by city',
     ],
     period_compare: [
-      'Profit summary this FY',
-      'Profit summary last FY',
-      'Outstanding by salesperson',
+      'Profit summary this quarter',
+      'Profit summary last quarter',
+      'Year on year revenue growth',
     ],
     tickets_by_salesperson: [
       'Ticket resolution time',

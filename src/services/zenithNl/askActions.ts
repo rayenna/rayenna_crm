@@ -126,6 +126,20 @@ function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Payment not complete — PENDING + PARTIAL (not FULLY_PAID). */
+export function wantsNotFullyPaidPayment(key: string): boolean {
+  const q = key.trim().toLowerCase().replace(/\s+/g, ' ');
+  return (
+    /\b(not\s+(yet\s+)?(fully\s+)?paid|not\s+received\s+full\s+payment|haven'?t\s+received\s+full\s+payment|full\s+payment\s+not\s+received|incomplete\s+payment)\b/.test(
+      q,
+    ) ||
+    /\b(payment\s+(is\s+)?pending|pending\s+payment|partial(ly)?\s+(paid|payment)|payment\s+partial)\b/.test(
+      q,
+    ) ||
+    /\b(outstanding(\s+balance|\s+payment)?|balance\s+(due|pending|outstanding)|unpaid)\b/.test(q)
+  );
+}
+
 function customersSearchHref(query?: string): string {
   const q = query?.trim();
   if (!q) return '/customers';
@@ -475,6 +489,8 @@ export function matchAskActionIntent(
     );
   }
   if (/\bunder\s+installation\b/.test(key)) {
+    // "Under installation + payment pending / not fully paid" → analytics list (not bare stage nav).
+    if (wantsNotFullyPaidPayment(key)) return null;
     if (!actionAllowedForRole('under_installation', role)) return null;
     return build(
       'under_installation',

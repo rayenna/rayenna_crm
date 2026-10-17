@@ -450,8 +450,11 @@ export async function execPeriodCompare(
   wherePrior: Prisma.ProjectWhereInput,
   opts: {
     focus?: 'revenue' | 'margin' | 'profit' | 'all';
+    mode?: 'yoy' | 'qoq';
     primaryFy: string;
     priorFy: string;
+    primaryQuarter?: string;
+    priorQuarter?: string;
   },
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   const [cur, prior] = await Promise.all([
@@ -459,8 +462,19 @@ export async function execPeriodCompare(
     aggregateProfitSummaryTotals(wherePrior),
   ]);
   const focus = opts.focus ?? 'all';
-  const thisLabel = `This FY (${opts.primaryFy})`;
-  const lastLabel = `Last FY (${opts.priorFy})`;
+  const mode = opts.mode ?? 'yoy';
+  const primaryKey =
+    mode === 'qoq' && opts.primaryQuarter
+      ? `${opts.primaryFy} ${opts.primaryQuarter}`
+      : opts.primaryFy;
+  const priorKey =
+    mode === 'qoq' && opts.priorQuarter
+      ? `${opts.priorFy} ${opts.priorQuarter}`
+      : opts.priorFy;
+  const thisLabel = mode === 'qoq' ? `This Q (${primaryKey})` : `This FY (${primaryKey})`;
+  const lastLabel = mode === 'qoq' ? `Last Q (${priorKey})` : `Last FY (${priorKey})`;
+  const compareWord = mode === 'qoq' ? 'QoQ' : 'YoY';
+  const periodWord = mode === 'qoq' ? 'quarter' : 'FY';
 
   type Row = {
     metric: string;
@@ -525,33 +539,33 @@ export async function execPeriodCompare(
     const sign = d > 0 ? '+' : '';
     insight =
       prior.deals === 0 && cur.deals === 0
-        ? 'No revenue-stage deals in either FY for margin comparison.'
+        ? `No revenue-stage deals in either ${periodWord} for margin comparison.`
         : prior.deals === 0
-          ? `Avg margin ${cur.avgMargin}% this FY (${opts.primaryFy}); no prior-FY baseline (${opts.priorFy}).`
-          : `Avg margin: ${cur.avgMargin}% this FY vs ${prior.avgMargin}% last FY (${sign}${d} pp).`;
+          ? `Avg margin ${cur.avgMargin}% this ${periodWord} (${primaryKey}); no prior-${periodWord} baseline (${priorKey}).`
+          : `Avg margin: ${cur.avgMargin}% this ${periodWord} vs ${prior.avgMargin}% last ${periodWord} (${sign}${d} pp).`;
   } else if (focus === 'profit') {
     const g = growthPct(cur.profit, prior.profit);
     insight =
       prior.profit === 0 && cur.profit === 0
-        ? 'No gross profit in either FY to compare.'
+        ? `No gross profit in either ${periodWord} to compare.`
         : prior.profit === 0
-          ? `Gross profit ${formatInr(cur.profit)} this FY; no prior-FY baseline.`
-          : `Gross profit YoY: ${formatInr(cur.profit)} this FY vs ${formatInr(prior.profit)} last FY (${formatGrowthPct(g)}).`;
+          ? `Gross profit ${formatInr(cur.profit)} this ${periodWord}; no prior-${periodWord} baseline.`
+          : `Gross profit ${compareWord}: ${formatInr(cur.profit)} this ${periodWord} vs ${formatInr(prior.profit)} last ${periodWord} (${formatGrowthPct(g)}).`;
   } else {
     const g = growthPct(cur.order, prior.order);
     insight =
       prior.order === 0 && cur.order === 0
-        ? 'No revenue (order value) in either FY to compare.'
+        ? `No revenue (order value) in either ${periodWord} to compare.`
         : prior.order === 0
-          ? `Revenue ${formatInr(cur.order)} this FY; no prior-FY baseline.`
-          : `Revenue YoY: ${formatInr(cur.order)} this FY vs ${formatInr(prior.order)} last FY (${formatGrowthPct(g)}).`;
+          ? `Revenue ${formatInr(cur.order)} this ${periodWord}; no prior-${periodWord} baseline.`
+          : `Revenue ${compareWord}: ${formatInr(cur.order)} this ${periodWord} vs ${formatInr(prior.order)} last ${periodWord} (${formatGrowthPct(g)}).`;
   }
 
   return {
     insight,
     viz: {
       kind: 'table',
-      title: `YoY compare · ${opts.primaryFy} vs ${opts.priorFy}`,
+      title: `${compareWord} compare · ${primaryKey} vs ${priorKey}`,
       columns: [
         { key: 'metric', label: 'Metric' },
         { key: 'thisFy', label: thisLabel },

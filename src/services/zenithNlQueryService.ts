@@ -148,11 +148,14 @@ export type ZenithNlQueryInput = {
   role: UserRole;
   userId: string;
   where: Prisma.ProjectWhereInput;
-  /** Prior FY where for period_compare (YoY / vs last). */
+  /** Prior period where for period_compare (YoY / QoQ). */
   compareWhere?: Prisma.ProjectWhereInput;
   compareMeta?: {
+    mode?: 'yoy' | 'qoq';
     primaryFy: string;
     priorFy: string;
+    primaryQuarter?: string;
+    priorQuarter?: string;
     focus: 'revenue' | 'margin' | 'profit' | 'all';
   };
   dateFilter: ZenithNlDateFilter;
@@ -533,7 +536,7 @@ Rules:
 - viz must be "chart" or "table". For chart, chartType is "bar" or "pie".
 - Optional filters (use whenever the user names them):
   - projectStatus (Prisma enum e.g. CONFIRMED)
-  - paymentStatus (PENDING|PARTIAL|FULLY_PAID)
+  - paymentStatus (PENDING|PARTIAL|FULLY_PAID|NOT_FULLY_PAID for pending+partial / not fully paid)
   - peBucket (proposal-ready|draft|not-started|rest)
   - leadSource (label or enum)
   - search (customer name ONLY — never put panel/inverter/bank names here)
@@ -548,7 +551,7 @@ Rules:
   - "revenue of projects who used Deye inverters" → cohort_summary, filters.inverterBrand="Deye"
   - "customers using loans from SBI" → availing_loan (or cohort_summary), filters.financingBank="SBI", availingLoan=true
   - "summarise my lost deals" (Sales) → lost_deals_summary; "installation status" (Sales) → install_by_status
-- Date phrases like "last FY" / "this quarter" are handled outside this JSON — do not invent date fields.
+- Date phrases like "last FY" / "this quarter" / "next quarter" and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter, prefer metric "profit_summary".
 - insightHints: short phrase describing what the user cares about (no numbers).
 - Follow-ups like "as a table" / "show that as a pie" should keep the prior metric and only change viz/chartType when possible.
 
@@ -1037,8 +1040,19 @@ function applyStatusPaymentLeadSearchFilters(
     w.projectStatus = st as ProjectStatus;
   }
   const ps = intent.filters?.paymentStatus?.trim();
-  if (ps && (Object.values(PaymentStatus) as string[]).includes(ps)) {
-    w.paymentStatus = ps as PaymentStatus;
+  if (ps) {
+    const upper = ps.toUpperCase().replace(/\s+/g, '_');
+    if (
+      upper === 'NOT_FULLY_PAID' ||
+      upper === 'PENDING,PARTIAL' ||
+      upper === 'PARTIAL,PENDING'
+    ) {
+      w.paymentStatus = { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] };
+    } else if ((Object.values(PaymentStatus) as string[]).includes(ps)) {
+      w.paymentStatus = ps as PaymentStatus;
+    } else if ((Object.values(PaymentStatus) as string[]).includes(upper)) {
+      w.paymentStatus = upper as PaymentStatus;
+    }
   }
   const search = intent.filters?.search?.trim();
   if (search) {
@@ -1066,6 +1080,18 @@ function applyStatusPaymentLeadSearchFilters(
 
 function describeEntitySlice(intent: ZenithNlIntent): string {
   const bits: string[] = [];
+  if (intent.filters?.projectStatus) {
+    const st = intent.filters.projectStatus.trim();
+    bits.push(PROJECT_STATUS_LABELS[st as ProjectStatus] || st.replace(/_/g, ' ').toLowerCase());
+  }
+  if (intent.filters?.paymentStatus) {
+    const ps = intent.filters.paymentStatus.trim().toUpperCase().replace(/\s+/g, '_');
+    if (ps === 'NOT_FULLY_PAID' || ps === 'PENDING,PARTIAL' || ps === 'PARTIAL,PENDING') {
+      bits.push('not fully paid');
+    } else {
+      bits.push(PAYMENT_STATUS_LABELS[ps as PaymentStatus] || ps.replace(/_/g, ' ').toLowerCase());
+    }
+  }
   if (intent.filters?.panelBrand) bits.push(`${intent.filters.panelBrand} panels`);
   if (intent.filters?.inverterBrand) bits.push(`${intent.filters.inverterBrand} inverters`);
   if (intent.filters?.financingBank) bits.push(`${intent.filters.financingBank.replace(/_/g, ' ')} loans`);
@@ -1129,6 +1155,7 @@ async function execProjectsListSlice(
 
   const showEquipment = Boolean(intent.filters?.panelBrand || intent.filters?.inverterBrand);
   const showBank = Boolean(intent.filters?.financingBank || intent.filters?.availingLoan);
+  const showPayment = Boolean(intent.filters?.paymentStatus);
 
   const [projects, aggregate] = await Promise.all([
     prisma.project.findMany({
@@ -1136,7 +1163,9 @@ async function execProjectsListSlice(
       select: {
         slNo: true,
         projectStatus: true,
+        paymentStatus: true,
         projectCost: true,
+        balanceAmount: true,
         panelBrand: true,
         inverterBrand: true,
         financingBank: true,
@@ -1148,20 +1177,29 @@ async function execProjectsListSlice(
     prisma.project.aggregate({
       where: w,
       _count: { id: true },
-      _sum: { projectCost: true },
+      _sum: { projectCost: true, balanceAmount: true },
     }),
   ]);
   const totalCount = aggregate._count.id;
   const totalValue = Math.round(Number(aggregate._sum.projectCost) || 0);
+  const totalBalance = Math.round(Number(aggregate._sum.balanceAmount) || 0);
   const sliceLabel = describeEntitySlice(intent);
   const insight = totalCount
-    ? `${totalCount} project${totalCount === 1 ? '' : 's'} match ${sliceLabel} (${formatInr(totalValue)} order value; showing up to ${TABLE_ROW_CAP}).`
+    ? `${totalCount} project${totalCount === 1 ? '' : 's'} match ${sliceLabel} (${formatInr(totalValue)} order value${
+        showPayment && totalBalance > 0 ? `; ${formatInr(totalBalance)} outstanding` : ''
+      }; showing up to ${TABLE_ROW_CAP}).`
     : `No projects match ${sliceLabel} under your Zenith filters.`;
 
   const columns = [
     { key: 'slNo', label: 'SL No' },
     { key: 'customer', label: 'Customer' },
     { key: 'stage', label: 'Stage' },
+    ...(showPayment
+      ? [
+          { key: 'payment', label: 'Payment' },
+          { key: 'balance', label: 'Balance (₹)' },
+        ]
+      : []),
     ...(showEquipment
       ? [
           { key: 'panel', label: 'Panel' },
@@ -1182,6 +1220,14 @@ async function execProjectsListSlice(
         slNo: p.slNo,
         customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
         stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+        ...(showPayment
+          ? {
+              payment: p.paymentStatus
+                ? PAYMENT_STATUS_LABELS[p.paymentStatus] || p.paymentStatus
+                : 'Pending',
+              balance: Math.round(Number(p.balanceAmount) || 0),
+            }
+          : {}),
         ...(showEquipment
           ? {
               panel: p.panelBrand?.trim() || '—',
@@ -2041,7 +2087,7 @@ async function executeMetric(
       if (!ctx.compareWhere || !ctx.compareMeta) {
         return {
           insight:
-            'I can compare this FY vs last FY for revenue, profit, or margin. Try “year on year revenue growth this FY”.',
+            'I can compare this FY vs last FY, or this quarter vs last quarter, for revenue, profit, or margin. Try “year on year revenue growth” or “quarter on quarter profit growth”.',
           viz: {
             kind: 'table',
             title: 'Period compare',
@@ -2055,8 +2101,11 @@ async function executeMetric(
       }
       return execPeriodCompare(where, ctx.compareWhere, {
         focus: intent.filters?.compareFocus ?? ctx.compareMeta.focus,
+        mode: ctx.compareMeta.mode ?? 'yoy',
         primaryFy: ctx.compareMeta.primaryFy,
         priorFy: ctx.compareMeta.priorFy,
+        primaryQuarter: ctx.compareMeta.primaryQuarter,
+        priorQuarter: ctx.compareMeta.priorQuarter,
       });
     }
     case 'tickets_by_salesperson':

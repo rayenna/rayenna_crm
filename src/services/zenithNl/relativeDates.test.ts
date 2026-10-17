@@ -18,6 +18,20 @@ describe('parseZenithRelativeDates', () => {
     expect(r?.selectedQuarters).toEqual(['Q3']);
   });
 
+  it('parses next quarter', () => {
+    const r = parseZenithRelativeDates('revenue next quarter', NOW);
+    expect(r?.selectedFYs).toEqual(['2025-26']);
+    expect(r?.selectedQuarters).toEqual(['Q4']);
+    expect(r?.phrase).toContain('next quarter');
+  });
+
+  it('parses next quarter across FY boundary from Q4', () => {
+    const jan = new Date('2026-01-15T06:30:00.000Z'); // FY 2025-26 Q4
+    const r = parseZenithRelativeDates('profit next quarter', jan);
+    expect(r?.selectedFYs).toEqual(['2026-27']);
+    expect(r?.selectedQuarters).toEqual(['Q1']);
+  });
+
   it('parses last quarter across FY boundary from Q1', () => {
     const apr = new Date('2025-04-10T06:30:00.000Z'); // FY 2025-26 Q1
     const r = parseZenithRelativeDates('deals last quarter', apr);

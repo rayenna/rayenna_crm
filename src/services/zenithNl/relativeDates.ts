@@ -17,6 +17,16 @@ export function getPreviousFY(fy: string): string {
   return '';
 }
 
+export function getNextFY(fy: string): string {
+  const twoDigit = fy.match(/^(\d{4})-(\d{2})$/);
+  if (twoDigit) {
+    const start = parseInt(twoDigit[1]!, 10);
+    const end = parseInt(twoDigit[2]!, 10);
+    return `${start + 1}-${String(end + 1).padStart(2, '0')}`;
+  }
+  return '';
+}
+
 export function currentFyQuarterMonth(now: Date = new Date()): {
   fy: string;
   quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
@@ -34,7 +44,10 @@ export function currentFyQuarterMonth(now: Date = new Date()): {
   return { fy, quarter, month };
 }
 
-function previousQuarter(fy: string, quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4'): {
+export function previousQuarter(
+  fy: string,
+  quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4',
+): {
   fy: string;
   quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
 } {
@@ -42,6 +55,19 @@ function previousQuarter(fy: string, quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4'): {
   if (quarter === 'Q2') return { fy, quarter: 'Q1' };
   if (quarter === 'Q3') return { fy, quarter: 'Q2' };
   return { fy, quarter: 'Q3' };
+}
+
+export function nextQuarter(
+  fy: string,
+  quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4',
+): {
+  fy: string;
+  quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4';
+} {
+  if (quarter === 'Q4') return { fy: getNextFY(fy) || fy, quarter: 'Q1' };
+  if (quarter === 'Q1') return { fy, quarter: 'Q2' };
+  if (quarter === 'Q2') return { fy, quarter: 'Q3' };
+  return { fy, quarter: 'Q4' };
 }
 
 function previousMonth(fy: string, month: string): { fy: string; month: string } {
@@ -121,6 +147,17 @@ export function parseZenithRelativeDates(
       selectedQuarters: [cur.quarter],
       selectedMonths: [],
       phrase: `this quarter (${cur.fy} ${cur.quarter})`,
+      source: 'question',
+    };
+  }
+
+  if (/\b(next|upcoming|coming)\s+quarter\b/.test(q)) {
+    const nxt = nextQuarter(cur.fy, cur.quarter);
+    return {
+      selectedFYs: [nxt.fy],
+      selectedQuarters: [nxt.quarter],
+      selectedMonths: [],
+      phrase: `next quarter (${nxt.fy} ${nxt.quarter})`,
       source: 'question',
     };
   }
