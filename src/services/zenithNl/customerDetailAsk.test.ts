@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { UserRole } from '@prisma/client';
 import {
+  formatCustomerEmails,
+  formatCustomerPhones,
   matchCustomerDetailLookupIntent,
   matchCustomersListIntent,
 } from './customerDetailAsk';
@@ -31,5 +33,31 @@ describe('matchCustomersListIntent', () => {
     expect(
       matchCustomersListIntent('List all subsidy projects', UserRole.ADMIN),
     ).toBeNull();
+  });
+});
+
+describe('formatCustomerPhones / formatCustomerEmails', () => {
+  it('parses JSON-encoded email and contactNumbers (no brackets in display)', () => {
+    const c = {
+      phone: null,
+      email: '["balakrishnanarun2001@gmail.com"]',
+      contactNumbers: '["9446177817"]',
+      contacts: null,
+    };
+    expect(formatCustomerPhones(c)).toBe('9446177817');
+    expect(formatCustomerEmails(c)).toBe('balakrishnanarun2001@gmail.com');
+  });
+
+  it('merges primary phone with contactNumbers and contacts', () => {
+    const c = {
+      phone: '9000000000',
+      email: 'a@example.com',
+      contactNumbers: '["9000000000","9111111111"]',
+      contacts: JSON.stringify([
+        { firstName: 'X', phones: ['9222222222'], emails: ['b@example.com'] },
+      ]),
+    };
+    expect(formatCustomerPhones(c)).toBe('9000000000, 9111111111, 9222222222');
+    expect(formatCustomerEmails(c)).toBe('a@example.com, b@example.com');
   });
 });

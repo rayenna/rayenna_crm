@@ -1,8 +1,14 @@
 /**
  * Ask Zenith — customer record lookup + customer list slices.
  */
-import { type Prisma, UserRole } from '@prisma/client';
+import { CustomerType, type Customer, type Prisma, UserRole } from '@prisma/client';
 import prisma from '../../prisma';
+import {
+  allEmailsFromCustomer,
+  allPhonesFromCustomer,
+} from '../../utils/consumerCustomerProfile';
+import { getCustomerTypeChartLabel } from '../../utils/customerTypeCharts';
+import { formatContactPersonName, parseContactsPayload } from '../../utils/customerContacts';
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 
@@ -38,11 +44,81 @@ function money(n: number | null | undefined): string {
 function displayName(c: {
   customerName?: string | null;
   firstName?: string | null;
+  middleName?: string | null;
   lastName?: string | null;
   prefix?: string | null;
+  companyName?: string | null;
 }): string {
-  const parts = [c.prefix, c.firstName, c.lastName].filter(Boolean).join(' ').trim();
-  return parts || c.customerName?.trim() || 'Unknown';
+  const parts = [c.prefix, c.firstName, c.middleName, c.lastName]
+    .map((p) => p?.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  if (parts) return parts;
+  if (c.companyName?.trim()) return c.companyName.trim();
+  return c.customerName?.trim() || 'Unknown';
+}
+
+/** Format CRM phone/email JSON arrays and contactNumbers for Ask tables. */
+export function formatCustomerPhones(c: {
+  phone?: string | null;
+  contactNumbers?: string | null;
+  contacts?: unknown;
+}): string {
+  // Prisma Json may already be an array; parseContactsPayload also accepts string JSON.
+  const contacts = parseContactsPayload(c.contacts);
+  return allPhonesFromCustomer({ ...c, contacts } as Customer).join(', ') || '—';
+}
+
+export function formatCustomerEmails(c: {
+  email?: string | null;
+  contacts?: unknown;
+}): string {
+  const contacts = parseContactsPayload(c.contacts);
+  return allEmailsFromCustomer({ ...c, contacts } as Customer).join(', ') || '—';
+}
+
+function formatAddress(c: {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pinCode?: string | null;
+}): string {
+  const line1 = c.addressLine1?.trim();
+  const line2 = c.addressLine2?.trim();
+  const legacy = c.address?.trim();
+  // Prefer structured lines; legacy `address` often duplicates them.
+  const street = [line1, line2].filter(Boolean);
+  const streetBits = street.length > 0 ? street : legacy ? [legacy] : [];
+  const bits = [...streetBits, c.city, c.state, c.country, c.pinCode]
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean);
+  return bits.length ? bits.join(', ') : '—';
+}
+
+function formatGst(c: { companyGst?: string | null; gstNumber?: string | null }): string {
+  return (c.companyGst || c.gstNumber || '').trim() || '—';
+}
+
+function formatMap(c: { latitude?: number | null; longitude?: number | null }): string {
+  if (c.latitude == null || c.longitude == null) return '—';
+  if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude)) return '—';
+  return `${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`;
+}
+
+function contactPersonLabel(c: {
+  contactPerson?: string | null;
+  contacts?: unknown;
+}): string {
+  const legacy = c.contactPerson?.trim();
+  if (legacy) return legacy;
+  const named = parseContactsPayload(c.contacts)
+    .map((entry) => formatContactPersonName(entry))
+    .filter(Boolean);
+  return named.join('; ') || '—';
 }
 
 function norm(q: string): string {
@@ -118,6 +194,54 @@ export function matchCustomersListIntent(
   };
 }
 
+const customerDetailSelect = {
+  id: true,
+  customerId: true,
+  customerName: true,
+  prefix: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  customerType: true,
+  phone: true,
+  email: true,
+  contactNumbers: true,
+  contacts: true,
+  contactPerson: true,
+  city: true,
+  state: true,
+  country: true,
+  address: true,
+  addressLine1: true,
+  addressLine2: true,
+  pinCode: true,
+  gstNumber: true,
+  companyGst: true,
+  consumerNumber: true,
+  companyName: true,
+  idProofType: true,
+  idProofNumber: true,
+  latitude: true,
+  longitude: true,
+  createdAt: true,
+  salesperson: { select: { name: true } },
+  projects: {
+    select: {
+      id: true,
+      slNo: true,
+      projectStatus: true,
+      type: true,
+      systemCapacity: true,
+      projectCost: true,
+      balanceAmount: true,
+      paymentStatus: true,
+    },
+    orderBy: { updatedAt: 'desc' as const },
+    take: 8,
+  },
+  _count: { select: { projects: true } },
+} satisfies Prisma.CustomerSelect;
+
 export async function execCustomerDetailLookup(
   intent: ZenithNlIntent,
   opts?: { salespersonId?: string },
@@ -136,6 +260,7 @@ export async function execCustomerDetailLookup(
     { firstName: { contains: raw, mode: 'insensitive' } },
     { lastName: { contains: raw, mode: 'insensitive' } },
     { phone: { contains: raw } },
+    { contactNumbers: { contains: raw } },
     { email: { contains: raw, mode: 'insensitive' } },
   ];
   const where: Prisma.CustomerWhereInput = opts?.salespersonId
@@ -144,40 +269,7 @@ export async function execCustomerDetailLookup(
 
   const matches = await prisma.customer.findMany({
     where,
-    select: {
-      id: true,
-      customerId: true,
-      customerName: true,
-      prefix: true,
-      firstName: true,
-      lastName: true,
-      customerType: true,
-      phone: true,
-      email: true,
-      city: true,
-      state: true,
-      address: true,
-      addressLine1: true,
-      pinCode: true,
-      gstNumber: true,
-      consumerNumber: true,
-      companyName: true,
-      createdAt: true,
-      salesperson: { select: { name: true } },
-      projects: {
-        select: {
-          id: true,
-          slNo: true,
-          projectStatus: true,
-          projectCost: true,
-          balanceAmount: true,
-          paymentStatus: true,
-        },
-        orderBy: { updatedAt: 'desc' },
-        take: 8,
-      },
-      _count: { select: { projects: true } },
-    },
+    select: customerDetailSelect,
     orderBy: { updatedAt: 'desc' },
     take: 5,
   });
@@ -207,7 +299,7 @@ export async function execCustomerDetailLookup(
           customerId: c.customerId,
           name: displayName(c),
           city: c.city || '—',
-          phone: c.phone || '—',
+          phone: formatCustomerPhones(c),
           projects: c._count.projects,
           href: `/customers/${c.id}`,
         })),
@@ -217,19 +309,23 @@ export async function execCustomerDetailLookup(
   }
 
   const c = matches[0]!;
-  const addr =
-    [c.addressLine1, c.address, c.city, c.state, c.pinCode].filter(Boolean).join(', ') || '—';
-  const rows: { field: string; value: string }[] = [
+  const idProof =
+    [c.idProofType, c.idProofNumber].map((p) => p?.trim()).filter(Boolean).join(' · ') || '—';
+
+  const rows: { field: string; value: string; href?: string }[] = [
     { field: 'Customer ID', value: c.customerId },
     { field: 'Name', value: displayName(c) },
-    { field: 'Type', value: c.customerType?.replace(/_/g, ' ') || '—' },
-    { field: 'Phone', value: c.phone || '—' },
-    { field: 'Email', value: c.email || '—' },
-    { field: 'City', value: c.city || '—' },
-    { field: 'Address', value: addr.slice(0, 120) },
-    { field: 'GST', value: c.gstNumber || '—' },
-    { field: 'Consumer no.', value: c.consumerNumber || '—' },
-    { field: 'Company', value: c.companyName || '—' },
+    { field: 'Type', value: getCustomerTypeChartLabel(c.customerType) },
+    { field: 'Phone', value: formatCustomerPhones(c) },
+    { field: 'Email', value: formatCustomerEmails(c) },
+    { field: 'Contact person', value: contactPersonLabel(c) },
+    { field: 'Company', value: c.companyName?.trim() || '—' },
+    { field: 'GST', value: formatGst(c) },
+    { field: 'Consumer no.', value: c.consumerNumber?.trim() || '—' },
+    { field: 'City', value: c.city?.trim() || '—' },
+    { field: 'Address', value: formatAddress(c) },
+    { field: 'Map', value: formatMap(c) },
+    { field: 'ID proof', value: idProof },
     { field: 'Salesperson', value: c.salesperson?.name || '—' },
     { field: 'Created', value: formatDate(c.createdAt) },
     { field: 'Projects', value: String(c._count.projects) },
@@ -243,14 +339,28 @@ export async function execCustomerDetailLookup(
   });
 
   for (const p of c.projects) {
+    const size =
+      p.systemCapacity != null && Number.isFinite(p.systemCapacity)
+        ? `${p.systemCapacity} kW`
+        : null;
+    const type = p.type?.replace(/_/g, ' ') || null;
+    const bits = [
+      p.projectStatus.replace(/_/g, ' '),
+      type,
+      size,
+      money(p.projectCost),
+      p.paymentStatus,
+      `bal ${money(p.balanceAmount)}`,
+    ].filter(Boolean);
     rows.push({
       field: `Project SL ${p.slNo}`,
-      value: `${p.projectStatus.replace(/_/g, ' ')} · ${money(p.projectCost)} · ${p.paymentStatus} · bal ${money(p.balanceAmount)}`,
+      value: bits.join(' · '),
+      href: `/projects/${p.id}`,
     });
   }
 
   return {
-    insight: `${displayName(c)} (${c.customerId}) · ${c.city || 'no city'} · ${c._count.projects} project${c._count.projects === 1 ? '' : 's'} · ${money(linkedOrder)} linked order.`,
+    insight: `${displayName(c)} (${c.customerId}) · ${getCustomerTypeChartLabel(c.customerType)} · ${c.city || 'no city'} · ${c._count.projects} project${c._count.projects === 1 ? '' : 's'} · ${money(linkedOrder)} linked order.`,
     viz: {
       kind: 'table',
       title: `Customer ${c.customerId}`,
@@ -284,11 +394,15 @@ export async function execCustomersListSlice(
       customerId: true,
       customerName: true,
       firstName: true,
+      middleName: true,
       lastName: true,
       prefix: true,
+      companyName: true,
       customerType: true,
       city: true,
       phone: true,
+      contactNumbers: true,
+      contacts: true,
       salesperson: { select: { name: true } },
       _count: { select: { projects: true } },
     },
@@ -323,9 +437,9 @@ export async function execCustomersListSlice(
       rows: customers.map((c) => ({
         customerId: c.customerId,
         name: displayName(c),
-        type: c.customerType || '—',
+        type: getCustomerTypeChartLabel(c.customerType ?? CustomerType.RESIDENTIAL),
         city: c.city || '—',
-        phone: c.phone || '—',
+        phone: formatCustomerPhones(c),
         sales: c.salesperson?.name || '—',
         projects: c._count.projects,
         href: `/customers/${c.id}`,

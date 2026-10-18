@@ -45,7 +45,8 @@ export function parseStoredEmailList(raw: string | null | undefined): string[] {
   return [trimmed];
 }
 
-function collectEmails(customer: Customer): string[] {
+/** All emails in Customer Master order: customer.email → contacts[].emails */
+export function allEmailsFromCustomer(customer: Customer): string[] {
   const emails: string[] = [];
   const seen = new Set<string>();
   const push = (value: string | null | undefined) => {
@@ -66,6 +67,10 @@ function collectEmails(customer: Customer): string[] {
   }
 
   return emails;
+}
+
+function collectEmails(customer: Customer): string[] {
+  return allEmailsFromCustomer(customer);
 }
 
 /** All phones in Customer Master order: primary phone → contactNumbers → contacts[].phones */
