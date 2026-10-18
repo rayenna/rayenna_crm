@@ -90,6 +90,15 @@ import {
   execTicketsBySalesperson,
   execUnpaidInvoices,
 } from './zenithNl/p1p2Metrics';
+import {
+  execProjectDetailLookup,
+  execProjectsOpsDetail,
+} from './zenithNl/projectDetailAsk';
+import {
+  execCustomerDetailLookup,
+  execCustomersListSlice,
+} from './zenithNl/customerDetailAsk';
+import { matchAskEditActionIntent } from './zenithNl/askEditActions';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
 function createAnthropicClient(): Anthropic {
@@ -306,6 +315,38 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
         salespersonUnassigned:
           filtersRaw.salespersonUnassigned === true ||
           filtersRaw.salespersonUnassigned === 'true' ||
+          undefined,
+        detailSlice:
+          typeof filtersRaw.detailSlice === 'string' ? filtersRaw.detailSlice.trim() || undefined : undefined,
+        panelCapacityWMin:
+          typeof filtersRaw.panelCapacityWMin === 'number'
+            ? filtersRaw.panelCapacityWMin
+            : typeof filtersRaw.panelCapacityWMin === 'string' && filtersRaw.panelCapacityWMin.trim()
+              ? Number(filtersRaw.panelCapacityWMin)
+              : undefined,
+        panelCapacityWMax:
+          typeof filtersRaw.panelCapacityWMax === 'number'
+            ? filtersRaw.panelCapacityWMax
+            : typeof filtersRaw.panelCapacityWMax === 'string' && filtersRaw.panelCapacityWMax.trim()
+              ? Number(filtersRaw.panelCapacityWMax)
+              : undefined,
+        inverterCapacityKwMin:
+          typeof filtersRaw.inverterCapacityKwMin === 'number'
+            ? filtersRaw.inverterCapacityKwMin
+            : typeof filtersRaw.inverterCapacityKwMin === 'string' &&
+                filtersRaw.inverterCapacityKwMin.trim()
+              ? Number(filtersRaw.inverterCapacityKwMin)
+              : undefined,
+        inverterCapacityKwMax:
+          typeof filtersRaw.inverterCapacityKwMax === 'number'
+            ? filtersRaw.inverterCapacityKwMax
+            : typeof filtersRaw.inverterCapacityKwMax === 'string' &&
+                filtersRaw.inverterCapacityKwMax.trim()
+              ? Number(filtersRaw.inverterCapacityKwMax)
+              : undefined,
+        incentiveEligible:
+          filtersRaw.incentiveEligible === true ||
+          filtersRaw.incentiveEligible === 'true' ||
           undefined,
       },
       insightHints: typeof parsed.insightHints === 'string' ? parsed.insightHints : undefined,
@@ -551,7 +592,12 @@ Rules:
   - "revenue of projects who used Deye inverters" → cohort_summary, filters.inverterBrand="Deye"
   - "customers using loans from SBI" → availing_loan (or cohort_summary), filters.financingBank="SBI", availingLoan=true
   - "summarise my lost deals" (Sales) → lost_deals_summary; "installation status" (Sales) → install_by_status
-- Date phrases like "last FY" / "this quarter" / "next quarter" and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter, prefer metric "profit_summary".
+  - "status of SL 123" / "what's the status of Ramesh" → project_detail_lookup with filters.search ("SL:123" or customer name)
+  - "customer details for Ramesh" → customer_detail_lookup; "list customers in Kochi" → customers_list_slice
+  - "payment timeline", "feasibility pending", "missing documents", "PE missing BOM", "hub station IDs", "550W panels", "lost deal details" → projects_ops_detail with filters.detailSlice
+  - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
+  - Pair detail lists with "for salesperson X" / "for ops Y" via filters.salespersonName / opsName
+- Date phrases like "last FY" / "this quarter" / "next quarter" / "this half year" (H1=Q1+Q2, H2=Q3+Q4) and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter or half year, prefer metric "profit_summary".
 - insightHints: short phrase describing what the user cares about (no numbers).
 - Follow-ups like "as a table" / "show that as a pie" should keep the prior metric and only change viz/chartType when possible.
 
@@ -631,33 +677,90 @@ async function execRevenueByLeadSource(
   };
 }
 
+function wantsProfitabilityTable(intent?: ZenithNlIntent): boolean {
+  return /\b(profit|margin|profitability)\b/i.test(
+    `${intent?.insightHints || ''} ${intent?.filters?.compareFocus || ''}`,
+  );
+}
+
 async function execRevenueBySalesperson(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   const revenueWhere = getRevenueWhere(where);
   const projects = await prisma.project.findMany({
     where: { ...revenueWhere, salespersonId: { not: null } },
     select: {
       projectCost: true,
+      grossProfit: true,
+      profitability: true,
+      systemCapacity: true,
       salespersonId: true,
       salesperson: { select: { name: true } },
     },
     take: 5000,
   });
-  const map = new Map<string, { label: string; value: number; count: number }>();
+  const map = new Map<
+    string,
+    { label: string; value: number; count: number; profit: number; marginSum: number; kw: number }
+  >();
   for (const p of projects) {
     if (!p.salespersonId) continue;
     const label = p.salesperson?.name?.trim() || 'Unassigned';
-    const cur = map.get(p.salespersonId) || { label, value: 0, count: 0 };
+    const cur = map.get(p.salespersonId) || {
+      label,
+      value: 0,
+      count: 0,
+      profit: 0,
+      marginSum: 0,
+      kw: 0,
+    };
     cur.value += Number(p.projectCost) || 0;
+    cur.profit += Number(p.grossProfit) || 0;
+    cur.marginSum += Number(p.profitability) || 0;
+    cur.kw += Number(p.systemCapacity) || 0;
     cur.count += 1;
     map.set(p.salespersonId, cur);
   }
-  const series = Array.from(map.values()).sort((a, b) => b.value - a.value);
+  if (wantsProfitabilityTable(intent)) {
+    const tableRows = Array.from(map.values())
+      .map((r) => ({
+        salesperson: r.label,
+        deals: r.count,
+        order: Math.round(r.value),
+        profit: Math.round(r.profit),
+        margin: r.count ? Math.round((r.marginSum / r.count) * 10) / 10 : 0,
+        kw: Math.round(r.kw),
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, TABLE_ROW_CAP);
+    const totalProfit = tableRows.reduce((s, x) => s + x.profit, 0);
+    return {
+      insight: tableRows.length
+        ? `Salesperson profitability: ${formatInr(totalProfit)} gross profit across ${tableRows.length} people.`
+        : 'No salesperson profitability data for your filters.',
+      viz: {
+        kind: 'table',
+        title: 'Profitability by salesperson',
+        columns: [
+          { key: 'salesperson', label: 'Salesperson' },
+          { key: 'deals', label: 'Deals' },
+          { key: 'order', label: 'Order value (₹)' },
+          { key: 'profit', label: 'Gross profit (₹)' },
+          { key: 'margin', label: 'Avg margin %' },
+          { key: 'kw', label: 'Capacity (kW)' },
+        ],
+        rows: tableRows,
+      },
+    };
+  }
+  const series = Array.from(map.values())
+    .map((r) => ({ label: r.label, value: r.value, count: r.count }))
+    .sort((a, b) => b.value - a.value);
   const total = series.reduce((s, x) => s + x.value, 0);
   const top = series[0];
   const insight = series.length
-    ? `Salesperson revenue totals ${formatInr(total)}. Leader: ${top.label} with ${formatInr(top.value)} (${top.count} deals).`
+    ? `Salesperson revenue totals ${formatInr(total)}. Leader: ${top!.label} with ${formatInr(top!.value)} (${top!.count} deals).`
     : 'No revenue-stage projects with an assigned salesperson match your filters.';
   return {
     insight,
@@ -1166,10 +1269,11 @@ async function execProjectsListSlice(
         paymentStatus: true,
         projectCost: true,
         balanceAmount: true,
+        siteAddress: true,
         panelBrand: true,
         inverterBrand: true,
         financingBank: true,
-        customer: { select: { customerName: true, firstName: true } },
+        customer: { select: { customerName: true, firstName: true, city: true } },
       },
       orderBy: { updatedAt: 'desc' },
       take: TABLE_ROW_CAP,
@@ -1193,6 +1297,7 @@ async function execProjectsListSlice(
   const columns = [
     { key: 'slNo', label: 'SL No' },
     { key: 'customer', label: 'Customer' },
+    { key: 'city', label: 'City' },
     { key: 'stage', label: 'Stage' },
     ...(showPayment
       ? [
@@ -1208,6 +1313,7 @@ async function execProjectsListSlice(
       : []),
     ...(showBank ? [{ key: 'bank', label: 'Bank' }] : []),
     { key: 'value', label: 'Order value (₹)' },
+    { key: 'address', label: 'Site address' },
   ];
 
   return {
@@ -1219,6 +1325,7 @@ async function execProjectsListSlice(
       rows: projects.map((p) => ({
         slNo: p.slNo,
         customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
+        city: p.customer?.city?.trim() || '—',
         stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
         ...(showPayment
           ? {
@@ -1236,6 +1343,7 @@ async function execProjectsListSlice(
           : {}),
         ...(showBank ? { bank: p.financingBank?.trim() || '—' } : {}),
         value: Math.round(Number(p.projectCost) || 0),
+        address: (p.siteAddress || '—').slice(0, 60),
       })),
     },
   };
@@ -1541,14 +1649,58 @@ async function execInverterBrandMix(
 
 async function execRevenueByProjectType(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   const revenueWhere = getRevenueWhere(where);
+  const wantsProfitability = /\b(profit|margin|profitability)\b/i.test(
+    `${intent?.insightHints || ''} ${intent?.filters?.compareFocus || ''}`,
+  );
+
   const rows = await prisma.project.groupBy({
     by: ['type'],
     where: revenueWhere,
     _count: { id: true },
-    _sum: { projectCost: true, systemCapacity: true },
+    _sum: { projectCost: true, systemCapacity: true, grossProfit: true },
+    _avg: { profitability: true },
   });
+
+  if (wantsProfitability) {
+    const tableRows = rows
+      .map((r) => ({
+        type: projectTypeLabel(r.type),
+        deals: r._count.id,
+        order: Math.round(Number(r._sum.projectCost) || 0),
+        profit: Math.round(Number(r._sum.grossProfit) || 0),
+        margin: Math.round((Number(r._avg.profitability) || 0) * 10) / 10,
+        kw: Math.round(Number(r._sum.systemCapacity) || 0),
+      }))
+      .sort((a, b) => b.profit - a.profit);
+    const totalProfit = tableRows.reduce((s, x) => s + x.profit, 0);
+    const totalOrder = tableRows.reduce((s, x) => s + x.order, 0);
+    const bits = tableRows.map(
+      (r) =>
+        `${r.type}: ${formatInr(r.profit)} profit · ${r.margin}% margin · ${r.deals} deals`,
+    );
+    return {
+      insight: tableRows.length
+        ? `Subsidy vs Non-Subsidy profitability: ${bits.join(' · ')} (${formatInr(totalOrder)} order · ${formatInr(totalProfit)} gross profit).`
+        : 'No revenue-stage projects match your filters for project-type profitability.',
+      viz: {
+        kind: 'table',
+        title: 'Profitability by project type',
+        columns: [
+          { key: 'type', label: 'Type' },
+          { key: 'deals', label: 'Deals' },
+          { key: 'order', label: 'Order value (₹)' },
+          { key: 'profit', label: 'Gross profit (₹)' },
+          { key: 'margin', label: 'Avg margin %' },
+          { key: 'kw', label: 'Capacity (kW)' },
+        ],
+        rows: tableRows,
+      },
+    };
+  }
+
   const series = rows
     .map((r) => ({
       label: projectTypeLabel(r.type),
@@ -1641,6 +1793,7 @@ async function execServiceTypeMix(
 
 async function execPanelTypeMix(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   const revenueWhere = getRevenueWhere(where);
   const rows = await prisma.project.groupBy({
@@ -1651,8 +1804,41 @@ async function execPanelTypeMix(
       NOT: { panelType: '' },
     },
     _count: { id: true },
-    _sum: { projectCost: true, systemCapacity: true },
+    _sum: { projectCost: true, systemCapacity: true, grossProfit: true },
+    _avg: { profitability: true },
   });
+  if (wantsProfitabilityTable(intent)) {
+    const tableRows = rows
+      .map((r) => ({
+        panelType: (r.panelType || 'Unknown').trim() || 'Unknown',
+        deals: r._count.id,
+        order: Math.round(Number(r._sum.projectCost) || 0),
+        profit: Math.round(Number(r._sum.grossProfit) || 0),
+        margin: Math.round((Number(r._avg.profitability) || 0) * 10) / 10,
+        kw: Math.round(Number(r._sum.systemCapacity) || 0),
+      }))
+      .sort((a, b) => b.profit - a.profit);
+    return {
+      insight: tableRows.length
+        ? `DCR vs Non-DCR profitability: ${tableRows
+            .map((r) => `${r.panelType} ${formatInr(r.profit)} · ${r.margin}%`)
+            .join(' · ')}.`
+        : 'No panel-type profitability data for your filters.',
+      viz: {
+        kind: 'table',
+        title: 'Profitability by panel type (DCR)',
+        columns: [
+          { key: 'panelType', label: 'Panel type' },
+          { key: 'deals', label: 'Deals' },
+          { key: 'order', label: 'Order value (₹)' },
+          { key: 'profit', label: 'Gross profit (₹)' },
+          { key: 'margin', label: 'Avg margin %' },
+          { key: 'kw', label: 'Capacity (kW)' },
+        ],
+        rows: tableRows,
+      },
+    };
+  }
   const series = rows
     .map((r) => ({
       label: (r.panelType || 'Unknown').trim() || 'Unknown',
@@ -1784,6 +1970,7 @@ async function execCapacityByBand(
 
 async function execLoanBankBreakdown(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   const rows = await prisma.project.groupBy({
     by: ['financingBank'],
@@ -1795,8 +1982,43 @@ async function execLoanBankBreakdown(
       NOT: { financingBank: '' },
     },
     _count: { id: true },
-    _sum: { projectCost: true },
+    _sum: { projectCost: true, grossProfit: true, systemCapacity: true },
+    _avg: { profitability: true },
   });
+  if (wantsProfitabilityTable(intent)) {
+    const tableRows = rows
+      .map((r) => ({
+        bank: (r.financingBank || 'Unknown').replace(/_/g, ' '),
+        deals: r._count.id,
+        order: Math.round(Number(r._sum.projectCost) || 0),
+        profit: Math.round(Number(r._sum.grossProfit) || 0),
+        margin: Math.round((Number(r._avg.profitability) || 0) * 10) / 10,
+        kw: Math.round(Number(r._sum.systemCapacity) || 0),
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 12);
+    return {
+      insight: tableRows.length
+        ? `Bank profitability: ${tableRows
+            .slice(0, 3)
+            .map((r) => `${r.bank} ${formatInr(r.profit)}`)
+            .join(' · ')}.`
+        : 'No bank profitability data for your filters.',
+      viz: {
+        kind: 'table',
+        title: 'Profitability by financing bank',
+        columns: [
+          { key: 'bank', label: 'Bank' },
+          { key: 'deals', label: 'Deals' },
+          { key: 'order', label: 'Order value (₹)' },
+          { key: 'profit', label: 'Gross profit (₹)' },
+          { key: 'margin', label: 'Avg margin %' },
+          { key: 'kw', label: 'Capacity (kW)' },
+        ],
+        rows: tableRows,
+      },
+    };
+  }
   const series = rows
     .map((r) => ({
       label: (r.financingBank || 'Unknown').replace(/_/g, ' '),
@@ -2021,12 +2243,12 @@ async function executeMetric(
     compareWhere?: Prisma.ProjectWhereInput;
     compareMeta?: ZenithNlQueryInput['compareMeta'];
   },
-): Promise<{ viz: ZenithNlViz; insight: string }> {
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
   switch (metric) {
     case 'revenue_by_lead_source':
       return execRevenueByLeadSource(where);
     case 'revenue_by_salesperson':
-      return execRevenueBySalesperson(where);
+      return execRevenueBySalesperson(where, intent);
     case 'pipeline_by_stage':
       return execPipelineByStage(where);
     case 'payment_status_breakdown':
@@ -2050,17 +2272,17 @@ async function executeMetric(
     case 'inverter_brand_mix':
       return execInverterBrandMix(where);
     case 'loan_bank_breakdown':
-      return execLoanBankBreakdown(where);
+      return execLoanBankBreakdown(where, intent);
     case 'support_tickets_summary':
       return execSupportTicketsSummary(intent, ctx);
     case 'revenue_by_project_type':
-      return execRevenueByProjectType(where);
+      return execRevenueByProjectType(where, intent);
     case 'revenue_by_customer_type':
       return execRevenueByCustomerType(where);
     case 'service_type_mix':
       return execServiceTypeMix(where);
     case 'panel_type_mix':
-      return execPanelTypeMix(where);
+      return execPanelTypeMix(where, intent);
     case 'roof_type_mix':
       return execRoofTypeMix(where);
     case 'system_type_mix':
@@ -2068,7 +2290,7 @@ async function executeMetric(
     case 'capacity_by_band':
       return execCapacityByBand(where);
     case 'revenue_by_city':
-      return execRevenueByCity(where);
+      return execRevenueByCity(where, intent);
     case 'ops_workload':
       return execOpsWorkload(where);
     case 'project_stage_mix':
@@ -2126,6 +2348,22 @@ async function executeMetric(
       return execTicketResolutionTime(where, ctx);
     case 'hub_plant_link_summary':
       return execHubPlantLinkSummary(where);
+    case 'project_detail_lookup':
+      return execProjectDetailLookup(where, intent, ctx.role);
+    case 'projects_ops_detail':
+      return execProjectsOpsDetail(where, intent);
+    case 'customer_detail_lookup':
+      return execCustomerDetailLookup(intent, {
+        salespersonId: ctx.role === UserRole.SALES ? ctx.userId : undefined,
+      });
+    case 'customers_list_slice': {
+      let salespersonId: string | undefined;
+      if (ctx.role === UserRole.SALES) salespersonId = ctx.userId;
+      else if (intent.filters?.salespersonName?.trim()) {
+        salespersonId = await resolveSalespersonIdByName(intent.filters.salespersonName);
+      }
+      return execCustomersListSlice(intent, { salespersonId });
+    }
     case 'install_by_status':
       return execInstallByStatus(where);
     case 'pending_subsidy':
@@ -2214,8 +2452,10 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
 
   const started = Date.now();
 
-  // Navigation / create actions — before analytics so "create support ticket" is not a ticket count.
-  const actionMatch = matchAskActionIntent(question, input.role);
+  // Navigation / create / edit actions — before analytics so "create support ticket" is not a ticket count.
+  const actionMatch =
+    matchAskActionIntent(question, input.role) ||
+    (await matchAskEditActionIntent(question, input.role));
   if (actionMatch) {
     console.info('[zenith-nl-query]', {
       role: input.role,
@@ -2270,8 +2510,11 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   // Chip intents already carry brands; salvage still helps free-text without Claude.
   if (!chipMatch) {
     intent = salvageMetricFromEntities(intent, entities, input.role);
-    intent = salvageMetricFromDimensions(intent, dimensions, (m) =>
-      metricAllowedForRole(m as ZenithNlMetric, input.role),
+    intent = salvageMetricFromDimensions(
+      intent,
+      dimensions,
+      (m) => metricAllowedForRole(m as ZenithNlMetric, input.role),
+      question,
     );
     intent = normalizeIntent(intent, input.role);
   }
@@ -2307,6 +2550,36 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     if (ticketIntent) {
       intent = normalizeIntent(ticketIntent, input.role);
     }
+  }
+
+  // List subsidy / non-subsidy projects — never leave as revenue mix or invented stage.
+  if (
+    dimensions.projectType &&
+    !dimensions.wantsProjectTypeMix &&
+    /\b(list|show|all|which)\b/.test(qLower) &&
+    /\bprojects?\b/.test(qLower) &&
+    !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|how\s+many|revenue)\b/.test(
+      qLower,
+    ) &&
+    metricAllowedForRole('projects_list_slice', input.role)
+  ) {
+    const filters = { ...(intent.filters || {}), projectType: dimensions.projectType };
+    if (
+      filters.projectStatus &&
+      !/\b(confirmed|proposal|under\s+installation|lead|completed|lost)\b/.test(qLower)
+    ) {
+      delete filters.projectStatus;
+    }
+    intent = normalizeIntent(
+      {
+        ...intent,
+        metric: 'projects_list_slice',
+        viz: 'table',
+        filters,
+        insightHints: intent.insightHints || `${dimensions.projectType} projects`,
+      },
+      input.role,
+    );
   }
 
   // Cohort revenue hint when chip says revenue of Deye…
@@ -2371,7 +2644,9 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     viz = maybeForceChart(viz, intent);
     viz = attachAskDrillHrefs(intent.metric, viz, intent, input.dateFilter);
     const insight = enrichInsight(intent.metric, viz, executed.insight);
-    const projectsHref = projectsHrefForIntent(intent.metric, intent, input.dateFilter);
+    const projectsHref =
+      executed.projectsHref ||
+      projectsHrefForIntent(intent.metric, intent, input.dateFilter);
     const followUps = followUpsForMetric(intent.metric, input.role);
 
     console.info('[zenith-nl-query]', {

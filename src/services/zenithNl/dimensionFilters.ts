@@ -323,13 +323,38 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
     if (band.max != null) out.capacityMax = band.max;
   }
 
-  const salesMatch = q.match(
-    /\b(?:for|by|of)\s+sales(?:person|man)?\s+([A-Za-z][A-Za-z.\s]{1,40}?)(?:\?|$|,|\.|pipeline|projects|revenue)/i,
-  ) || q.match(/\b([A-Za-z][A-Za-z.\s]{1,30}?)(?:'s)?\s+pipeline\b/i);
+  const salesMatch =
+    q.match(
+      /\b(?:for|by|of)\s+sales(?:person|man)?\s+([A-Za-z][A-Za-z.\s]{1,40}?)(?:\?|$|,|\.|pipeline|projects|revenue|and\b)/i,
+    ) ||
+    q.match(/\b([A-Za-z][A-Za-z.\s]{1,30}?)(?:'s)?\s+pipeline\b/i) ||
+    // “Ravi's under-installation unpaid” / “Anoop's confirmed projects”
+    q.match(
+      /\b([A-Za-z][A-Za-z]{1,28})(?:'s)\s+(?:under[\s-]?installation|confirmed|proposal|projects?|unpaid|payment|feasibility|timeline|outstanding)/i,
+    );
   if (salesMatch?.[1]) {
     const name = salesMatch[1].trim().replace(/\s+/g, ' ');
     if (name.length >= 2 && !/^(my|the|our|all|this|last)$/i.test(name)) {
       out.salespersonName = name;
+    }
+  }
+
+  const opsMatch =
+    q.match(
+      /\b(?:for|by|of|assigned\s+to)\s+ops(?:\s+person)?\s+([A-Za-z][A-Za-z.\s]{1,40}?)(?:\?|$|,|\.|and\b|projects?)/i,
+    ) ||
+    q.match(
+      /\bops(?:\s+person)?\s+([A-Za-z][A-Za-z.\s]{1,30}?)\s+(?:projects?|workload|timeline|feasibility)/i,
+    ) ||
+    q.match(/\b([A-Za-z][A-Za-z]{1,28})(?:'s)\s+ops\b/i);
+  if (opsMatch?.[1]) {
+    const name = opsMatch[1].trim().replace(/\s+/g, ' ');
+    if (name.length >= 2 && !/^(my|the|our|all|this|last|workload)$/i.test(name)) {
+      out.opsName = name;
+      // “Ravi's ops …” is ops, not salesperson
+      if (out.salespersonName === name && /\bops\b/.test(lower) && !/\bsales/.test(lower)) {
+        delete out.salespersonName;
+      }
     }
   }
 
@@ -613,6 +638,7 @@ export function salvageMetricFromDimensions(
   intent: ZenithNlIntent,
   dims: ExtractedDimensions,
   allowed: (metric: string) => boolean,
+  question = '',
 ): ZenithNlIntent {
   const tryMetric = (
     flag: boolean | undefined,
@@ -624,8 +650,27 @@ export function salvageMetricFromDimensions(
     return null;
   };
 
+  const q = question.toLowerCase().replace(/\s+/g, ' ').trim();
+  const listLike =
+    Boolean(q) &&
+    /\b(list|show|all|which)\b/.test(q) &&
+    /\bprojects?\b/.test(q) &&
+    !/\b(vs|versus|mix|breakdown|share|how\s+many|revenue)\b/.test(q);
+
   return (
-    tryMetric(dims.wantsProjectTypeMix, 'revenue_by_project_type', 'chart', 'pie') ||
+    (() => {
+      if (!dims.wantsProjectTypeMix || !allowed('revenue_by_project_type')) return null;
+      const profit = /\b(profit|margin|profitability)\b/.test(q);
+      return {
+        ...intent,
+        metric: 'revenue_by_project_type' as const,
+        viz: (profit ? 'table' : 'chart') as 'table' | 'chart',
+        chartType: profit ? undefined : ('pie' as const),
+        insightHints: profit
+          ? 'subsidy vs non-subsidy profitability'
+          : intent.insightHints || 'subsidy vs non-subsidy',
+      };
+    })() ||
     tryMetric(dims.wantsCustomerTypeMix, 'revenue_by_customer_type', 'chart', 'pie') ||
     tryMetric(dims.wantsServiceTypeMix, 'service_type_mix', 'chart', 'bar') ||
     tryMetric(dims.wantsPanelTypeMix, 'panel_type_mix', 'chart', 'pie') ||
@@ -668,8 +713,31 @@ export function salvageMetricFromDimensions(
           dims.incentiveEligible ||
           dims.lifecycleSpecsIncomplete,
       );
+      if (!hasDim) return intent;
+
+      // “List all non-subsidy projects” → project list, not revenue mix / confirmed cohort.
       if (
-        hasDim &&
+        listLike &&
+        dims.projectType &&
+        !dims.wantsProjectTypeMix &&
+        allowed('projects_list_slice') &&
+        (intent.metric === 'clarify' ||
+          intent.metric === 'projects_list_slice' ||
+          intent.metric === 'cohort_summary' ||
+          intent.metric === 'revenue_by_project_type')
+      ) {
+        const next = pick(intent, 'projects_list_slice', 'table');
+        if (
+          next.filters?.projectStatus &&
+          !/\b(confirmed|proposal|under\s+installation|lead|completed|lost)\b/.test(q)
+        ) {
+          const { projectStatus: _drop, ...rest } = next.filters;
+          return { ...next, filters: rest };
+        }
+        return next;
+      }
+
+      if (
         (intent.metric === 'clarify' || intent.metric === 'projects_list_slice') &&
         allowed('cohort_summary')
       ) {

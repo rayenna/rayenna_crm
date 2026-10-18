@@ -57,7 +57,11 @@ export function enrichInsight(
     metric === 'unpaid_invoices' ||
     metric === 'amc_expiring' ||
     metric === 'ticket_resolution_time' ||
-    metric === 'hub_plant_link_summary'
+    metric === 'hub_plant_link_summary' ||
+    metric === 'project_detail_lookup' ||
+    metric === 'projects_ops_detail' ||
+    metric === 'customer_detail_lookup' ||
+    metric === 'customers_list_slice'
   ) {
     return fallback;
   }

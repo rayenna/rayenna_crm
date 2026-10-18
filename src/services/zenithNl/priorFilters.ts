@@ -117,6 +117,8 @@ export function parseZenithNlPriorFilters(raw: unknown): PriorFilters | undefine
   ) {
     out.compareFocus = compareFocus;
   }
+  const detailSlice = asTrimmedString(f.detailSlice);
+  if (detailSlice) out.detailSlice = detailSlice.slice(0, 64);
 
   return Object.keys(out).length > 0 ? out : undefined;
 }

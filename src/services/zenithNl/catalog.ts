@@ -45,6 +45,10 @@ export const ZENITH_NL_METRICS = [
   'ticket_resolution_time',
   'hub_plant_link_summary',
   'period_compare',
+  'project_detail_lookup',
+  'projects_ops_detail',
+  'customer_detail_lookup',
+  'customers_list_slice',
   'clarify',
 ] as const;
 
@@ -116,6 +120,11 @@ export type ZenithNlIntent = {
     inverterCapacityKwMax?: number;
     /** YoY / QoQ compare focus for period_compare */
     compareFocus?: 'revenue' | 'margin' | 'profit' | 'all';
+    /**
+     * Ops/detail list slice for projects_ops_detail
+     * (payment_timeline, feasibility_pending, missing_documents, pe_missing_bom, …).
+     */
+    detailSlice?: string;
   };
   insightHints?: string;
 };
@@ -570,6 +579,33 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: FINANCE_PLUS,
   },
   {
+    metric: 'project_detail_lookup',
+    description:
+      'Single project detail card by SL No or customer name (status, payments, compliance dates, PE/hub, remarks)',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
+    metric: 'projects_ops_detail',
+    description:
+      'Detail lists: payment timeline, KSEB/MNRE gaps, commissioning, remarks, missing docs/survey/install/invoice/PE/roof, hub IDs, incentive, panel W, lost reasons — pair with salesperson/ops name filters',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
+    metric: 'customer_detail_lookup',
+    description:
+      'Single customer record by name or customer ID (contact, city, GST, linked projects)',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
+    metric: 'customers_list_slice',
+    description: 'List customers filtered by city, type, or salesperson',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
     metric: 'clarify',
     description: 'Use when the question is ambiguous or outside the catalog',
     defaultViz: 'table',
@@ -602,29 +638,29 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   ],
   MANAGEMENT: [
     'Subsidy vs non-subsidy revenue',
+    'DCR vs Non-DCR profitability',
     'Revenue by city',
     'Profit summary this quarter',
-    'Quarter on quarter revenue growth',
-    'Loan vs cash revenue',
+    'Customer details for Ramesh',
   ],
   ADMIN: [
     'Profit summary this quarter',
-    'Quarter on quarter revenue growth',
+    'Compare bank profitability',
     'Ops workload',
-    'Hub plant link status',
+    'Customer details for Ramesh',
     'Outstanding by salesperson',
   ],
   OPERATIONS: [
     'Ops workload',
-    'SLA status indicators',
-    'Compliance backlog',
-    'Subsidy funnel',
+    'Projects with feasibility pending',
+    'Projects missing documents',
+    'Payment timeline',
     'AMCs expiring',
   ],
   FINANCE: [
     'Profit summary this quarter',
-    'Quarter on quarter revenue growth',
-    'Outstanding by salesperson',
+    'Payment timeline',
+    'Compare bank profitability',
     'Payment mode mix',
     'Unpaid invoices',
   ],
@@ -883,6 +919,26 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Support tickets by salesperson',
       'Show open support tickets',
       'Show overdue support tickets',
+    ],
+    project_detail_lookup: [
+      'Projects with feasibility pending',
+      'Payment timeline',
+      'Customer details for Ramesh',
+    ],
+    projects_ops_detail: [
+      'Status of SL 1',
+      'Incentive eligible projects',
+      'Lost deal details',
+    ],
+    customer_detail_lookup: [
+      'List customers in Kochi',
+      'Status of SL 1',
+      'Payment timeline',
+    ],
+    customers_list_slice: [
+      'Customer details for Ramesh',
+      'Revenue by city',
+      'List residential customers',
     ],
     hub_plant_link_summary: [
       'AMCs expiring',

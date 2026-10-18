@@ -18,6 +18,40 @@ describe('parseZenithRelativeDates', () => {
     expect(r?.selectedQuarters).toEqual(['Q3']);
   });
 
+  it('parses this half year as H2 (Q3+Q4) when in Q3', () => {
+    const r = parseZenithRelativeDates('Profit Summary this Half Year', NOW);
+    expect(r?.selectedFYs).toEqual(['2025-26']);
+    expect(r?.selectedQuarters).toEqual(['Q3', 'Q4']);
+    expect(r?.phrase).toContain('this half year');
+    expect(r?.phrase).toContain('H2');
+  });
+
+  it('parses this half year as H1 when in Q1', () => {
+    const apr = new Date('2025-04-10T06:30:00.000Z');
+    const r = parseZenithRelativeDates('revenue this half-year', apr);
+    expect(r?.selectedFYs).toEqual(['2025-26']);
+    expect(r?.selectedQuarters).toEqual(['Q1', 'Q2']);
+  });
+
+  it('parses last half year from H2 into same-FY H1', () => {
+    const r = parseZenithRelativeDates('profit last half year', NOW);
+    expect(r?.selectedFYs).toEqual(['2025-26']);
+    expect(r?.selectedQuarters).toEqual(['Q1', 'Q2']);
+  });
+
+  it('parses last half year from H1 into prior-FY H2', () => {
+    const may = new Date('2025-05-10T06:30:00.000Z'); // FY 2025-26 Q1
+    const r = parseZenithRelativeDates('deals last half year', may);
+    expect(r?.selectedFYs).toEqual(['2024-25']);
+    expect(r?.selectedQuarters).toEqual(['Q3', 'Q4']);
+  });
+
+  it('parses explicit H1', () => {
+    const r = parseZenithRelativeDates('profit summary H1', NOW);
+    expect(r?.selectedFYs).toEqual(['2025-26']);
+    expect(r?.selectedQuarters).toEqual(['Q1', 'Q2']);
+  });
+
   it('parses next quarter', () => {
     const r = parseZenithRelativeDates('revenue next quarter', NOW);
     expect(r?.selectedFYs).toEqual(['2025-26']);

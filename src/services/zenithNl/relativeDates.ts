@@ -70,11 +70,49 @@ export function nextQuarter(
   return { fy, quarter: 'Q4' };
 }
 
+/** Indian FY half: H1 = Q1+Q2 (Apr–Sep), H2 = Q3+Q4 (Oct–Mar). */
+export type FyHalf = 'H1' | 'H2';
+
+export function halfForQuarter(quarter: 'Q1' | 'Q2' | 'Q3' | 'Q4'): FyHalf {
+  return quarter === 'Q1' || quarter === 'Q2' ? 'H1' : 'H2';
+}
+
+export function quartersForHalf(half: FyHalf): Array<'Q1' | 'Q2' | 'Q3' | 'Q4'> {
+  return half === 'H1' ? ['Q1', 'Q2'] : ['Q3', 'Q4'];
+}
+
+export function previousHalf(
+  fy: string,
+  half: FyHalf,
+): { fy: string; half: FyHalf } {
+  if (half === 'H1') return { fy: getPreviousFY(fy) || fy, half: 'H2' };
+  return { fy, half: 'H1' };
+}
+
+export function nextHalf(fy: string, half: FyHalf): { fy: string; half: FyHalf } {
+  if (half === 'H2') return { fy: getNextFY(fy) || fy, half: 'H1' };
+  return { fy, half: 'H2' };
+}
+
 function previousMonth(fy: string, month: string): { fy: string; month: string } {
   const m = parseInt(month, 10);
   if (m === 4) return { fy: getPreviousFY(fy) || fy, month: '03' };
   if (m === 1) return { fy, month: '12' };
   return { fy, month: String(m - 1).padStart(2, '0') };
+}
+
+function halfYearResult(
+  fy: string,
+  half: FyHalf,
+  phrase: string,
+): ZenithRelativeDateParse {
+  return {
+    selectedFYs: [fy],
+    selectedQuarters: quartersForHalf(half),
+    selectedMonths: [],
+    phrase,
+    source: 'question',
+  };
 }
 
 /**
@@ -128,6 +166,56 @@ export function parseZenithRelativeDates(
       phrase: `this FY (${cur.fy})`,
       source: 'question',
     };
+  }
+
+  // Half year = two Indian FY quarters (H1 Q1–Q2, H2 Q3–Q4). Before single-quarter phrases.
+  const halfToken = q.match(/\b(?:in\s+)?(h[12]|1h|2h|first\s+half|second\s+half)\b/);
+  const halfYearPhrase =
+    /\b(half[\s-]?year|halfyear|semi[\s-]?annual|semiannual)\b/.test(q) ||
+    Boolean(halfToken);
+
+  if (halfYearPhrase) {
+    const curHalf = halfForQuarter(cur.quarter);
+    let fy = cur.fy;
+    let half = curHalf;
+
+    if (/\b(last|previous|prior)\s+(half[\s-]?year|halfyear)\b/.test(q)) {
+      const prev = previousHalf(cur.fy, curHalf);
+      fy = prev.fy;
+      half = prev.half;
+      return halfYearResult(fy, half, `last half year (${fy} ${half} · ${quartersForHalf(half).join('+')})`);
+    }
+    if (/\b(next|upcoming|coming)\s+(half[\s-]?year|halfyear)\b/.test(q)) {
+      const nxt = nextHalf(cur.fy, curHalf);
+      fy = nxt.fy;
+      half = nxt.half;
+      return halfYearResult(fy, half, `next half year (${fy} ${half} · ${quartersForHalf(half).join('+')})`);
+    }
+    if (/\b(this|current|present)\s+(half[\s-]?year|halfyear)\b/.test(q)) {
+      return halfYearResult(
+        cur.fy,
+        curHalf,
+        `this half year (${cur.fy} ${curHalf} · ${quartersForHalf(curHalf).join('+')})`,
+      );
+    }
+
+    // Explicit H1 / H2 / first half / second half (optional this/last FY)
+    if (halfToken) {
+      const raw = halfToken[1]!.replace(/\s+/g, ' ');
+      if (raw === 'h1' || raw === '1h' || raw === 'first half') half = 'H1';
+      else half = 'H2';
+      if (/\b(last|previous)\s+(fy|financial year)\b/.test(q)) {
+        fy = getPreviousFY(cur.fy) || fy;
+      }
+      return halfYearResult(fy, half, `${fy} ${half} · ${quartersForHalf(half).join('+')}`);
+    }
+
+    // Bare "half year" / "semi-annual" → current half of this FY
+    return halfYearResult(
+      cur.fy,
+      curHalf,
+      `this half year (${cur.fy} ${curHalf} · ${quartersForHalf(curHalf).join('+')})`,
+    );
   }
 
   if (/\b(last|previous|prior)\s+quarter\b/.test(q)) {

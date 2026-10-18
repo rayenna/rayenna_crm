@@ -114,6 +114,9 @@ function entityHrefParams(intent: ZenithNlIntent): {
   customerType?: string[];
   projectServiceType?: string[];
   salespersonUnassigned?: boolean;
+  salespersonName?: string;
+  opsName?: string;
+  city?: string;
 } {
   const panelBrand = intent.filters?.panelBrand?.trim() || undefined;
   const inverterBrand = intent.filters?.inverterBrand?.trim() || undefined;
@@ -130,6 +133,9 @@ function entityHrefParams(intent: ZenithNlIntent): {
     customerType?: string[];
     projectServiceType?: string[];
     salespersonUnassigned?: boolean;
+    salespersonName?: string;
+    opsName?: string;
+    city?: string;
   } = {};
   if (panelBrand) out.panelBrand = panelBrand;
   if (inverterBrand) out.inverterBrand = inverterBrand;
@@ -143,6 +149,11 @@ function entityHrefParams(intent: ZenithNlIntent): {
   if (customerType) out.customerType = [customerType];
   if (service) out.projectServiceType = [service];
   if (intent.filters?.salespersonUnassigned) out.salespersonUnassigned = true;
+  if (intent.filters?.salespersonName?.trim()) {
+    out.salespersonName = intent.filters.salespersonName.trim();
+  }
+  if (intent.filters?.opsName?.trim()) out.opsName = intent.filters.opsName.trim();
+  if (intent.filters?.city?.trim()) out.city = intent.filters.city.trim();
   return out;
 }
 
@@ -312,6 +323,86 @@ export function projectsHrefForIntent(
     }
     case 'pending_subsidy':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
+    case 'customer_detail_lookup':
+    case 'customers_list_slice': {
+      const search = intent.filters?.search?.trim() || intent.filters?.city?.trim();
+      return search ? `/customers?q=${encodeURIComponent(search)}` : '/customers';
+    }
+    case 'project_detail_lookup': {
+      const search = intent.filters?.search?.trim();
+      if (search && !/^SL:\d+$/i.test(search)) {
+        return buildZenithNlProjectsHref({ search, ...entityHrefParams(intent) }, dateFilter);
+      }
+      return buildZenithNlProjectsHref({ ...entityHrefParams(intent) }, dateFilter);
+    }
+    case 'projects_ops_detail': {
+      const slice = intent.filters?.detailSlice || '';
+      if (slice === 'feasibility_pending') {
+        return buildZenithNlProjectsHref(
+          { complianceGap: 'no_feasibility', type: ['SUBSIDY'], ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'registration_pending') {
+        return buildZenithNlProjectsHref(
+          { complianceGap: 'feas_no_reg', type: ['SUBSIDY'], ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'mnre_pending') {
+        return buildZenithNlProjectsHref(
+          { complianceGap: 'install_no_mnre', type: ['SUBSIDY'], ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'subsidy_credit_pending') {
+        return buildZenithNlProjectsHref(
+          {
+            complianceGap: 'subsidy_req_no_credit',
+            type: ['SUBSIDY'],
+            ...entityHrefParams(intent),
+          },
+          dateFilter,
+        );
+      }
+      if (slice === 'incentive_eligible') {
+        return buildZenithNlProjectsHref({ ...entityHrefParams(intent) }, dateFilter);
+      }
+      if (slice === 'hub_station_ids') {
+        return buildZenithNlProjectsHref(
+          { hubPlantLinked: true, ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'hub_unlinked') {
+        return buildZenithNlProjectsHref(
+          { hubPlantLinked: false, ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'advance_only' || slice === 'no_p2' || slice === 'payment_timeline') {
+        return buildZenithNlProjectsHref(
+          { paymentStatus: ['PENDING', 'PARTIAL'], ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'commissioning_overdue' || slice === 'commissioning') {
+        return buildZenithNlProjectsHref({ ...entityHrefParams(intent) }, dateFilter);
+      }
+      if (slice === 'missing_documents' && intent.filters?.projectStatus === 'CONFIRMED') {
+        return buildZenithNlProjectsHref(
+          { status: ['CONFIRMED'], ...entityHrefParams(intent) },
+          dateFilter,
+        );
+      }
+      if (slice === 'lost_detail') {
+        return '/lost-deals';
+      }
+      if (slice.startsWith('pe_missing_')) {
+        return buildZenithNlProjectsHref({ peBucket: 'draft', ...entityHrefParams(intent) }, dateFilter);
+      }
+      return buildZenithNlProjectsHref({ ...entityHrefParams(intent) }, dateFilter);
+    }
     case 'availing_loan':
     case 'loan_bank_breakdown':
       return buildZenithNlProjectsHref(

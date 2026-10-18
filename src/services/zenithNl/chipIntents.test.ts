@@ -171,4 +171,95 @@ describe('matchPhraseChipIntent', () => {
       )?.filters?.paymentStatus,
     ).toBe('NOT_FULLY_PAID');
   });
+
+  it('lists non-subsidy / subsidy projects without Claude', () => {
+    const nonSub = matchExactChipIntent(
+      'List all Non Subsidy Projects this FY',
+      UserRole.ADMIN,
+    );
+    expect(nonSub?.metric).toBe('projects_list_slice');
+    expect(nonSub?.filters?.projectType).toBe('NON_SUBSIDY');
+    const sub = matchPhraseChipIntent('List all subsidy projects', UserRole.MANAGEMENT);
+    expect(sub?.metric).toBe('projects_list_slice');
+    expect(sub?.filters?.projectType).toBe('SUBSIDY');
+    expect(
+      matchExactChipIntent('Subsidy vs non-subsidy revenue', UserRole.MANAGEMENT)?.metric,
+    ).toBe('revenue_by_project_type');
+  });
+
+  it('compares subsidy vs non-subsidy profitability (not YoY)', () => {
+    const intent = matchExactChipIntent(
+      'Compare Profitability of Subsidy versus Non Subsidy Projects for last FY',
+      UserRole.ADMIN,
+    );
+    expect(intent?.metric).toBe('revenue_by_project_type');
+    expect(intent?.insightHints).toMatch(/profitability/i);
+    expect(intent?.viz).toBe('table');
+  });
+
+  it('looks up project by SL No without Claude', () => {
+    const intent = matchExactChipIntent("What's the status of SL 123?", UserRole.ADMIN);
+    expect(intent?.metric).toBe('project_detail_lookup');
+    expect(intent?.filters?.search).toBe('SL:123');
+  });
+
+  it('matches payment timeline and feasibility pending detail lists', () => {
+    expect(matchExactChipIntent('Payment timeline', UserRole.FINANCE)?.filters?.detailSlice).toBe(
+      'payment_timeline',
+    );
+    expect(
+      matchExactChipIntent('Projects with feasibility pending', UserRole.OPERATIONS)?.filters
+        ?.detailSlice,
+    ).toBe('feasibility_pending');
+    expect(
+      matchExactChipIntent('whose feasibility is pending', UserRole.ADMIN)?.filters?.detailSlice,
+    ).toBe('feasibility_pending');
+  });
+
+  it('matches 550W panel listing and hub / PE / lost detail slices', () => {
+    const panels = matchExactChipIntent('List projects with 550W panels', UserRole.MANAGEMENT);
+    expect(panels?.metric).toBe('projects_ops_detail');
+    expect(panels?.filters?.detailSlice).toBe('panel_wattage');
+    expect(panels?.filters?.panelCapacityWMin).toBe(550);
+    expect(matchExactChipIntent('Hub station IDs', UserRole.ADMIN)?.filters?.detailSlice).toBe(
+      'hub_station_ids',
+    );
+    expect(matchExactChipIntent('PE missing BOM', UserRole.OPERATIONS)?.filters?.detailSlice).toBe(
+      'pe_missing_bom',
+    );
+    expect(matchExactChipIntent('Lost deal details', UserRole.MANAGEMENT)?.filters?.detailSlice).toBe(
+      'lost_detail',
+    );
+  });
+
+  it('does not treat show Solis ID as a customer-name lookup', () => {
+    const intent = matchExactChipIntent('Show Solis IDs', UserRole.ADMIN);
+    expect(intent?.metric).toBe('projects_ops_detail');
+    expect(intent?.filters?.detailSlice).toBe('hub_station_ids');
+    expect(intent?.filters?.search).toBeUndefined();
+  });
+
+  it('matches customer detail and profitability compares', () => {
+    expect(matchExactChipIntent('Customer details for Ramesh', UserRole.ADMIN)?.metric).toBe(
+      'customer_detail_lookup',
+    );
+    expect(matchExactChipIntent('DCR vs Non-DCR profitability', UserRole.MANAGEMENT)?.metric).toBe(
+      'panel_type_mix',
+    );
+    expect(matchExactChipIntent('Compare bank profitability', UserRole.FINANCE)?.metric).toBe(
+      'loan_bank_breakdown',
+    );
+    expect(matchExactChipIntent('City profitability', UserRole.ADMIN)?.insightHints).toMatch(
+      /profit/i,
+    );
+    expect(
+      matchExactChipIntent('Salesperson profitability', UserRole.MANAGEMENT)?.metric,
+    ).toBe('revenue_by_salesperson');
+  });
+
+  it('lists customers by city', () => {
+    const intent = matchExactChipIntent('List customers in Kochi', UserRole.ADMIN);
+    expect(intent?.metric).toBe('customers_list_slice');
+    expect(intent?.filters?.city).toMatch(/kochi/i);
+  });
 });

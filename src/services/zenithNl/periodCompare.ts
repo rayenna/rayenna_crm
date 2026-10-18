@@ -53,8 +53,22 @@ export function parsePeriodCompare(
   const q = normQuestion(question);
   if (!q || q.length < 6) return null;
 
-  // Do not steal loan-vs-cash / panel-vs type mix questions.
+  // Do not steal segment mix questions — “versus” is between types, not time periods.
   if (/\b(loan\s+vs\s+cash|cash\s+vs\s+loan|paid\s+vs\s+pending)\b/.test(q)) {
+    return null;
+  }
+  if (
+    /\bsubsid/.test(q) &&
+    /\bnon[-\s]?subsid/.test(q) &&
+    /\b(versus|vs\.?|compared\s+to|compared\s+with|compare[d]?)\b/.test(q)
+  ) {
+    return null;
+  }
+  if (
+    /\bdcr\b/.test(q) &&
+    /\bnon[-\s]?dcr\b/.test(q) &&
+    /\b(versus|vs\.?|compared\s+to|compared\s+with|compare[d]?)\b/.test(q)
+  ) {
     return null;
   }
 
@@ -101,15 +115,21 @@ export function parsePeriodCompare(
     /\b(year[\s-]?on[\s-]?year|year[\s-]?over[\s-]?year|\byoy\b)\b/.test(q) ||
     (/\bgrowth\b/.test(q) && /\b(year|fy|financial)\b/.test(q) && !/\bquarter\b/.test(q));
 
+  // Time-period “vs last FY” only when the compare target is the prior FY/year,
+  // not “A versus B … for last FY” (segment mix with a date phrase).
   const versusLastFy =
-    /\b(versus|vs\.?|compared\s+to|compared\s+with|compare[d]?)\b/.test(q) &&
-    /\b(last|previous|prior)\s+(fy|financial\s+year|year)\b/.test(q) &&
+    (/\b(versus|vs\.?|compared\s+to|compared\s+with)\s+(last|previous|prior)\s+(fy|financial\s+year|year)\b/.test(
+      q,
+    ) ||
+      /\bcompare[d]?\s+(this\s+)?(fy|financial\s+year|year)\s+(versus|vs\.?|to|with)\s+(last|previous|prior)\b/.test(
+        q,
+      )) &&
     !/\bquarter\b/.test(q);
 
   const thisVsLastFy =
     /\b(this|current|present)\s+(fy|financial\s+year)\b/.test(q) &&
-    /\b(versus|vs\.?|compared\s+to|compared\s+with)\b/.test(q) &&
-    /\blast\b/.test(q);
+    /\b(versus|vs\.?|compared\s+to|compared\s+with)\s+(last|previous|prior)\b/.test(q) &&
+    !/\bquarter\b/.test(q);
 
   if (!yoy && !versusLastFy && !thisVsLastFy) return null;
 

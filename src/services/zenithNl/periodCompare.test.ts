@@ -68,6 +68,15 @@ describe('parsePeriodCompare', () => {
     expect(parsePeriodCompare('loan vs cash revenue', NOW)).toBeNull();
     expect(parsePeriodCompare('Profit summary this quarter', NOW)).toBeNull();
   });
+
+  it('does not steal subsidy versus non-subsidy profitability for last FY', () => {
+    expect(
+      parsePeriodCompare(
+        'Compare Profitability of Subsidy versus Non Subsidy Projects for last FY',
+        NOW,
+      ),
+    ).toBeNull();
+  });
 });
 
 describe('growthPct', () => {

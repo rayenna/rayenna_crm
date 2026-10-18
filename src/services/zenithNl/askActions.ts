@@ -38,6 +38,12 @@ export const ZENITH_ASK_ACTIONS = [
   'go_change_password',
   'go_help',
   'show_tip',
+  /** Navigate to project edit / detail for write workflows (resolved in askEditActions). */
+  'edit_project_payment',
+  'edit_project_status',
+  'assign_project_ops',
+  'add_project_remark',
+  'edit_customer',
 ] as const;
 
 export type ZenithAskActionId = (typeof ZENITH_ASK_ACTIONS)[number];
@@ -116,6 +122,11 @@ const ACTION_ROLES: Record<ZenithAskActionId, UserRole[]> = {
   go_change_password: ALL_STAFF,
   go_help: ALL_STAFF,
   show_tip: ALL_STAFF,
+  edit_project_payment: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES],
+  edit_project_status: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.OPERATIONS, UserRole.SALES],
+  assign_project_ops: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.OPERATIONS],
+  add_project_remark: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.OPERATIONS, UserRole.SALES],
+  edit_customer: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
 };
 
 export function actionAllowedForRole(action: ZenithAskActionId, role: UserRole): boolean {
@@ -488,7 +499,7 @@ export function matchAskActionIntent(
       'Opening proposal-stage projects…',
     );
   }
-  if (/\bunder\s+installation\b/.test(key)) {
+  if (/\bunder[\s-]+installation\b/.test(key)) {
     // "Under installation + payment pending / not fully paid" → analytics list (not bare stage nav).
     if (wantsNotFullyPaidPayment(key)) return null;
     if (!actionAllowedForRole('under_installation', role)) return null;
@@ -500,6 +511,10 @@ export function matchAskActionIntent(
     );
   }
   if (/\bconfirmed\s+projects?\b/.test(key)) {
+    // “Confirmed projects with no documents” → analytics detail list, not stage nav.
+    if (/\b(no|missing|without)\s+documents?\b/.test(key) || /\bdocuments?\b/.test(key) && /\b(no|missing|without)\b/.test(key)) {
+      return null;
+    }
     if (!actionAllowedForRole('confirmed_projects', role)) return null;
     return build(
       'confirmed_projects',
@@ -571,7 +586,10 @@ export function matchAskActionIntent(
       'Opening Change Password…',
     );
   }
-  if (/\blost\s+deals?\b/.test(key) && !/\b(summarise|summarize|reason|by reason)\b/.test(key)) {
+  if (
+    /\blost\s+deals?\b/.test(key) &&
+    !/\b(summarise|summarize|reason|by reason|details?)\b/.test(key)
+  ) {
     if (!actionAllowedForRole('go_lost_deals', role)) return null;
     return build('go_lost_deals', '/lost-deals', 'Lost Deals', 'Opening Lost Deals…');
   }
@@ -630,3 +648,11 @@ export const ACTION_EXAMPLE_CHIPS_BY_ROLE: Partial<Record<UserRole, string[]>> =
   [UserRole.OPERATIONS]: ['Under Installation Projects', 'Create a Support Ticket', 'Solar Hub Provisioning'],
   [UserRole.FINANCE]: ['Go to Tally Export', 'Availing Loan Projects', 'Customer Search'],
 };
+
+/** Extra task chips for edit/write navigation (shown in More questions / help). */
+export const EDIT_ACTION_EXAMPLE_CHIPS = [
+  'Update payment for SL 1',
+  'Change status of SL 1',
+  'Assign ops to SL 1',
+  'Add remark to SL 1',
+];

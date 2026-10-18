@@ -20,7 +20,7 @@ import {
   COMPLIANCE_GAP_LABELS,
   type ComplianceGapId,
 } from '../../utils/complianceGaps';
-import type { ZenithNlViz } from './catalog';
+import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { formatDelta, formatGrowthPct, growthPct } from './periodCompare';
 
 const TABLE_CAP = 25;
@@ -70,7 +70,11 @@ const PAYMENT_MODE_LABELS: Record<PaymentMode, string> = {
 
 export async function execRevenueByCity(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const wantsProfit = /\b(profit|margin|profitability)\b/i.test(
+    `${intent?.insightHints || ''} ${intent?.filters?.compareFocus || ''}`,
+  );
   const projects = await prisma.project.findMany({
     where: {
       ...where,
@@ -86,19 +90,67 @@ export async function execRevenueByCity(
     },
     select: {
       projectCost: true,
+      grossProfit: true,
+      profitability: true,
+      systemCapacity: true,
       customer: { select: { city: true } },
     },
     take: 8000,
   });
-  const map = new Map<string, { label: string; value: number; count: number }>();
+  const map = new Map<
+    string,
+    { label: string; value: number; count: number; profit: number; marginSum: number; kw: number }
+  >();
   for (const p of projects) {
     const label = p.customer?.city?.trim() || 'Unknown';
-    const cur = map.get(label) || { label, value: 0, count: 0 };
+    const cur = map.get(label) || {
+      label,
+      value: 0,
+      count: 0,
+      profit: 0,
+      marginSum: 0,
+      kw: 0,
+    };
     cur.value += Number(p.projectCost) || 0;
+    cur.profit += Number(p.grossProfit) || 0;
+    cur.marginSum += Number(p.profitability) || 0;
+    cur.kw += Number(p.systemCapacity) || 0;
     cur.count += 1;
     map.set(label, cur);
   }
+  if (wantsProfit) {
+    const tableRows = Array.from(map.values())
+      .map((r) => ({
+        city: r.label,
+        deals: r.count,
+        order: Math.round(r.value),
+        profit: Math.round(r.profit),
+        margin: r.count ? Math.round((r.marginSum / r.count) * 10) / 10 : 0,
+        kw: Math.round(r.kw),
+      }))
+      .sort((a, b) => b.profit - a.profit)
+      .slice(0, 12);
+    return {
+      insight: tableRows.length
+        ? `City profitability: top ${tableRows[0]!.city} with ${formatInr(tableRows[0]!.profit)} gross profit.`
+        : 'No city profitability data for your filters.',
+      viz: {
+        kind: 'table',
+        title: 'Profitability by city',
+        columns: [
+          { key: 'city', label: 'City' },
+          { key: 'deals', label: 'Deals' },
+          { key: 'order', label: 'Order value (₹)' },
+          { key: 'profit', label: 'Gross profit (₹)' },
+          { key: 'margin', label: 'Avg margin %' },
+          { key: 'kw', label: 'Capacity (kW)' },
+        ],
+        rows: tableRows,
+      },
+    };
+  }
   const series = Array.from(map.values())
+    .map((r) => ({ label: r.label, value: r.value, count: r.count }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 12);
   const total = series.reduce((s, x) => s + x.value, 0);
@@ -371,6 +423,8 @@ export type ProfitSummaryTotals = {
   deals: number;
   order: number;
   profit: number;
+  expectedProfit: number;
+  finalProfit: number;
   avgMargin: number;
   collected: number;
   balance: number;
@@ -396,6 +450,8 @@ async function aggregateProfitSummaryTotals(
     _sum: {
       projectCost: true,
       grossProfit: true,
+      expectedProfit: true,
+      finalProfit: true,
       totalAmountReceived: true,
       balanceAmount: true,
       systemCapacity: true,
@@ -406,6 +462,8 @@ async function aggregateProfitSummaryTotals(
     deals: agg._count.id,
     order: Math.round(Number(agg._sum.projectCost) || 0),
     profit: Math.round(Number(agg._sum.grossProfit) || 0),
+    expectedProfit: Math.round(Number(agg._sum.expectedProfit) || 0),
+    finalProfit: Math.round(Number(agg._sum.finalProfit) || 0),
     avgMargin: Math.round((Number(agg._avg.profitability) || 0) * 10) / 10,
     collected: Math.round(Number(agg._sum.totalAmountReceived) || 0),
     balance: Math.round(Number(agg._sum.balanceAmount) || 0),
@@ -416,11 +474,11 @@ async function aggregateProfitSummaryTotals(
 export async function execProfitSummary(
   where: Prisma.ProjectWhereInput,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
-  const { deals, order, profit, avgMargin, collected, balance, kw } =
+  const { deals, order, profit, expectedProfit, finalProfit, avgMargin, collected, balance, kw } =
     await aggregateProfitSummaryTotals(where);
   return {
     insight: deals
-      ? `Profit summary: ${deals} deals · ${formatInr(order)} order · ${formatInr(profit)} gross profit · avg margin ${avgMargin}% · collected ${formatInr(collected)} · balance ${formatInr(balance)} · ${kw} kW.`
+      ? `Profit summary: ${deals} deals · ${formatInr(order)} order · ${formatInr(profit)} gross · expected ${formatInr(expectedProfit)} · final ${formatInr(finalProfit)} · avg margin ${avgMargin}% · collected ${formatInr(collected)} · balance ${formatInr(balance)} · ${kw} kW.`
       : 'No revenue-stage projects match your filters for profit summary.',
     viz: {
       kind: 'table',
@@ -432,7 +490,9 @@ export async function execProfitSummary(
       rows: [
         { metric: 'Deals', value: deals },
         { metric: 'Order value (₹)', value: order },
+        { metric: 'Expected profit (₹)', value: expectedProfit },
         { metric: 'Gross profit (₹)', value: profit },
+        { metric: 'Final profit (₹)', value: finalProfit },
         { metric: 'Avg margin %', value: avgMargin },
         { metric: 'Collected (₹)', value: collected },
         { metric: 'Outstanding (₹)', value: balance },

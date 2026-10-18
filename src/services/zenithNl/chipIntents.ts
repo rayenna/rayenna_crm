@@ -4,6 +4,14 @@ import {
   metricAllowedForRole,
   type ZenithNlIntent,
 } from './catalog';
+import {
+  matchProjectDetailLookupIntent,
+  matchProjectsOpsDetailIntent,
+} from './projectDetailAsk';
+import {
+  matchCustomerDetailLookupIntent,
+  matchCustomersListIntent,
+} from './customerDetailAsk';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -122,6 +130,104 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     insightHints: 'pending subsidy',
   },
+  [norm('Payment timeline')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'payment_timeline' },
+    insightHints: 'payment timeline',
+  },
+  [norm('Projects with advance only')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'advance_only' },
+    insightHints: 'advance only',
+  },
+  [norm('Projects with no P2')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'no_p2' },
+    insightHints: 'no p2',
+  },
+  [norm('Projects with feasibility pending')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'feasibility_pending' },
+    insightHints: 'feasibility pending',
+  },
+  [norm('Overdue commissioning')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'commissioning_overdue' },
+    insightHints: 'overdue commissioning',
+  },
+  [norm('Confirmed projects with no documents')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'missing_documents', projectStatus: 'CONFIRMED' },
+    insightHints: 'confirmed missing documents',
+  },
+  [norm('Projects missing documents')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'missing_documents' },
+    insightHints: 'missing documents',
+  },
+  [norm('Hub unlinked projects')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'hub_unlinked' },
+    insightHints: 'hub unlinked',
+  },
+  [norm('Incentive eligible projects')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'incentive_eligible' },
+    insightHints: 'incentive eligible',
+  },
+  [norm('Lost deal details')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'lost_detail' },
+    insightHints: 'lost detail',
+  },
+  [norm('Hub station IDs')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'hub_station_ids' },
+    insightHints: 'hub station ids',
+  },
+  [norm('PE missing BOM')]: {
+    metric: 'projects_ops_detail',
+    viz: 'table',
+    filters: { detailSlice: 'pe_missing_bom' },
+    insightHints: 'pe missing bom',
+  },
+  [norm('Customer details for Ramesh')]: {
+    metric: 'customer_detail_lookup',
+    viz: 'table',
+    filters: { search: 'Ramesh' },
+    insightHints: 'customer Ramesh',
+  },
+  [norm('DCR vs Non-DCR profitability')]: {
+    metric: 'panel_type_mix',
+    viz: 'table',
+    insightHints: 'dcr profitability',
+  },
+  [norm('Compare bank profitability')]: {
+    metric: 'loan_bank_breakdown',
+    viz: 'table',
+    insightHints: 'bank profitability',
+  },
+  [norm('City profitability')]: {
+    metric: 'revenue_by_city',
+    viz: 'table',
+    insightHints: 'city profitability',
+  },
+  [norm('Salesperson profitability')]: {
+    metric: 'revenue_by_salesperson',
+    viz: 'table',
+    insightHints: 'salesperson profitability',
+  },
   [norm('Revenue by salesperson')]: {
     metric: 'revenue_by_salesperson',
     viz: 'chart',
@@ -215,6 +321,46 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'chart',
     chartType: 'pie',
     insightHints: 'subsidy vs non-subsidy',
+  },
+  [norm('Compare Profitability of Subsidy versus Non Subsidy Projects for last FY')]: {
+    metric: 'revenue_by_project_type',
+    viz: 'table',
+    insightHints: 'subsidy vs non-subsidy profitability',
+  },
+  [norm('Compare profitability of subsidy versus non-subsidy projects')]: {
+    metric: 'revenue_by_project_type',
+    viz: 'table',
+    insightHints: 'subsidy vs non-subsidy profitability',
+  },
+  [norm('List all Non Subsidy Projects this FY')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectType: 'NON_SUBSIDY' },
+    insightHints: 'non-subsidy projects',
+  },
+  [norm('List all Non-Subsidy Projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectType: 'NON_SUBSIDY' },
+    insightHints: 'non-subsidy projects',
+  },
+  [norm('List all Subsidy Projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectType: 'SUBSIDY' },
+    insightHints: 'subsidy projects',
+  },
+  [norm('Non subsidy projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectType: 'NON_SUBSIDY' },
+    insightHints: 'non-subsidy projects',
+  },
+  [norm('Subsidy projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectType: 'SUBSIDY' },
+    insightHints: 'subsidy projects',
   },
   [norm('DCR vs Non-DCR mix')]: {
     metric: 'panel_type_mix',
@@ -313,6 +459,16 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     metric: 'profit_summary',
     viz: 'table',
     insightHints: 'profit summary next quarter',
+  },
+  [norm('Profit summary this half year')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'profit summary this half year',
+  },
+  [norm('Profit summary last half year')]: {
+    metric: 'profit_summary',
+    viz: 'table',
+    insightHints: 'profit summary last half year',
   },
   [norm('Revenue this quarter')]: {
     metric: 'profit_summary',
@@ -502,7 +658,7 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
   {
     // Under installation where payment is not complete (PENDING + PARTIAL).
     test: (q) =>
-      /\bunder\s+installation\b/.test(q) &&
+      /\bunder[\s-]+installation\b/.test(q) &&
       /\b(not\s+(yet\s+)?(fully\s+)?paid|not\s+received\s+full\s+payment|haven'?t\s+received\s+full\s+payment|full\s+payment\s+not\s+received|incomplete\s+payment|payment\s+(is\s+)?pending|pending\s+payment|partial(ly)?\s+(paid|payment)|payment\s+partial|outstanding(\s+balance|\s+payment)?|balance\s+(due|pending|outstanding)|unpaid)\b/.test(
         q,
       ),
@@ -517,9 +673,116 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
     },
   },
   {
+    // List subsidy / non-subsidy projects (not mix, funnel, or pending credit).
+    test: (q) =>
+      !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|subsidy\s+credit)\b/.test(q) &&
+      /\b(list|show|all|which)\b/.test(q) &&
+      /\bprojects?\b/.test(q) &&
+      /\bnon[-\s]?subsid/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { projectType: 'NON_SUBSIDY' },
+      insightHints: 'non-subsidy projects',
+    },
+  },
+  {
+    test: (q) =>
+      !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|subsidy\s+credit|non[-\s]?subsid)\b/.test(
+        q,
+      ) &&
+      /\b(list|show|all|which)\b/.test(q) &&
+      /\bprojects?\b/.test(q) &&
+      /\bsubsid/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { projectType: 'SUBSIDY' },
+      insightHints: 'subsidy projects',
+    },
+  },
+  {
+    // Short labels without “list” — still a project list, not revenue mix.
+    test: (q) =>
+      !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|subsidy\s+credit|revenue|how\s+many)\b/.test(
+        q,
+      ) &&
+      /^(non[-\s]?subsidy|non\s+subsidy)\s+projects?\b/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { projectType: 'NON_SUBSIDY' },
+      insightHints: 'non-subsidy projects',
+    },
+  },
+  {
+    test: (q) =>
+      !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|subsidy\s+credit|revenue|how\s+many|non[-\s]?subsid)\b/.test(
+        q,
+      ) && /^subsidy\s+projects?\b/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { projectType: 'SUBSIDY' },
+      insightHints: 'subsidy projects',
+    },
+  },
+  // Dimension profitability cuts — before portfolio profit_summary (half year / FY dates apply).
+  {
+    test: (q) =>
+      /\bsales(?:person|people|man)?\b/.test(q) &&
+      /\b(profit|margin|profitability)\b/.test(q) &&
+      !/\bprofit\s+summary\b/.test(q) &&
+      !/\btickets?\b/.test(q),
+    intent: {
+      metric: 'revenue_by_salesperson',
+      viz: 'table',
+      insightHints: 'salesperson profitability',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(bank|financing)\b/.test(q) &&
+      /\b(profit|margin|profitability)\b/.test(q) &&
+      !/\bprofit\s+summary\b/.test(q),
+    intent: {
+      metric: 'loan_bank_breakdown',
+      viz: 'table',
+      insightHints: 'bank profitability',
+    },
+  },
+  {
+    test: (q) =>
+      /\bcit(y|ies)\b/.test(q) &&
+      /\b(profit|margin|profitability)\b/.test(q) &&
+      !/\brevenue\s+by\s+city\b/.test(q) &&
+      !/\bprofit\s+summary\b/.test(q),
+    intent: {
+      metric: 'revenue_by_city',
+      viz: 'table',
+      insightHints: 'city profitability',
+    },
+  },
+  {
+    test: (q) =>
+      /\bdcr\b/.test(q) &&
+      /\b(profit|margin|profitability)\b/.test(q),
+    intent: {
+      metric: 'panel_type_mix',
+      viz: 'table',
+      insightHints: 'dcr profitability',
+    },
+  },
+  {
     // Single-period revenue / profitability (dates come from relativeDates on the question).
     test: (q) =>
       !/\b(quarter[\s-]?on[\s-]?quarter|quarter[\s-]?over[\s-]?quarter|\bqoq\b|year[\s-]?on[\s-]?year|\byoy\b|versus|vs\.?|compared\s+to)\b/.test(
+        q,
+      ) &&
+      !/\b(sales(?:person|people|man)?|bank|cit(y|ies)|dcr|panel\s+type)\b.{0,20}\b(profit|margin|profitability)\b/.test(
+        q,
+      ) &&
+      !/\b(profit|margin|profitability)\b.{0,20}\b(by\s+)?(sales(?:person|people|man)?|bank|cit(y|ies)|dcr)\b/.test(
         q,
       ) &&
       ((/\b(profit\s+summary|gross\s+profit|margin\s+summary|how\s+(much|is)\s+(our\s+)?profit|what('?s|\s+is)\s+(our\s+)?profit)\b/.test(
@@ -527,7 +790,7 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
       ) ||
         /\b(show|give)\s+(me\s+)?(the\s+)?profit\b/.test(q) ||
         (/\b(revenue|order\s+value|profitability)\b/.test(q) &&
-          /\b(this|last|next|current|previous|prior|upcoming)\s+(quarter|fy|financial\s+year|month)\b/.test(
+          /\b(this|last|next|current|previous|prior|upcoming)\s+(quarter|half[\s-]?year|halfyear|fy|financial\s+year|month)\b/.test(
             q,
           ))) &&
         !/\b(by\s+(city|sales|lead|type)|loan\s+vs|panel|inverter)\b/.test(q)),
@@ -682,9 +945,21 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
   },
   {
     test: (q) =>
+      /\bsubsid/.test(q) &&
+      /\bnon[-\s]?subsid/.test(q) &&
+      /\b(versus|vs\.?|compared\s+to|compared\s+with|compare[d]?)\b/.test(q) &&
+      /\b(profit|margin|profitability)\b/.test(q),
+    intent: {
+      metric: 'revenue_by_project_type',
+      viz: 'table',
+      insightHints: 'subsidy vs non-subsidy profitability',
+    },
+  },
+  {
+    test: (q) =>
       /\b(subsidy\s+vs\s+non[- ]?subsidy|non[- ]?subsidy\s+vs\s+subsidy|subsidy\s+mix\s+revenue)\b/.test(
         q,
-      ),
+      ) && !/\b(profit|margin|profitability)\b/.test(q),
     intent: {
       metric: 'revenue_by_project_type',
       viz: 'chart',
@@ -932,6 +1207,10 @@ export function matchExactChipIntent(
       }
     }
     return (
+      matchCustomerDetailLookupIntent(question, role) ||
+      matchCustomersListIntent(question, role) ||
+      matchProjectDetailLookupIntent(question, role) ||
+      matchProjectsOpsDetailIntent(question, role) ||
       matchSupportTicketIntent(question, role) ||
       matchEquipmentMixIntent(question, role) ||
       matchPhraseChipIntent(question, role)

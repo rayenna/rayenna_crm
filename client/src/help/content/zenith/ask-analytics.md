@@ -7,7 +7,7 @@
 
 ## How to use Ask
 
-1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this / last / next quarter**, **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY)** or **quarter-on-quarter (QoQ)** growth / comparison for **revenue**, **gross profit**, or **average margin** — Ask compares both periods in one table. The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
+1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this / last / next quarter**, **this / last / next half year** — H1 = Q1+Q2, H2 = Q3+Q4 — **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY)** or **quarter-on-quarter (QoQ)** growth / comparison for **revenue**, **gross profit**, or **average margin** — Ask compares both periods in one table. The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
 2. Focus the Ask box with **/** or **A** (when you are not already typing in a field), or open **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to jump here and run it.
 3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
@@ -29,11 +29,35 @@ Role packs differ — example chips under the Ask box show questions allowed for
 
 ### Segment mixes and capacity
 
-- Subsidy vs Non-Subsidy revenue · DCR vs Non-DCR mix
+- Subsidy vs Non-Subsidy revenue · **Subsidy vs Non-Subsidy profitability**
+- **DCR vs Non-DCR profitability** · **Compare bank profitability** · **City profitability** · **Salesperson profitability** (works with **this / last half year** or FY on the question / date bar)
+- DCR vs Non-DCR mix (order value)
 - Revenue by customer type (Residential / Apartment / Commercial)
 - Service type mix (EPC, cleaning, maintenance…) · Roof type · System type (on-grid / off-grid / hybrid)
 - Capacity sold by size band (under 3 / 3–5 / 6–10 / above 10 kW)
 - **Revenue by city** · **Loan vs cash revenue**
+
+### Project & customer records
+
+- **Status of SL 123** / **status of Ramesh** — one project card (payments, KSEB/MNRE dates, commissioning, site address, remarks, PE/hub, docs)
+- **Customer details for Ramesh** — customer record (contact, city, GST, linked projects)
+- **List customers in Kochi** / residential / for salesperson X — customer lists
+- Pair detail lists with **for salesperson X** or **for ops Y** (e.g. payment timeline for salesperson Anoop)
+
+### Payment, compliance, documents
+
+- **Payment timeline** · **projects with advance only** · **projects with no P2**
+- **No feasibility** · **no registration** · **subsidy request sent not credited** (lists with dates)
+- **Overdue commissioning** (pair with this quarter / FY on the date bar) · site address / city on list rows
+- **Confirmed projects with no documents** · missing KSEB / MNRE / agreement docs
+- **Projects mentioning …** · **last remark on SL 123**
+- **PE missing BOM / ROI / costing / proposal** · **Hub station IDs** / **Hub unlinked projects**
+- **Ravi's under-installation unpaid** — salesperson (or ops) name + status + payment filters
+- **550W panels** / inverter kW · **incentive eligible** · **lost deal details**
+
+### Edit from Ask (opens the form — does not save for you)
+
+- **Update payment for SL 123** · **Change status of SL 123** · **Assign ops to SL 123** · **Add remark to SL 123** · **Edit customer Ramesh**
 
 ### Operations and compliance
 
@@ -45,7 +69,7 @@ Role packs differ — example chips under the Ask box show questions allowed for
 
 ### Finance and collections
 
-- Profit summary (order value, gross profit, margin, collected, outstanding, kW)
+- Profit summary (order value, expected / gross / final profit, margin, collected, outstanding, kW)
 - **YoY / this FY vs last FY** — revenue growth, gross profit, or average margin comparison
 - **QoQ / this quarter vs last quarter** — same metrics, quarter-on-quarter growth
 - **Profit / revenue this · last · next quarter** — profit summary for that Indian FY quarter
