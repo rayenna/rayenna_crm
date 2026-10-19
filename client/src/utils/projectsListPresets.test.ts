@@ -16,9 +16,15 @@ import {
 describe('projectsListPresets', () => {
   const allStatuses = Object.values(ProjectStatus)
 
-  it('exposes five presets for all roles', () => {
+  it('exposes five presets for non-Operations roles', () => {
     expect(projectsPresetsForRole(UserRole.ADMIN)).toHaveLength(5)
-    expect(projectsPresetsForRole(UserRole.OPERATIONS)).toHaveLength(5)
+    expect(projectsPresetsForRole(UserRole.SALES)).toHaveLength(5)
+  })
+
+  it('hides Open pipeline for Operations', () => {
+    const ops = projectsPresetsForRole(UserRole.OPERATIONS)
+    expect(ops).toHaveLength(4)
+    expect(ops.map((p) => p.id)).not.toContain('open-pipeline')
   })
 
   it('open pipeline excludes completed and lost', () => {

@@ -1,7 +1,9 @@
 import {
   CustomerType,
+  InstallationStatus,
   ProjectServiceType,
   ProjectStage,
+  ProjectStatus,
   ProjectType,
   SystemType,
   type Prisma,
@@ -200,10 +202,22 @@ export type ExtractedDimensions = {
   leadSourceIsNull?: boolean;
   incentiveEligible?: boolean;
   hasDocuments?: boolean;
+  /** Projects with zero documents (Projects list “no docs” style). */
+  missingDocuments?: boolean;
+  availingLoan?: boolean;
+  pendingSubsidy?: boolean;
   lifecycleSpecsIncomplete?: boolean;
   dataSenseNeedsReview?: boolean;
   hubPlantLinked?: boolean;
   salespersonUnassigned?: boolean;
+  /** Project.projectStatus enum string (CRM stage) */
+  projectStatus?: string;
+  /** PaymentStatus or NOT_FULLY_PAID */
+  paymentStatus?: string;
+  /** Installation.status — distinct from Project Status UNDER_INSTALLATION */
+  installationStatus?: InstallationStatus;
+  peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+  leadSource?: string;
   wantsProjectTypeMix?: boolean;
   wantsCustomerTypeMix?: boolean;
   wantsServiceTypeMix?: boolean;
@@ -281,9 +295,13 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
     else if (/\bdcr\b/.test(lower)) out.panelType = 'DCR';
   }
 
-  if (/\bresidential\b/.test(lower)) out.customerType = CustomerType.RESIDENTIAL;
-  else if (/\bapartment\b/.test(lower)) out.customerType = CustomerType.APARTMENT;
-  else if (/\bcommercial\b/.test(lower)) out.customerType = CustomerType.COMMERCIAL;
+  if (/\bapartments?\b/.test(lower) || /\bhousing\s+societ/.test(lower)) {
+    out.customerType = CustomerType.APARTMENT;
+  } else if (/\bcommercial\b/.test(lower)) {
+    out.customerType = CustomerType.COMMERCIAL;
+  } else if (/\bresidential\b/.test(lower)) {
+    out.customerType = CustomerType.RESIDENTIAL;
+  }
 
   if (/\bpanel\s+cleaning\b|\bcleaning\s+jobs?\b/.test(lower)) {
     out.projectServiceType = ProjectServiceType.PANEL_CLEANING;
@@ -389,15 +407,31 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   if (/\b(by\s+city|top\s+cities|revenue\s+by\s+city|cities?\s+by\s+revenue)\b/.test(lower)) {
     out.wantsCityMix = true;
   }
-  const cityMatch = q.match(/\b(?:in|at)\s+([A-Za-z][A-Za-z\s]{2,30}?)\b(?:\?|$|,)/);
-  if (cityMatch?.[1] && !/\b(pipeline|progress|subsidy|loan|revenue|projects?)\b/i.test(cityMatch[1])) {
-    // only if phrased as "projects in Kochi"
+  const cityMatch = q.match(/\b(?:in|at)\s+([A-Za-z][A-Za-z\s-]{2,30}?)\b(?:\?|$|,)/);
+  const cityCandidate = cityMatch?.[1]?.trim();
+  const cityIsJunk =
+    cityCandidate &&
+    /^(customer\s+master|master|crm|pipeline|progress|subsidy|loan|revenue|projects?|customers?)$/i.test(
+      cityCandidate,
+    );
+  if (
+    cityCandidate &&
+    !cityIsJunk &&
+    !/\b(pipeline|progress|subsidy|loan|revenue)\b/i.test(cityCandidate)
+  ) {
+    // only if phrased as "projects in Kochi" / "customers in Kochi"
     if (/\b(?:projects?|customers?|deals?)\s+in\s+/i.test(q)) {
-      out.city = cityMatch[1].trim();
+      out.city = cityCandidate;
     }
   }
-  if (/\bprojects?\s+in\s+([A-Za-z][A-Za-z\s]{2,30})/i.test(q)) {
-    out.city = q.match(/\bprojects?\s+in\s+([A-Za-z][A-Za-z\s]{2,30})/i)?.[1]?.trim();
+  if (/\bprojects?\s+in\s+([A-Za-z][A-Za-z\s-]{2,30})/i.test(q)) {
+    const c = q.match(/\bprojects?\s+in\s+([A-Za-z][A-Za-z\s-]{2,30})/i)?.[1]?.trim();
+    if (
+      c &&
+      !/^(customer\s+master|master|crm|pipeline|subsidy|loan)$/i.test(c)
+    ) {
+      out.city = c;
+    }
   }
 
   if (/\b(ops\s+workload|by\s+ops|assigned\s+ops|ops\s+person)\b/.test(lower)) {
@@ -451,6 +485,17 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   if (/\b(hub\s+plant|plant\s+link|unlinked\s+plants?|solis|deye\s+station)\b/.test(lower)) {
     out.wantsHubPlant = true;
   }
+  if (
+    /\b(hub\s+unlinked|unlinked\s+(?:hub\s+)?plants?|without\s+hub\s+link|not\s+linked\s+to\s+hub)\b/.test(
+      lower,
+    )
+  ) {
+    out.hubPlantLinked = false;
+    delete out.wantsHubPlant;
+  } else if (/\b(hub\s+linked|linked\s+to\s+hub|with\s+hub\s+plant)\b/.test(lower)) {
+    out.hubPlantLinked = true;
+    delete out.wantsHubPlant;
+  }
   if (/\b(no\s+salesperson|unassigned\s+salesperson|without\s+salesperson)\b/.test(lower)) {
     out.salespersonUnassigned = true;
   }
@@ -461,12 +506,180 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   if (/\b(missing\s+specs|lifecycle\s+specs\s+incomplete|incomplete\s+specs)\b/.test(lower)) {
     out.lifecycleSpecsIncomplete = true;
   }
-  if (/\b(data\s*sense|needs?\s+review)\b/.test(lower) && !/\bprojects\s+needing\s+review\b/.test(lower)) {
+  if (/\b(data\s*sense|needs?\s+review|needing\s+review)\b/.test(lower)) {
     out.dataSenseNeedsReview = true;
   }
   if (/\b(with\s+documents|has\s+documents)\b/.test(lower)) out.hasDocuments = true;
+  if (/\b(availing\s+loan|on\s+loan|with\s+loan|loan\s+projects?)\b/.test(lower) && !/\bloan\s+vs\b/.test(lower)) {
+    out.availingLoan = true;
+  }
+  if (/\bpending\s+subsidy\b/.test(lower)) out.pendingSubsidy = true;
+  if (/\b(without\s+documents|no\s+documents|missing\s+documents)\b/.test(lower)) {
+    out.missingDocuments = true;
+  }
+
+  // Three distinct CRM fields — do not mix:
+  //   Project Status (stage) · Installation Status (install record) · Payment Status (cash)
+  Object.assign(out, extractCrmStatusFilters(lower));
+
+  if (/\bproposal[\s-]?ready\b/.test(lower) || /\bpe\s+proposal[\s-]?ready\b/.test(lower)) {
+    out.peBucket = 'proposal-ready';
+  } else if (/\bpe\s+draft\b|\bproposal\s+engine\s+draft\b/.test(lower)) {
+    out.peBucket = 'draft';
+  } else if (/\bpe\s+not[\s-]?started\b|\bproposal\s+engine\s+not[\s-]?started\b/.test(lower)) {
+    out.peBucket = 'not-started';
+  }
+
+  const leadMatch = lower.match(
+    /\blead\s+source\s+(website|referral|google|channel\s+partner|digital\s+marketing|sales|management\s+connect|other)\b/,
+  );
+  if (leadMatch?.[1]) {
+    const map: Record<string, string> = {
+      website: 'WEBSITE',
+      referral: 'REFERRAL',
+      google: 'GOOGLE',
+      'channel partner': 'CHANNEL_PARTNER',
+      'digital marketing': 'DIGITAL_MARKETING',
+      sales: 'SALES',
+      'management connect': 'MANAGEMENT_CONNECT',
+      other: 'OTHER',
+    };
+    out.leadSource = map[leadMatch[1]] || leadMatch[1].toUpperCase().replace(/\s+/g, '_');
+  }
 
   return out;
+}
+
+/**
+ * Disambiguate Project Status vs Installation Status vs Payment Status from free text.
+ * Explicit cues win; ambiguous “completed” / “pending” never cross fields.
+ */
+export function extractCrmStatusFilters(lower: string): Pick<
+  ExtractedDimensions,
+  'projectStatus' | 'paymentStatus' | 'installationStatus'
+> {
+  const out: Pick<
+    ExtractedDimensions,
+    'projectStatus' | 'paymentStatus' | 'installationStatus'
+  > = {};
+
+  const installCue =
+    /\binstallation\s+status\b/.test(lower) ||
+    /\binstall(?:ation)?\s+(?:is\s+)?(pending|in\s+progress|completed)\b/.test(lower) ||
+    /\b(pending|in\s+progress|completed)\s+install(?:ation)?\b/.test(lower) ||
+    /\binstall(?:ation)?\s+records?\b/.test(lower);
+
+  const paymentCue =
+    /\bpayment\s+status\b/.test(lower) ||
+    /\b(fully|partially)\s+paid\b/.test(lower) ||
+    /\bpayment\s+(pending|partial|complete|completed)\b/.test(lower) ||
+    /\bpending\s+payment\b/.test(lower) ||
+    /\bnot\s+(yet\s+)?(fully\s+)?paid\b/.test(lower) ||
+    /\bincomplete\s+payment\b/.test(lower);
+
+  const projectStatusCue =
+    /\bproject\s+status\b/.test(lower) ||
+    /\bunder[\s-]+installation\b/.test(lower) ||
+    /\bsite\s+survey\b/.test(lower) ||
+    /\bcompleted[\s-]+subsidy[\s-]+credited\b/.test(lower) ||
+    /\bsubmitted\s+for\s+subsidy\b/.test(lower);
+
+  // Installation Status (Installation.status) — never Project Status UNDER_INSTALLATION
+  if (installCue && !/\bunder[\s-]+installation\b/.test(lower)) {
+    if (/\bin\s+progress\b/.test(lower)) {
+      out.installationStatus = InstallationStatus.IN_PROGRESS;
+    } else if (/\bcompleted\b/.test(lower)) {
+      out.installationStatus = InstallationStatus.COMPLETED;
+    } else if (/\bpending\b/.test(lower) && !/\bpending\s+subsidy\b/.test(lower)) {
+      out.installationStatus = InstallationStatus.PENDING;
+    }
+  }
+
+  // Payment Status — only with payment language (not bare “pending” / “completed”)
+  if (paymentCue) {
+    if (/\b(not\s+(yet\s+)?(fully\s+)?paid|incomplete\s+payment)\b/.test(lower)) {
+      out.paymentStatus = 'NOT_FULLY_PAID';
+    } else if (/\bfully\s+paid\b/.test(lower) || /\bpayment\s+complete(?:d)?\b/.test(lower)) {
+      out.paymentStatus = 'FULLY_PAID';
+    } else if (/\bpartial(ly)?\s+(paid|payment)|payment\s+partial\b/.test(lower)) {
+      out.paymentStatus = 'PARTIAL';
+    } else if (
+      /\b(payment\s+pending|pending\s+payment)\b/.test(lower) &&
+      !/\bpending\s+subsidy\b/.test(lower)
+    ) {
+      out.paymentStatus = 'PENDING';
+    }
+  }
+
+  // Project Status (CRM stage) — skip “completed” when it clearly means installation/payment
+  if (!/\bpending\s+subsidy\b/.test(lower)) {
+    if (/\bcompleted[\s-]+subsidy[\s-]+credited\b/.test(lower)) {
+      out.projectStatus = ProjectStatus.COMPLETED_SUBSIDY_CREDITED;
+    } else if (/\bsubmitted\s+for\s+subsidy\b/.test(lower)) {
+      out.projectStatus = ProjectStatus.SUBMITTED_FOR_SUBSIDY;
+    } else if (/\bunder[\s-]+installation\b/.test(lower)) {
+      out.projectStatus = ProjectStatus.UNDER_INSTALLATION;
+    } else if (/\bsite\s+survey\b/.test(lower)) {
+      out.projectStatus = ProjectStatus.SITE_SURVEY;
+    } else if (
+      /\bconfirmed\b/.test(lower) &&
+      !/\bnot\s+confirmed\b/.test(lower) &&
+      (projectStatusCue || /\bprojects?\b/.test(lower))
+    ) {
+      out.projectStatus = ProjectStatus.CONFIRMED;
+    } else if (
+      /\bproposal\b/.test(lower) &&
+      !/\bproposal\s+engine\b/.test(lower) &&
+      !/\bpe\s+/.test(lower) &&
+      !/\bproposal[\s-]?ready\b/.test(lower) &&
+      (projectStatusCue || /\bprojects?\b/.test(lower))
+    ) {
+      out.projectStatus = ProjectStatus.PROPOSAL;
+    } else if (
+      /\bleads?\b/.test(lower) &&
+      /\bprojects?\b/.test(lower) &&
+      !/\blead\s+source\b/.test(lower)
+    ) {
+      out.projectStatus = ProjectStatus.LEAD;
+    } else if (
+      /\blost\b/.test(lower) &&
+      /\bprojects?\b/.test(lower) &&
+      !/\blost\s+deals?\s+by\b/.test(lower)
+    ) {
+      out.projectStatus = ProjectStatus.LOST;
+    } else if (
+      /\bcompleted\b/.test(lower) &&
+      /\bprojects?\b/.test(lower) &&
+      !/\bcompleted[\s-]+subsidy/.test(lower) &&
+      !installCue &&
+      !paymentCue &&
+      !out.installationStatus
+    ) {
+      out.projectStatus = ProjectStatus.COMPLETED;
+    } else if (
+      projectStatusCue &&
+      /\bcompleted\b/.test(lower) &&
+      !/\bcompleted[\s-]+subsidy/.test(lower) &&
+      !installCue
+    ) {
+      out.projectStatus = ProjectStatus.COMPLETED;
+    }
+  }
+
+  return out;
+}
+
+export function parseInstallationStatus(raw?: string | null): InstallationStatus | undefined {
+  if (!raw?.trim()) return undefined;
+  const k = raw.trim().toLowerCase().replace(/[_-]+/g, ' ');
+  if (k === 'pending') return InstallationStatus.PENDING;
+  if (k === 'in progress' || k === 'inprogress') return InstallationStatus.IN_PROGRESS;
+  if (k === 'completed' || k === 'complete') return InstallationStatus.COMPLETED;
+  const upper = raw.trim().toUpperCase().replace(/\s+/g, '_');
+  if ((Object.values(InstallationStatus) as string[]).includes(upper)) {
+    return upper as InstallationStatus;
+  }
+  return undefined;
 }
 
 function pushAnd(where: Prisma.ProjectWhereInput, clause: Prisma.ProjectWhereInput): void {
@@ -588,10 +801,27 @@ export function applyZenithDimensionFilters(
 
   if (f.hasDocuments) {
     pushAnd(next, { documents: { some: {} } });
+  } else if (f.missingDocuments) {
+    pushAnd(next, { documents: { none: {} } });
+  }
+
+  if (f.availingLoan) {
+    pushAnd(next, { availingLoan: true });
+  }
+
+  if (f.pendingSubsidy) {
+    pushAnd(next, {
+      AND: [{ type: ProjectType.SUBSIDY }, { projectStatus: ProjectStatus.COMPLETED }],
+    });
   }
 
   if (f.dataSenseNeedsReview) {
     pushAnd(next, dataSenseNeedsReviewPrismaOr(new Date()) as Prisma.ProjectWhereInput);
+  }
+
+  const installStatus = parseInstallationStatus(f.installationStatus);
+  if (installStatus) {
+    pushAnd(next, { installations: { some: { status: installStatus } } });
   }
 
   return next;
@@ -618,10 +848,18 @@ export function mergeDimensionsIntoIntent(
   if (dims.leadSourceIsNull) filters.leadSourceIsNull = true;
   if (dims.incentiveEligible) filters.incentiveEligible = true;
   if (dims.hasDocuments) filters.hasDocuments = true;
+  if (dims.missingDocuments) filters.missingDocuments = true;
+  if (dims.availingLoan) filters.availingLoan = true;
+  if (dims.pendingSubsidy) filters.pendingSubsidy = true;
   if (dims.lifecycleSpecsIncomplete) filters.lifecycleSpecsIncomplete = true;
   if (dims.dataSenseNeedsReview) filters.dataSenseNeedsReview = true;
   if (dims.hubPlantLinked != null) filters.hubPlantLinked = dims.hubPlantLinked;
   if (dims.salespersonUnassigned) filters.salespersonUnassigned = true;
+  if (dims.projectStatus) filters.projectStatus = dims.projectStatus;
+  if (dims.paymentStatus) filters.paymentStatus = dims.paymentStatus;
+  if (dims.installationStatus) filters.installationStatus = dims.installationStatus;
+  if (dims.peBucket) filters.peBucket = dims.peBucket;
+  if (dims.leadSource) filters.leadSource = dims.leadSource;
   return { ...intent, filters };
 }
 
@@ -653,8 +891,8 @@ export function salvageMetricFromDimensions(
   const q = question.toLowerCase().replace(/\s+/g, ' ').trim();
   const listLike =
     Boolean(q) &&
-    /\b(list|show|all|which)\b/.test(q) &&
-    /\bprojects?\b/.test(q) &&
+    /\b(list|show|all|which|find)\b/.test(q) &&
+    /\bprojects\b/.test(q) &&
     !/\b(vs|versus|mix|breakdown|share|how\s+many|revenue)\b/.test(q);
 
   return (
@@ -705,31 +943,57 @@ export function salvageMetricFromDimensions(
           dims.capacityMin != null ||
           dims.capacityMax != null ||
           dims.salespersonName ||
+          dims.opsName ||
           dims.city ||
           dims.projectStage ||
           dims.statusIndicator ||
           dims.salespersonUnassigned ||
           dims.leadSourceIsNull ||
           dims.incentiveEligible ||
-          dims.lifecycleSpecsIncomplete,
+          dims.lifecycleSpecsIncomplete ||
+          dims.hasDocuments ||
+          dims.missingDocuments ||
+          dims.availingLoan ||
+          dims.pendingSubsidy ||
+          dims.dataSenseNeedsReview ||
+          dims.hubPlantLinked != null ||
+          dims.projectStatus ||
+          dims.paymentStatus ||
+          dims.installationStatus ||
+          dims.peBucket ||
+          dims.leadSource,
       );
       if (!hasDim) return intent;
 
-      // “List all non-subsidy projects” → project list, not revenue mix / confirmed cohort.
+      const wantsMix =
+        dims.wantsProjectTypeMix ||
+        dims.wantsCustomerTypeMix ||
+        dims.wantsServiceTypeMix ||
+        dims.wantsPanelTypeMix ||
+        dims.wantsRoofTypeMix ||
+        dims.wantsSystemTypeMix ||
+        dims.wantsCapacityBandMix ||
+        dims.wantsCityMix;
+
+      // “List/show … projects” with any Projects-list filter → table of matching projects.
       if (
         listLike &&
-        dims.projectType &&
-        !dims.wantsProjectTypeMix &&
+        !wantsMix &&
         allowed('projects_list_slice') &&
         (intent.metric === 'clarify' ||
           intent.metric === 'projects_list_slice' ||
           intent.metric === 'cohort_summary' ||
-          intent.metric === 'revenue_by_project_type')
+          intent.metric === 'revenue_by_project_type' ||
+          intent.metric === 'revenue_by_customer_type' ||
+          intent.metric === 'pending_subsidy' ||
+          intent.metric === 'availing_loan')
       ) {
         const next = pick(intent, 'projects_list_slice', 'table');
         if (
           next.filters?.projectStatus &&
-          !/\b(confirmed|proposal|under\s+installation|lead|completed|lost)\b/.test(q)
+          !/\b(confirmed|proposal|under\s+installation|lead|completed|lost|site\s+survey|project\s+status|submitted\s+for\s+subsidy)\b/.test(
+            q,
+          )
         ) {
           const { projectStatus: _drop, ...rest } = next.filters;
           return { ...next, filters: rest };

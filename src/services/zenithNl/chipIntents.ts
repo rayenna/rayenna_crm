@@ -12,6 +12,8 @@ import {
   matchCustomerDetailLookupIntent,
   matchCustomersListIntent,
 } from './customerDetailAsk';
+import { matchPipelineHealthIntent } from './pipelineHealthAsk';
+import { matchProjectsListFilterIntent } from './listFilterAsk';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -35,6 +37,72 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     insightHints: 'pipeline by stage',
   },
+  [norm('Show my stalled pipeline')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'stalled' },
+    insightHints: 'stalled pipeline',
+  },
+  [norm('Show my ageing pipeline')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'ageing' },
+    insightHints: 'ageing pipeline',
+  },
+  [norm('Show my aging pipeline')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'ageing' },
+    insightHints: 'ageing pipeline',
+  },
+  [norm('Give me a pipeline analysis')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'analysis' },
+    insightHints: 'pipeline analysis',
+  },
+  [norm('Pipeline analysis')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'analysis' },
+    insightHints: 'pipeline analysis',
+  },
+  [norm('Show all apartments in customer master')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'APARTMENT' },
+    insightHints: 'apartment customers',
+  },
+  [norm('List apartment customers')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'APARTMENT' },
+    insightHints: 'apartment customers',
+  },
+  [norm('List residential customers')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'RESIDENTIAL' },
+    insightHints: 'residential customers',
+  },
+  [norm('List commercial customers')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'COMMERCIAL' },
+    insightHints: 'commercial customers',
+  },
+  [norm('Show all residential in customer master')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'RESIDENTIAL' },
+    insightHints: 'residential customers',
+  },
+  [norm('Show all commercial in customer master')]: {
+    metric: 'customers_list_slice',
+    viz: 'table',
+    filters: { customerType: 'COMMERCIAL' },
+    insightHints: 'commercial customers',
+  },
   [norm('Summarise my lost deals by reason')]: {
     metric: 'lost_deals_summary',
     viz: 'table',
@@ -46,9 +114,15 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     insightHints: 'lost deals by reason',
   },
   [norm('Show installation status breakdown')]: {
+    metric: 'installation_model_status',
+    viz: 'chart',
+    chartType: 'pie',
+    insightHints: 'installation status (records)',
+  },
+  [norm('Show late-stage project status')]: {
     metric: 'install_by_status',
     viz: 'table',
-    insightHints: 'installation by status',
+    insightHints: 'late-stage project status',
   },
   [norm('How many of my projects used Adani panels?')]: {
     metric: 'cohort_summary',
@@ -992,7 +1066,8 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
   {
     test: (q) =>
       /\b(pipeline\s+by\s+stage|show\s+(my\s+)?pipeline|deals?\s+by\s+stage)\b/.test(q) &&
-      !/\blost\b/.test(q),
+      !/\blost\b/.test(q) &&
+      !/\b(stalled|age?ing|aeging|analys[ei]s|health|at[- ]?risk|stuck|neglected)\b/.test(q),
     intent: {
       metric: 'pipeline_by_stage',
       viz: 'table',
@@ -1099,12 +1174,29 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
     },
   },
   {
+    // Installation Status field (Pending / In progress / Completed records)
     test: (q) =>
-      /\b(install(ation)?\s+(status|breakdown)|install\s+by\s+status)\b/.test(q),
+      /\binstallation\s+status\b/.test(q) ||
+      /\binstall(?:ation)?\s+records?\b/.test(q) ||
+      (/\binstall(?:ation)?\s+(pending|in\s+progress|completed)\b/.test(q) &&
+        /\b(mix|breakdown|by\s+status|how\s+many)\b/.test(q)),
+    intent: {
+      metric: 'installation_model_status',
+      viz: 'chart',
+      chartType: 'pie',
+      insightHints: 'installation status (records)',
+    },
+  },
+  {
+    // Late-stage Project Status cohort (Under installation → Subsidy credited)
+    test: (q) =>
+      /\b(late[\s-]?stage\s+project\s+status|install\s+by\s+status|project\s+status\s+under\s+installation)\b/.test(
+        q,
+      ),
     intent: {
       metric: 'install_by_status',
       viz: 'table',
-      insightHints: 'installation by status',
+      insightHints: 'late-stage project status',
     },
   },
   {
@@ -1207,10 +1299,12 @@ export function matchExactChipIntent(
       }
     }
     return (
+      matchPipelineHealthIntent(question, role) ||
       matchCustomerDetailLookupIntent(question, role) ||
       matchCustomersListIntent(question, role) ||
       matchProjectDetailLookupIntent(question, role) ||
       matchProjectsOpsDetailIntent(question, role) ||
+      matchProjectsListFilterIntent(question, role) ||
       matchSupportTicketIntent(question, role) ||
       matchEquipmentMixIntent(question, role) ||
       matchPhraseChipIntent(question, role)

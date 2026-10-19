@@ -2044,6 +2044,95 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   gap: 0.75rem;
 }
 
+/* Ask result tables: frozen header (outside scroll) + scrolling body */
+.zenith-root .zenith-ask-table {
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 0.65rem;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.zenith-root .zenith-ask-table__head {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
+  /* Keep header above body when body scrolls underneath (iOS overscroll). */
+  position: relative;
+  z-index: 2;
+}
+
+.zenith-root .zenith-ask-table__body {
+  max-height: 280px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.zenith-root .zenith-ask-table__grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+@media (min-width: 640px) {
+  .zenith-root .zenith-ask-table__grid {
+    font-size: 0.875rem;
+  }
+}
+
+.zenith-root .zenith-ask-table__head th {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  background: var(--bg-card);
+}
+
+.zenith-root .zenith-ask-table__head th:first-child,
+.zenith-root .zenith-ask-table__body td:first-child {
+  padding-left: 0.65rem;
+}
+
+.zenith-root .zenith-ask-table__body td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: top;
+}
+
+.zenith-root .zenith-ask-table__body tr:last-child td {
+  border-bottom: 0;
+}
+
+.zenith-root .zenith-ask-table__body tr.is-clickable {
+  cursor: pointer;
+}
+
+.zenith-root .zenith-ask-table__body tr.is-clickable:hover {
+  background: color-mix(in srgb, var(--bg-elevated, #fff) 4%, transparent);
+}
+
+.zenith-root .zenith-ask-table__body td.is-drill {
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-decoration-line: underline;
+  text-underline-offset: 2px;
+}
+
+.zenith-root .zenith-ask-table__empty {
+  padding: 1.5rem 0.65rem;
+  text-align: center;
+  color: var(--text-muted);
+  border-bottom: 0 !important;
+}
+
 /* Ask answer charts — donut + legend / polished bars */
 .zenith-root .zenith-ask-chart {
   display: flex;

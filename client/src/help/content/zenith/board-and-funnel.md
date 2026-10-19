@@ -46,11 +46,11 @@ When a project **enters** **Confirmed**, **Under Installation**, **Completed**, 
 
 **KPI strip** — Focus on execution: e.g. **Pending Installation**, **Completed Installation**, **Subsidy Credited**, and **Confirmed Revenue** (order value for confirmed / in-progress / completed revenue-eligible projects, respecting your date filters).
 
-**Your Focus** — **Installation pulse** for **Operations** (see [Your Focus](#your-focus-role-specific)).
+**Your Focus** — **Installation pulse** for **Operations** (see [Your Focus](#your-focus-role-specific)). **Today’s plan** is full-width — there is **no Weighted open pipeline** tile for Ops.
 
 **Funnel** — Execution-oriented funnel (installation, subsidy, etc.). **Click** a **stage row** or **payment pill** to open the **Quick Actions** list for that slice; use **Open in Projects →** for the full filtered **Projects** page ([Deal flow funnel](#deal-flow-funnel-zenith)).
 
-**Charts** — **Revenue & Profit by FY** (axis respects selected FYs; [details](#revenue-and-profit-by-fy-chart-zenith)), **Projects by stage**, **Revenue by Customer Type** (where shown), and **sales team** style charts where shown.
+**Charts** — **Pipeline signals** without **Pipeline ageing**; **Revenue & Profit by FY** (axis respects selected FYs; [details](#revenue-and-profit-by-fy-chart-zenith)), **Projects by stage**, **Revenue by Customer Type** (where shown), panel/inverter brand bars, and other ops-relevant charts.
 
 Use **Reset** when you want a fresh, unscoped overview before drilling into a single FY or quarter.
 

@@ -158,15 +158,21 @@ export default function ZenithInsightChartsRow({
   chartHeight,
   chartGroup,
   onDrill,
+  /** Operations: hide sales-style stage-ageing chart. */
+  showPipelineAgeing = true,
 }: {
   explorerProjects: ZenithExplorerProject[]
   chartHeight: number
   chartGroup: ZenithChartGroup
   onDrill: (dimension: ZenithChartDrilldownDimension, value: string) => void
+  showPipelineAgeing?: boolean
 }) {
   const chartColors = useChartColors()
 
-  const pipelineRows = useMemo(() => buildPipelineAgeChartRows(explorerProjects), [explorerProjects])
+  const pipelineRows = useMemo(
+    () => (showPipelineAgeing ? buildPipelineAgeChartRows(explorerProjects) : []),
+    [explorerProjects, showPipelineAgeing],
+  )
   const commissioningRows = useMemo(
     () => buildCommissioningTimelineRows(explorerProjects),
     [explorerProjects],
@@ -187,6 +193,10 @@ export default function ZenithInsightChartsRow({
     </p>
   ) : null
 
+  const intro = showPipelineAgeing
+    ? 'Open deals by time in stage, expected commissioning window, and outstanding balance by salesperson.'
+    : 'Expected commissioning window and outstanding balance by salesperson.'
+
   return (
     <div className="space-y-3">
       <header className="px-0.5">
@@ -200,28 +210,32 @@ export default function ZenithInsightChartsRow({
           className="mt-1 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
           style={{ fontFamily: 'DM Sans, sans-serif' }}
         >
-          Open deals by time in stage, expected commissioning window, and outstanding balance by salesperson.
+          {intro}
         </p>
       </header>
       <div
         id="zenith-charts-row-insights"
-        className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 scroll-mt-24 [&>*]:min-w-0"
+        className={`grid grid-cols-1 gap-3 lg:gap-4 scroll-mt-24 [&>*]:min-w-0 ${
+          showPipelineAgeing ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+        }`}
       >
-        <ChartPanel
-          title="Pipeline ageing"
-          subtitle="Days in current stage — open deals"
-          showExploreHint
-        >
-          <InsightBarChart
-            data={pipelineRows}
-            height={chartHeight}
-            chartGroup={chartGroup}
-            valueMode="count"
-            barColor={chartColors.teal}
-            chartColors={chartColors}
-            onBarClick={(row) => onDrill('pipeline_age', row.key)}
-          />
-        </ChartPanel>
+        {showPipelineAgeing ? (
+          <ChartPanel
+            title="Pipeline ageing"
+            subtitle="Days in current stage — open deals"
+            showExploreHint
+          >
+            <InsightBarChart
+              data={pipelineRows}
+              height={chartHeight}
+              chartGroup={chartGroup}
+              valueMode="count"
+              barColor={chartColors.teal}
+              chartColors={chartColors}
+              onBarClick={(row) => onDrill('pipeline_age', row.key)}
+            />
+          </ChartPanel>
+        ) : null}
         <ChartPanel
           title="Commissioning timeline"
           subtitle="Expected commissioning — open deals"

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   CustomerType,
+  InstallationStatus,
   LeadSource,
   LostReason,
   PaymentStatus,
@@ -98,6 +99,7 @@ import {
   execCustomerDetailLookup,
   execCustomersListSlice,
 } from './zenithNl/customerDetailAsk';
+import { execPipelineHealth } from './zenithNl/pipelineHealthAsk';
 import { matchAskEditActionIntent } from './zenithNl/askEditActions';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
@@ -268,6 +270,10 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
           typeof filtersRaw.projectStatus === 'string' ? filtersRaw.projectStatus : undefined,
         paymentStatus:
           typeof filtersRaw.paymentStatus === 'string' ? filtersRaw.paymentStatus : undefined,
+        installationStatus:
+          typeof filtersRaw.installationStatus === 'string'
+            ? filtersRaw.installationStatus
+            : undefined,
         peBucket,
         leadSource: typeof filtersRaw.leadSource === 'string' ? filtersRaw.leadSource : undefined,
         // Customer name search only — never put brand/bank tokens here.
@@ -576,8 +582,9 @@ Rules:
 - Prefer the closest metric. If unclear or outside catalog, use metric "clarify".
 - viz must be "chart" or "table". For chart, chartType is "bar" or "pie".
 - Optional filters (use whenever the user names them):
-  - projectStatus (Prisma enum e.g. CONFIRMED)
-  - paymentStatus (PENDING|PARTIAL|FULLY_PAID|NOT_FULLY_PAID for pending+partial / not fully paid)
+  - projectStatus = CRM Project Status / stage only (LEAD|SITE_SURVEY|PROPOSAL|CONFIRMED|UNDER_INSTALLATION|SUBMITTED_FOR_SUBSIDY|COMPLETED|COMPLETED_SUBSIDY_CREDITED|LOST). "Under installation" → UNDER_INSTALLATION. Never use this for payment or Installation Status.
+  - paymentStatus = Payment Status only (PENDING|PARTIAL|FULLY_PAID|NOT_FULLY_PAID). "Payment pending" / "fully paid" / "not fully paid" → here. Never map payment language to projectStatus.
+  - installationStatus = Installation Status on Installation records only (PENDING|IN_PROGRESS|COMPLETED). "Installation pending" / "installation in progress" / "installation completed" → here. Distinct from projectStatus UNDER_INSTALLATION.
   - peBucket (proposal-ready|draft|not-started|rest)
   - leadSource (label or enum)
   - search (customer name ONLY — never put panel/inverter/bank names here)
@@ -594,7 +601,14 @@ Rules:
   - "summarise my lost deals" (Sales) → lost_deals_summary; "installation status" (Sales) → install_by_status
   - "status of SL 123" / "what's the status of Ramesh" → project_detail_lookup with filters.search ("SL:123" or customer name)
   - "customer details for Ramesh" → customer_detail_lookup; "list customers in Kochi" → customers_list_slice
+  - "show all apartments/residential/commercial in customer master" → customers_list_slice with filters.customerType (APARTMENT|RESIDENTIAL|COMMERCIAL); never put "customer master" in filters.city
+  - "list/show … projects" with any Projects-list filter (project status, payment status, installation status, type, customer type, city, salesperson, ops, loan, pending subsidy, documents, PE bucket, panel/inverter brand, bank, DCR, system/roof, capacity, hub link, incentive, data sense) → projects_list_slice with those filters
+  - "list projects with installation pending" → projects_list_slice filters.installationStatus=PENDING (not projectStatus)
+  - "list under installation projects" → projects_list_slice filters.projectStatus=UNDER_INSTALLATION
+  - "list fully paid projects" → projects_list_slice filters.paymentStatus=FULLY_PAID
+  - "installation status breakdown" (Pending/In progress/Completed records) → installation_model_status; late-stage Project Status cohort → install_by_status
   - "payment timeline", "feasibility pending", "missing documents", "PE missing BOM", "hub station IDs", "550W panels", "lost deal details" → projects_ops_detail with filters.detailSlice
+  - "stalled pipeline", "ageing/aging/aeging pipeline", "pipeline analysis", "pipeline health" → pipeline_health with filters.detailSlice stalled|ageing|analysis
   - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
   - Pair detail lists with "for salesperson X" / "for ops Y" via filters.salespersonName / opsName
 - Date phrases like "last FY" / "this quarter" / "next quarter" / "this half year" (H1=Q1+Q2, H2=Q3+Q4) and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter or half year, prefer metric "profit_summary".
@@ -1157,6 +1171,20 @@ function applyStatusPaymentLeadSearchFilters(
       w.paymentStatus = upper as PaymentStatus;
     }
   }
+  const installRaw = intent.filters?.installationStatus?.trim();
+  if (installRaw) {
+    const upper = installRaw.toUpperCase().replace(/\s+/g, '_');
+    const installMap: Record<string, InstallationStatus> = {
+      PENDING: InstallationStatus.PENDING,
+      IN_PROGRESS: InstallationStatus.IN_PROGRESS,
+      COMPLETED: InstallationStatus.COMPLETED,
+      COMPLETE: InstallationStatus.COMPLETED,
+    };
+    const installStatus = installMap[upper];
+    if (installStatus) {
+      pushWhereAnd(w, { installations: { some: { status: installStatus } } });
+    }
+  }
   const search = intent.filters?.search?.trim();
   if (search) {
     pushWhereAnd(w, {
@@ -1185,15 +1213,25 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
   const bits: string[] = [];
   if (intent.filters?.projectStatus) {
     const st = intent.filters.projectStatus.trim();
-    bits.push(PROJECT_STATUS_LABELS[st as ProjectStatus] || st.replace(/_/g, ' ').toLowerCase());
+    bits.push(
+      `project status ${PROJECT_STATUS_LABELS[st as ProjectStatus] || st.replace(/_/g, ' ').toLowerCase()}`,
+    );
   }
   if (intent.filters?.paymentStatus) {
     const ps = intent.filters.paymentStatus.trim().toUpperCase().replace(/\s+/g, '_');
     if (ps === 'NOT_FULLY_PAID' || ps === 'PENDING,PARTIAL' || ps === 'PARTIAL,PENDING') {
-      bits.push('not fully paid');
+      bits.push('payment not fully paid');
     } else {
-      bits.push(PAYMENT_STATUS_LABELS[ps as PaymentStatus] || ps.replace(/_/g, ' ').toLowerCase());
+      bits.push(
+        `payment ${PAYMENT_STATUS_LABELS[ps as PaymentStatus] || ps.replace(/_/g, ' ').toLowerCase()}`,
+      );
     }
+  }
+  if (intent.filters?.installationStatus) {
+    const is = intent.filters.installationStatus.trim().toUpperCase().replace(/\s+/g, '_');
+    const installLabel =
+      is === 'IN_PROGRESS' ? 'in progress' : is.replace(/_/g, ' ').toLowerCase();
+    bits.push(`installation status ${installLabel}`);
   }
   if (intent.filters?.panelBrand) bits.push(`${intent.filters.panelBrand} panels`);
   if (intent.filters?.inverterBrand) bits.push(`${intent.filters.inverterBrand} inverters`);
@@ -1225,6 +1263,19 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
     else if (b != null) bits.push(`≤${b} kW`);
   }
   if (intent.filters?.salespersonName) bits.push(`salesperson ${intent.filters.salespersonName}`);
+  if (intent.filters?.opsName) bits.push(`ops ${intent.filters.opsName}`);
+  if (intent.filters?.city) bits.push(`in ${intent.filters.city}`);
+  if (intent.filters?.pendingSubsidy) bits.push('pending subsidy');
+  if (intent.filters?.hasDocuments) bits.push('with documents');
+  if (intent.filters?.missingDocuments) bits.push('missing documents');
+  if (intent.filters?.peBucket) bits.push(`PE ${intent.filters.peBucket}`);
+  if (intent.filters?.leadSource) bits.push(`lead ${intent.filters.leadSource}`);
+  if (intent.filters?.incentiveEligible) bits.push('incentive eligible');
+  if (intent.filters?.dataSenseNeedsReview) bits.push('needs review');
+  if (intent.filters?.lifecycleSpecsIncomplete) bits.push('incomplete specs');
+  if (intent.filters?.hubPlantLinked === true) bits.push('hub linked');
+  if (intent.filters?.hubPlantLinked === false) bits.push('hub unlinked');
+  if (intent.filters?.salespersonUnassigned) bits.push('unassigned salesperson');
   return bits.length ? bits.join(' · ') : 'your filters';
 }
 
@@ -2251,6 +2302,8 @@ async function executeMetric(
       return execRevenueBySalesperson(where, intent);
     case 'pipeline_by_stage':
       return execPipelineByStage(where);
+    case 'pipeline_health':
+      return execPipelineHealth(intent, where);
     case 'payment_status_breakdown':
       return execPaymentStatusBreakdown(where);
     case 'capacity_sold':
@@ -2552,34 +2605,72 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     }
   }
 
-  // List subsidy / non-subsidy projects — never leave as revenue mix or invented stage.
-  if (
-    dimensions.projectType &&
-    !dimensions.wantsProjectTypeMix &&
-    /\b(list|show|all|which)\b/.test(qLower) &&
-    /\bprojects?\b/.test(qLower) &&
-    !/\b(vs|versus|mix|breakdown|share|funnel|pending\s+subsidy|how\s+many|revenue)\b/.test(
-      qLower,
-    ) &&
-    metricAllowedForRole('projects_list_slice', input.role)
-  ) {
-    const filters = { ...(intent.filters || {}), projectType: dimensions.projectType };
-    if (
-      filters.projectStatus &&
-      !/\b(confirmed|proposal|under\s+installation|lead|completed|lost)\b/.test(qLower)
-    ) {
-      delete filters.projectStatus;
-    }
-    intent = normalizeIntent(
-      {
-        ...intent,
-        metric: 'projects_list_slice',
-        viz: 'table',
-        filters,
-        insightHints: intent.insightHints || `${dimensions.projectType} projects`,
-      },
-      input.role,
+  // List/show projects with any Projects-list filter — prefer the filtered project table.
+  {
+    const listProjects =
+      /\b(list|show|all|which|find)\b/.test(qLower) &&
+      /\bprojects?\b/.test(qLower) &&
+      !/\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|workload|analys[ei]s)\b/.test(
+        qLower,
+      );
+    const hasListFilter = Boolean(
+      intent.filters?.projectType ||
+        intent.filters?.customerType ||
+        intent.filters?.projectServiceType ||
+        intent.filters?.panelType ||
+        intent.filters?.systemType ||
+        intent.filters?.roofType ||
+        intent.filters?.city ||
+        intent.filters?.salespersonName ||
+        intent.filters?.opsName ||
+        intent.filters?.projectStatus ||
+        intent.filters?.paymentStatus ||
+        intent.filters?.installationStatus ||
+        intent.filters?.availingLoan ||
+        intent.filters?.pendingSubsidy ||
+        intent.filters?.hasDocuments ||
+        intent.filters?.missingDocuments ||
+        intent.filters?.peBucket ||
+        intent.filters?.panelBrand ||
+        intent.filters?.inverterBrand ||
+        intent.filters?.financingBank ||
+        intent.filters?.leadSource ||
+        intent.filters?.capacityMin != null ||
+        intent.filters?.capacityMax != null ||
+        intent.filters?.salespersonUnassigned ||
+        intent.filters?.leadSourceIsNull ||
+        intent.filters?.incentiveEligible ||
+        intent.filters?.lifecycleSpecsIncomplete ||
+        intent.filters?.dataSenseNeedsReview ||
+        intent.filters?.hubPlantLinked != null ||
+        intent.filters?.statusIndicator ||
+        intent.filters?.projectStage,
     );
+    if (
+      listProjects &&
+      hasListFilter &&
+      metricAllowedForRole('projects_list_slice', input.role)
+    ) {
+      const filters = { ...(intent.filters || {}) };
+      if (
+        filters.projectStatus &&
+        !/\b(confirmed|proposal|under\s+installation|lead|completed|lost|site\s+survey)\b/.test(
+          qLower,
+        )
+      ) {
+        delete filters.projectStatus;
+      }
+      intent = normalizeIntent(
+        {
+          ...intent,
+          metric: 'projects_list_slice',
+          viz: 'table',
+          filters,
+          insightHints: intent.insightHints || 'filtered projects',
+        },
+        input.role,
+      );
+    }
   }
 
   // Cohort revenue hint when chip says revenue of Deye…

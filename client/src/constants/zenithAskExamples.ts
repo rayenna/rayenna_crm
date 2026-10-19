@@ -6,37 +6,37 @@
 export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Which lead sources drove the most revenue?',
-    'Show my pipeline by stage',
-    'Show me the total support tickets raised',
+    'Show my stalled pipeline',
+    'Give me a pipeline analysis',
     'Summarise my lost deals by reason',
     'How many of my projects used Adani panels?',
   ],
   MANAGEMENT: [
+    'Show all apartments in customer master',
+    'List residential projects in Kochi',
+    'List pending subsidy projects',
     'Subsidy vs non-subsidy revenue',
-    'DCR vs Non-DCR profitability',
-    'Revenue by city',
-    'Profit summary this quarter',
     'Customer details for Ramesh',
   ],
   ADMIN: [
-    'Profit summary this quarter',
-    'Compare bank profitability',
+    'Show all commercial in customer master',
+    'List projects availing loan',
+    'List projects needing review',
     'Ops workload',
     'Customer details for Ramesh',
-    'Outstanding by salesperson',
   ],
   OPERATIONS: [
-    'Ops workload',
-    'Projects with feasibility pending',
+    'List under installation projects not fully paid',
+    'List projects with installation pending',
+    'Show installation status breakdown',
     'Projects missing documents',
-    'Payment timeline',
     'AMCs expiring',
   ],
   FINANCE: [
-    'Profit summary this quarter',
-    'Payment timeline',
-    'Compare bank profitability',
-    'Payment mode mix',
+    'List fully paid projects',
+    'List payment pending projects',
+    'Payment status breakdown',
+    'Pending subsidy',
     'Unpaid invoices',
   ],
 }
@@ -47,9 +47,9 @@ export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
  */
 export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
   SALES: [
+    'Show my ageing pipeline',
+    'Show my pipeline by stage',
     'Payment status breakdown',
-    'Panel brand mix',
-    'Support tickets by salesperson',
     'Capacity sold',
   ],
   MANAGEMENT: [

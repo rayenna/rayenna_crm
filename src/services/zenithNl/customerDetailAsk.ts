@@ -159,38 +159,70 @@ export function matchCustomerDetailLookupIntent(
   };
 }
 
-/** List customers by city / type / salesperson. */
+/** Phrases that look like “in X” but are not city names (e.g. “in customer master”). */
+function isNonCityPlacePhrase(raw: string): boolean {
+  const t = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  return /^(customer\s+master|the\s+customer\s+master|master|crm|the\s+crm|database|system|rayenna|customers?|accounts?|the\s+system)$/.test(
+    t,
+  );
+}
+
+function parseCustomerListType(q: string): 'RESIDENTIAL' | 'APARTMENT' | 'COMMERCIAL' | undefined {
+  if (/\bapartments?\b/.test(q) || /\bhousing\s+societ/.test(q)) return 'APARTMENT';
+  if (/\bcommercial\b/.test(q) || /\bbusiness(?:es)?\b/.test(q)) return 'COMMERCIAL';
+  if (/\bresidential\b/.test(q) || /\bresidents?\b/.test(q)) return 'RESIDENTIAL';
+  return undefined;
+}
+
+/** List customers by city / type / salesperson / Customer Master. */
 export function matchCustomersListIntent(
   question: string,
   role: UserRole,
 ): ZenithNlIntent | null {
   if (!metricAllowedForRole('customers_list_slice', role)) return null;
   const q = norm(question);
-  if (!/\bcustomers?\b/.test(q)) return null;
   if (!/\b(list|show|all|which|find)\b/.test(q)) return null;
   // Avoid stealing project lists and customer detail.
-  if (/\bprojects?\b/.test(q)) return null;
+  if (/\bprojects?\b/.test(q) && !/\bcustomers?\b/.test(q)) return null;
   if (/\b(customer\s+details?|customer\s+record|open\s+customer)\b/.test(q)) return null;
 
-  const filters: ZenithNlIntent['filters'] = {};
-  const city = q.match(/\b(?:in|from|at)\s+([a-z][a-z\s]{1,30}?)$/) ||
-    q.match(/\bcity\s+([a-z][a-z\s]{1,30})$/);
-  if (city?.[1]) filters.city = city[1].trim();
+  const customerType = parseCustomerListType(q);
+  const mentionsCustomers = /\bcustomers?\b/.test(q);
+  const mentionsCustomerMaster = /\bcustomer\s+master\b/.test(q);
+  // “show all apartments” / “list commercial in customer master” need a customer-list signal.
+  if (!customerType && !mentionsCustomers && !mentionsCustomerMaster) return null;
 
-  if (/\bresidential\b/.test(q)) filters.customerType = 'RESIDENTIAL';
-  else if (/\bapartment\b/.test(q)) filters.customerType = 'APARTMENT';
-  else if (/\bcommercial\b/.test(q)) filters.customerType = 'COMMERCIAL';
+  const filters: ZenithNlIntent['filters'] = {};
+  if (customerType) filters.customerType = customerType;
+
+  // Prefer “in Kochi” / “city Kochi”; ignore “in customer master”.
+  const cityMatch =
+    q.match(/\bcity\s+([a-z][a-z\s-]{1,30})$/) ||
+    q.match(/\b(?:in|from|at)\s+([a-z][a-z\s-]{1,40})$/);
+  const cityRaw = cityMatch?.[1]?.trim();
+  if (cityRaw && !isNonCityPlacePhrase(cityRaw)) {
+    filters.city = cityRaw;
+  }
 
   const sales = q.match(
     /\b(?:for|by)\s+sales(?:person|man)?\s+([a-z][a-z.\s]{1,40}?)(?:\?|$)/i,
   );
   if (sales?.[1]) filters.salespersonName = sales[1].trim();
 
+  const hints =
+    customerType === 'APARTMENT'
+      ? 'apartment customers'
+      : customerType === 'COMMERCIAL'
+        ? 'commercial customers'
+        : customerType === 'RESIDENTIAL'
+          ? 'residential customers'
+          : 'customers list';
+
   return {
     metric: 'customers_list_slice',
     viz: 'table',
     filters: Object.keys(filters).length ? filters : undefined,
-    insightHints: 'customers list',
+    insightHints: hints,
   };
 }
 
@@ -382,8 +414,11 @@ export async function execCustomersListSlice(
   const city = intent.filters?.city?.trim();
   if (city) where.city = { contains: city, mode: 'insensitive' };
   const ct = intent.filters?.customerType?.trim().toUpperCase();
-  if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
+  if (ct === 'APARTMENT' || ct === 'COMMERCIAL') {
     where.customerType = ct;
+  } else if (ct === 'RESIDENTIAL') {
+    // Customer Master treats blank type as Residential.
+    where.OR = [{ customerType: CustomerType.RESIDENTIAL }, { customerType: null }];
   }
   if (opts?.salespersonId) where.salespersonId = opts.salespersonId;
 
@@ -410,21 +445,48 @@ export async function execCustomersListSlice(
     take: TABLE_CAP,
   });
 
-  const bits = [
-    city ? `in ${city}` : null,
-    ct ? ct.toLowerCase() : null,
-    intent.filters?.salespersonName ? `for ${intent.filters.salespersonName}` : null,
-  ]
+  const typeLabel =
+    ct === 'APARTMENT'
+      ? 'apartment'
+      : ct === 'COMMERCIAL'
+        ? 'commercial'
+        : ct === 'RESIDENTIAL'
+          ? 'residential'
+          : null;
+
+  const totalMatching = await prisma.customer.count({ where });
+
+  const customersHref = (() => {
+    const params = new URLSearchParams();
+    // Customer Master list reads `type` from the URL.
+    if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
+      params.set('type', ct);
+    }
+    if (city) params.set('q', city);
+    const qs = params.toString();
+    return qs ? `/customers?${qs}` : '/customers';
+  })();
+
+  const noun = typeLabel
+    ? `${typeLabel} customer${totalMatching === 1 ? '' : 's'}`
+    : `customer${totalMatching === 1 ? '' : 's'}`;
+  const scopeBits = [city ? `in ${city}` : null, intent.filters?.salespersonName ? `for ${intent.filters.salespersonName}` : null]
     .filter(Boolean)
     .join(' · ');
 
   return {
     insight: customers.length
-      ? `Customers${bits ? ` ${bits}` : ''}: ${customers.length} shown (up to ${TABLE_CAP}).`
-      : `No customers match${bits ? ` ${bits}` : ''}.`,
+      ? `${totalMatching} ${noun}${scopeBits ? ` ${scopeBits}` : ''} in Customer Master${
+          customers.length < totalMatching
+            ? ` · showing ${customers.length} (up to ${TABLE_CAP})`
+            : ` · all shown`
+        }. Click a row to open the record.`
+      : `No ${typeLabel ? `${typeLabel} customers` : 'customers'}${scopeBits ? ` ${scopeBits}` : ''} match in Customer Master.`,
     viz: {
       kind: 'table',
-      title: 'Customers',
+      title: typeLabel
+        ? `${typeLabel.charAt(0).toUpperCase()}${typeLabel.slice(1)} customers`
+        : 'Customers',
       columns: [
         { key: 'customerId', label: 'ID' },
         { key: 'name', label: 'Name' },
@@ -445,9 +507,7 @@ export async function execCustomersListSlice(
         href: `/customers/${c.id}`,
       })),
     },
-    projectsHref: city
-      ? `/customers?q=${encodeURIComponent(city)}`
-      : '/customers',
+    projectsHref: customersHref,
   };
 }
 

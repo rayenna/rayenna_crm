@@ -28,6 +28,8 @@ export function buildZenithNlProjectsHref(
     search?: string;
     dataSenseNeedsReview?: boolean;
     pendingSubsidy?: boolean;
+    hasDocuments?: boolean;
+    lifecycleSpecsIncomplete?: boolean;
     complianceGap?: ComplianceGapId;
     availingLoan?: boolean;
     notAvailingLoan?: boolean;
@@ -62,6 +64,8 @@ export function buildZenithNlProjectsHref(
   if (params.zenithSlice) search.append('zenithSlice', params.zenithSlice);
   if (params.dataSenseNeedsReview) search.append('dataSenseNeedsReview', 'true');
   if (params.pendingSubsidy) search.append('pendingSubsidy', 'true');
+  if (params.hasDocuments) search.append('hasDocuments', 'true');
+  if (params.lifecycleSpecsIncomplete) search.append('lifecycleSpecsIncomplete', 'true');
   if (params.complianceGap) search.append('complianceGap', params.complianceGap);
   if (params.availingLoan) search.append('availingLoan', 'true');
   if (params.notAvailingLoan) search.append('notAvailingLoan', 'true');
@@ -117,6 +121,19 @@ function entityHrefParams(intent: ZenithNlIntent): {
   salespersonName?: string;
   opsName?: string;
   city?: string;
+  pendingSubsidy?: boolean;
+  hasDocuments?: boolean;
+  lifecycleSpecsIncomplete?: boolean;
+  dataSenseNeedsReview?: boolean;
+  panelType?: string;
+  systemType?: string;
+  roofType?: string;
+  statusIndicator?: string;
+  projectStage?: string;
+  capacityMin?: number;
+  capacityMax?: number;
+  hubPlantLinked?: boolean;
+  installationStatus?: string;
 } {
   const panelBrand = intent.filters?.panelBrand?.trim() || undefined;
   const inverterBrand = intent.filters?.inverterBrand?.trim() || undefined;
@@ -136,6 +153,19 @@ function entityHrefParams(intent: ZenithNlIntent): {
     salespersonName?: string;
     opsName?: string;
     city?: string;
+    pendingSubsidy?: boolean;
+    hasDocuments?: boolean;
+    lifecycleSpecsIncomplete?: boolean;
+    dataSenseNeedsReview?: boolean;
+    panelType?: string;
+    systemType?: string;
+    roofType?: string;
+    statusIndicator?: string;
+    projectStage?: string;
+    capacityMin?: number;
+    capacityMax?: number;
+    hubPlantLinked?: boolean;
+    installationStatus?: string;
   } = {};
   if (panelBrand) out.panelBrand = panelBrand;
   if (inverterBrand) out.inverterBrand = inverterBrand;
@@ -154,6 +184,26 @@ function entityHrefParams(intent: ZenithNlIntent): {
   }
   if (intent.filters?.opsName?.trim()) out.opsName = intent.filters.opsName.trim();
   if (intent.filters?.city?.trim()) out.city = intent.filters.city.trim();
+  if (intent.filters?.pendingSubsidy) out.pendingSubsidy = true;
+  if (intent.filters?.hasDocuments) out.hasDocuments = true;
+  if (intent.filters?.lifecycleSpecsIncomplete) out.lifecycleSpecsIncomplete = true;
+  if (intent.filters?.dataSenseNeedsReview) out.dataSenseNeedsReview = true;
+  if (intent.filters?.panelType?.trim()) out.panelType = intent.filters.panelType.trim();
+  if (intent.filters?.systemType?.trim()) out.systemType = intent.filters.systemType.trim();
+  if (intent.filters?.roofType?.trim()) out.roofType = intent.filters.roofType.trim();
+  if (intent.filters?.statusIndicator?.trim()) {
+    out.statusIndicator = intent.filters.statusIndicator.trim();
+  }
+  if (intent.filters?.projectStage?.trim()) out.projectStage = intent.filters.projectStage.trim();
+  if (typeof intent.filters?.capacityMin === 'number') out.capacityMin = intent.filters.capacityMin;
+  if (typeof intent.filters?.capacityMax === 'number') out.capacityMax = intent.filters.capacityMax;
+  if (intent.filters?.hubPlantLinked != null) out.hubPlantLinked = intent.filters.hubPlantLinked;
+  if (intent.filters?.installationStatus?.trim()) {
+    const raw = intent.filters.installationStatus.trim().toUpperCase().replace(/\s+/g, '_');
+    if (raw === 'PENDING' || raw === 'IN_PROGRESS' || raw === 'COMPLETED') {
+      out.installationStatus = raw;
+    }
+  }
   return out;
 }
 
@@ -229,6 +279,18 @@ export function projectsHrefForIntent(
         dateFilter,
       );
     }
+    case 'pipeline_health':
+      return buildZenithNlProjectsHref(
+        {
+          status: [
+            ...PIPELINE_STATUSES,
+            'UNDER_INSTALLATION',
+            'SUBMITTED_FOR_SUBSIDY',
+          ],
+          zenithSlice: 'pipeline',
+        },
+        dateFilter,
+      );
     case 'payment_status_breakdown': {
       const ps = intent.filters?.paymentStatus?.trim();
       if (ps) {
@@ -323,10 +385,23 @@ export function projectsHrefForIntent(
     }
     case 'pending_subsidy':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
-    case 'customer_detail_lookup':
-    case 'customers_list_slice': {
+    case 'customer_detail_lookup': {
       const search = intent.filters?.search?.trim() || intent.filters?.city?.trim();
       return search ? `/customers?q=${encodeURIComponent(search)}` : '/customers';
+    }
+    case 'customers_list_slice': {
+      const params = new URLSearchParams();
+      const ct = intent.filters?.customerType?.trim().toUpperCase();
+      // Customer Master URL uses `type` (see applyCustomerListStateToSearchParams).
+      if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
+        params.set('type', ct);
+      }
+      const city = intent.filters?.city?.trim();
+      if (city) params.set('q', city);
+      const search = intent.filters?.search?.trim();
+      if (search && !city) params.set('q', search);
+      const qs = params.toString();
+      return qs ? `/customers?${qs}` : '/customers';
     }
     case 'project_detail_lookup': {
       const search = intent.filters?.search?.trim();

@@ -38,6 +38,13 @@ export function parseZenithNlPriorFilters(raw: unknown): PriorFilters | undefine
   if (projectStatus) out.projectStatus = projectStatus;
   const paymentStatus = asTrimmedString(f.paymentStatus);
   if (paymentStatus) out.paymentStatus = paymentStatus;
+  const installationStatus = asTrimmedString(f.installationStatus);
+  if (installationStatus) {
+    const upper = installationStatus.toUpperCase().replace(/\s+/g, '_');
+    if (upper === 'PENDING' || upper === 'IN_PROGRESS' || upper === 'COMPLETED') {
+      out.installationStatus = upper;
+    }
+  }
   const peBucket = asTrimmedString(f.peBucket);
   if (peBucket && PE_BUCKETS.has(peBucket)) {
     out.peBucket = peBucket as PriorFilters['peBucket'];

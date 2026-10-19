@@ -22,7 +22,7 @@ You drive **execution** after the sale is confirmed: installations, compliance d
 
 **Filters:** financial year and month apply across cards and charts.
 
-Use **Zenith ✦** for installation-focused panels and chart drill-downs. [Zenith help](/help/zenith#zenith-command-center)
+Use **Zenith ✦** for installation-focused panels and chart drill-downs. Ops Zenith does **not** include **Weighted open pipeline** or **Pipeline ageing** (sales-style open-pipeline views). [Zenith help](/help/zenith#zenith-command-center) · [Operations playbook](/help/zenith#operations-playbook-installation-pulse)
 
 ## Which projects you see
 
@@ -41,7 +41,7 @@ If you need an early-stage project, ask the assigned **Sales** user or **Managem
 
 ### Find work
 
-1. **Projects** → filter by status (Confirmed, Installation, etc.).
+1. **Projects** → filter by status (Confirmed, Installation, etc.), or use **Quick views** (**Needs review**, **Availing loan**, **Pending subsidy**, **Outstanding payment** — not **Open pipeline**).
 2. Or start from dashboard **Pending installation** / subsidy widgets.
 3. Search by customer name or project number.
 

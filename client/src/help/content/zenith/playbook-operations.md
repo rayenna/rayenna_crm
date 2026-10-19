@@ -11,9 +11,14 @@ How **Operations** users use Zenith for execution visibility, lifecycle quality,
 ## 2. KPIs and Ops tab (~4 min)
 
 1. Review execution-oriented **KPI strip** tiles ([KPI strip](#kpi-strip-and-year-on-year)).
-2. Scan **Weighted open pipeline** for Confirmed+ value / kW in the role accent ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
 2. On mobile, use **KPIs** then **Ops** tabs ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
 3. Open **Your Focus** → **Installation pulse** — tables of jobs under installation, subsidy pending, or similar ops cohorts ([Installation pulse](#installation-pulse-operations)).
+
+**Not shown for Operations** (sales / early-pipeline views):
+
+- **Weighted open pipeline** tile next to Today's plan
+- **Pipeline ageing** chart under **Pipeline signals** (Commissioning timeline and Outstanding by salesperson remain)
+- **Open pipeline** Quick view on the **Projects** list (early stages Lead / Site Survey / Proposal are outside Ops scope)
 
 ## 3. Work the queue (~8 min)
 
@@ -31,11 +36,12 @@ Use **Deal Health** badges in tables to prioritise at-risk installs ([Deal Healt
 1. **Deal flow funnel** — click **Under Installation**, **Completed**, or subsidy-related stages ([Deal flow funnel](#deal-flow-funnel-zenith)).
 2. Scroll the **Operations (Zenith)** section when present for role-specific summary cards ([Operations](#operations-zenith)).
 
-## 5. Brand charts (~3 min)
+## 5. Charts (~3 min)
 
 1. Open the **Charts** tab on mobile or scroll to **Explore the landscape**.
-2. **Projects by panel brand** and **Projects by inverter brand** — hover for counts, capacity sum, and cost hints; click for **Quick Actions** ([Panel and inverter brand charts](#panel-and-inverter-brand-charts-zenith)).
-3. Fix missing brands in **Projects** so future analytics cohorts stay complete.
+2. **Pipeline signals** — **Commissioning timeline** and **Outstanding by salesperson** (no **Pipeline ageing** for Ops) ([Explore charts](#explore-charts-and-drill-down-zenith)).
+3. **Projects by panel brand** and **Projects by inverter brand** — hover for counts, capacity sum, and cost hints; click for **Quick Actions** ([Panel and inverter brand charts](#panel-and-inverter-brand-charts-zenith)).
+4. Fix missing brands in **Projects** so future analytics cohorts stay complete.
 
 ## Checklist
 

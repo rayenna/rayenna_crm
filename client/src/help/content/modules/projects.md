@@ -111,7 +111,7 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 
 1. Navigate to **Projects** from the top menu (or click a dashboard Quick Access tile).
 2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
-3. **Quick views** (one tap) — presets such as **Open pipeline**, **Needs review**, **Availing loan**, **Pending subsidy**, and **Outstanding payment**. They replace the matching pipeline flags; use **Clear All** to reset.
+3. **Quick views** (one tap) — presets such as **Open pipeline**, **Needs review**, **Availing loan**, **Pending subsidy**, and **Outstanding payment**. They replace the matching pipeline flags; use **Clear All** to reset. **Operations** does **not** see **Open pipeline** (Lead / Site Survey / Proposal are outside the Ops project list).
 4. Apply **filters** (click **Show Filters** to expand):
    - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
    - **Pipeline** (status): Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.

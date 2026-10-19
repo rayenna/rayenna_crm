@@ -161,7 +161,7 @@ The main projects page displays all projects you have access to.
 
 - **Filter Section**:
   - **Search** bar and **Show Filters** / **Hide Filters** / **Clear All**
-  - **Quick views** — one-tap presets (Open pipeline, Needs review, Availing loan, Pending subsidy, Outstanding payment)
+  - **Quick views** — one-tap presets (Open pipeline, Needs review, Availing loan, Pending subsidy, Outstanding payment). **Operations** does **not** see **Open pipeline** (early stages are outside Ops project scope).
   - **Active filter chips** under search (remove one filter at a time; admins see export hint)
   - Expanded grid: FY/quarter/month, status, **Segment**, **Customer type**, service type, payment, tickets, pipeline, PE bucket, **Pending subsidy**, etc.
 

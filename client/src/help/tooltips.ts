@@ -192,7 +192,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.revenue-forecast',
     title: 'Weighted open pipeline (Zenith)',
     content:
-      'Headline = order value × stage % (Confirmed+ at 100%; not cash). When filters use expected commissioning only. Band All/Early/Committed; tabs split the total; rows and +N more open deals.',
+      'Headline = order value × stage % (Confirmed+ at 100%; not cash). When filters use expected commissioning only. Band All/Early/Committed; tabs split the total; rows and +N more open deals. Shown for Sales, Management, Admin, and Finance — not on Operations Zenith.',
   },
   'zenith.revenue-profit-fy-chart': {
     key: 'zenith.revenue-profit-fy-chart',

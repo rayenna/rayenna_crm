@@ -16,7 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus, ProjectType, UserRole } from '../../types'
+import { ProjectStatus, ProjectType } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
 import {
@@ -53,17 +53,13 @@ import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
-import {
-  buildForecastOpenDealsProjectsHref,
-  buildZenithDrawerListProjectsHref,
-} from '../../utils/zenithListProjectsDeepLink'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
-import ForecastKPI from './ForecastKPI'
 import ZenithPriorityRibbon from './ZenithPriorityRibbon'
 import { ZenithKpiSkeletonGrid } from './ZenithOverviewSkeletons'
 import { buildOperationsPriorityItems } from '../../utils/zenithPriorityItems'
@@ -433,37 +429,21 @@ export default function ZenithOperationsBody({
           />
           </div>
 
-          {/* Row 2: Today's plan | Weighted open pipeline */}
-          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 min-[744px]:grid-cols-2 min-[744px]:items-stretch min-[744px]:gap-4">
-            <div
-              id="zenith-todays-plan"
-              className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28"
-            >
-              <DashboardPlanAttentionRow
-                stackAttention
-                fillColumnHeight
-                showLifecycleReminder
-                explorerProjects={explorerProjects}
-                tileParams={{
-                  selectedFYs: dateFilter.selectedFYs,
-                  selectedQuarters: dateFilter.selectedQuarters,
-                  selectedMonths: dateFilter.selectedMonths,
-                }}
-              />
-            </div>
-            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col [&_.zenith-forecast-root]:h-full">
-              <ForecastKPI
-                compactSidebar
-                role={UserRole.OPERATIONS}
-                projects={explorerProjects}
-                onOpenForecastList={(args) =>
-                  onOpenDrawerListMode({
-                    ...args,
-                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
-                  })
-                }
-              />
-            </div>
+          {/* Today's plan — Weighted open pipeline omitted (not relevant for Operations) */}
+          <div
+            id="zenith-todays-plan"
+            className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28"
+          >
+            <DashboardPlanAttentionRow
+              stackAttention
+              showLifecycleReminder
+              explorerProjects={explorerProjects}
+              tileParams={{
+                selectedFYs: dateFilter.selectedFYs,
+                selectedQuarters: dateFilter.selectedQuarters,
+                selectedMonths: dateFilter.selectedMonths,
+              }}
+            />
           </div>
         </>
       ) : (
@@ -499,6 +479,7 @@ export default function ZenithOperationsBody({
           chartHeight={exploreChartHeight}
           chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}
           onDrill={(dimension, value) => drill(dimension, value)}
+          showPipelineAgeing={false}
         />
         <div className="space-y-3">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">

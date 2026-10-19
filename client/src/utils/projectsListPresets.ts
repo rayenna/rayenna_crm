@@ -20,6 +20,8 @@ export const PROJECTS_PRESET_DEFS: ProjectsPresetDef[] = [
     id: 'open-pipeline',
     label: 'Open pipeline',
     description: 'Active deals before completion (excludes Completed and Lost)',
+    // Operations cannot use early pipeline stages (Lead / Survey / Proposal).
+    roles: [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN, UserRole.FINANCE],
   },
   {
     id: 'needs-review',

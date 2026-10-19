@@ -133,6 +133,8 @@ function getInitialFiltersFromUrl(): {
   lifecycleSpecsIncomplete: boolean
   dataSenseNeedsReview: boolean
   dataSenseRule: DataSenseRuleId | null
+  customerType: string[]
+  hasDocuments: boolean
   askDrill: ReturnType<typeof parseAskProjectsDrillParams>
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
@@ -140,6 +142,8 @@ function getInitialFiltersFromUrl(): {
   const paymentStatus = p.getAll('paymentStatus')
   const availingLoan = p.get('availingLoan') === 'true'
   const pendingSubsidy = p.get('pendingSubsidy') === 'true'
+  const hasDocuments = p.get('hasDocuments') === 'true'
+  const customerType = p.getAll('customerType')
   const complianceGap = parseComplianceGap(p.get('complianceGap'))
   const fy = p.getAll('fy')
   const quarter = p.getAll('quarter')
@@ -192,6 +196,8 @@ function getInitialFiltersFromUrl(): {
     p.get('lifecycleSpecsIncomplete') === 'true' ||
     dataSenseNeedsReview ||
     dataSenseRule != null ||
+    hasDocuments ||
+    customerType.length > 0 ||
     askProjectsDrillHasAny(askDrill)
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
@@ -199,6 +205,10 @@ function getInitialFiltersFromUrl(): {
   const validType = type.filter((t) => Object.values(ProjectType).includes(t as ProjectType))
   const validLead = leadSource.filter((ls) => Object.values(LeadSource).includes(ls as LeadSource))
   const validFinancingBank = financingBank.map((b) => b.trim()).filter(Boolean)
+  const validCustomerTypes = CUSTOMER_TYPE_OPTIONS.map((o) => o.value)
+  const validCustomerType = customerType.filter((ct) =>
+    validCustomerTypes.includes(ct as CustomerType),
+  )
   return {
     status: validStatus,
     paymentStatus: validPayment,
@@ -210,6 +220,8 @@ function getInitialFiltersFromUrl(): {
     selectedMonths: month,
     peBucket,
     type: validType,
+    customerType: validCustomerType,
+    hasDocuments,
     leadSource: leadSourceIsNull ? [] : validLead,
     salespersonId: salespersonUnassigned ? [] : salespersonId.map((id) => id.trim()).filter(Boolean),
     financingBank: validFinancingBank,
@@ -627,13 +639,13 @@ const Projects = () => {
   const [filters, setFilters] = useState(() => ({
     status: (urlInit?.status ?? []) as string[],
     type: (urlInit?.type ?? []) as string[],
-    customerType: [] as string[],
+    customerType: (urlInit?.customerType ?? []) as string[],
     projectServiceType: [] as string[],
     salespersonId: (urlInit?.salespersonId ?? []) as string[],
     leadSource: (urlInit?.leadSource ?? []) as string[],
     supportTicketStatus: [] as string[],
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
-    hasDocuments: false,
+    hasDocuments: urlInit?.hasDocuments ?? false,
     availingLoan: urlInit?.availingLoan ?? false,
     pendingSubsidy: urlInit?.pendingSubsidy ?? false,
     complianceGap: (urlInit?.complianceGap ?? null) as ComplianceGapId | null,
@@ -668,6 +680,7 @@ const Projects = () => {
     const paymentStatusFromUrl = searchParams.getAll('paymentStatus')
     const availingLoanFromUrl = searchParams.get('availingLoan') === 'true'
     const pendingSubsidyFromUrl = searchParams.get('pendingSubsidy') === 'true'
+    const hasDocumentsFromUrl = searchParams.get('hasDocuments') === 'true'
     const complianceGapFromUrl = parseComplianceGap(searchParams.get('complianceGap'))
     const fyFromUrl = searchParams.getAll('fy')
     const quarterFromUrl = searchParams.getAll('quarter')
@@ -730,6 +743,7 @@ const Projects = () => {
       dataSenseNeedsReviewFromUrl ||
       dataSenseRuleFromUrl != null ||
       complianceGapFromUrl != null ||
+      hasDocumentsFromUrl ||
       hasAskDrillParams
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
@@ -761,6 +775,7 @@ const Projects = () => {
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
         ...(pendingSubsidyFromUrl && { pendingSubsidy: true }),
+        ...(hasDocumentsFromUrl && { hasDocuments: true }),
         ...(complianceGapFromUrl != null && {
           complianceGap: complianceGapFromUrl,
           type: ['SUBSIDY'] as string[],
@@ -1119,6 +1134,7 @@ const Projects = () => {
     searchParams.get('dataSenseNeedsReview') === 'true' ||
     Boolean(parseDataSenseRule(searchParams.get('dataSenseRule'))) ||
     Boolean(parseComplianceGap(searchParams.get('complianceGap'))) ||
+    searchParams.get('hasDocuments') === 'true' ||
     askProjectsDrillHasAny(parseAskProjectsDrillParams(searchParams))
 
   const listQueryInput = {

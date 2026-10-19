@@ -1,6 +1,31 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, X } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  Banknote,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  CircleHelp,
+  ClipboardList,
+  CornerDownLeft,
+  FileText,
+  FolderKanban,
+  Hammer,
+  LayoutDashboard,
+  Lightbulb,
+  ListFilter,
+  MessageSquarePlus,
+  Plus,
+  Search,
+  Sparkles,
+  Sun,
+  Ticket,
+  UserPlus,
+  Users,
+  Wrench,
+  X,
+} from 'lucide-react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDayContext } from '../contexts/MyDayContext'
@@ -17,11 +42,65 @@ type Props = {
   onClose: () => void
 }
 
+const GROUP_META: Record<
+  CommandPaletteGroup,
+  { blurb: string; Icon: LucideIcon; tone: 'create' | 'goto' | 'search' | 'lists' }
+> = {
+  Create: { blurb: 'Start something new', Icon: Plus, tone: 'create' },
+  'Go to': { blurb: 'Jump to a page', Icon: LayoutDashboard, tone: 'goto' },
+  Search: { blurb: 'Find people & projects', Icon: Search, tone: 'search' },
+  Lists: { blurb: 'Open a filtered queue', Icon: ListFilter, tone: 'lists' },
+}
+
+const ITEM_ICONS: Record<string, LucideIcon> = {
+  new_customer: UserPlus,
+  new_project: FolderKanban,
+  create_support_ticket: MessageSquarePlus,
+  new_user: Users,
+  open_my_day: Sun,
+  open_my_day_journal: BookOpen,
+  show_tip: Lightbulb,
+  overdue_support_tickets: Ticket,
+  open_support_tickets: ClipboardList,
+  solar_hub_tickets: Wrench,
+  proposal_projects: FileText,
+  confirmed_projects: CheckCircle2,
+  under_installation: Hammer,
+  pending_subsidy: Banknote,
+  availing_loan: Building2,
+  ask_zenith: Sparkles,
+  ask_zenith_query: Sparkles,
+  go_zenith: Sparkles,
+  go_dashboard: LayoutDashboard,
+  go_customers: Users,
+  go_projects: FolderKanban,
+  go_support_tickets: Ticket,
+  go_help: CircleHelp,
+  go_users: Users,
+  go_solar_hub: Sun,
+  search_customers: Users,
+  search_projects: FolderKanban,
+  pe_not_started: FileText,
+  pe_draft: FileText,
+  pe_ready: CheckCircle2,
+  data_sense_review: CircleHelp,
+}
+
+function iconForItem(item: CommandPaletteItem): LucideIcon {
+  if (ITEM_ICONS[item.id]) return ITEM_ICONS[item.id]!
+  return GROUP_META[item.group].Icon
+}
+
 function groupItems(items: CommandPaletteItem[]): { group: CommandPaletteGroup; items: CommandPaletteItem[] }[] {
   return COMMAND_PALETTE_GROUP_ORDER.map((group) => ({
     group,
     items: items.filter((i) => i.group === group),
   })).filter((g) => g.items.length > 0)
+}
+
+function isApplePlatform(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent)
 }
 
 export default function CommandPalette({ open, onClose }: Props) {
@@ -34,6 +113,7 @@ export default function CommandPalette({ open, onClose }: Props) {
   const listRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const modKey = isApplePlatform() ? '⌘' : 'Ctrl'
 
   const items = useMemo(
     () => filterCommandPaletteItems(user?.role, query),
@@ -41,6 +121,7 @@ export default function CommandPalette({ open, onClose }: Props) {
   )
   const grouped = useMemo(() => groupItems(items), [items])
   const flat = items
+  const activeItem = flat[activeIndex] ?? null
 
   useEffect(() => {
     if (!open) return
@@ -118,20 +199,48 @@ export default function CommandPalette({ open, onClose }: Props) {
         onClick={onClose}
       />
       <div className="command-palette__panel">
+        <header className="command-palette__hero">
+          <div className="command-palette__hero-copy">
+            <p className="command-palette__eyebrow">
+              <Sparkles className="command-palette__eyebrow-icon" aria-hidden />
+              Command palette
+            </p>
+            <h2 className="command-palette__title">Where do you want to go?</h2>
+          </div>
+          <span className="command-palette__shortcut-pill" title="Keyboard shortcut">
+            <kbd>{modKey}</kbd>
+            <kbd>K</kbd>
+          </span>
+        </header>
+
         <div className="command-palette__search">
           <Search className="command-palette__search-icon" aria-hidden />
           <input
             ref={inputRef}
             type="search"
             className="command-palette__input"
-            placeholder="Search commands, customers, projects…"
+            placeholder="Type a command, customer, or project…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
+            aria-controls="command-palette-list"
           />
+          {query ? (
+            <button
+              type="button"
+              className="command-palette__clear"
+              onClick={() => {
+                setQuery('')
+                inputRef.current?.focus()
+              }}
+              aria-label="Clear search"
+            >
+              Clear
+            </button>
+          ) : null}
           <button
             type="button"
             className="command-palette__close"
@@ -142,41 +251,100 @@ export default function CommandPalette({ open, onClose }: Props) {
           </button>
         </div>
 
-        <div ref={listRef} className="command-palette__list" role="listbox">
+        <div
+          id="command-palette-list"
+          ref={listRef}
+          className="command-palette__list"
+          role="listbox"
+          aria-label="Commands"
+        >
           {flat.length === 0 ? (
-            <p className="command-palette__empty">No matching commands</p>
+            <div className="command-palette__empty">
+              <Search className="command-palette__empty-icon" aria-hidden />
+              <p className="command-palette__empty-title">No matches for “{query.trim()}”</p>
+              <p className="command-palette__empty-hint">
+                Try a name, “new customer”, “Zenith”, or a ticket queue.
+              </p>
+            </div>
           ) : (
-            grouped.map(({ group, items: groupItems }) => (
-              <div key={group} className="command-palette__group">
-                <p className="command-palette__group-label">{group}</p>
-                {groupItems.map((item) => {
-                  const index = runningIndex++
-                  const active = index === activeIndex
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      data-palette-index={index}
-                      className={`command-palette__item${active ? ' is-active' : ''}`}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onClick={() => run(item)}
-                    >
-                      <span className="command-palette__item-label">{item.label}</span>
-                      <span className="command-palette__item-hint">↵</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))
+            grouped.map(({ group, items: groupItems }) => {
+              const meta = GROUP_META[group]
+              const GroupIcon = meta.Icon
+              return (
+                <section
+                  key={group}
+                  className={`command-palette__group command-palette__group--${meta.tone}`}
+                  aria-label={group}
+                >
+                  <div className="command-palette__group-head">
+                    <span className="command-palette__group-badge" aria-hidden>
+                      <GroupIcon size={12} strokeWidth={2.4} />
+                    </span>
+                    <div className="command-palette__group-text">
+                      <p className="command-palette__group-label">{group}</p>
+                      <p className="command-palette__group-blurb">{meta.blurb}</p>
+                    </div>
+                    <span className="command-palette__group-count">{groupItems.length}</span>
+                  </div>
+                  {groupItems.map((item) => {
+                    const index = runningIndex++
+                    const active = index === activeIndex
+                    const ItemIcon = iconForItem(item)
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        data-palette-index={index}
+                        className={`command-palette__item${active ? ' is-active' : ''}`}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onClick={() => run(item)}
+                      >
+                        <span className="command-palette__item-icon" aria-hidden>
+                          <ItemIcon size={16} strokeWidth={2.1} />
+                        </span>
+                        <span className="command-palette__item-main">
+                          <span className="command-palette__item-label">{item.label}</span>
+                          {item.dynamic ? (
+                            <span className="command-palette__item-sub">Uses your search text</span>
+                          ) : null}
+                        </span>
+                        <span className="command-palette__item-hint" aria-hidden>
+                          <CornerDownLeft size={13} strokeWidth={2.2} />
+                        </span>
+                      </button>
+                    )
+                  })}
+                </section>
+              )
+            })
           )}
         </div>
 
-        <p className="command-palette__footer">
-          <kbd>↑</kbd>
-          <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close
-        </p>
+        <footer className="command-palette__footer">
+          <div className="command-palette__footer-keys">
+            <span>
+              <kbd>↑</kbd>
+              <kbd>↓</kbd>
+              <span className="command-palette__footer-label">move</span>
+            </span>
+            <span>
+              <kbd>Enter</kbd>
+              <span className="command-palette__footer-label">open</span>
+            </span>
+            <span>
+              <kbd>Esc</kbd>
+              <span className="command-palette__footer-label">close</span>
+            </span>
+          </div>
+          {activeItem ? (
+            <p className="command-palette__footer-active" title={activeItem.label}>
+              <span className="command-palette__footer-active-label">Selected</span>
+              <span className="command-palette__footer-active-value">{activeItem.label}</span>
+            </p>
+          ) : null}
+        </footer>
       </div>
     </div>
   )

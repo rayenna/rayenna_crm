@@ -2785,8 +2785,14 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
             select: { confirmationDate: true, lastPaymentDate: true },
             take: 120,
           }),
+          // Same as Projects `pendingSubsidy=true` / Zenith KPI: Subsidy segment + Completed
+          // (awaiting subsidy credit — not COMPLETED_SUBSIDY_CREDITED).
           prisma.project.count({
-            where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+            where: {
+              ...where,
+              type: ProjectType.SUBSIDY,
+              projectStatus: ProjectStatus.COMPLETED,
+            },
           }),
           prisma.project.findMany({
             where: {
@@ -2816,7 +2822,11 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
             _sum: { totalAmountReceived: true },
           }),
           prisma.project.aggregate({
-            where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+            where: {
+              ...where,
+              type: ProjectType.SUBSIDY,
+              projectStatus: ProjectStatus.COMPLETED,
+            },
             _sum: { projectCost: true },
           }),
           prisma.project.findMany({

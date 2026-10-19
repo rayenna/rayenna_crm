@@ -56,7 +56,9 @@
 
 **FY revenue vs FY profit** — For **Revenue & profit by FY**, revenue and profit use **different** list metrics (order value vs gross profit); see [Revenue and profit by FY chart](#revenue-and-profit-by-fy-chart-zenith). The **Open in Projects →** link carries the matching filter so the **Projects** total lines up with the chart point you clicked.
 
-**Weighted open pipeline “+N more”** — Floating list of **remaining categories** on the current tab; choose one to open that slice’s open deals (respects band + When timing).
+**Weighted open pipeline “+N more”** — Floating list of **remaining categories** on the current tab; choose one to open that slice’s open deals (respects band + When timing). Shown only where the **Weighted open pipeline** tile appears (**Sales**, **Management**, **Admin**, **Finance** — **not Operations**). See [Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile).
+
+**Pipeline signals** — Near the top of **Explore the landscape**: **Pipeline ageing** (days in current stage), **Commissioning timeline**, and **Outstanding by salesperson**. **Operations** omits **Pipeline ageing** (early open-pipeline stage ageing is out of Ops scope); Ops still sees commissioning and outstanding charts.
 
 **Customer Type donuts** — Chart titles are **Revenue by Customer Type** and **Pipeline by Customer Type**. Slices use the linked customer’s **customer type** from **Customer Master** (**Residential**, **Apartment**, **Commercial**) — **not** the project **Segment** filter (Subsidy / Non-Subsidy). **Revenue** and **Pipeline** are separate charts with different cohort rules (revenue-eligible vs open pipeline). Click a slice → drawer list; **Open in Projects →** applies the **Customer type** filter on the Projects page (same as classic Dashboard donuts).
 

@@ -422,18 +422,33 @@ export async function execProjectDetailLookup(
     roof: Boolean(project.roofLayout),
   };
 
+  const installStatuses = Array.isArray(project.installations)
+    ? project.installations
+        .map((i: { status?: string | null }) => i.status)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0)
+        .map((s) => s.replace(/_/g, ' '))
+    : [];
+  const installStatusLabel =
+    installStatuses.length > 0
+      ? [...new Set(installStatuses)].join(', ')
+      : 'No installation record';
+
   const rows: { field: string; value: string }[] = [
     { field: 'SL No', value: String(project.slNo) },
     { field: 'Customer', value: customerLabel(project.customer) },
-    { field: 'Status', value: project.projectStatus.replace(/_/g, ' ') },
+    { field: 'Project status', value: project.projectStatus.replace(/_/g, ' ') },
+    { field: 'Installation status', value: installStatusLabel },
+    {
+      field: 'Payment status',
+      value: project.paymentStatus?.replace(/_/g, ' ') || '—',
+    },
     { field: 'Type', value: project.type === ProjectType.SUBSIDY ? 'Subsidy' : 'Non-Subsidy' },
-    { field: 'Stage', value: project.projectStage?.replace(/_/g, ' ') || '—' },
+    { field: 'Lifecycle stage', value: project.projectStage?.replace(/_/g, ' ') || '—' },
     { field: 'Order value', value: money(project.projectCost) },
     { field: 'Expected profit', value: money(project.expectedProfit) },
     { field: 'Gross profit', value: money(project.grossProfit) },
     { field: 'Final profit', value: money(project.finalProfit) },
     { field: 'Margin %', value: project.profitability != null ? `${project.profitability}%` : '—' },
-    { field: 'Payment status', value: project.paymentStatus },
     { field: 'Collected', value: money(project.totalAmountReceived) },
     { field: 'Balance', value: money(project.balanceAmount) },
     {
@@ -540,7 +555,7 @@ export async function execProjectDetailLookup(
   }
 
   return {
-    insight: `SL ${project.slNo} · ${customerLabel(project.customer)} · ${project.projectStatus.replace(/_/g, ' ')} · balance ${money(project.balanceAmount)}.`,
+    insight: `SL ${project.slNo} · ${customerLabel(project.customer)} · project ${project.projectStatus.replace(/_/g, ' ')} · install ${installStatusLabel} · payment ${(project.paymentStatus || '—').replace(/_/g, ' ')} · balance ${money(project.balanceAmount)}.`,
     viz: {
       kind: 'table',
       title: `Project SL ${project.slNo}`,
@@ -559,7 +574,11 @@ function projectDetailInclude(role: UserRole) {
     customer: { select: { customerName: true, firstName: true, lastName: true } },
     documents: { select: { category: true }, take: 40 },
     siteSurveys: { select: { id: true }, take: 3 },
-    installations: { select: { id: true }, take: 3 },
+    installations: {
+      select: { id: true, status: true },
+      orderBy: { updatedAt: 'desc' as const },
+      take: 5,
+    },
     invoices: { select: { id: true }, take: 3 },
     proposals: { select: { id: true }, take: 3 },
     peCostingSheets: { select: { id: true }, take: 1 },

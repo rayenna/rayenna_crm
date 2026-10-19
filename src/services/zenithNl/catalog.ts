@@ -5,6 +5,7 @@ export const ZENITH_NL_METRICS = [
   'revenue_by_lead_source',
   'revenue_by_salesperson',
   'pipeline_by_stage',
+  'pipeline_health',
   'payment_status_breakdown',
   'capacity_sold',
   'outstanding_balance',
@@ -62,8 +63,12 @@ export type ZenithNlIntent = {
   viz: ZenithNlVizKind;
   chartType?: ZenithNlChartType;
   filters?: {
+    /** CRM project stage: LEAD, SITE_SURVEY, PROPOSAL, CONFIRMED, UNDER_INSTALLATION, … */
     projectStatus?: string;
+    /** Customer payment: PENDING | PARTIAL | FULLY_PAID | NOT_FULLY_PAID */
     paymentStatus?: string;
+    /** Installation record status: PENDING | IN_PROGRESS | COMPLETED (not project stage) */
+    installationStatus?: string;
     peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
     leadSource?: string;
     search?: string;
@@ -110,6 +115,10 @@ export type ZenithNlIntent = {
     leadSourceIsNull?: boolean;
     incentiveEligible?: boolean;
     hasDocuments?: boolean;
+    /** Projects with no uploaded documents */
+    missingDocuments?: boolean;
+    /** Completed subsidy projects (Projects list pendingSubsidy) */
+    pendingSubsidy?: boolean;
     lifecycleSpecsIncomplete?: boolean;
     dataSenseNeedsReview?: boolean;
     /** Any of solis/deye/sunways station ids set */
@@ -296,6 +305,13 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'pipeline_by_stage',
     description: 'Open pipeline deal counts and value by project status / stage',
+    defaultViz: 'table',
+    roles: [...EXEC, UserRole.OPERATIONS],
+  },
+  {
+    metric: 'pipeline_health',
+    description:
+      'Stalled / ageing pipeline and Deal Health analysis (quiet deals, over-SLA stages, weakest scores)',
     defaultViz: 'table',
     roles: [...EXEC, UserRole.OPERATIONS],
   },
@@ -521,7 +537,8 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'installation_model_status',
-    description: 'Installation table records by status (Pending / In progress / Completed)',
+    description:
+      'Installation Status (Installation records): Pending / In progress / Completed — not Project Status',
     defaultViz: 'chart',
     defaultChartType: 'pie',
     roles: INSTALL_ROLES,
@@ -561,7 +578,7 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'install_by_status',
     description:
-      'Installation / late-stage project counts by status (Ops + Management/Admin; Sales own book)',
+      'Late-stage Project Status counts (Under installation → Subsidy credited) — not Installation Status field',
     defaultViz: 'table',
     roles: INSTALL_ROLES,
   },
@@ -631,8 +648,8 @@ export function isZenithNlMetric(v: unknown): v is ZenithNlMetric {
 export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Which lead sources drove the most revenue?',
-    'Show my pipeline by stage',
-    'Show me the total support tickets raised',
+    'Show my stalled pipeline',
+    'Give me a pipeline analysis',
     'Summarise my lost deals by reason',
     'How many of my projects used Adani panels?',
   ],
@@ -721,9 +738,14 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Pipeline by stage',
     ],
     pipeline_by_stage: [
-      'Show projects in Proposal',
+      'Show my stalled pipeline',
+      'Give me a pipeline analysis',
       'Payment status breakdown',
-      'What is Proposal Engine status?',
+    ],
+    pipeline_health: [
+      'Show my pipeline by stage',
+      'Show my ageing pipeline',
+      'Summarise my lost deals by reason',
     ],
     payment_status_breakdown: [
       'Show projects with outstanding balance',

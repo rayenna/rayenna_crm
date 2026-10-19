@@ -29,6 +29,27 @@ describe('matchCustomersListIntent', () => {
     expect(intent?.filters?.city).toMatch(/kochi/i);
   });
 
+  it('lists apartments in customer master (not as city)', () => {
+    const intent = matchCustomersListIntent(
+      'show all apartments in customer master',
+      UserRole.ADMIN,
+    );
+    expect(intent?.metric).toBe('customers_list_slice');
+    expect(intent?.filters?.customerType).toBe('APARTMENT');
+    expect(intent?.filters?.city).toBeUndefined();
+  });
+
+  it('lists residential and commercial types', () => {
+    expect(
+      matchCustomersListIntent('Show all residential in customer master', UserRole.SALES)
+        ?.filters?.customerType,
+    ).toBe('RESIDENTIAL');
+    expect(
+      matchCustomersListIntent('List commercial customers', UserRole.MANAGEMENT)?.filters
+        ?.customerType,
+    ).toBe('COMMERCIAL');
+  });
+
   it('does not steal project lists', () => {
     expect(
       matchCustomersListIntent('List all subsidy projects', UserRole.ADMIN),

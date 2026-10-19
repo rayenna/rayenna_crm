@@ -60,6 +60,7 @@ export function enrichInsight(
     metric === 'hub_plant_link_summary' ||
     metric === 'project_detail_lookup' ||
     metric === 'projects_ops_detail' ||
+    metric === 'pipeline_health' ||
     metric === 'customer_detail_lookup' ||
     metric === 'customers_list_slice'
   ) {

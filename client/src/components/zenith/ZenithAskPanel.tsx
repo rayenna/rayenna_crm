@@ -92,84 +92,94 @@ function AskViz({
 }) {
   if (viz.kind === 'table') {
     const anyClickable = viz.rows.some((r) => typeof r.href === 'string' && r.href.length > 0)
+    const colCount = viz.columns.length
+    // Equal-width cols keep the frozen header table aligned with the scrolling body table.
+    const colPct = colCount > 0 ? `${(100 / colCount).toFixed(4)}%` : undefined
     return (
       <ChartPanel title={viz.title} contentClassName="min-h-0">
-        <div className="overflow-x-auto max-h-[280px] overflow-y-auto">
-          {anyClickable ? (
-            <p className="mb-1.5 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
-              Click a row to open matching projects
-            </p>
-          ) : null}
-          <table className="w-full text-left text-xs sm:text-sm border-collapse">
-            <thead className="sticky top-0 bg-[color:var(--bg-card)]">
-              <tr className="border-b border-[color:var(--border-default)] text-[color:var(--text-muted)]">
+        {anyClickable ? (
+          <p className="mb-1.5 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
+            Click a row to open matching projects
+          </p>
+        ) : null}
+        {/*
+          Header lives OUTSIDE the scroll body — position:sticky on <th> fails here
+          (overflow-x + Ask panel stacking). Frozen header + scrolling tbody is reliable.
+        */}
+        <div className="zenith-ask-table">
+          <div className="zenith-ask-table__head">
+            <table className="zenith-ask-table__grid">
+              <colgroup>
                 {viz.columns.map((c) => (
-                  <th key={c.key} className="py-2 pr-3 font-semibold whitespace-nowrap">
-                    {c.label}
-                  </th>
+                  <col key={c.key} style={colPct ? { width: colPct } : undefined} />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {viz.rows.length === 0 ? (
+              </colgroup>
+              <thead>
                 <tr>
-                  <td
-                    colSpan={viz.columns.length}
-                    className="py-6 text-center text-[color:var(--text-muted)]"
-                  >
-                    No rows
-                  </td>
+                  {viz.columns.map((c) => (
+                    <th key={c.key}>{c.label}</th>
+                  ))}
                 </tr>
-              ) : (
-                viz.rows.map((row, i) => {
-                  const href = typeof row.href === 'string' ? row.href : ''
-                  const clickable = Boolean(href)
-                  return (
-                    <tr
-                      key={i}
-                      className={
-                        clickable
-                          ? 'border-b border-[color:var(--border-default)] text-[color:var(--text-primary)] cursor-pointer hover:bg-[color:var(--bg-elevated,rgba(255,255,255,0.04))] transition-colors'
-                          : 'border-b border-[color:var(--border-default)] text-[color:var(--text-primary)]'
-                      }
-                      onClick={
-                        clickable
-                          ? () => {
-                              onDrill?.(href)
-                            }
-                          : undefined
-                      }
-                      onKeyDown={
-                        clickable
-                          ? (e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
+              </thead>
+            </table>
+          </div>
+          <div className="zenith-ask-table__body">
+            <table className="zenith-ask-table__grid">
+              <colgroup>
+                {viz.columns.map((c) => (
+                  <col key={c.key} style={colPct ? { width: colPct } : undefined} />
+                ))}
+              </colgroup>
+              <tbody>
+                {viz.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={colCount} className="zenith-ask-table__empty">
+                      No rows
+                    </td>
+                  </tr>
+                ) : (
+                  viz.rows.map((row, i) => {
+                    const href = typeof row.href === 'string' ? row.href : ''
+                    const clickable = Boolean(href)
+                    return (
+                      <tr
+                        key={i}
+                        className={clickable ? 'is-clickable' : undefined}
+                        onClick={
+                          clickable
+                            ? () => {
                                 onDrill?.(href)
                               }
-                            }
-                          : undefined
-                      }
-                      tabIndex={clickable ? 0 : undefined}
-                      role={clickable ? 'link' : undefined}
-                    >
-                      {viz.columns.map((c) => (
-                        <td
-                          key={c.key}
-                          className={
-                            clickable && c.key === 'count'
-                              ? 'py-2 pr-3 whitespace-nowrap font-semibold text-[color:var(--accent-gold)] underline-offset-2 hover:underline'
-                              : 'py-2 pr-3 whitespace-nowrap'
-                          }
-                        >
-                          {formatCell(row[c.key] ?? null)}
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                            : undefined
+                        }
+                        onKeyDown={
+                          clickable
+                            ? (e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  onDrill?.(href)
+                                }
+                              }
+                            : undefined
+                        }
+                        tabIndex={clickable ? 0 : undefined}
+                        role={clickable ? 'link' : undefined}
+                      >
+                        {viz.columns.map((c) => (
+                          <td
+                            key={c.key}
+                            className={clickable && c.key === 'count' ? 'is-drill' : undefined}
+                          >
+                            {formatCell(row[c.key] ?? null)}
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </ChartPanel>
     )
@@ -419,7 +429,9 @@ export default function ZenithAskPanel({
               >
                 {result.projectsHref.startsWith('/support-tickets')
                   ? 'Open Support Tickets →'
-                  : 'Open in Projects →'}
+                  : result.projectsHref.startsWith('/customers')
+                    ? 'Open Customer Master →'
+                    : 'Open in Projects →'}
               </Link>
             ) : null}
           </>
