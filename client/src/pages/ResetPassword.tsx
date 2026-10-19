@@ -141,7 +141,17 @@ const ResetPassword = () => {
         <div className="mt-2 rounded-2xl border border-[color:var(--border-card)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-modal)]/95 p-6 shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)]">
           <div className="mb-4">
             <p className="text-center text-sm text-[color:var(--text-secondary)]">
-              Reset password for: <span className="font-semibold text-[color:var(--text-primary)]">{tokenData.name}</span> ({tokenData.email})
+              Choose a new password for your Rayenna CRM account.
+              {tokenData?.expiresAt ? (
+                <>
+                  {' '}
+                  Link valid until{' '}
+                  <span className="font-semibold text-[color:var(--text-primary)]">
+                    {new Date(tokenData.expiresAt).toLocaleString()}
+                  </span>
+                  .
+                </>
+              ) : null}
             </p>
           </div>
 

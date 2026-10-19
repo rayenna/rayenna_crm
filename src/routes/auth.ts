@@ -5,11 +5,12 @@ import { body, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
-import { rateLimit } from '../middleware/rateLimit';
+import { rateLimit, sharedRateLimit } from '../middleware/rateLimit';
 import { logPasswordReset } from '../utils/passwordResetAudit';
 import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 import { PUBLIC_ERRORS, sendErrorResponse } from '../utils/publicApiError';
 import { signStaffJwt } from '../utils/staffJwt';
+import { hashPasswordResetToken } from '../utils/passwordResetToken';
 
 const router = express.Router();
 
@@ -47,10 +48,10 @@ function consumeSsoTicket(ticket: string): { userId: string } | null {
   return { userId: entry.userId };
 }
 
-// Login – rate limit by IP to reduce brute force
+// Login – shared rate limit by IP (Neon) across API instances
 router.post(
   '/login',
-  rateLimit(15, 15 * 60 * 1000), // 15 attempts per 15 minutes per IP
+  sharedRateLimit(15, 15 * 60 * 1000), // 15 attempts per 15 minutes per IP
   [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
@@ -335,30 +336,29 @@ router.post(
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Generate secure random token
+      // Generate secure random token; store only SHA-256 hash in DB
       const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenHash = hashPasswordResetToken(resetToken);
       const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
-      // Store token and expiry in database
       await prisma.user.update({
         where: { id: userId },
         data: {
-          resetToken,
+          resetToken: resetTokenHash,
           resetTokenExpiry,
         },
       });
 
-      // Audit log
       await logPasswordReset({
         userId: targetUser.id,
         userEmail: targetUser.email,
         action: 'reset_initiated',
         initiatedBy: req.user.id,
-        token: resetToken.substring(0, 8) + '...', // Log partial token for tracking
+        token: resetToken.substring(0, 8) + '...',
       });
       logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'password_reset_initiated', entityType: 'User', entityId: targetUser.id, summary: `Admin initiated reset for ${targetUser.email}`, req });
 
-      // Return reset token (admin can share this link with user)
+      // Return raw token once (admin shares link); DB keeps hash only
       res.json({
         message: 'Password reset token generated successfully',
         resetToken,
@@ -372,7 +372,7 @@ router.post(
   }
 );
 
-// Verify reset token validity
+// Verify reset token validity (no PII — avoids email enumeration via the link)
 router.get('/verify-reset-token/:token', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
@@ -383,15 +383,13 @@ router.get('/verify-reset-token/:token', async (req: Request, res: Response) => 
 
     const user = await prisma.user.findFirst({
       where: {
-        resetToken: token,
+        resetToken: hashPasswordResetToken(token),
         resetTokenExpiry: {
-          gt: new Date(), // Token must not be expired
+          gt: new Date(),
         },
       },
       select: {
         id: true,
-        email: true,
-        name: true,
         resetTokenExpiry: true,
       },
     });
@@ -402,8 +400,6 @@ router.get('/verify-reset-token/:token', async (req: Request, res: Response) => 
 
     res.json({
       valid: true,
-      email: user.email,
-      name: user.name,
       expiresAt: user.resetTokenExpiry,
     });
   } catch (error: unknown) {
@@ -412,10 +408,10 @@ router.get('/verify-reset-token/:token', async (req: Request, res: Response) => 
   }
 });
 
-// Reset password with token – rate limit by IP
+// Reset password with token – shared rate limit by IP
 router.post(
   '/reset-password',
-  rateLimit(5, 60 * 60 * 1000), // 5 attempts per hour per IP
+  sharedRateLimit(5, 60 * 60 * 1000), // 5 attempts per hour per IP
   [
     body('token').notEmpty().withMessage('Reset token is required'),
     body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
@@ -429,12 +425,11 @@ router.post(
 
       const { token, newPassword } = req.body;
 
-      // Find user with valid token
       const user = await prisma.user.findFirst({
         where: {
-          resetToken: token,
+          resetToken: hashPasswordResetToken(token),
           resetTokenExpiry: {
-            gt: new Date(), // Token must not be expired
+            gt: new Date(),
           },
         },
       });

@@ -6,6 +6,8 @@ export type ConsumerJwtPayload = {
   consumerId: string;
   username: string;
   role: typeof CONSUMER_JWT_ROLE;
+  /** Present on new tokens; missing treated as 0 for older Hub sessions. */
+  tokenVersion?: number;
 };
 
 export type ConsumerPublicUser = {

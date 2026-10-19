@@ -9,7 +9,7 @@ import {
   authenticateConsumer,
   rejectStaffTokenOnConsumerRoutes,
 } from '../middleware/consumerAuth';
-import { rateLimit } from '../middleware/rateLimit';
+import { sharedRateLimit } from '../middleware/rateLimit';
 import { logSecurityAudit } from '../utils/auditLogger';
 import {
   CONSUMER_JWT_ROLE,
@@ -29,16 +29,20 @@ import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
 
 const router = express.Router();
 
-const consumerLoginLimiter = rateLimit(10, 15 * 60 * 1000);
+const consumerLoginLimiter = sharedRateLimit(10, 15 * 60 * 1000);
 
-function signConsumerToken(consumerId: string, username: string): string {
+function signConsumerToken(
+  consumerId: string,
+  username: string,
+  tokenVersion: number,
+): string {
   const secret = getConsumerJwtSecret();
   if (!secret) {
     throw new Error('CONSUMER_JWT_SECRET is not set');
   }
   const expiresIn: string = process.env.CONSUMER_JWT_EXPIRES_IN || '7d';
   return (jwt.sign as (payload: object, secret: string, options: object) => string)(
-    { consumerId, username, role: CONSUMER_JWT_ROLE },
+    { consumerId, username, role: CONSUMER_JWT_ROLE, tokenVersion },
     secret,
     { expiresIn },
   );
@@ -102,7 +106,7 @@ router.post(
         updated = await awardFirstLoginPoints(consumer.id, consumer.points);
       }
 
-      const token = signConsumerToken(updated.id, updated.username);
+      const token = signConsumerToken(updated.id, updated.username, updated.tokenVersion);
       return res.json({
         token,
         user: toConsumerPublicUser(updated),
@@ -146,12 +150,18 @@ router.post(
       }
 
       const hashed = await bcrypt.hash(newPassword, 10);
-      await prisma.consumerUser.update({
+      const updated = await prisma.consumerUser.update({
         where: { id: consumer.id },
-        data: { password: hashed, mustChangePassword: false },
+        data: {
+          password: hashed,
+          mustChangePassword: false,
+          tokenVersion: { increment: 1 },
+        },
       });
 
-      return res.json({ ok: true });
+      // Issue a fresh token so the current session keeps working; other devices are revoked.
+      const token = signConsumerToken(updated.id, updated.username, updated.tokenVersion);
+      return res.json({ ok: true, token, user: toConsumerPublicUser(updated) });
     } catch (err) {
       console.error('Consumer change-password error:', err);
       return res.status(500).json({ error: 'Failed to change password' });

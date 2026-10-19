@@ -31,6 +31,13 @@ export async function authenticateConsumer(
 
     const consumer = await prisma.consumerUser.findUnique({
       where: { id: decoded.consumerId },
+      select: {
+        id: true,
+        username: true,
+        projectId: true,
+        isActive: true,
+        tokenVersion: true,
+      },
     });
 
     if (!consumer || !consumer.isActive) {
@@ -39,6 +46,11 @@ export async function authenticateConsumer(
 
     if (consumer.username !== decoded.username) {
       return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const tokenVersion = decoded.tokenVersion ?? 0;
+    if (tokenVersion !== consumer.tokenVersion) {
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 
     req.consumer = {

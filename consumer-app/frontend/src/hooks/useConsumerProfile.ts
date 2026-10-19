@@ -1,10 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import axios from '@/utils/axios'
+import axios, {
+  persistConsumerToken,
+  readRememberPreference,
+  setConsumerAuthToken,
+} from '@/utils/axios'
 import type {
   ChangePasswordInput,
   ConsumerNotification,
   ConsumerProfile,
 } from '@/types/profile'
+import type { ConsumerUser } from '@/types'
 
 export function useConsumerProfile() {
   return useQuery({
@@ -19,7 +24,17 @@ export function useConsumerProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (input: ChangePasswordInput) => {
-      await axios.post('/api/consumer/auth/change-password', input)
+      const { data } = await axios.post<{
+        ok: boolean
+        token?: string
+        user?: ConsumerUser
+      }>('/api/consumer/auth/change-password', input)
+      // Persist rotated JWT so this device stays signed in; other sessions are revoked.
+      if (data?.token) {
+        persistConsumerToken(data.token, readRememberPreference())
+        setConsumerAuthToken(data.token)
+      }
+      return data
     },
   })
 }

@@ -855,6 +855,16 @@ model UserAskHistory {
   @@map("user_ask_history")
 }
 
+/// Shared (Neon-backed) rate-limit counters for auth endpoints across API instances.
+model RateLimitBucket {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime @map("reset_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("rate_limit_buckets")
+}
+
 // Shareable proposal link (read-only view via /view/:token). No auth required to view; optional password, expiry.
 model PESharedProposal {
   id           String    @id @default(cuid())
@@ -922,6 +932,8 @@ model ConsumerUser {
   isActive        Boolean            @default(true)
   mustChangePassword Boolean         @default(false)
   profileComplete Boolean            @default(false)
+  /// Bumped on password change/reset so existing Hub JWTs are rejected.
+  tokenVersion    Int                @default(0)
   lastLoginAt     DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt

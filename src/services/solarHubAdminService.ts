@@ -366,7 +366,11 @@ export async function resetSolarHubPassword(
   const hashed = await bcrypt.hash(temporaryPassword, 10);
   await prisma.consumerUser.update({
     where: { id },
-    data: { password: hashed, mustChangePassword: true },
+    data: {
+      password: hashed,
+      mustChangePassword: true,
+      tokenVersion: { increment: 1 },
+    },
   });
 
   return { username: existing.username, temporaryPassword };
