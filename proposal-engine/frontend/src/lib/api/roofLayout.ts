@@ -153,3 +153,18 @@ export interface CrmProjectForAiLayout {
 export async function fetchCrmProjectForAiLayout(projectId: string): Promise<CrmProjectForAiLayout> {
   return apiFetch<CrmProjectForAiLayout>(`/api/projects/${projectId}`);
 }
+
+/** Short-lived signed disk URL for satellite/layout images (when not on Cloudinary). */
+export async function fetchSignedLayoutUrl(
+  projectId: string,
+  kind: 'satellite' | 'ai' | 'manual' | '3d' = 'satellite',
+): Promise<string | null> {
+  try {
+    const res = await apiFetch<{ url: string }>(
+      `/api/roof/signed-layout-url/${encodeURIComponent(projectId)}?kind=${encodeURIComponent(kind)}`,
+    );
+    return res?.url?.trim() || null;
+  } catch {
+    return null;
+  }
+}

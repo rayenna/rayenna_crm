@@ -9,7 +9,7 @@ import {
 import {
   absolutizeLayoutImageUrl,
   cacheBustImageUrl,
-  satelliteEditorUrlForProject,
+  resolveSatelliteEditorUrlForProject,
 } from './roofLayoutPageUtils';
 import { keepoutFromGeometryJson } from './keepoutGeometry';
 import { fingerprintParsedRoofLayoutGeometry } from './roofLayoutGeometryFingerprint';
@@ -143,9 +143,10 @@ export function parseManualRoofLayoutHydrate(
       manual.satellite_image_url && String(manual.satellite_image_url).trim()
         ? absolutizeLayoutImageUrl(String(manual.satellite_image_url))
         : null;
-    const satUrl = cacheBustImageUrl(
-      satFromSaved ?? absolutizeLayoutImageUrl(satelliteEditorUrlForProject(String(crmProjectId))),
-    );
+    const satFallback = satFromSaved
+      ? null
+      : await resolveSatelliteEditorUrlForProject(String(crmProjectId));
+    const satUrl = cacheBustImageUrl(satFromSaved ?? satFallback);
     if (!satUrl) return { kind: 'none' };
 
     return {

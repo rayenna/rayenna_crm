@@ -151,9 +151,22 @@ export function absolutizeLayoutImageUrl(raw: string | null | undefined): string
   return `${base}${s.startsWith('/') ? s : `/${s}`}`;
 }
 
+/**
+ * @deprecated Prefer `resolveSatelliteEditorUrlForProject` — unsigned disk URLs are auth-gated.
+ */
 export function satelliteEditorUrlForProject(projectId: string): string | null {
   const base = getApiBaseUrl() || '';
   return `${base}/api/generated_layouts/${projectId}_satellite.png`;
+}
+
+/** Authenticated signed satellite URL for PE editor fallbacks. */
+export async function resolveSatelliteEditorUrlForProject(
+  projectId: string,
+): Promise<string | null> {
+  const { fetchSignedLayoutUrl } = await import('../api/roofLayout');
+  const signed = await fetchSignedLayoutUrl(projectId, 'satellite');
+  if (signed) return absolutizeLayoutImageUrl(signed);
+  return null;
 }
 
 export type { RoofLayoutPanelRect, RoofLayoutPoint, RoofLayoutKeepoutRect } from './roofLayoutTypes';

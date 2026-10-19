@@ -10,7 +10,7 @@ import { getKeralaMapGpsWarning } from '../mapGpsValidation';
 import {
   absolutizeLayoutImageUrl,
   cacheBustImageUrl,
-  satelliteEditorUrlForProject,
+  resolveSatelliteEditorUrlForProject,
 } from './roofLayoutPageUtils';
 
 export type GenerateRoofLayoutInput = {
@@ -143,8 +143,10 @@ export async function runGenerateRoofLayoutDraft(
     const satFromApi = data?.satellite_image_url
       ? absolutizeLayoutImageUrl(String(data.satellite_image_url))
       : null;
-    const satBase =
-      satFromApi ?? absolutizeLayoutImageUrl(satelliteEditorUrlForProject(String(crmProjectId)));
+    const satFallback = satFromApi
+      ? null
+      : await resolveSatelliteEditorUrlForProject(String(crmProjectId));
+    const satBase = satFromApi ?? satFallback;
     const imageUrl = cacheBustImageUrl(satBase ?? aiUrl, cacheVersion);
     if (!imageUrl) {
       return { ok: false, error: 'Could not resolve satellite image URL after generate.' };
@@ -156,7 +158,8 @@ export async function runGenerateRoofLayoutDraft(
       latitude: latitude as number,
       longitude: longitude as number,
       bgImageUrl: imageUrl,
-      satelliteEditorBaseUrl: imageUrl.split('?')[0] ?? imageUrl,
+      // Keep query (exp/sig) — unsigned disk paths are auth-gated.
+      satelliteEditorBaseUrl: imageUrl,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to generate AI layout';
