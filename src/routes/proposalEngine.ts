@@ -17,6 +17,7 @@ import {
 } from '../utils/peProjectListQuery';
 import crypto from 'crypto';
 import { repairAndPersistRoofLayoutUrls } from '../services/roofLayoutImageStorage';
+import { signEphemeralLayoutUrl } from '../utils/signedGeneratedLayoutUrl';
 import {
   loadPeArtifactFlagSets,
   peArtifactFlagsForProject,
@@ -691,14 +692,20 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
 
     if (roofLayout) {
       const urls = await repairAndPersistRoofLayoutUrls(req.params.id);
+      const layoutRaw = urls.layoutImageUrl || roofLayout.layoutImageUrl;
+      const layout3dRaw = urls.layoutImage3dUrl ?? roofLayout.layoutImage3dUrl ?? undefined;
+      const satRaw = urls.satelliteImageUrl ?? roofLayout.satelliteImageUrl ?? undefined;
       roofLayoutPayload = {
         roof_area_m2: roofLayout.roofAreaM2,
         usable_area_m2: roofLayout.usableAreaM2,
         panel_count: roofLayout.panelCount,
-        layout_image_url: urls.layoutImageUrl || roofLayout.layoutImageUrl,
-        layout_image_3d_url: urls.layoutImage3dUrl ?? roofLayout.layoutImage3dUrl ?? undefined,
-        satellite_image_url:
-          urls.satelliteImageUrl ?? roofLayout.satelliteImageUrl ?? undefined,
+        layout_image_url: signEphemeralLayoutUrl(layoutRaw) || layoutRaw,
+        layout_image_3d_url: layout3dRaw
+          ? signEphemeralLayoutUrl(layout3dRaw) || layout3dRaw
+          : undefined,
+        satellite_image_url: satRaw
+          ? signEphemeralLayoutUrl(satRaw) || satRaw
+          : undefined,
         prefer_3d_for_proposal: roofLayout.prefer3dForProposal,
         savedAt: roofLayout.savedAt?.toISOString?.() ?? undefined,
       };

@@ -167,14 +167,12 @@ if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 
-// Static files for AI-generated layouts
+// Layout image files live on disk but are NOT public static — served only via
+// authenticated / HMAC-signed routes (see routes/generatedLayouts.ts).
 const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
 if (!fs.existsSync(generatedLayoutsDir)) {
   fs.mkdirSync(generatedLayoutsDir, { recursive: true });
 }
-app.use('/generated_layouts', express.static(generatedLayoutsDir));
-// Also expose under /api so Vite dev proxy can forward correctly from Proposal Engine frontend.
-app.use('/api/generated_layouts', express.static(generatedLayoutsDir));
 
 // API router: routes are mounted here after listen (see below)
 const apiRouter = express.Router();
@@ -327,6 +325,7 @@ const server = app.listen(PORT, async () => {
     const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
     const solarNewsRoutes       = (await import('./routes/solarNews')).default;
     const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
+    const generatedLayoutsRoutes = (await import('./routes/generatedLayouts')).default;
     const myDayRoutes          = (await import('./routes/myDay')).default;
     const consumerAuthRoutes   = (await import('./routes/consumerAuth')).default;
     const consumerEnergyRoutes = (await import('./routes/consumerEnergy')).default;
@@ -362,6 +361,9 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/proposal-engine', proposalEngineRoutes);
     apiRouter.use('/solar-news', solarNewsRoutes);
     apiRouter.use('/roof', roofLayoutRoutes);
+    apiRouter.use('/generated_layouts', generatedLayoutsRoutes);
+    // Legacy non-/api path used by some absolute links
+    app.use('/generated_layouts', generatedLayoutsRoutes);
     apiRouter.use('/my-day', myDayRoutes);
     apiRouter.use('/consumer/auth', consumerAuthRoutes);
     apiRouter.use('/consumer/energy', consumerEnergyRoutes);

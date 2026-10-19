@@ -26,9 +26,16 @@ import {
   uploadRoofLayoutFileToCloudinary,
   uploadSatelliteFileToCloudinary,
 } from '../services/roofLayoutImageStorage';
+import { signEphemeralLayoutUrl } from '../utils/signedGeneratedLayoutUrl';
 
 const router = Router();
 const useCloudinary = isCloudinaryConfigured();
+
+/** Sign ephemeral disk URLs for <img src>; leave Cloudinary/https unchanged. */
+function clientLayoutUrl(url: string | null | undefined): string | undefined {
+  if (url == null || !String(url).trim()) return undefined;
+  return signEphemeralLayoutUrl(String(url)) || String(url);
+}
 
 if (useCloudinary) {
   configureCloudinaryIfNeeded();
@@ -102,8 +109,18 @@ function manualLayoutJsonResponse(
   geomFromFile: ParsedRoofLayoutGeometry | null,
 ) {
   const legacy = geomFromFile ? legacyCoordinatesFromGeometry(geomFromFile) : null;
+  const layout =
+    typeof parsed.layout_image_url === 'string'
+      ? clientLayoutUrl(parsed.layout_image_url) || parsed.layout_image_url
+      : parsed.layout_image_url;
+  const sat =
+    typeof parsed.satellite_image_url === 'string'
+      ? clientLayoutUrl(parsed.satellite_image_url) || parsed.satellite_image_url
+      : parsed.satellite_image_url;
   return {
     ...parsed,
+    ...(layout != null ? { layout_image_url: layout } : {}),
+    ...(sat != null ? { satellite_image_url: sat } : {}),
     source: parsed.source ?? 'MANUAL',
     ...(geomFromFile && legacy
       ? {
@@ -199,8 +216,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       roof_area_m2: result.roofAreaM2,
       usable_area_m2: result.usableAreaM2,
       panel_count: result.panelCount,
-      layout_image_url: layoutImageUrl,
-      satellite_image_url: satelliteImageUrl,
+      layout_image_url: clientLayoutUrl(layoutImageUrl) || layoutImageUrl,
+      satellite_image_url: clientLayoutUrl(satelliteImageUrl) || satelliteImageUrl,
       resolved_latitude: Number(latitude),
       resolved_longitude: Number(longitude),
       roof_polygon_coordinates: result.roofPolygonCoords,
@@ -320,8 +337,10 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     });
 
     return res.json({
-      layout_image_url: layoutImageUrl,
-      ...(satelliteImageUrl ? { satellite_image_url: satelliteImageUrl } : {}),
+      layout_image_url: clientLayoutUrl(layoutImageUrl) || layoutImageUrl,
+      ...(satelliteImageUrl
+        ? { satellite_image_url: clientLayoutUrl(satelliteImageUrl) || satelliteImageUrl }
+        : {}),
       ...(parsedGeometry ? { geometry: parsedGeometry } : {}),
     });
   } catch (err) {
@@ -405,7 +424,7 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
     });
 
     return res.json({
-      layout_image_3d_url: layout3dUrl,
+      layout_image_3d_url: clientLayoutUrl(layout3dUrl) || layout3dUrl,
       prefer_3d_for_proposal: prefer ? true : existing.prefer3dForProposal,
     });
   } catch (err) {
@@ -466,15 +485,15 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         await ensureSatelliteOnDiskFromCloudinary(projectId);
       }
 
+      const sat =
+        urls.satelliteImageUrl ?? `/api/generated_layouts/${projectId}_satellite.png`;
       return res.json({
         roof_area_m2: record.roofAreaM2,
         usable_area_m2: record.usableAreaM2,
         panel_count: record.panelCount,
-        layout_image_url: urls.layoutImageUrl,
-        layout_image_3d_url: urls.layoutImage3dUrl ?? undefined,
-        satellite_image_url:
-          urls.satelliteImageUrl ??
-          `/api/generated_layouts/${projectId}_satellite.png`,
+        layout_image_url: clientLayoutUrl(urls.layoutImageUrl) || urls.layoutImageUrl,
+        layout_image_3d_url: clientLayoutUrl(urls.layoutImage3dUrl) || urls.layoutImage3dUrl || undefined,
+        satellite_image_url: clientLayoutUrl(sat) || sat,
         prefer_3d_for_proposal: record.prefer3dForProposal,
         savedAt: record.savedAt.toISOString(),
         projectId: record.projectId,
@@ -534,8 +553,10 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         roof_area_m2: roof,
         usable_area_m2: usable,
         panel_count: panels,
-        layout_image_url: layoutImageUrl,
-        ...(satelliteImageUrl ? { satellite_image_url: satelliteImageUrl } : {}),
+        layout_image_url: clientLayoutUrl(layoutImageUrl) || layoutImageUrl,
+        ...(satelliteImageUrl
+          ? { satellite_image_url: clientLayoutUrl(satelliteImageUrl) || satelliteImageUrl }
+          : {}),
         savedAt: new Date().toISOString(),
         projectId,
         source: 'MANUAL',
@@ -569,6 +590,44 @@ router.delete('/layout/:projectId', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Failed to delete roof layout:', err);
     return res.status(500).json({ error: 'Failed to delete roof layout' });
+  }
+});
+
+/**
+ * Return a short-lived signed URL for an ephemeral disk layout image
+ * (PE editor fallback when no Cloudinary URL is stored).
+ */
+router.get('/signed-layout-url/:projectId', authenticate, async (req, res) => {
+  const projectId = String(req.params.projectId || '').trim();
+  const kindRaw = String(req.query.kind || 'satellite').toLowerCase();
+  const kindMap: Record<string, string> = {
+    satellite: 'satellite.png',
+    ai: 'ai_layout.png',
+    ai_layout: 'ai_layout.png',
+    manual: 'manual_layout.png',
+    manual_layout: 'manual_layout.png',
+    '3d': '3d_layout.png',
+    '3d_layout': '3d_layout.png',
+  };
+  const fileSuffix = kindMap[kindRaw];
+  if (!projectId || !fileSuffix) {
+    return res.status(400).json({ error: 'projectId and kind=satellite|ai|manual|3d required' });
+  }
+
+  try {
+    const readAccess = await ensureProjectReadAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!readAccess.ok) return res.status(readAccess.status).json({ error: 'Access denied' });
+
+    const relative = `/api/generated_layouts/${projectId}_${fileSuffix}`;
+    const signed = clientLayoutUrl(relative) || relative;
+    return res.json({ url: signed });
+  } catch (err) {
+    console.error('Failed to sign layout URL:', err);
+    return res.status(500).json({ error: 'Failed to sign layout URL' });
   }
 });
 

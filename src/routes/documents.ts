@@ -11,6 +11,10 @@ import { logSecurityAudit } from '../utils/auditLogger';
 import { v2 as cloudinary } from 'cloudinary';
 import { requireProjectAccess } from '../utils/staffAccess';
 import { sendErrorResponse } from '../utils/publicApiError';
+import {
+  signDocumentDownloadTicket,
+  verifyDocumentDownloadTicket,
+} from '../utils/signedDocumentDownload';
 
 const router = express.Router();
 
@@ -47,6 +51,20 @@ if (useCloudinary) {
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+/** Resolve a stored local path only if it stays under uploadsDir. */
+function resolveSafeUploadPath(storedPath: string): string | null {
+  const absUploads = path.resolve(uploadsDir);
+  if (path.isAbsolute(storedPath)) {
+    const resolved = path.resolve(storedPath);
+    if (!resolved.startsWith(absUploads + path.sep) && resolved !== absUploads) return null;
+    return resolved;
+  }
+  if (storedPath.includes('..')) return null;
+  const resolved = path.resolve(absUploads, storedPath);
+  if (!resolved.startsWith(absUploads + path.sep) && resolved !== absUploads) return null;
+  return resolved;
 }
 
 /** Build Cloudinary delivery URL via Cloudinary SDK (no manual string concatenation). */
@@ -436,11 +454,8 @@ router.delete(
           // Continue with database deletion even if Cloudinary deletion fails
         }
       } else {
-        // Local storage - delete from filesystem
-        const filePath = path.isAbsolute(document.filePath) 
-          ? document.filePath 
-          : path.join(uploadsDir, document.filePath);
-        if (fs.existsSync(filePath)) {
+        const filePath = resolveSafeUploadPath(document.filePath);
+        if (filePath && fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
@@ -477,15 +492,28 @@ router.delete(
   }
 );
 
-// View/Download document (admin, management, sales, operations, finance, or uploader)
+// View/Download document — Authorization header, or short-lived HMAC ticket (not JWT in query).
 router.get(
   '/:id/download',
-  // Allow JWT to be passed via query string (`?token=...`) for cases where
-  // the browser cannot set Authorization headers (e.g., window.open).
-  (req: Request, res: Response, next: NextFunction) => {
-    const token = (req.query.token as string | undefined)?.trim();
-    if (token && !req.headers.authorization) {
-      req.headers.authorization = `Bearer ${token}`;
+  async (req: Request, res: Response, next: NextFunction) => {
+    const exp = typeof req.query.exp === 'string' ? req.query.exp : '';
+    const sig = typeof req.query.sig === 'string' ? req.query.sig : '';
+    const uid = typeof req.query.uid === 'string' ? req.query.uid : '';
+    const isDownload = req.query.download === 'true';
+    if (exp && sig && uid && verifyDocumentDownloadTicket(req.params.id, uid, isDownload, exp, sig)) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: uid },
+          select: { id: true, email: true, role: true, isActive: true },
+        });
+        if (!user || !user.isActive) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+        req.user = { id: user.id, email: user.email, role: user.role };
+        return next();
+      } catch {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
     }
     return authenticate(req, res, next);
   },
@@ -504,38 +532,7 @@ router.get(
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Check if user has permission to view/download the document
-      // Allow: ADMIN, MANAGEMENT, SALES (only their projects), OPERATIONS, FINANCE, or the uploader
-      const isAdmin = req.user?.role === UserRole.ADMIN;
-      const isManagement = req.user?.role === UserRole.MANAGEMENT;
-      const isSales = req.user?.role === UserRole.SALES;
-      const isOperations = req.user?.role === UserRole.OPERATIONS;
-      const isFinance = req.user?.role === UserRole.FINANCE;
-      const isUploader = document.uploadedById === req.user?.id;
-
-      // For Sales users, check if they have access to the project
-      let salesHasAccess = false;
-      if (isSales) {
-        const project = await prisma.project.findUnique({
-          where: { id: document.projectId },
-          select: { salespersonId: true },
-        });
-        salesHasAccess = project?.salespersonId === req.user?.id;
-      }
-
-      if (
-        !isAdmin &&
-        !isManagement &&
-        !(isSales && salesHasAccess) &&
-        !isOperations &&
-        !isFinance &&
-        !isUploader
-      ) {
-        return res.status(403).json({
-          error:
-            'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.',
-        });
-      }
+      if (!(await requireProjectAccess(req, res, document.projectId))) return;
 
       const isDownload = req.query.download === 'true';
 
@@ -621,8 +618,9 @@ router.get(
             'Content-Disposition',
             `attachment; filename="${encodeURIComponent(document.fileName)}"`
           );
-          if (axiosResponse.headers['content-length']) {
-            res.setHeader('Content-Length', axiosResponse.headers['content-length']);
+          const contentLength = axiosResponse.headers['content-length'];
+          if (contentLength != null && contentLength !== false) {
+            res.setHeader('Content-Length', String(contentLength));
           }
           axiosResponse.data.pipe(res);
           axiosResponse.data.on('error', (err: Error) => {
@@ -637,12 +635,9 @@ router.get(
 
       // Local storage: stream from filesystem
       if (!document.filePath.startsWith('http')) {
-        // Local storage - stream from filesystem
-        const filePath = path.isAbsolute(document.filePath)
-          ? document.filePath
-          : path.join(uploadsDir, document.filePath);
+        const filePath = resolveSafeUploadPath(document.filePath);
 
-        if (!fs.existsSync(filePath)) {
+        if (!filePath || !fs.existsSync(filePath)) {
           return res.status(404).json({ error: 'File not found on server' });
         }
 
@@ -680,7 +675,7 @@ router.get(
   }
 );
 
-// Get signed URL for document (Cloudinary or local download URL)
+// Short-lived download URL for window.open (HMAC ticket — not the staff JWT).
 router.get(
   '/:id/signed-url',
   authenticate,
@@ -688,71 +683,27 @@ router.get(
     try {
       const document = await prisma.document.findUnique({
         where: { id: req.params.id },
-        include: {
-          uploadedBy: {
-            select: { id: true },
-          },
-        },
+        select: { id: true, projectId: true },
       });
 
       if (!document) {
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Reuse the same permission rules as the download endpoint
-      const isAdmin = req.user?.role === UserRole.ADMIN;
-      const isManagement = req.user?.role === UserRole.MANAGEMENT;
-      const isSales = req.user?.role === UserRole.SALES;
-      const isOperations = req.user?.role === UserRole.OPERATIONS;
-      const isFinance = req.user?.role === UserRole.FINANCE;
-      const isUploader = document.uploadedById === req.user?.id;
-
-      let salesHasAccess = false;
-      if (isSales) {
-        const project = await prisma.project.findUnique({
-          where: { id: document.projectId },
-          select: { salespersonId: true },
-        });
-        salesHasAccess = project?.salespersonId === req.user?.id;
-      }
-
-      if (
-        !isAdmin &&
-        !isManagement &&
-        !(isSales && salesHasAccess) &&
-        !isOperations &&
-        !isFinance &&
-        !isUploader
-      ) {
-        return res.status(403).json({
-          error:
-            'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.',
-        });
-      }
+      if (!(await requireProjectAccess(req, res, document.projectId))) return;
 
       const isDownload = req.query.download === 'true';
-
-      // Always return a backend URL so the browser never talks to Cloudinary.
-      // Include the caller's JWT as a `token` query parameter so that when
-      // the frontend does window.open(), the backend can still authenticate.
-      const tokenFromHeader = req.headers.authorization
-        ? String(req.headers.authorization).replace('Bearer ', '').trim()
-        : undefined;
+      const ticket = signDocumentDownloadTicket(document.id, req.user!.id, isDownload);
 
       const params = new URLSearchParams();
-      if (isDownload) {
-        params.set('download', 'true');
-      }
-      if (tokenFromHeader) {
-        params.set('token', tokenFromHeader);
-      }
+      if (isDownload) params.set('download', 'true');
+      params.set('uid', req.user!.id);
+      params.set('exp', String(ticket.exp));
+      params.set('sig', ticket.sig);
 
       const basePath = `/api/documents/${document.id}/download`;
-      const pathWithQuery =
-        params.toString().length > 0 ? `${basePath}?${params.toString()}` : basePath;
+      const pathWithQuery = `${basePath}?${params.toString()}`;
 
-      // Build an absolute URL on the backend host so that window.open()
-      // hits the API service directly, not the frontend host.
       const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
       const host = req.get('host');
       const absoluteUrl = `${protocol}://${host}${pathWithQuery}`;

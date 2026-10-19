@@ -7,6 +7,41 @@ import { calculateFY } from '../utils/calculations';
 
 const router = express.Router();
 
+const LEAD_WRITE_ROLES: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.MANAGEMENT,
+  UserRole.SALES,
+];
+
+function canViewAllLeads(role: UserRole): boolean {
+  return (
+    role === UserRole.ADMIN ||
+    role === UserRole.MANAGEMENT ||
+    role === UserRole.OPERATIONS ||
+    role === UserRole.FINANCE
+  );
+}
+
+async function requireLeadAccess(
+  req: Request,
+  res: Response,
+  leadId: string,
+): Promise<{ id: string; assignedSalesId: string | null; customerId: string; status: LeadStatus } | null> {
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, assignedSalesId: true, customerId: true, status: true },
+  });
+  if (!lead) {
+    res.status(404).json({ error: 'Lead not found' });
+    return null;
+  }
+  const role = req.user!.role as UserRole;
+  if (canViewAllLeads(role)) return lead;
+  if (role === UserRole.SALES && lead.assignedSalesId === req.user!.id) return lead;
+  res.status(403).json({ error: 'Access denied' });
+  return null;
+}
+
 // Get all leads
 router.get(
   '/',
@@ -35,11 +70,17 @@ router.get(
         limit = 20,
       } = req.query;
 
-      const where: any = {};
+      const where: Record<string, unknown> = {};
+      const role = req.user!.role as UserRole;
+
+      if (role === UserRole.SALES) {
+        where.assignedSalesId = req.user!.id;
+      } else if (assignedSalesId && canViewAllLeads(role)) {
+        where.assignedSalesId = assignedSalesId;
+      }
 
       if (status) where.status = status;
       if (source) where.source = source;
-      if (assignedSalesId) where.assignedSalesId = assignedSalesId;
       if (search) {
         where.OR = [
           { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
@@ -82,6 +123,9 @@ router.get(
 // Get single lead
 router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
+    const allowed = await requireLeadAccess(req, res, req.params.id);
+    if (!allowed) return;
+
     const lead = await prisma.lead.findUnique({
       where: { id: req.params.id },
       include: {
@@ -106,6 +150,7 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
 router.post(
   '/',
   authenticate,
+  authorize(...LEAD_WRITE_ROLES),
   [
     body('customerId').isString().notEmpty(),
     body('source').isIn(Object.values(LeadSource)),
@@ -122,10 +167,40 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const role = req.user!.role as UserRole;
+      const {
+        customerId,
+        source,
+        systemSizeKw,
+        roofType,
+        city,
+        assignedSalesId,
+        expectedValue,
+      } = req.body as {
+        customerId: string;
+        source: LeadSource;
+        systemSizeKw?: number;
+        roofType?: string;
+        city?: string;
+        assignedSalesId?: string;
+        expectedValue?: number;
+      };
+
+      let resolvedAssignee = assignedSalesId || null;
+      if (role === UserRole.SALES) {
+        resolvedAssignee = req.user!.id;
+      }
+
       const lead = await prisma.lead.create({
         data: {
-          ...req.body,
-          status: 'NEW',
+          customerId,
+          source,
+          status: LeadStatus.NEW,
+          ...(systemSizeKw != null ? { systemSizeKw } : {}),
+          ...(roofType != null ? { roofType } : {}),
+          ...(city != null ? { city } : {}),
+          ...(resolvedAssignee ? { assignedSalesId: resolvedAssignee } : {}),
+          ...(expectedValue != null ? { expectedValue } : {}),
         },
         include: {
           customer: true,
@@ -145,10 +220,14 @@ router.post(
 router.put(
   '/:id',
   authenticate,
+  authorize(...LEAD_WRITE_ROLES),
   [
     body('source').optional().isIn(Object.values(LeadSource)),
     body('status').optional().isIn(Object.values(LeadStatus)),
     body('systemSizeKw').optional().isFloat({ min: 0 }),
+    body('roofType').optional().isString(),
+    body('city').optional().isString(),
+    body('assignedSalesId').optional().isString(),
     body('expectedValue').optional().isFloat({ min: 0 }),
   ],
   async (req: Request, res: express.Response) => {
@@ -158,9 +237,42 @@ router.put(
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const existing = await requireLeadAccess(req, res, req.params.id);
+      if (!existing) return;
+
+      const role = req.user!.role as UserRole;
+      const {
+        source,
+        status,
+        systemSizeKw,
+        roofType,
+        city,
+        assignedSalesId,
+        expectedValue,
+      } = req.body as {
+        source?: LeadSource;
+        status?: LeadStatus;
+        systemSizeKw?: number;
+        roofType?: string;
+        city?: string;
+        assignedSalesId?: string;
+        expectedValue?: number;
+      };
+
+      const data: Record<string, unknown> = {};
+      if (source !== undefined) data.source = source;
+      if (status !== undefined) data.status = status;
+      if (systemSizeKw !== undefined) data.systemSizeKw = systemSizeKw;
+      if (roofType !== undefined) data.roofType = roofType;
+      if (city !== undefined) data.city = city;
+      if (expectedValue !== undefined) data.expectedValue = expectedValue;
+      if (assignedSalesId !== undefined && role !== UserRole.SALES) {
+        data.assignedSalesId = assignedSalesId;
+      }
+
       const lead = await prisma.lead.update({
         where: { id: req.params.id },
-        data: req.body,
+        data,
         include: {
           customer: true,
           assignedSales: true,
@@ -179,8 +291,12 @@ router.put(
 router.post(
   '/:id/convert',
   authenticate,
+  authorize(...LEAD_WRITE_ROLES),
   async (req: Request, res: express.Response) => {
     try {
+      const allowed = await requireLeadAccess(req, res, req.params.id);
+      if (!allowed) return;
+
       const lead = await prisma.lead.findUnique({
         where: { id: req.params.id },
         include: { customer: true },
@@ -194,10 +310,10 @@ router.post(
         return res.status(400).json({ error: 'Lead already converted' });
       }
 
-      // Create project from lead
-      // Calculate FY from current date (since confirmationDate is not available at lead conversion)
-      const currentYear = calculateFY(new Date()) || `${new Date().getFullYear()}-${String(new Date().getFullYear() + 1).slice(-2)}`;
-      
+      const currentYear =
+        calculateFY(new Date()) ||
+        `${new Date().getFullYear()}-${String(new Date().getFullYear() + 1).slice(-2)}`;
+
       const project = await prisma.project.create({
         data: {
           customerId: lead.customerId,
@@ -219,7 +335,6 @@ router.post(
         },
       });
 
-      // Update lead status
       await prisma.lead.update({
         where: { id: lead.id },
         data: { status: 'CONVERTED' },
