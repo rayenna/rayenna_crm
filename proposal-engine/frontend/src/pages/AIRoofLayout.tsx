@@ -538,7 +538,7 @@ export default function AIRoofLayout() {
         const manual = await fetchManualRoofLayout(String(crmProjectId));
         if (cancelled || hydrateGen !== layoutHydrateGenerationRef.current) return;
 
-        const parsed = parseManualRoofLayoutHydrate(manual, String(crmProjectId));
+        const parsed = await parseManualRoofLayoutHydrate(manual, String(crmProjectId));
         if (parsed.kind === 'none') return;
         if (hydrateGen !== layoutHydrateGenerationRef.current) return;
 

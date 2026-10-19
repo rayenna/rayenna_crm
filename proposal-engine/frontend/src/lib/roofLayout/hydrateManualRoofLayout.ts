@@ -63,10 +63,10 @@ export type ParsedManualHydrate =
   | { kind: 'editing'; data: HydratedEditingLayout }
   | { kind: 'saved'; data: HydratedSavedLayout };
 
-export function parseManualRoofLayoutHydrate(
+export async function parseManualRoofLayoutHydrate(
   manual: ManualLayoutApiResponse,
   crmProjectId: string,
-): ParsedManualHydrate {
+): Promise<ParsedManualHydrate> {
   if (!manual?.layout_image_url || !String(manual.layout_image_url).trim()) {
     return { kind: 'none' };
   }
