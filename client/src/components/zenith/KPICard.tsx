@@ -86,6 +86,11 @@ export default function KPICard({
 
       <p className="zenith-kpi-value relative shrink-0 text-lg tabular-nums leading-tight text-[color:var(--text-primary)] sm:text-xl">
         {formatDisplay(item, animated)}
+        {item.projectCount != null ? (
+          <span className="ml-1 text-[0.72em] font-semibold text-[color:var(--text-secondary)]">
+            ({item.projectCount.toLocaleString('en-IN')})
+          </span>
+        ) : null}
       </p>
       <p className="mt-1 line-clamp-2 shrink-0 text-[10px] font-semibold uppercase leading-tight tracking-wider text-[color:var(--text-secondary)]">
         {item.label}

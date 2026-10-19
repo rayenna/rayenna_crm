@@ -48,7 +48,12 @@ import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
-import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
+import {
+  buildFilterLabel,
+  filterProjectsByChartSlice,
+  inDashboardPipelineSlice,
+  matchesDashboardRevenueWhere,
+} from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
 import DashboardMyDayPlanCard from '../dashboard/DashboardMyDayPlanCard'
 import DashboardLifecycleBrandReminder from '../dashboard/DashboardLifecycleBrandReminder'
@@ -275,6 +280,17 @@ export default function ZenithExecutiveBody({
     { paymentStatus: ['PENDING', 'PARTIAL'] },
     dateFilter,
   )
+  const pipelineProjectsUrl = buildProjectsUrl({ zenithSlice: 'pipeline' }, dateFilter)
+  const revenueProjectsUrl = buildProjectsUrl({ zenithSlice: 'revenue' }, dateFilter)
+
+  const pipelineExplorerProjects = useMemo(
+    () => explorerProjects.filter(inDashboardPipelineSlice),
+    [explorerProjects],
+  )
+  const revenueExplorerProjects = useMemo(
+    () => explorerProjects.filter(matchesDashboardRevenueWhere),
+    [explorerProjects],
+  )
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -355,6 +371,36 @@ export default function ZenithExecutiveBody({
     },
     [onOpenDrawerListMode, dateFilter],
   )
+
+  const onPipelineKpiClick = useCallback(() => {
+    onOpenDrawerListMode({
+      filterLabel: 'Total Pipeline',
+      filteredProjects: pipelineExplorerProjects,
+      listAmountMode: 'deal_value',
+      projectsPageHref: pipelineProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
+    })
+  }, [pipelineExplorerProjects, onOpenDrawerListMode, pipelineProjectsUrl])
+
+  const onRevenueKpiClick = useCallback(() => {
+    onOpenDrawerListMode({
+      filterLabel: 'Total Revenue',
+      filteredProjects: revenueExplorerProjects,
+      listAmountMode: 'deal_value',
+      projectsPageHref: revenueProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
+    })
+  }, [revenueExplorerProjects, onOpenDrawerListMode, revenueProjectsUrl])
+
+  const onProfitKpiClick = useCallback(() => {
+    onOpenDrawerListMode({
+      filterLabel: 'Total Profit',
+      filteredProjects: revenueExplorerProjects,
+      listAmountMode: 'gross_profit',
+      projectsPageHref: revenueProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
+    })
+  }, [revenueExplorerProjects, onOpenDrawerListMode, revenueProjectsUrl])
 
   const onAvailingLoanKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
@@ -515,7 +561,15 @@ export default function ZenithExecutiveBody({
 
   if (isLoading) return <ZenithSkeleton insightsBar={insightsBar} />
 
-  const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
+  const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs).map((k) => {
+    if (k.key === 'pipeline') {
+      return { ...k, projectCount: pipelineExplorerProjects.length }
+    }
+    if (k.key === 'revenue' || k.key === 'profit') {
+      return { ...k, projectCount: revenueExplorerProjects.length }
+    }
+    return k
+  })
   const kpiRow1 = kpis.slice(0, 4)
   const kpiRow2 = kpis.slice(4)
   const kpiRow2GridClass =
@@ -549,15 +603,21 @@ export default function ZenithExecutiveBody({
           index={i}
           icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
           onClick={
-            k.key === 'loan'
-              ? onAvailingLoanKpiClick
-              : k.key === 'pendingSubsidy'
-                ? onPendingSubsidyKpiClick
-                : k.key === 'lost'
-                  ? onLostProjectsKpiClick
-                  : k.key === 'outstanding'
-                    ? onOutstandingKpiClick
-                    : undefined
+            k.key === 'pipeline'
+              ? onPipelineKpiClick
+              : k.key === 'revenue'
+                ? onRevenueKpiClick
+                : k.key === 'profit'
+                  ? onProfitKpiClick
+                  : k.key === 'loan'
+                    ? onAvailingLoanKpiClick
+                    : k.key === 'pendingSubsidy'
+                      ? onPendingSubsidyKpiClick
+                      : k.key === 'lost'
+                        ? onLostProjectsKpiClick
+                        : k.key === 'outstanding'
+                          ? onOutstandingKpiClick
+                          : undefined
           }
         />
       )}

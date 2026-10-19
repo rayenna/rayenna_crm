@@ -11,6 +11,8 @@ export interface ZenithKpiItem {
   /** % change vs previous period; null = N/A */
   changePct: number | null
   sparkline: number[]
+  /** Project count shown in brackets next to the value (e.g. pipeline / revenue tiles). */
+  projectCount?: number
 }
 
 function getPreviousFY(fy: string): string {
