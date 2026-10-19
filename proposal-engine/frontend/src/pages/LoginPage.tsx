@@ -13,7 +13,29 @@ import {
 } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
 
-const bgImageUrl = new URL('../assets/background.jpg', import.meta.url).href;
+/**
+ * Matches the Rayenna CRM login card (Zenith dark): frosted navy panel, gold
+ * left edge, gold Ver / Sign-in, same solar wallpaper. Values are local so PE
+ * does not import CRM styles.
+ */
+const LOGIN = {
+  page: '#0A0A0F',
+  card: 'rgba(17, 17, 24, 0.95)',
+  cardBorder: 'rgba(255, 255, 255, 0.08)',
+  gold: '#F5A623',
+  goldBorder: 'rgba(245, 166, 35, 0.3)',
+  teal: '#00D4B4',
+  tealBorder: 'rgba(0, 212, 180, 0.3)',
+  text: 'rgba(255, 255, 255, 0.75)',
+  textActive: '#FFFFFF',
+  textInverse: '#0A0A0F',
+  inputBg: 'rgba(255, 255, 255, 0.05)',
+  inputBorder: 'rgba(255, 255, 255, 0.12)',
+  focusBorder: 'rgba(245, 166, 35, 0.5)',
+  placeholder: 'rgba(255, 255, 255, 0.22)',
+  shadow: '0 20px 60px rgba(0, 0, 0, 0.6)',
+  borderDefault: 'rgba(255, 255, 255, 0.09)',
+} as const;
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
 
@@ -39,7 +61,6 @@ export default function LoginPage() {
   const apiBaseUrl = getApiBaseUrl();
   const apiNotConfigured = isProd && !apiBaseUrl;
 
-  // Pre-warm the backend as soon as the login page loads (same as CRM).
   useEffect(() => {
     if (!apiBaseUrl || !isProd) return;
     let mounted = true;
@@ -120,33 +141,70 @@ export default function LoginPage() {
     }
   }
 
+  const fieldCls =
+    'block w-full rounded-xl px-3 py-2.5 shadow-inner transition-all focus:outline-none focus:ring-2 sm:text-sm';
+
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
-      style={{
-        backgroundImage: `url(${bgImageUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
+      className="relative flex min-h-screen min-h-[100dvh] items-center justify-center overflow-auto py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]"
+      style={{ backgroundColor: LOGIN.page }}
     >
-      <div className="max-w-md w-full space-y-6 bg-white rounded-xl p-6 sm:p-8 border border-secondary-200">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/background.jpg)' }}
+        aria-hidden
+      />
+      <div
+        className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-l-4 p-6 backdrop-blur-md sm:space-y-8 sm:p-8"
+        style={{
+          backgroundColor: LOGIN.card,
+          borderColor: LOGIN.cardBorder,
+          borderLeftColor: LOGIN.gold,
+          color: LOGIN.textActive,
+          boxShadow: LOGIN.shadow,
+          outline: `1px solid ${LOGIN.borderDefault}`,
+        }}
+      >
         {apiNotConfigured && (
-          <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
-            <strong>API not configured.</strong> Set{' '}
-            <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in your
-            deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables)
-            to your backend URL (e.g.{' '}
-            <code className="bg-amber-200/60 px-1 rounded">https://rayenna-crm.onrender.com</code>),
-            then <strong>redeploy</strong>. Login will not work until then.
+          <div
+            className="mb-1 rounded-xl border p-3 text-sm"
+            style={{
+              borderColor: LOGIN.goldBorder,
+              backgroundColor: 'color-mix(in srgb, #111118 88%, #F5A623 12%)',
+              color: LOGIN.textActive,
+            }}
+          >
+            <strong style={{ color: LOGIN.gold }}>API not configured.</strong> Set{' '}
+            <code
+              className="rounded px-1.5 py-0.5"
+              style={{ backgroundColor: 'rgba(17, 17, 24, 0.85)', color: LOGIN.textActive }}
+            >
+              VITE_API_BASE_URL
+            </code>{' '}
+            in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment
+            Variables) to your backend URL (e.g.{' '}
+            <code
+              className="rounded px-1.5 py-0.5"
+              style={{ backgroundColor: 'rgba(17, 17, 24, 0.85)', color: LOGIN.textActive }}
+            >
+              https://rayenna-crm.onrender.com
+            </code>
+            ), then <strong>redeploy</strong>. Login will not work until then.
           </div>
         )}
 
-        {/* Server warm-up status banner — same messages as CRM */}
         {isProd && !apiNotConfigured && serverStatus === 'checking' && (
-          <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm flex items-center gap-2">
+          <div
+            className="mb-1 flex items-center gap-2 rounded-xl border p-3 text-sm"
+            style={{
+              borderColor: LOGIN.borderDefault,
+              backgroundColor: 'rgba(17, 17, 24, 0.92)',
+              color: LOGIN.text,
+            }}
+          >
             <svg
-              className="animate-spin h-4 w-4 shrink-0 text-blue-500"
+              className="h-4 w-4 shrink-0 animate-spin"
+              style={{ color: LOGIN.gold }}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -168,9 +226,17 @@ export default function LoginPage() {
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'ready' && (
-          <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
+          <div
+            className="mb-1 flex items-center gap-2 rounded-xl border p-3 text-sm"
+            style={{
+              borderColor: LOGIN.tealBorder,
+              backgroundColor: 'color-mix(in srgb, #111118 88%, #00D4B4 12%)',
+              color: LOGIN.textActive,
+            }}
+          >
             <svg
-              className="h-4 w-4 shrink-0 text-green-500"
+              className="h-4 w-4 shrink-0"
+              style={{ color: LOGIN.teal }}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -182,22 +248,34 @@ export default function LoginPage() {
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'slow' && !submitting && (
-          <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <div
+            className="mb-1 rounded-xl border p-3 text-sm"
+            style={{
+              borderColor: LOGIN.goldBorder,
+              backgroundColor: 'color-mix(in srgb, #111118 88%, #F5A623 12%)',
+              color: LOGIN.textActive,
+            }}
+          >
             Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or
             wait a few more seconds and try again.
           </div>
         )}
 
         <div className="text-center">
-          <div className="flex flex-col items-center pt-2 px-2">
+          <div className="flex items-center justify-center px-2 pt-4 pb-0 sm:pt-6 sm:pb-0">
             <img
               src="/Proposals_Logo.jpg"
-              alt="Proposal Engine"
-              className="h-[4.8rem] sm:h-[6rem] w-auto max-w-[70vw] object-contain"
+              alt="Rayenna Proposals"
+              className="mx-auto h-36 max-h-[44vh] w-auto max-w-[85vw] object-contain drop-shadow-lg sm:h-40 md:h-44"
             />
-            <p className="mt-0.5 text-xs font-bold tracking-wide text-secondary-500">Ver 2.0</p>
           </div>
-          <p className="mt-8 text-sm font-medium text-gray-600">
+          <p
+            className="mt-0.5 text-base font-semibold tracking-wide sm:mt-1 sm:text-lg"
+            style={{ color: LOGIN.gold }}
+          >
+            Ver 2.0
+          </p>
+          <p className="mt-2 text-sm font-medium" style={{ color: LOGIN.text }}>
             Sign in to your account with your Rayenna CRM credentials
           </p>
         </div>
@@ -206,8 +284,8 @@ export default function LoginPage() {
           <AlertCard variant="error" title="Login failed" message={error} />
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+        <form className="mt-6 space-y-4 sm:mt-8" onSubmit={handleSubmit}>
+          <div className="space-y-3">
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -218,10 +296,23 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                className={fieldCls}
+                style={{
+                  backgroundColor: LOGIN.inputBg,
+                  border: `1px solid ${LOGIN.inputBorder}`,
+                  color: LOGIN.textActive,
+                }}
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = LOGIN.focusBorder;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${LOGIN.goldBorder}`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = LOGIN.inputBorder;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
             <div>
@@ -234,24 +325,42 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                className={fieldCls}
+                style={{
+                  backgroundColor: LOGIN.inputBg,
+                  border: `1px solid ${LOGIN.inputBorder}`,
+                  color: LOGIN.textActive,
+                }}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = LOGIN.focusBorder;
+                  e.currentTarget.style.boxShadow = `0 0 0 2px ${LOGIN.goldBorder}`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = LOGIN.inputBorder;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
           </div>
 
-          <div>
+          <div className="pt-1">
             <button
               type="submit"
               disabled={submitting || serverStatus === 'checking'}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="relative flex w-full justify-center rounded-xl py-3 px-4 text-sm font-extrabold transition-all hover:opacity-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                backgroundColor: LOGIN.gold,
+                color: LOGIN.textInverse,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }}
             >
               {submitting ? (
                 <span className="flex items-center gap-2">
                   <svg
-                    className="animate-spin h-4 w-4"
+                    className="h-4 w-4 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -277,27 +386,33 @@ export default function LoginPage() {
               )}
             </button>
             {submitting && elapsed > 5 && (
-              <p className="mt-2 text-xs text-center text-gray-500">
+              <p className="mt-2 text-center text-xs" style={{ color: LOGIN.text }}>
                 The server may be waking from sleep.{' '}
-                <strong>Please do not press the button again</strong> — your request is in progress.
+                <strong style={{ color: LOGIN.textActive }}>Please do not press the button again</strong>{' '}
+                — your request is in progress.
               </p>
             )}
           </div>
         </form>
 
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-600">
+        <div className="text-center">
+          <p className="text-xs" style={{ color: LOGIN.text }}>
             Forgot your Password? Contact your administrator
           </p>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
+        <div className="border-t pt-6" style={{ borderColor: LOGIN.borderDefault }}>
+          <p className="text-center text-xs leading-relaxed" style={{ color: LOGIN.text }}>
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual
             property and Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>
       </div>
+      <style>{`
+        #email::placeholder, #password::placeholder {
+          color: ${LOGIN.placeholder};
+        }
+      `}</style>
     </div>
   );
 }
