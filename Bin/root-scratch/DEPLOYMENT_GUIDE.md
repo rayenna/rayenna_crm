@@ -92,14 +92,14 @@ rayenna-crm/
    OPENAI_API_KEY=<Your OpenAI key if using AI features>
    FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
    ```
-   DATABASE_URL=psql 'postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-   JWT_SECRET=9c25dc50ac733514ca93cede8399df7673543e863d52344e4bb9ce4e978ea82647b02dead25305d8ed283bfd5cce599a27485741c68fd89e6b26ce08457ab517
+   DATABASE_URL=psql 'postgresql://USER:PASSWORD@HOST/DB?sslmode=require'
+   JWT_SECRET=<REDACTED_ROTATE_ME>
    NODE_ENV=production
    PORT=10000
    MAX_FILE_SIZE=26214400
-   CLOUDINARY_CLOUD_NAME=dwmwc2nzf
-   CLOUDINARY_API_KEY=998311513464496
-   CLOUDINARY_API_SECRET=efzCoLtJzYcRJJWlEJq36zOsUb4
+   CLOUDINARY_CLOUD_NAME=<REDACTED>
+   CLOUDINARY_API_KEY=<REDACTED>
+   CLOUDINARY_API_SECRET=<REDACTED_ROTATE_ME>
    OPENAI_API_KEY=<Your OpenAI API Key - get from https://platform.openai.com/api-keys>
    FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
 

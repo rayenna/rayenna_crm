@@ -31,13 +31,13 @@ This guide will help you migrate your local database data to Neon.
 
 1. **Update .env to point to Neon:**
    ```bash
-   DATABASE_URL="postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require"
    ```
 
 2. **Import data:**
    ```powershell
    # Use psql to import
-   $neonUrl = "postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+   $neonUrl = "postgresql://USER:PASSWORD@HOST/DB?sslmode=require"
    psql $neonUrl -f local_backup.sql
    ```
 

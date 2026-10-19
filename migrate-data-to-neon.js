@@ -21,7 +21,7 @@ async function migrateData() {
   // Get database URLs (filter out flags like --yes)
   const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
   const localUrl = args[0] || 'postgresql://postgres:password@localhost:5432/rayenna_crm';
-  const neonUrl = args[1] || 'postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  const neonUrl = args[1] || 'postgresql://USER:PASSWORD@HOST/DB?sslmode=require';
 
   console.log('Local DB:', localUrl.replace(/:[^:@]+@/, ':****@'));
   console.log('Neon DB:', neonUrl.replace(/:[^:@]+@/, ':****@'));
