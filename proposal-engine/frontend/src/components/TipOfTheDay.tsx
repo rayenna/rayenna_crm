@@ -56,15 +56,10 @@ const TipOfTheDay = () => {
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border-2 border-primary-200 overflow-hidden">
-        {/* Header */}
-        <div
-          className="px-4 py-3 flex items-center gap-3"
-          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
-        >
-          <span className="text-2xl" aria-hidden>💡</span>
-          <h3 className="text-lg font-bold text-white">Tip of the Day</h3>
-          <span className="ml-auto text-xs text-white/60 font-medium">
+      <div className="bg-white rounded-xl max-w-md w-full border border-secondary-200 overflow-hidden">
+        <div className="pe-banner px-4 py-3 flex items-center gap-3">
+          <h3 className="text-base font-semibold text-white">Tip of the Day</h3>
+          <span className="ml-auto text-xs text-white/80 font-medium">
             {TIPS.indexOf(tip) + 1} / {TIPS.length}
           </span>
         </div>
@@ -93,8 +88,7 @@ const TipOfTheDay = () => {
             </button>
             <button
               onClick={handleGotIt}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
-              style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848)' }}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#0A9E87] hover:bg-[#087A6A] transition-colors"
             >
               Got it
             </button>

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { btnPrimary, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   loadCustomers,
   createCustomer,
@@ -661,26 +662,20 @@ export default function Customers() {
         />
       )}
 
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">👥</div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">Customers / Projects</h1>
-                <p className="mt-0.5 text-white/90 text-sm">
-                  Comprehensive module for solar costing, BOMs, proposals, and ROI.
-                  <br />
-                  Select a customer to start a proposal workflow — Costing → BOM → ROI → Proposal.
-                </p>
-              </div>
+      <div className={pageShell}>
+        <div className={pageBanner}>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Customers / Projects</h1>
+              <p className="mt-1 text-sm text-white/85 max-w-2xl">
+                Open a project, then use Continue for the next step — costing, ROI if needed, then the proposal.
+              </p>
             </div>
             {canCreateProposal && (
               <button
                 onClick={() => { void loadEligibleProjects(); setShowPicker(true); }}
                 title="Pick from Rayenna CRM Projects in Proposal stage or higher."
-                className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all w-full sm:w-auto flex-shrink-0"
+                className={`${btnPrimary} text-sm w-full sm:w-auto flex-shrink-0`}
               >
                 + Select Project
               </button>
@@ -691,17 +686,17 @@ export default function Customers() {
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
 
           {/* Stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 border border-secondary-200 rounded-xl overflow-hidden divide-x divide-y sm:divide-y-0 divide-secondary-200">
             {[
-              { label: 'Total',           value: statCounts.total,       color: 'text-secondary-700 bg-secondary-50 border-secondary-200' },
-              { label: 'Not Yet Created', value: statCounts.notStarted,  color: 'text-slate-700 bg-slate-50 border-slate-200' },
-              { label: 'PE Draft',        value: statCounts.draft,       color: 'text-secondary-600 bg-secondary-50 border-secondary-200' },
-              { label: 'PE Ready',        value: statCounts.ready,       color: 'text-blue-700 bg-blue-50 border-blue-200' },
-              { label: 'Confirmed',       value: statCounts.confirmed,   color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+              { label: 'Total', value: statCounts.total, active: filterPeStatus === '', num: 'text-secondary-800', wash: 'bg-[#F4F1EC]' },
+              { label: 'Not Yet Created', value: statCounts.notStarted, active: filterPeStatus === 'not-started', num: 'text-secondary-500', wash: 'bg-secondary-50' },
+              { label: 'PE Draft', value: statCounts.draft, active: filterPeStatus === 'draft', num: 'text-[#EA580C]', wash: 'bg-orange-50' },
+              { label: 'PE Ready', value: statCounts.ready, active: filterPeStatus === 'proposal-ready', num: 'text-[#0A9E87]', wash: 'bg-teal-50' },
+              { label: 'Confirmed', value: statCounts.confirmed, active: false, num: 'text-[#0A8F63]', wash: 'bg-emerald-50' },
             ].map((s) => (
-              <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
-                <p className="text-2xl font-extrabold tabular-nums">{s.value}</p>
-                <p className="text-xs mt-0.5 opacity-70">{s.label}</p>
+              <div key={s.label} className={`px-3 py-3 text-center ${s.active ? s.wash : 'bg-white'}`}>
+                <p className={`text-xl font-semibold tabular-nums ${s.num}`}>{s.value}</p>
+                <p className="text-[11px] text-secondary-500 mt-0.5">{s.label}</p>
               </div>
             ))}
           </div>

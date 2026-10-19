@@ -1,4 +1,13 @@
 import {
+  btnGhost,
+  btnPrimary,
+  IconBolt,
+  IconPin,
+  IconTrash,
+  IconUser,
+  MetaLine,
+} from '../components/ui/chrome';
+import {
   MapCoordinatesBadge,
   ProposalReadinessBadgeFromPeStatus,
   RoofLayoutSavedBadge,
@@ -64,8 +73,7 @@ export function ProjectCard({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden bg-white rounded-xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'}`}
-      style={{ borderLeftWidth: '4px', borderLeftColor: isActive ? '#0d1b3a' : '#e2e8f0' }}
+      className={`min-w-0 overflow-hidden bg-white rounded-xl border transition-colors cursor-pointer ${isActive ? 'border-primary-400 ring-1 ring-primary-200' : 'border-secondary-200 hover:border-secondary-300'}`}
       onClick={onOpen}
     >
       <div className="p-3 sm:p-4 min-w-0">
@@ -83,9 +91,9 @@ export function ProjectCard({
                 type="button"
                 onClick={onRemoveFromList}
                 title="Remove from Proposal Engine (Admin only)"
-                className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation"
+                className="p-2 rounded-lg text-secondary-400 hover:text-red-600 hover:bg-red-50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation"
               >
-                🗑
+                <IconTrash size={16} />
               </button>
             )}
             {onHideFromList && (
@@ -93,7 +101,7 @@ export function ProjectCard({
                 type="button"
                 onClick={onHideFromList}
                 title="Hide from my list"
-                className="text-[11px] font-medium px-2 py-1.5 rounded-lg text-secondary-500 hover:text-amber-700 hover:bg-amber-50 border border-secondary-200 touch-manipulation"
+                className={`${btnGhost} touch-manipulation`}
               >
                 Hide
               </button>
@@ -102,8 +110,7 @@ export function ProjectCard({
               type="button"
               onClick={onOpen}
               title="Open project"
-              className="text-xs text-white font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] touch-manipulation"
-              style={{ background: '#0d1b3a' }}
+              className={`${btnPrimary} touch-manipulation`}
             >
               Open
             </button>
@@ -117,25 +124,27 @@ export function ProjectCard({
 
         <div className="mt-2 space-y-0.5 min-w-0">
           {location && (
-            <p className="text-xs text-secondary-500 line-clamp-2 sm:truncate" title={location}>
-              📍 {location}
-            </p>
+            <MetaLine icon={<IconPin size={12} />}>
+              <span className="line-clamp-2 sm:truncate" title={location}>{location}</span>
+            </MetaLine>
           )}
           {typeof project.systemSizeKw === 'number' && project.systemSizeKw > 0 && (
-            <p className="text-[11px] text-secondary-400">
-              ⚡ {project.systemSizeKw} kW system
-            </p>
+            <MetaLine icon={<IconBolt size={12} />}>
+              <span className="text-[11px]">{project.systemSizeKw} kW system</span>
+            </MetaLine>
           )}
           {roofLayoutLine && (
-            <p className="text-[11px] text-emerald-700 font-medium tabular-nums" title="Saved roof layout">
-              📐 {roofLayoutLine}
+            <p className="text-[11px] text-secondary-600 font-medium tabular-nums" title="Saved roof layout">
+              {roofLayoutLine}
             </p>
           )}
           {(project.contactPerson || project.phone) && (
-            <p className="text-xs text-secondary-400 truncate">
-              👤 {project.contactPerson || ''}
-              {project.phone ? ` · ${project.phone}` : ''}
-            </p>
+            <MetaLine icon={<IconUser size={12} />}>
+              <span className="truncate">
+                {project.contactPerson || ''}
+                {project.phone ? ` · ${project.phone}` : ''}
+              </span>
+            </MetaLine>
           )}
           {project.salespersonName && (
             <p className="text-[10px] text-secondary-400 truncate">

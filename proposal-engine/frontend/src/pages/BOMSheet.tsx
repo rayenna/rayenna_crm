@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
+import { btnPrimary, btnSecondary, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   CATEGORIES, CATEGORY_COLORS, catAccentColor, snapCategory,
 } from '../lib/costingConstants';
@@ -667,22 +668,16 @@ export default function BOMSheet() {
   return (
     <div>
       {/* Page card */}
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header strip */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">
-                🔩
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
-                  Bill of Materials
-                </h1>
-                <p className="mt-0.5 text-white/90 text-sm">
-                  Auto-generated from costing items. Edit specifications as needed (include make/model there).
-                </p>
-              </div>
+      <div className={pageShell}>
+        <div className={pageBanner}>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+                Bill of Materials
+              </h1>
+              <p className="mt-1 text-sm text-white/85">
+                Auto-generated from costing items. Edit specifications as needed (include make/model there).
+              </p>
             </div>
 
             <div className="flex flex-col gap-2 w-full sm:w-auto flex-shrink-0">
@@ -695,7 +690,7 @@ export default function BOMSheet() {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : source === 'costing-sheet'
                         ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        : 'bg-white/20 text-white border-white/40'
+                        : 'bg-secondary-50 text-secondary-700 border-secondary-200'
                     }`}
                   >
                     {source === 'overrides'
@@ -712,24 +707,24 @@ export default function BOMSheet() {
                   <button
                     type="button"
                     onClick={() => void exportBomXlsx(liveRows, storedBom?.sheetName ?? 'BOM')}
-                    className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors min-h-[36px]"
+                    className={btnSecondary}
                   >
-                    📤 XLSX
+                    XLSX
                   </button>
                   <button
                     type="button"
                     onClick={() => exportBomCsv(liveRows, storedBom?.sheetName ?? 'BOM')}
-                    className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors min-h-[36px]"
+                    className={btnSecondary}
                   >
-                    📤 CSV
+                    CSV
                   </button>
                   <button
                     type="button"
                     onClick={() => { void handleSubmit(onSubmit)(); }}
                     disabled={saveStatus === 'saving'}
-                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60"
+                    className={btnPrimary}
                   >
-                    💾 Save BOM
+                    Save BOM
                   </button>
                 </div>
               )}
@@ -865,10 +860,7 @@ export default function BOMSheet() {
 
               {/* Grand total */}
               {fields.length > 0 && liveRows.some((r) => r.itemName) && (
-                <div
-                  className="mt-3 rounded-xl overflow-hidden shadow-sm"
-                  style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
-                >
+                <div className="mt-3 rounded-xl overflow-hidden bg-primary-600">
                   <div className="flex items-center justify-between px-4 py-3">
                     <div>
                       <p className="text-sm font-bold text-white uppercase tracking-wide drop-shadow">Total Items in BOM</p>

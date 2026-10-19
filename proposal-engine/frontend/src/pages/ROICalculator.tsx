@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { btnPrimary, pageBanner, pageShell } from '../components/ui/chrome';
 import type { RoiAutofill } from '../lib/costingConstants';
 import {
   getActiveCustomer,
@@ -12,6 +13,7 @@ import { canEditProposalArtifacts } from '../lib/apiClient';
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
 import { getSubsidyByCapacityKw } from '../lib/roiAssumptions';
+import { calculateROI } from '../lib/calculateRoi';
 
 // ─────────────────────────────────────────────
 // Types
@@ -45,68 +47,6 @@ interface ROIResult {
   co2OffsetTons: number;
   yearlyBreakdown: YearlyRow[];
   effectiveProjectCost?: number;
-}
-
-// ─────────────────────────────────────────────
-// Pure client-side ROI engine
-// ─────────────────────────────────────────────
-
-const PANEL_DEGRADATION = 0.005;
-const LIFETIME          = 25;
-const CO2_FACTOR        = 0.82;
-
-function r2(n: number) { return Math.round(n * 100) / 100; }
-function r4(n: number) { return Math.round(n * 10000) / 10000; }
-
-function calculateROI(inputs: ROIResult['inputs']): ROIResult {
-  const { systemSizeKw, tariff, generationFactor, escalationPercent, projectCost, subsidyEligible, subsidyAmount } = inputs;
-  const effectiveCost = Math.max(0, projectCost - (subsidyEligible && (subsidyAmount ?? 0) > 0 ? (subsidyAmount ?? 0) : 0));
-
-  const escRate          = escalationPercent / 100;
-  const annualGeneration = r2(systemSizeKw * generationFactor);
-  const annualSavings    = r2(annualGeneration * tariff);
-
-  let cumulative = 0, paybackYears = LIFETIME, paybackFound = false, totalGen25 = 0;
-  const yearlyBreakdown: YearlyRow[] = [];
-
-  for (let y = 1; y <= LIFETIME; y++) {
-    const degradFactor = y === 1 ? 1 : Math.pow(1 - PANEL_DEGRADATION, y - 1);
-    const generation   = r2(annualGeneration * degradFactor);
-    const tariffRate   = r4(tariff * Math.pow(1 + escRate, y - 1));
-    const savings      = r2(generation * tariffRate);
-    cumulative         = r2(cumulative + savings);
-    totalGen25        += generation;
-
-    if (!paybackFound && effectiveCost > 0 && cumulative >= effectiveCost) {
-      const prev = cumulative - savings;
-      paybackYears = r2(y - 1 + (effectiveCost - prev) / savings);
-      paybackFound = true;
-    }
-
-    yearlyBreakdown.push({
-      year: y, generation, tariffRate, savings,
-      cumulativeSavings: cumulative,
-      paybackReached: effectiveCost > 0 && cumulative >= effectiveCost,
-    });
-  }
-
-  const totalSavings25Years = r2(cumulative);
-  const roiPercent    = effectiveCost > 0 ? r2(((totalSavings25Years - effectiveCost) / effectiveCost) * 100) : 0;
-  const lcoe          = totalGen25 > 0 ? r4(effectiveCost / totalGen25) : 0;
-  const co2OffsetTons = r2((totalGen25 * CO2_FACTOR) / 1000);
-
-  return {
-    inputs: { ...inputs, subsidyEligible, subsidyAmount },
-    annualGeneration,
-    annualSavings,
-    paybackYears,
-    totalSavings25Years,
-    roiPercent,
-    lcoe,
-    co2OffsetTons,
-    yearlyBreakdown,
-    effectiveProjectCost: effectiveCost > 0 && effectiveCost !== projectCost ? effectiveCost : undefined,
-  };
 }
 
 // ─────────────────────────────────────────────
@@ -548,26 +488,22 @@ export default function ROICalculator() {
 
   return (
     <div>
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">📈</div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">ROI Calculator</h1>
-                <p className="mt-0.5 text-white/90 text-sm">Calculate payback period, annual savings, and 25-year returns.</p>
-              </div>
+      <div className={pageShell}>
+        <div className={pageBanner}>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">ROI Calculator</h1>
+              <p className="mt-1 text-sm text-white/85">Payback saved with the costing sheet. Change tariff, generation, or subsidy here when the defaults do not fit.</p>
             </div>
             {canEdit && result && (
               <div className="flex items-center gap-2 flex-shrink-0">
-                {saveStatus === 'saved' && <span className="text-xs text-emerald-300 font-medium">✓ Saved</span>}
-                {saveStatus === 'error' && <span className="text-xs text-red-200 font-medium">Sync failed</span>}
+                {saveStatus === 'saved' && <span className="text-xs text-emerald-700 font-medium">Saved</span>}
+                {saveStatus === 'error' && <span className="text-xs text-red-600 font-medium">Sync failed</span>}
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                  className={btnPrimary}
                 >
-                  💾 Save Result
+                  Save Result
                 </button>
               </div>
             )}

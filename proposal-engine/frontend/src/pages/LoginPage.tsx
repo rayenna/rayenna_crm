@@ -130,8 +130,7 @@ export default function LoginPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Same card size and styling as CRM Login: max-w-md, p-6 sm:p-8, same borders */}
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 sm:p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
+      <div className="max-w-md w-full space-y-6 bg-white rounded-xl p-6 sm:p-8 border border-secondary-200">
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
             <strong>API not configured.</strong> Set{' '}
@@ -190,14 +189,15 @@ export default function LoginPage() {
         )}
 
         <div className="text-center">
-          <div className="flex justify-center items-center py-4 sm:py-6 px-2">
+          <div className="flex flex-col items-center pt-2 px-2">
             <img
               src="/Proposals_Logo.jpg"
               alt="Proposal Engine"
-              className="h-36 sm:h-40 md:h-44 w-auto max-w-[85vw] object-contain mx-auto drop-shadow-lg"
+              className="h-[4.8rem] sm:h-[6rem] w-auto max-w-[70vw] object-contain"
             />
+            <p className="mt-0.5 text-xs font-bold tracking-wide text-secondary-500">Ver 2.0</p>
           </div>
-          <p className="mt-2 text-sm font-medium text-gray-600">
+          <p className="mt-8 text-sm font-medium text-gray-600">
             Sign in to your account with your Rayenna CRM credentials
           </p>
         </div>

@@ -18,6 +18,22 @@ import {
 import { loadProjectFromServer } from '../lib/projectLoadPipeline';
 import { getServerSyncStatus, clearServerSyncStatus } from '../lib/serverSyncStatus';
 import { ServerSyncBanner } from '../components/ServerSyncBanner';
+import { ProposalContinueBar } from '../components/ProposalContinue';
+import {
+  ARTIFACT_COLORS,
+  IconBolt,
+  IconFile,
+  IconGrid,
+  IconLayout,
+  IconList,
+  IconPhone,
+  IconPin,
+  IconTrend,
+  pageBanner,
+} from '../components/ui/chrome';
+import type { ReactNode } from 'react';
+
+const NAVY_GOLD = 'pe-banner';
 
 function fmtINR(n: number): string {
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)} Cr`;
@@ -92,10 +108,9 @@ export default function Dashboard() {
 
   const artifactTiles = [
     {
-      icon: '📊',
+      icon: IconGrid,
       title: 'Costing Sheet',
       description: 'Line-item cost breakdown with GST & margin',
-      accentColor: '#0ea5e9',
       to: '/costing',
       saved: !!activeCustomer?.costing,
       savedAt: activeCustomer?.costing?.savedAt,
@@ -106,10 +121,9 @@ export default function Dashboard() {
         : undefined,
     },
     {
-      icon: '🔩',
+      icon: IconList,
       title: 'Bill of Materials',
       description: 'Equipment list with specifications',
-      accentColor: '#eab308',
       to: '/bom',
       saved: !!activeCustomer?.bom,
       savedAt: activeCustomer?.bom?.savedAt,
@@ -118,10 +132,9 @@ export default function Dashboard() {
         : undefined,
     },
     {
-      icon: '📈',
+      icon: IconTrend,
       title: 'ROI Calculator',
       description: 'Payback period, 25-year savings & LCOE',
-      accentColor: '#10b981',
       to: '/roi',
       saved: !!activeCustomer?.roi,
       savedAt: activeCustomer?.roi?.savedAt,
@@ -130,10 +143,9 @@ export default function Dashboard() {
         : undefined,
     },
     {
-      icon: '📐',
+      icon: IconLayout,
       title: 'Roof Layout',
       description: 'Roof segmentation and solar panel placement for proposals',
-      accentColor: '#f97316',
       to: '/ai-layout',
       saved: !!resolvedRoofLayout,
       savedAt: resolvedRoofLayout?.savedAt,
@@ -142,10 +154,9 @@ export default function Dashboard() {
         : undefined,
     },
     {
-      icon: '📄',
+      icon: IconFile,
       title: 'Proposal',
       description: 'Full techno-commercial proposal document',
-      accentColor: '#8b5cf6',
       to: '/proposal',
       saved: !!activeCustomer?.proposal,
       savedAt: activeCustomer?.proposal?.generatedAt,
@@ -158,28 +169,22 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Page card — mimics CRM PageCard */}
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header strip */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-2xl leading-none">
-                ⚡
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
-                  Proposal Command Center
-                </h1>
-                <p className="mt-0.5 text-white/90 text-sm">
-                  Manage costing, BOM, ROI, and proposal generation for your solar project.
-                </p>
-              </div>
+      <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden">
+        <div className={pageBanner}>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+                Dashboard
+              </h1>
+              <p className="mt-1 text-sm text-white/85">
+                Costing, BOM, ROI, and the proposal for the open project.
+              </p>
             </div>
             <Link
               to="/customers"
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all self-start sm:self-auto flex-shrink-0"
+              className="text-sm self-start sm:self-auto flex-shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg border border-white/40 bg-white/15 text-white font-semibold hover:bg-white/25 min-h-[36px]"
             >
-              👥 {canCreateOrEdit
+              {canCreateOrEdit
                 ? (allCustomers.length > 0 ? `${allCustomers.length} Customer${allCustomers.length !== 1 ? 's' : ''}` : 'New Customer')
                 : 'Projects'}
             </Link>
@@ -188,12 +193,6 @@ export default function Dashboard() {
 
         {/* Body */}
         <div className="px-4 sm:px-8 py-6 sm:py-8">
-          {/* Status badge */}
-          <div className="inline-flex items-center gap-2 text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 py-1.5 rounded-full font-bold shadow border-2 border-white/50 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            Rayenna Proposal Engine · Production
-          </div>
-
           {/* Server sync confirmation — shown after background refresh or cross-device navigation */}
           {activeCustomer && serverSyncedAt && (
             <ServerSyncBanner
@@ -207,47 +206,49 @@ export default function Dashboard() {
 
           {/* Active customer quick-access */}
           {activeCustomer ? (
-            <div className="mb-6 rounded-2xl border-2 border-sky-200 bg-gradient-to-r from-slate-900 via-slate-900/95 to-amber-600/80 p-4 sm:p-5 text-white flex flex-col gap-3">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                {/* Left: Name + core info */}
+            <div className={`mb-6 rounded-xl p-4 sm:p-5 flex flex-col gap-3 text-white ${NAVY_GOLD}`}>
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-sky-200 uppercase tracking-[0.2em] mb-1">Active Project</p>
+                  <p className="text-[11px] font-medium text-white/75 mb-1">Open project</p>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg sm:text-xl font-extrabold tracking-tight truncate">
+                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-white truncate">
                       {activeCustomer.master.name || 'Unnamed customer'}
                     </h2>
                     {typeof activeCustomer.proposalIndex === 'number' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/15 text-amber-200 border border-amber-300/70 font-semibold flex-shrink-0">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/15 text-amber-100 border border-amber-200/50 font-semibold flex-shrink-0">
                         Proposal #{activeCustomer.proposalIndex}
                       </span>
                     )}
                   </div>
                   {activeCustomer.master.location && (
-                    <p className="text-xs sm:text-[13px] text-slate-100/80 mt-0.5 truncate">
-                      📍 {activeCustomer.master.location}
+                    <p className="mt-1 flex items-start gap-1.5 text-xs text-white/85 min-w-0">
+                      <IconPin size={12} />
+                      <span className="truncate">{activeCustomer.master.location}</span>
                     </p>
                   )}
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-200/80">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/80">
                     {typeof activeCustomer.master.systemSizeKw === 'number' && activeCustomer.master.systemSizeKw > 0 && (
                       <span className="inline-flex items-center gap-1">
-                        ⚡ <span className="font-semibold">{activeCustomer.master.systemSizeKw} kW system</span>
+                        <IconBolt size={12} />
+                        <span className="font-medium text-white">{activeCustomer.master.systemSizeKw} kW system</span>
                       </span>
                     )}
                     {activeCustomer.master.segment && (
-                      <span className="inline-flex items-center gap-1">
-                        🎯 <span>{activeCustomer.master.segment}</span>
-                      </span>
+                      <span>{activeCustomer.master.segment}</span>
                     )}
                     {activeCustomer.master.projectStage && (
-                      <span className="inline-flex items-center gap-1">
-                        📌 <span>{activeCustomer.master.projectStage}</span>
-                      </span>
+                      <span>{activeCustomer.master.projectStage}</span>
                     )}
                   </div>
                   {activeCustomer.master.phone || activeCustomer.master.email ? (
-                    <p className="mt-1 text-[11px] text-slate-200/80 flex flex-wrap gap-x-3 gap-y-0.5">
-                      {activeCustomer.master.phone && <span>📞 {activeCustomer.master.phone}</span>}
-                      {activeCustomer.master.email && <span>✉ {formatEmailForDisplay(activeCustomer.master.email)}</span>}
+                    <p className="mt-1 text-[11px] text-white/80 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                      {activeCustomer.master.phone && (
+                        <span className="inline-flex items-center gap-1">
+                          <IconPhone size={12} />
+                          {activeCustomer.master.phone}
+                        </span>
+                      )}
+                      {activeCustomer.master.email && <span>{formatEmailForDisplay(activeCustomer.master.email)}</span>}
                     </p>
                   ) : null}
                 </div>
@@ -255,22 +256,22 @@ export default function Dashboard() {
                 {/* Right: quick CRM snapshot badges */}
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                   {activeCustomer.master.customerNumber && (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-500/60 font-semibold">
+                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-black/25 border border-white/25 text-white font-medium">
                       Customer ID: {activeCustomer.master.customerNumber}
                     </span>
                   )}
                   {typeof activeCustomer.master.projectNumber === 'number' && (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-500/60 font-semibold">
+                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-black/25 border border-white/25 text-white font-medium">
                       Project #: {activeCustomer.master.projectNumber}
                     </span>
                   )}
                   {activeCustomer.master.salespersonName && (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-500/60 font-semibold">
+                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-black/25 border border-white/25 text-white font-medium">
                       Sales: {activeCustomer.master.salespersonName}
                     </span>
                   )}
                   {activeCustomer.master.panelType && (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-500/60 font-semibold">
+                    <span className="text-[10px] px-2.5 py-1 rounded-full bg-black/25 border border-white/25 text-white font-medium">
                       Panel: {activeCustomer.master.panelType}
                     </span>
                   )}
@@ -312,42 +313,36 @@ export default function Dashboard() {
                 ].filter(Boolean).length;
                 const pct = (completed / 4) * 100;
                 return (
-                  <div className="mt-4 pt-3 border-t border-white/10">
+                  <div className="mt-4 pt-3 border-t border-white/15">
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[11px] text-white/80 font-medium">Proposal Progress</p>
-                      <p className="text-[11px] text-white/90 font-semibold">{completed} / 4 artifacts complete</p>
+                      <p className="text-[11px] text-white/80 font-medium">Proposal progress</p>
+                      <p className="text-[11px] text-white font-semibold">{completed} / 4 artifacts complete</p>
                     </div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%`, background: 'linear-gradient(to right, #38bdf8, #eab308)' }}
+                        style={{ width: `${pct}%`, background: 'linear-gradient(to right, #fde68a, #eab308)' }}
                       />
                     </div>
                   </div>
                 );
               })()}
 
-              {/* Bottom: shortcuts */}
-              <div className="pt-2 border-t border-white/10 mt-1 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] text-slate-200/80 mr-1">
+              <ProposalContinueBar
+                record={activeCustomer}
+                appearance="dark"
+                onContinue={(path) => navigate(path)}
+              />
+
+              <div className="pt-2 border-t border-white/15 mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] text-white/80 mr-1">
                   {artifactSummary(activeCustomer)}
                 </span>
-                <span className="w-px h-4 bg-white/15 hidden sm:inline-block" />
-                <Link to="/costing" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-300/60 transition-colors">
-                  Costing
-                </Link>
-                <Link to="/bom" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-300/60 transition-colors">
-                  BOM
-                </Link>
-                <Link to="/roi" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-300/60 transition-colors">
-                  ROI
-                </Link>
-                <Link to="/ai-layout" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/60 transition-colors">
-                  Roof Layout
-                </Link>
-                <Link to="/proposal" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-300/60 transition-colors">
-                  Proposal
-                </Link>
+                <Link to="/costing" className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-white/35 bg-white/10 text-white hover:bg-white/20">Costing</Link>
+                <Link to="/bom" className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-white/35 bg-white/10 text-white hover:bg-white/20">BOM</Link>
+                <Link to="/roi" className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-white/35 bg-white/10 text-white hover:bg-white/20">ROI</Link>
+                <Link to="/ai-layout" className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-white/35 bg-white/10 text-white hover:bg-white/20">Roof Layout</Link>
+                <Link to="/proposal" className="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-white/35 bg-white/10 text-white hover:bg-white/20">Proposal</Link>
               </div>
             </div>
           ) : (
@@ -360,8 +355,7 @@ export default function Dashboard() {
               </div>
               <Link
                 to="/customers"
-                className="text-sm text-white font-semibold px-4 py-2 rounded-xl shadow transition-all self-start flex-shrink-0"
-                style={{ background: '#0d1b3a' }}
+                className="text-sm text-white font-semibold px-4 py-2 rounded-lg self-start flex-shrink-0 bg-[#0A9E87] hover:bg-[#087A6A]"
               >
                 {canCreateOrEdit ? '+ New Customer' : 'View Projects'}
               </Link>
@@ -375,7 +369,7 @@ export default function Dashboard() {
                 <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wide">
                   Project Status:
                 </p>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 border border-amber-400/70 font-semibold">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary-50 text-secondary-700 border border-secondary-300 font-semibold">
                   {(() => {
                     const raw = (activeCustomer.master.projectStage || '').toUpperCase();
                     switch (raw) {
@@ -472,7 +466,7 @@ export default function Dashboard() {
           )}
 
           {/* Production info footer */}
-          <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="rounded-xl border border-secondary-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-xs text-secondary-400">
               For CRM-linked projects, artifacts are also synced to the Rayenna CRM backend; standalone drafts remain stored locally in this browser.
             </p>
@@ -487,10 +481,9 @@ export default function Dashboard() {
 }
 
 type ArtifactTile = {
-  icon: string;
+  icon: (props: { size?: number }) => ReactNode;
   title: string;
   description: string;
-  accentColor: string;
   to: string;
   saved: boolean;
   savedAt?: string;
@@ -504,22 +497,28 @@ function DashboardArtifactCard({
   tile: ArtifactTile;
   onOpen: () => void;
 }) {
-  const { icon, title, description, accentColor, saved, savedAt, summary } = tile;
+  const { icon: TileIcon, title, description, saved, savedAt, summary } = tile;
+  const tone =
+    title === 'Bill of Materials' ? ARTIFACT_COLORS.BOM
+    : title === 'ROI Calculator' ? ARTIFACT_COLORS.ROI
+    : title === 'Roof Layout' ? ARTIFACT_COLORS.Roof
+    : title === 'Proposal' ? ARTIFACT_COLORS.Proposal
+    : ARTIFACT_COLORS.Costing;
 
   return (
     <div
-      className="bg-white rounded-xl border border-secondary-200 shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer group"
-      style={{ borderLeftWidth: '4px', borderLeftColor: accentColor }}
+      className="bg-white rounded-xl border border-secondary-200 hover:border-secondary-300 transition-colors overflow-hidden cursor-pointer group"
+      style={{ borderTopWidth: 3, borderTopColor: tone }}
       onClick={onOpen}
     >
       <div className="p-5 h-full flex flex-col">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: `${accentColor}18` }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${tone}18`, color: tone }}
             >
-              {icon}
+              <TileIcon size={18} />
             </div>
             <div>
               <p className="text-sm font-bold text-secondary-900">{title}</p>
@@ -550,10 +549,7 @@ function DashboardArtifactCard({
           <span className="text-xs text-secondary-400 group-hover:text-secondary-600 transition-colors">
             {saved ? 'Open & edit →' : 'Start →'}
           </span>
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            style={{ background: accentColor }}
-          >
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-primary-700 text-xs font-bold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity bg-secondary-100">
             →
           </div>
         </div>
@@ -572,19 +568,18 @@ function RecentCustomerCard({
   onSelect: () => void;
 }) {
   const dots = [
-    { done: !!record.costing,  color: '#0ea5e9' },
-    { done: !!record.bom,      color: '#eab308' },
-    { done: !!record.roi,      color: '#10b981' },
-    { done: !!record.proposal, color: '#8b5cf6' },
+    { done: !!record.costing, color: ARTIFACT_COLORS.Costing },
+    { done: !!record.bom, color: ARTIFACT_COLORS.BOM },
+    { done: !!record.roi, color: ARTIFACT_COLORS.ROI },
+    { done: !!record.proposal, color: ARTIFACT_COLORS.Proposal },
   ];
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-all p-4 text-left w-full ${
-        isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'
+      className={`bg-white rounded-xl border transition-colors p-4 text-left w-full ${
+        isActive ? 'border-primary-400 ring-1 ring-primary-200' : 'border-secondary-200 hover:border-secondary-300'
       }`}
-      style={{ borderLeftWidth: '4px', borderLeftColor: isActive ? '#0d1b3a' : '#e2e8f0' }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1">
@@ -597,11 +592,17 @@ function RecentCustomerCard({
         </div>
         {isActive && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-bold flex-shrink-0">Active</span>}
       </div>
-      {record.master.location && <p className="text-xs text-secondary-400 truncate mb-2">📍 {record.master.location}</p>}
+      {record.master.location && (
+        <p className="text-xs text-secondary-400 truncate mb-2">{record.master.location}</p>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {dots.map((d, i) => (
-            <span key={i} className="w-2 h-2 rounded-full border" style={{ background: d.done ? d.color : 'transparent', borderColor: d.color, opacity: d.done ? 1 : 0.35 }} />
+            <span
+              key={i}
+              className="w-2 h-2 rounded-full border"
+              style={{ background: d.done ? d.color : 'transparent', borderColor: d.color }}
+            />
           ))}
         </div>
         <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}>

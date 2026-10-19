@@ -1,6 +1,9 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { TIPS } from '../data/tipOfTheDay';
+import { getActiveCustomer, getResolvedRoofLayout } from '../lib/customerStore';
+import { nextProposalStep } from '../lib/proposalContinue';
+import { pageBanner } from '../components/ui/chrome';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 interface AccordionProps {
@@ -28,20 +31,16 @@ function BackToTop() {
 }
 
 /* ─── Accordion wrapper (always open on md+, collapsible on mobile) ──────── */
-function Section({ id, icon, title, accent, children, defaultOpen = false }: AccordionProps) {
+function Section({ id, title, children, defaultOpen = false }: AccordionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div id={id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden scroll-mt-24">
-      {/* Header */}
+    <div id={id} className="bg-white rounded-xl border border-secondary-200 overflow-hidden scroll-mt-24">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left md:cursor-default"
         aria-expanded={open}
       >
-        <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${accent}`}>
-          {icon}
-        </span>
-        <span className="flex-1 font-bold text-gray-800 text-base sm:text-lg">{title}</span>
+        <span className="flex-1 font-semibold text-primary-800 text-base sm:text-lg">{title}</span>
         <span className={`md:hidden text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           ▾
         </span>
@@ -72,8 +71,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
-      <span className="flex-shrink-0">💡</span>
+    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-900">
       <span>{children}</span>
     </div>
   );
@@ -81,8 +79,7 @@ function Tip({ children }: { children: React.ReactNode }) {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 text-sm text-sky-800">
-      <span className="flex-shrink-0">ℹ️</span>
+    <div className="bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 text-sm text-sky-900">
       <span>{children}</span>
     </div>
   );
@@ -90,9 +87,76 @@ function Note({ children }: { children: React.ReactNode }) {
 
 function Warn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-800">
-      <span className="flex-shrink-0">⚠️</span>
+    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-900">
       <span>{children}</span>
+    </div>
+  );
+}
+
+function savedLabel(ok: boolean): string {
+  return ok ? 'Saved' : 'Not yet';
+}
+
+/** Shows the open project's next step, so Quick Start matches the job on screen. */
+function QuickStartNow() {
+  const customer = getActiveCustomer();
+  if (!customer) {
+    return (
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="font-semibold">No project is open</p>
+        <p className="mt-1 leading-relaxed">
+          Go to <Link to="/customers" className="underline font-medium">Customers</Link>, click <strong>Open</strong> on a project
+          (or <strong>+ Select Project</strong> the first time). You land on the Dashboard. Press <strong>Continue</strong>.
+        </p>
+      </div>
+    );
+  }
+
+  const step = nextProposalStep(customer);
+  const layout = getResolvedRoofLayout(customer);
+  const panelCount = layout?.panel_count ?? 0;
+  const hasLayout = panelCount > 0;
+  const flags = [
+    ['Costing', !!customer.costing],
+    ['BOM', !!customer.bom],
+    ['ROI', !!customer.roi],
+    ['Proposal', !!customer.proposal],
+    ['Roof', hasLayout],
+  ] as const;
+
+  return (
+    <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">This project</p>
+      <p className="mt-1 text-base font-semibold text-gray-900">{customer.master.name}</p>
+      {customer.master.location ? (
+        <p className="text-xs text-gray-600 mt-0.5">{customer.master.location}</p>
+      ) : null}
+      <p className="text-sm text-gray-700 mt-2 leading-relaxed">{step.detail}</p>
+      <Link
+        to={step.path}
+        className="mt-3 inline-flex items-center text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg"
+      >
+        {step.button}
+      </Link>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {flags.map(([label, ok]) => (
+          <span
+            key={label}
+            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+              ok
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-white text-gray-500 border-gray-200'
+            }`}
+          >
+            {label}: {savedLabel(ok)}
+          </span>
+        ))}
+      </div>
+      <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+        {hasLayout
+          ? `A roof layout is saved (${panelCount} panels). On the costing sheet, Use roof layout copies that count onto the module line. Save the sheet afterwards. Turn the layout on when you generate the proposal if the customer should see the drawing.`
+          : 'No roof layout yet. You can still price and send the proposal. Add a layout later if you want a site picture, then use it on the costing sheet.'}
+      </p>
     </div>
   );
 }
@@ -175,28 +239,14 @@ export default function HelpPage() {
   return (
     <div className="space-y-6 pb-12 w-full">
       {/* Same outer page card + horizontal padding as Dashboard / Customers / About (full width within Layout main). */}
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        <div
-          className="px-6 py-5 sm:px-8 sm:py-6"
-          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
-        >
-          <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-2xl leading-none flex-shrink-0">
-              📘
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">User Guide</h1>
-              <p className="mt-0.5 text-white/90 text-sm">Rayenna Proposal Engine · Sales Team Edition</p>
-              <p className="mt-1 text-white/80 text-sm leading-relaxed">
-                Everything you need to create a professional solar proposal — from costing to customer delivery — in one place.
-              </p>
-              <p className="mt-2 text-white/70 text-xs leading-relaxed">
-                Use the top bar to move between pages. Main links run{' '}
-                <strong className="text-white/90">Customers → Dashboard → Costing → BOM → ROI → AI Roof Layout (Beta) → Proposal</strong>. The{' '}
-                <strong className="text-white/90">? Help</strong> dropdown opens User Guide, Tip of the Day, and About.
-              </p>
-            </div>
-          </div>
+      <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden">
+        <div className={pageBanner}>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">User Guide</h1>
+          <p className="mt-1 text-sm text-white/85">Rayenna Proposal Engine</p>
+          <p className="mt-2 text-sm text-white/85 leading-relaxed max-w-3xl">
+            Open a project, then press <strong>Continue</strong>. It opens the next step that project still needs.
+            The top bar still lists every page if you want to jump there. Help opens this guide, Tip of the Day, and About.
+          </p>
         </div>
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6">
@@ -208,9 +258,8 @@ export default function HelpPage() {
             <a
               key={t.id}
               href={`#${t.id}`}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 text-sm font-medium transition-colors border border-gray-100 hover:border-indigo-200"
+              className="flex items-center px-3 py-2 rounded-lg bg-secondary-50 hover:bg-primary-50 text-secondary-700 text-sm font-medium transition-colors border border-secondary-100"
             >
-              <span>{t.icon}</span>
               <span className="truncate">{t.label}</span>
             </a>
           ))}
@@ -220,91 +269,78 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 1. QUICK START                                                    */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="quickstart" icon="🚀" title="Quick Start — Core workflow + roof layout" accent="bg-indigo-100 text-indigo-700" defaultOpen>
+      <Section id="quickstart" icon="🚀" title="Quick Start" accent="bg-indigo-100 text-indigo-700" defaultOpen>
 
-        <p className="text-sm text-gray-600 mb-5">
-          Follow the <strong>five core steps</strong> for a complete proposal. Add <strong>AI Roof Layout</strong> (optional, between ROI and Proposal) when you want a satellite site plan — typically <strong>2–5 minutes</strong> once you know the page. Full detail: <a href="#ai-roof-layout" className="text-indigo-600 underline font-medium">AI Roof Layout section</a>.
+        <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+          You do not walk Costing, BOM, ROI, and Proposal by hand. <strong>Open</strong> a project, then press <strong>Continue</strong>.
+          The button label tells you what that project still needs.
         </p>
 
-        {/* Visual workflow */}
-        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs font-semibold">
-          {['1 Customer', '2 Costing', '3 BOM', '4 ROI', '5 Proposal'].map((s, i, arr) => (
-            <Fragment key={s}>
-              <span className="px-3 py-1.5 rounded-full bg-indigo-600 text-white shadow-sm">{s}</span>
-              {i < arr.length - 1 && <span className="text-gray-400">→</span>}
-            </Fragment>
+        <QuickStartNow />
+
+        <div className="flex flex-wrap gap-1.5 mb-6 text-xs font-semibold">
+          {[
+            ['Continue to costing', 'No price sheet yet'],
+            ['Continue to ROI', 'Price is saved, payback is not'],
+            ['Continue to proposal', 'Price and payback are saved'],
+            ['Review proposal', 'The document is already saved'],
+          ].map(([label, when]) => (
+            <span key={label} className="px-2.5 py-1 rounded-full bg-white border border-indigo-200 text-indigo-900">
+              {label}
+              <span className="font-normal text-gray-500"> — {when}</span>
+            </span>
           ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-semibold">
-          <span className="text-gray-400">optional after step 4 →</span>
-          <span className="px-3 py-1.5 rounded-full bg-emerald-600 text-white shadow-sm">AI Roof Layout</span>
         </div>
 
         <div className="space-y-5">
-          <Step n={1} title="Pick a CRM Project">
-            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. <strong>In the picker</strong>, use its search and filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Use Selected Project →</strong>. This links the CRM project to Proposal Engine and makes it the <strong>active project</strong> on your Dashboard and on Costing, BOM, ROI, AI Roof Layout, and Proposal. To reopen work later, click <strong>Open</strong> on the same project in the list — the app loads the latest <strong>Costing, BOM, ROI, and Proposal</strong> from the CRM server (not only what was left in your browser).
+          <Step n={1} title="Open the project">
+            On <Link to="/customers" className="text-indigo-600 underline font-medium">Customers</Link>, click <strong>Open</strong>.
+            The first time a CRM job is not in the list, use <strong>+ Select Project</strong>, pick a <em>Proposal</em> or <em>Confirmed</em> project, then <strong>Use Selected Project</strong>.
+            You land on the Dashboard with that project active. The name in the top bar is the job you are about to save into.
           </Step>
 
-          <Step n={2} title="Build the Costing Sheet">
-            Go to <Link to="/costing" className="text-indigo-600 underline font-medium">Costing Sheet</Link>. Click <strong>📋 Templates</strong> or <strong>📥 Import Excel</strong>, adjust quantities and prices, set <strong>Margin %</strong> (any value up to <strong>three decimal places</strong>, e.g. 15 or 3.75), then click <strong>💾 Save Sheet</strong>. Saving stores the sheet on the <strong>CRM project</strong>, auto-generates the BOM, and pre-fills ROI. If server sync fails, you will see an error — fix the connection and save again (importing alone does not sync until you save).
+          <Step n={2} title="Press Continue">
+            <strong>Continue</strong> is on the Dashboard and on the project page. It opens one page:
+            costing, ROI, or the proposal. Use the other menu items only when you already know you need them.
           </Step>
 
-          <Step n={3} title="Review the Bill of Materials">
-            Go to <Link to="/bom" className="text-indigo-600 underline font-medium">BOM</Link>. The equipment list is already generated when you saved the costing sheet. Adjust specifications (include make/model there if needed) and click <strong>💾 Save BOM</strong> to sync BOM changes to the CRM project.
+          <Step n={3} title="Price the job, then save once">
+            On <Link to="/costing" className="text-indigo-600 underline font-medium">Costing</Link>, load a <strong>template</strong> or import Excel, check quantities and margin, then <strong>Save Sheet</strong>.
+            That save stores the price, builds the bill of materials, and stores payback from the CRM system size.
+            Homes use ₹8.20 per unit, 1,500 units per kW per year, and the household subsidy. Commercial jobs skip that subsidy.
+            If a roof layout is already saved, click <strong>Use roof layout</strong> first so the module count matches the drawing, then save.
+            If CRM has module watts, those watts are written on the module line too.
           </Step>
 
-          <Step n={4} title="Calculate ROI">
-            Go to <Link to="/roi" className="text-indigo-600 underline font-medium">ROI Calculator</Link>. System size and project cost are already filled in after a costing save. Adjust tariff and escalation if needed, click <strong>Calculate</strong>, then <strong>💾 Save Result</strong> to store ROI on the CRM project.
-          </Step>
-
-          <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong>, then <strong>💾 Save</strong> in the header to store the proposal (and linked artifacts) on the CRM project. If you saved a roof layout, enable <strong>Include AI Roof Layout (Beta) in proposal</strong> first. Export with <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong>, or <strong>🔗 Share</strong> for a customer link (optional password and expiry).
+          <Step n={4} title="Generate and send">
+            <strong>Continue to proposal</strong> opens <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>.
+            Click <strong>Generate Proposal</strong>, then <strong>Save</strong>. If a roof drawing should appear in the document, turn on <strong>Include roof layout</strong> before you generate.
+            Then <strong>PDF</strong>, <strong>DOCX</strong>, or <strong>Share</strong>.
           </Step>
         </div>
 
-        <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50/80 p-4 space-y-2">
-          <p className="text-sm font-semibold text-sky-900">Saving across devices (CRM is the source of truth)</p>
+        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-gray-800">Open another page only when this is true</p>
           <ul className="text-sm text-gray-700 space-y-1.5 list-disc list-inside leading-relaxed">
-            <li>Workflow data is stored on the <strong>Rayenna CRM server</strong> when you save — not only in your browser.</li>
-            <li>You must start from <strong>+ Select Project</strong> (or <strong>Open</strong> on an existing CRM-linked project). Standalone customers without a CRM project link do not sync across laptops.</li>
-            <li>After <strong>Open</strong>, the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> may show a green <strong>Up to date</strong> banner confirming data was loaded from the server.</li>
-            <li>On <strong>Customers / Projects</strong>, each card shows coloured <strong>artifact dots</strong> (Costing, BOM, ROI, Proposal, <strong>Roof layout</strong>) and optional <strong>Map GPS</strong> / <strong>Roof layout</strong> badges when those are set.</li>
-            <li>Local development: run the CRM API on <strong>port 3000</strong> and Proposal Engine UI on <strong>5174</strong> (see README). Set <strong>GOOGLE_MAPS_API_KEY</strong> on the CRM API (<code className="text-xs bg-white px-1 rounded">.env</code> at repo root) for satellite imagery. If the API is down, saves may stay on this device only and reopening elsewhere will look empty.</li>
+            <li><strong>BOM</strong> — a specification or make should differ from the costing line. Saving the sheet already created the list.</li>
+            <li><strong>ROI</strong> — the tariff, generation, or subsidy on the bill is not the default. Change it, then <strong>Calculate</strong> and <strong>Save Result</strong>. A later costing save keeps that choice and updates the project cost.</li>
+            <li>
+              <strong>Roof layout</strong> — you want a site picture. Draw it, <strong>Save to Proposal</strong>, then <strong>Use roof layout</strong> on the costing sheet.
+              Drawing steps are in <a href="#ai-roof-layout" className="text-indigo-600 underline font-medium">AI Roof Layout</a>.
+            </li>
           </ul>
         </div>
 
-        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
-          <p className="text-sm font-semibold text-emerald-900">Optional — AI Roof Layout (recommended for site visuals)</p>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            Open <Link to="/ai-layout" className="text-indigo-600 underline font-medium">AI Roof Layout (Beta)</Link> with the same active CRM project. The page guides you: <strong>Locate site</strong> → <strong>Outline roof</strong> → <strong>Place panels</strong> → <strong>Review &amp; save</strong>.
-          </p>
-          <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-            <li>
-              <strong>Locate:</strong> Map GPS from <strong>Rayenna CRM Customer Master</strong> loads automatically. In CRM, set the pin under the customer&apos;s address — if latitude is in Kerala (about 8°–13°N) and longitude is <strong>west of 76°</strong>, CRM and PE show a warning because Google satellite often fails there; most Kerala sites use ~<strong>76.2°–77.4°E</strong>. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) under <strong>Override Google Maps location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
-            </li>
-            <li>
-              <strong>Outline:</strong> Drag green corner handles to match each roof face. This is an <strong>AI-assisted draft</strong> — the first outline is a <strong>starting rectangle</strong> (not auto-traced). Set <strong>Azimuth</strong> under <strong>Roof sections</strong> (even for one roof). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. Corners snap to 90° while you drag. <strong>Undo</strong> / <strong>Redo</strong> (<strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong> on desktop; <strong>Esc</strong> = scroll map, <strong>E</strong> = draw outline, <strong>K</strong> = keepouts).
-            </li>
-            <li>
-              <strong>Panels:</strong> Add rectangular or circular <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density, portrait/landscape, and <strong>edge setback</strong> (0–0.6 m). Hover a roof edge to see length in metres. In <strong>Layout tools</strong>, read <strong>India layout notes</strong> for typical parapet clearance and module gaps (informational only).
-            </li>
-            <li>
-              <strong>Review:</strong> The <strong>status strip</strong> shows panel count, placed kW vs CRM target, roof/usable m², module <strong>W + physical size</strong> (from costing/BOM when available), and an optional <strong>eff. kW</strong> / orientation hint when the roof faces away from south.
-            </li>
-            <li>
-              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). Or export a standalone <strong>⬇ Site plan PDF</strong> (letterhead, customer block, module metrics, north arrow, scale bar — choose <em>Save as PDF</em> in the print dialog with <strong>Background graphics</strong> on).
-            </li>
-            <li>
-              <strong>Start over:</strong> <strong>Regenerate AI Layout</strong> fetches new satellite imagery and a new draft (keeps working on the same project). <strong>Delete layout</strong> (red button, confirm in the standard PE modal) removes saved layout images and geometry on the server and returns you to a blank page with <strong>Generate AI Layout</strong> — use when you want to discard the layout entirely.
-            </li>
-          </ol>
-          <p className="text-xs text-gray-600">
-            On phone: use <strong>Scroll map</strong> vs <strong>Edit polygon</strong> above the preview. On desktop: stepper and tools sit beside the map (wide screens).
-          </p>
+        <div className="mt-4">
+          <Note>
+            A save on a CRM-linked project is stored on the server, so the next laptop sees it after <strong>Open</strong>.
+            The green <strong>Up to date</strong> line on the Dashboard means that refresh succeeded.
+            Work that you have not saved stays on this browser only.
+          </Note>
         </div>
 
-        <div className="mt-5">
-          <Tip>The core workflow takes about 10–15 minutes once you are familiar with it. Roof layout adds a few minutes the first time; saved layouts reopen on return visits.</Tip>
+        <div className="mt-4">
+          <Tip>Look at the Continue label before you pick a page from the menu. It is the shortest path for the project that is open.</Tip>
         </div>
       </Section>
 
@@ -340,7 +376,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Setting the Active Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active project</strong>. The active project is shown on the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> (<em>Proposal Command Center</em>) and as a pulsing blue dot in the top navigation bar. Click <strong>Open</strong> on a project in <strong>Customers / Projects</strong> (or a recent tile on the Dashboard) to make it active, <strong>refresh saved artifacts from the CRM server</strong>, and return to the Dashboard. A green <strong>Up to date</strong> notice may appear after a successful refresh.
+              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active project</strong>. Click <strong>Open</strong> on a project to make it the job and land on the Dashboard. <strong>Continue</strong> there (and on the project workspace) opens the next incomplete step: costing, then ROI only if payback was not saved with the sheet, then the proposal. The active project is also shown as a pulsing blue dot in the top navigation bar. Opening a project <strong>refreshes saved artifacts from the CRM server</strong>. A green <strong>Up to date</strong> notice may appear after a successful refresh.
             </p>
             <div className="mt-2">
               <Warn>Always check the active customer before saving any work. Saving to the wrong customer will overwrite their data.</Warn>
@@ -471,10 +507,10 @@ export default function HelpPage() {
               Click <strong>💾 Save Sheet</strong>. Enter a name (e.g. <em>5KW DCR – Mr. Sharma</em>) and optional notes, then confirm. For a CRM-linked active project, saving:
             </p>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li>Stores the costing sheet on the active customer record in your browser</li>
-              <li><strong>Syncs costing and BOM</strong> to the Rayenna CRM server (required for other devices)</li>
-              <li>Auto-generates the BOM from costing line items</li>
-              <li>Pre-fills the ROI Calculator with system size and total project cost</li>
+              <li>Stores the costing sheet on the active customer and syncs it to the CRM project</li>
+              <li><strong>Syncs the BOM</strong> generated from the costing lines</li>
+              <li><strong>Saves ROI</strong> using the CRM system size (whole kW), the project tariff or ₹8.20/kWh, 1,500 kWh/kW/year, 5% escalation, and the PM Surya Ghar subsidy unless the segment is commercial or a previous ROI already chose otherwise</li>
+              <li>Keeps a custom tariff, generation factor, escalation, or subsidy if ROI was saved before</li>
             </ul>
             <p className="text-sm text-gray-600 leading-relaxed mt-2">
               If sync fails, you will see a message — the sheet may still be on this device only. Ensure the CRM API is reachable and the project was opened via <strong>Select Project</strong> or <strong>Open</strong> (not a standalone customer without <code className="text-xs bg-gray-100 px-1 rounded">crmProjectId</code>).
@@ -627,7 +663,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Saving the Result</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save Result</strong> after calculating. The result is saved against the active customer and will appear in the Proposal's Financial Benefits section.
+              Saving the costing sheet already stores a payback result. Use this page when the tariff, generation factor, or subsidy should differ. Click <strong>Calculate</strong>, then <strong>💾 Save Result</strong>. The result is saved against the active customer and appears in the Proposal's Financial Benefits section.
             </p>
           </div>
         </div>
@@ -1139,10 +1175,8 @@ export default function HelpPage() {
           </div>
           <a
             href={`${pathname}?showTip=1`}
-            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
-            style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848)' }}
+            className="flex-shrink-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700"
           >
-            <span>💡</span>
             Launch
           </a>
         </div>
@@ -1153,15 +1187,7 @@ export default function HelpPage() {
             <div key={category.label}>
               {/* Category header */}
               <div className="flex items-center gap-2 mb-3">
-                <div
-                  className="w-1 h-5 rounded-full flex-shrink-0"
-                  style={{ background: category.accent }}
-                />
-                <span className="text-base leading-none">{category.icon}</span>
-                <h3
-                  className="text-xs font-extrabold uppercase tracking-widest"
-                  style={{ color: category.accent }}
-                >
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-secondary-500">
                   {category.label}
                 </h3>
                 <span className="text-xs text-gray-400 font-medium">({tips.length})</span>

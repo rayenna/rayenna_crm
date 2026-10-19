@@ -53,6 +53,16 @@ export default {
           yellow:  '#f59e0b',
           cyan:    '#06b6d4',
         },
+        /* Light Zenith accents — cream page, orange highlight, teal actions. */
+        zenith: {
+          cream: '#F4F1EC',
+          gold: '#EA580C',
+          teal: '#0A9E87',
+          tealDark: '#087A6A',
+          purple: '#6D3EC4',
+          green: '#0A8F63',
+          blue: '#1D4ED8',
+        },
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

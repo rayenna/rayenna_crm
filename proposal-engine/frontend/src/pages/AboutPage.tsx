@@ -4,6 +4,8 @@
  * (client/src/components/AboutSection.tsx + client/src/pages/About.tsx).
  */
 
+import { pageBanner } from '../components/ui/chrome';
+
 /* ─── Block types ────────────────────────────────────────────────────────── */
 type Block =
   | { type: 'title';    text: string }
@@ -253,26 +255,12 @@ export default function AboutPage() {
   return (
     <div className="px-0">
       {/* Outer card — matches CRM's PageCard gradient header; no extra vertical padding here so gap under global nav matches Dashboard / Customers (Layout main supplies py-4 sm:py-6). */}
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-
-        {/* Header */}
-        <div
-          className="px-6 py-5 sm:px-8 sm:py-6 border-b border-primary-100"
-          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-white/20 border border-white/30 backdrop-blur-md">
-              <svg className="w-5 h-5 text-white drop-shadow-sm" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">About</h1>
-              <p className="text-white/80 text-xs sm:text-sm mt-0.5">
-                Credits, copyright, intellectual property, and confidentiality notice
-              </p>
-            </div>
-          </div>
+      <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden">
+        <div className={pageBanner}>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">About</h1>
+          <p className="text-white/85 text-sm mt-1">
+            Credits, copyright, intellectual property, and confidentiality notice
+          </p>
         </div>
 
         {/* Body */}

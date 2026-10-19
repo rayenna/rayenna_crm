@@ -285,6 +285,16 @@ export function parseModuleWattageWatts(
   return null;
 }
 
+/** Rewrite a module specification so it carries one explicit wattage token (e.g. 600W). */
+export function specificationWithModuleWatts(specification: string, watts: number): string {
+  const token = `${Math.round(watts)}W`;
+  const spec = specification ?? '';
+  if (MODULE_WATTAGE_RANGE_RE.test(spec)) return spec.replace(MODULE_WATTAGE_RANGE_RE, token);
+  if (MODULE_WATTAGE_TOKEN_RE.test(spec)) return spec.replace(MODULE_WATTAGE_TOKEN_RE, token);
+  const trimmed = spec.trim();
+  return trimmed ? `${trimmed} ${token}` : token;
+}
+
 export type DeriveSystemSizeOptions = {
   /** CRM Project Lifecycle panel wattage (W) when a line has no name/spec wattage. */
   fallbackPanelWattage?: number | null;

@@ -30,15 +30,14 @@ export function SaveSheetModal({
       <div className="absolute inset-0 bg-secondary-900/50 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+        <div className="px-6 py-4 flex items-center justify-between border-b border-secondary-200">
           <div className="flex items-center gap-3">
-            <span className="text-xl">📄</span>
             <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Save Costing Sheet</h2>
-              <p className="text-white/80 text-xs">{itemCount} line item{itemCount !== 1 ? 's' : ''} will be saved</p>
+              <h2 className="text-primary-800 font-semibold text-base">Save Costing Sheet</h2>
+              <p className="text-secondary-500 text-xs">{itemCount} line item{itemCount !== 1 ? 's' : ''} will be saved</p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onCancel} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
 
         {/* Body */}
@@ -114,15 +113,14 @@ export function SavedSheetsPanel({
 
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-secondary-200">
           <div className="flex items-center gap-3">
-            <span className="text-xl">📂</span>
             <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Saved Costing Sheets</h2>
-              <p className="text-white/80 text-xs">{sheets.length} sheet{sheets.length !== 1 ? 's' : ''} saved</p>
+              <h2 className="text-primary-800 font-semibold text-base">Saved Costing Sheets</h2>
+              <p className="text-secondary-500 text-xs">{sheets.length} sheet{sheets.length !== 1 ? 's' : ''} saved</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
 
         {/* Sheet list */}
@@ -282,15 +280,14 @@ export function SaveTemplateModal({
       <div className="absolute inset-0 bg-secondary-900/50 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-md overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+        <div className="px-6 py-4 flex items-center justify-between border-b border-secondary-200">
           <div className="flex items-center gap-3">
-            <span className="text-xl">💾</span>
             <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Save as Template</h2>
-              <p className="text-white/80 text-xs">{itemCount} line item{itemCount !== 1 ? 's' : ''} will be saved</p>
+              <h2 className="text-primary-800 font-semibold text-base">Save as Template</h2>
+              <p className="text-secondary-500 text-xs">{itemCount} line item{itemCount !== 1 ? 's' : ''} will be saved</p>
             </div>
           </div>
-          <button onClick={onCancel} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onCancel} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
 
         {/* Body */}
@@ -372,17 +369,16 @@ export function TemplatesPanel({
 
       <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-secondary-200">
           <div className="flex items-center gap-3">
-            <span className="text-xl">📋</span>
             <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Costing Templates</h2>
-              <p className="text-white/80 text-xs">
+              <h2 className="text-primary-800 font-semibold text-base">Costing Templates</h2>
+              <p className="text-secondary-500 text-xs">
                 {userSaved.length} saved · {builtIn.length} built-in starters
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
 
         {/* Template list */}
@@ -594,14 +590,12 @@ export function ImportModal({
       <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div
-          className="px-6 py-4 flex items-center justify-between flex-shrink-0"
-          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
+          className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-secondary-200"
         >
           <div className="flex items-center gap-3">
-            <span className="text-xl">📥</span>
             <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Import Preview</h2>
-              <p className="text-white/80 text-xs">
+              <h2 className="text-primary-800 font-semibold text-base">Import Preview</h2>
+              <p className="text-secondary-500 text-xs">
                 {validCount} valid row{validCount !== 1 ? 's' : ''}
                 {invalidCount > 0 && (
                   <span className="text-amber-300 ml-2">· {invalidCount} with issues (will be skipped)</span>
@@ -611,7 +605,7 @@ export function ImportModal({
           </div>
           <button
             onClick={onCancel}
-            className="text-white/70 hover:text-white text-xl leading-none transition-colors"
+            className="text-secondary-400 hover:text-secondary-700 text-xl leading-none transition-colors"
           >
             ×
           </button>
@@ -621,13 +615,13 @@ export function ImportModal({
         <div className="overflow-auto flex-1">
           <table className="w-full text-xs border-collapse min-w-[700px]">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b-2 border-primary-200" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-                <th className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide w-28">Category</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide">Item Name</th>
-                <th className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide">Specification</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-white uppercase tracking-wide w-20">Qty</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-white uppercase tracking-wide w-28">Unit Cost</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-white uppercase tracking-wide w-28">Total</th>
+              <tr className="border-b border-secondary-200 bg-secondary-50">
+                <th className="px-3 py-2.5 text-left font-semibold text-secondary-600 uppercase tracking-wide w-28">Category</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-secondary-600 uppercase tracking-wide">Item Name</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-secondary-600 uppercase tracking-wide">Specification</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-secondary-600 uppercase tracking-wide w-20">Qty</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-secondary-600 uppercase tracking-wide w-28">Unit Cost</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-secondary-600 uppercase tracking-wide w-28">Total</th>
                 <th className="px-3 py-2.5 w-6" />
               </tr>
             </thead>

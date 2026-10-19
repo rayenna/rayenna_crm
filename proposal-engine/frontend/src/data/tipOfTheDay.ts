@@ -51,7 +51,7 @@ export const TIPS: string[] = [
   'The default generation factor of 1500 kWh/kW/year is the Kerala average — adjust for other states or shading conditions.',
   'Blue bars on the 25-year chart are pre-payback years; green bars are post-payback — the more green, the better the ROI.',
   'LCOE (Levelised Cost of Energy) should be well below the current grid tariff — a good indicator of project viability.',
-  'Always click "Save Result" after calculating — unsaved ROI results will not appear in the Proposal\'s Financial Benefits section.',
+  'Saving the costing sheet also saves ROI. Open ROI when the tariff, generation factor, or subsidy should differ, then Calculate and Save Result.',
 
   // ── Proposal ────────────────────────────────────────────────────────────────
   'Generate the Proposal only after saving the Costing Sheet, BOM, and ROI result — all three feed into the proposal automatically.',

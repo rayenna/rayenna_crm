@@ -1,3 +1,4 @@
+import { ARTIFACT_COLORS, IconLayout, IconPin } from '../components/ui/chrome';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
@@ -19,9 +20,7 @@ export function MapCoordinatesBadge({ className = '' }: { className?: string }) 
       className={`${PE_PILL_BADGE} bg-emerald-50 text-emerald-800 border-emerald-200/90 ${className}`}
       title="Google Map coordinates saved in Rayenna Customer Master"
     >
-      <span className="text-[11px] leading-none" aria-hidden>
-        📌
-      </span>
+      <IconPin size={11} />
       <span>Map GPS</span>
     </span>
   );
@@ -39,9 +38,7 @@ export function RoofLayoutSavedBadge({ className = '' }: { className?: string })
       className={`${PE_PILL_BADGE} bg-orange-50 text-orange-900 border-orange-200/90 ${className}`}
       title="AI Roof Layout saved for this project"
     >
-      <span className="text-[11px] leading-none" aria-hidden>
-        📐
-      </span>
+      <IconLayout size={11} />
       <span>Roof layout</span>
     </span>
   );
@@ -70,11 +67,11 @@ export function ProposalReadinessBadgeFromPeStatus({
 }
 
 const ARTIFACT_DOT_DEFS: { key: keyof PeProjectArtifacts; label: string; color: string }[] = [
-  { key: 'hasCosting', label: 'Costing', color: '#0ea5e9' },
-  { key: 'hasBom', label: 'BOM', color: '#eab308' },
-  { key: 'hasRoi', label: 'ROI', color: '#10b981' },
-  { key: 'hasProposal', label: 'Proposal', color: '#8b5cf6' },
-  { key: 'hasRoofLayout', label: 'Roof', color: '#ea580c' },
+  { key: 'hasCosting', label: 'Costing', color: ARTIFACT_COLORS.Costing },
+  { key: 'hasBom', label: 'BOM', color: ARTIFACT_COLORS.BOM },
+  { key: 'hasRoi', label: 'ROI', color: ARTIFACT_COLORS.ROI },
+  { key: 'hasProposal', label: 'Proposal', color: ARTIFACT_COLORS.Proposal },
+  { key: 'hasRoofLayout', label: 'Roof', color: ARTIFACT_COLORS.Roof },
 ];
 
 const ARTIFACT_SHORT_LABELS: Record<string, string> = {
@@ -115,7 +112,6 @@ function ArtifactDotsRow({
                 style={{
                   background: d.done ? d.color : 'transparent',
                   borderColor: d.color,
-                  opacity: d.done ? 1 : 0.35,
                 }}
                 aria-hidden
               />
@@ -143,7 +139,6 @@ function ArtifactDotsRow({
             style={{
               background: d.done ? d.color : 'transparent',
               borderColor: d.color,
-              opacity: d.done ? 1 : 0.4,
             }}
           />
           <span className="text-[10px] text-secondary-400">{d.label}</span>
@@ -178,11 +173,11 @@ export function ArtifactDots({
   layout?: 'card' | 'inline';
 }) {
   const dots = [
-    { label: 'Costing', done: !!record.costing, color: '#0ea5e9' },
-    { label: 'BOM', done: !!record.bom, color: '#eab308' },
-    { label: 'ROI', done: !!record.roi, color: '#10b981' },
-    { label: 'Proposal', done: !!record.proposal, color: '#8b5cf6' },
-    { label: 'Roof', done: hasSavedRoofLayout(record), color: '#ea580c' },
+    { label: 'Costing', done: !!record.costing, color: ARTIFACT_COLORS.Costing },
+    { label: 'BOM', done: !!record.bom, color: ARTIFACT_COLORS.BOM },
+    { label: 'ROI', done: !!record.roi, color: ARTIFACT_COLORS.ROI },
+    { label: 'Proposal', done: !!record.proposal, color: ARTIFACT_COLORS.Proposal },
+    { label: 'Roof', done: hasSavedRoofLayout(record), color: ARTIFACT_COLORS.Roof },
   ];
   return <ArtifactDotsRow dots={dots} layout={layout} />;
 }

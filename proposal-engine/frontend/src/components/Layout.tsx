@@ -18,11 +18,10 @@ const NAV = [
   { label: 'Proposal',              to: '/proposal'  },
 ];
 
-/* Exact gradient used by the CRM navbar */
-const NAV_GRADIENT = 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)';
-/* CRM active link: bg-white/30 = rgba(255,255,255,0.30) */
-const ACTIVE_LINK  = 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40';
-const IDLE_LINK    = 'text-white hover:bg-white/20 hover:text-white';
+const ACTIVE_LINK = 'text-white font-semibold border-b-2 border-[#EA580C]';
+const IDLE_LINK = 'text-white/70 hover:text-white font-medium border-b-2 border-transparent';
+const DRAWER_ACTIVE = 'bg-white/10 text-white border-l-2 border-[#EA580C]';
+const DRAWER_IDLE = 'text-white/80 hover:bg-white/10 hover:text-white';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
@@ -203,7 +202,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // experience focused and avoid showing navigation before authentication.
   if (pathname === '/login') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         {storageAlert}
         {children}
       </div>
@@ -221,40 +220,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
+    <div className="min-h-screen">
       {storageAlert}
 
       {/* ── Navbar ── */}
       <nav
-        style={{ background: NAV_GRADIENT }}
-        className="shadow-lg border-b-4 border-amber-400 sticky top-0 z-20"
+        style={{ background: '#0d1b3a' }}
+        className="border-b-2 border-[#EA580C] sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          {/* Navbar row — shorter in landscape (h-12) vs portrait (h-16) vs desktop (h-20) */}
-          <div className="flex items-center justify-between h-16 landscape:h-12 md:landscape:h-20 md:h-20 gap-2">
+          <div className="flex items-center justify-between h-14 gap-2">
 
-            {/* Brand — reuse Rayenna logo, match CRM alignment. Root (/) now lands on Customers. */}
+            {/* Wordmark sits on white so the navy lettering stays readable on the bar. */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <Link
                 to="/"
-                className="flex items-center hover:opacity-90 transition-opacity"
+                className="flex items-center bg-white rounded-md px-1.5 py-0.5 hover:opacity-90 transition-opacity"
               >
                 <img
                   src="/Proposals_Logo.jpg"
                   alt="Proposal Engine"
-                  className="h-14 landscape:h-12 md:h-16 lg:h-[4.5rem] xl:h-[4.75rem] w-auto object-contain"
+                  className="h-9 w-auto object-contain"
                 />
               </Link>
             </div>
 
-            {/* Desktop nav (xl+). Tablet / iPad use hamburger drawer — md was too narrow for 7 links + actions. */}
-            <div className="hidden xl:flex items-center flex-1 justify-center min-w-0">
+            {/* Desktop nav from laptop width. Tighter padding keeps the seven links in the bar. */}
+            <div className="hidden lg:flex items-center flex-1 justify-center min-w-0">
               <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto">
                 {NAV.map((n) => (
                   <Link
                     key={n.to}
                     to={n.to}
-                    className={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    className={`inline-flex items-center px-2 py-1 text-xs transition-colors duration-200 whitespace-nowrap ${
                       pathname === n.to ? ACTIVE_LINK : IDLE_LINK
                     }`}
                   >
@@ -270,40 +268,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => setHelpOpen((o) => !o)}
                   aria-expanded={helpOpen}
                   aria-haspopup="true"
-                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs transition-colors duration-200 whitespace-nowrap ${
                     pathname === '/help' || pathname === '/about' ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
-                  <span>? Help</span>
+                  <span>Help</span>
                   <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} aria-hidden>▾</span>
                 </button>
                 {helpOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50" role="menu">
+                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-lg border border-secondary-200 overflow-hidden z-50" role="menu">
                     <Link
                       to="/help"
                       role="menuitem"
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors"
                       onClick={() => setHelpOpen(false)}
                     >
-                      <span>📘</span>
                       <span className="font-medium">User Guide</span>
                     </Link>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={() => { setHelpOpen(false); navigate(`${pathname}?showTip=1`); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border-t border-gray-100 text-left"
+                      className="w-full flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors border-t border-secondary-100 text-left"
                     >
-                      <span>💡</span>
                       <span className="font-medium">Tip of the Day</span>
                     </button>
                     <Link
                       to="/about"
                       role="menuitem"
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors border-t border-gray-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors border-t border-secondary-100"
                       onClick={() => setHelpOpen(false)}
                     >
-                      <span>ℹ️</span>
                       <span className="font-medium">About</span>
                     </Link>
                   </div>
@@ -316,32 +311,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {activeCustomer && (
                 <Link
                   to="/dashboard"
-                  className="hidden xl:flex items-center gap-1.5 text-xs text-white/90 bg-white/15 hover:bg-white/25 border border-white/30 px-2.5 py-1 rounded-full transition-colors max-w-[160px] 2xl:max-w-[200px]"
+                  className="hidden lg:flex items-center gap-1.5 text-xs text-white/90 bg-white/10 hover:bg-white/15 border border-white/20 px-2.5 py-1 rounded-full transition-colors max-w-[160px] 2xl:max-w-[200px]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0A9E87] inline-block flex-shrink-0" />
                   <span className="truncate font-medium">{activeCustomer.master.name}</span>
                 </Link>
               )}
 
-              {/* Active customer dot — mobile only (compact, routes to Dashboard) */}
+              {/* Active customer — compact, when the full link row is hidden */}
               {activeCustomer && (
                 <Link
                   to="/dashboard"
-                  className="xl:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/15 border border-white/30 px-2 py-0.5 rounded-full max-w-[min(42vw,11rem)] sm:max-w-[12rem]"
+                  className="lg:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full max-w-[min(42vw,11rem)] sm:max-w-[12rem]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0A9E87] inline-block flex-shrink-0" />
                   <span className="truncate font-medium">{activeCustomer.master.name}</span>
                 </Link>
               )}
 
               {/* Logout button — desktop only */}
               {hasToken && (
-                <div className="hidden xl:flex items-center gap-2">
+                <div className="hidden lg:flex items-center gap-2">
                   {userName && (
                     <span
-                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-white/95 bg-white/15 border border-white/30 max-w-[180px] xl:max-w-[240px]"
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium text-white/90 bg-white/10 border border-white/20 max-w-[180px] xl:max-w-[240px]"
                       title={userName}
                     >
                       <span className="truncate">{userName}</span>
@@ -350,20 +345,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
+                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-800 bg-white hover:bg-secondary-100 transition-colors"
                   >
                     Logout
                   </button>
                 </div>
               )}
 
-              {/* Hamburger — phone + tablet / iPad (below xl) */}
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
-                className="xl:hidden flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/20 active:bg-white/30 transition-colors flex-shrink-0 touch-manipulation"
+                className="lg:hidden flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 touch-manipulation"
               >
                 <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`block w-5 h-0.5 bg-white transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
@@ -379,11 +373,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               aria-label="Close menu"
-              className="xl:hidden fixed inset-0 z-10 bg-black/40 touch-manipulation"
+              className="lg:hidden fixed inset-0 z-10 bg-black/40 touch-manipulation"
               onClick={() => setMenuOpen(false)}
             />
             <div
-              className="xl:hidden relative z-20 border-t border-white/20 backdrop-blur-sm"
+              className="lg:hidden relative z-20 border-t border-white/15"
               style={{ background: '#0d1b3aF2' }}
             >
             <nav
@@ -396,10 +390,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link
                     key={n.to}
                     to={n.to}
-                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
-                      pathname === n.to
-                        ? 'bg-white/30 text-white border border-white/40'
-                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
+                      pathname === n.to ? DRAWER_ACTIVE : DRAWER_IDLE
                     }`}
                   >
                     {n.label}
@@ -412,31 +404,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <Link
                     to="/help"
-                    className={`flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
-                      pathname === '/help'
-                        ? 'bg-white/30 text-white border border-white/40'
-                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
+                      pathname === '/help' ? DRAWER_ACTIVE : DRAWER_IDLE
                     }`}
                   >
-                    <span>📘</span>
                     <span>User Guide</span>
                   </Link>
                   <button
                     onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}
-                    className="flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors touch-manipulation"
+                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${DRAWER_IDLE}`}
                   >
-                    <span>💡</span>
                     <span>Tip of the Day</span>
                   </button>
                   <Link
                     to="/about"
-                    className={`flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
-                      pathname === '/about'
-                        ? 'bg-white/30 text-white border border-white/40'
-                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
+                      pathname === '/about' ? DRAWER_ACTIVE : DRAWER_IDLE
                     }`}
                   >
-                    <span>ℹ️</span>
                     <span>About</span>
                   </Link>
                 </div>
@@ -458,9 +443,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={() => { setMenuOpen(false); handleLogout(); }}
-                    className="mt-2 w-full flex items-center justify-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors touch-manipulation"
+                    className="mt-2 w-full flex items-center justify-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-primary-800 bg-white hover:bg-secondary-100 transition-colors touch-manipulation"
                   >
-                    <span>⎋</span>
                     <span>Logout</span>
                   </button>
                 )}

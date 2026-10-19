@@ -382,10 +382,7 @@ export function GrandTotalCard({ items, showGst, marginPercent }: { items: LineI
           </div>
         )}
       </div>
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
-      >
+      <div className="flex items-center justify-between px-4 py-3 bg-primary-600">
         <span className="text-sm font-bold text-white uppercase tracking-wide drop-shadow">
           Total Project Cost{showGst ? ' (incl. GST)' : ''}
         </span>
@@ -431,8 +428,8 @@ export function CategoryBreakdown({ items }: { items: LineItem[] }) {
               </div>
               <div className="h-1.5 bg-primary-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${pct}%`, background: 'linear-gradient(to right, #0d1b3a, #eab308)' }}
+                  className="h-full rounded-full bg-primary-600 transition-all duration-500"
+                  style={{ width: `${pct}%` }}
                 />
               </div>
             </div>

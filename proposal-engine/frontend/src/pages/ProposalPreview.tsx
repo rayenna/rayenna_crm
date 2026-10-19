@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { btnPrimary, btnSecondary, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   getActiveCustomer,
   saveAllArtifacts,
@@ -102,6 +103,12 @@ export default function ProposalPreview() {
   const [bomCollapsed, setBomCollapsed]       = useState<Record<string, boolean>>({});
   const [bomAllCollapsed, setBomAllCollapsed] = useState(true);
   const [isEditing, setIsEditing]             = useState(false);
+  const [docRevision, setDocRevision]         = useState(0);
+  const editSnapshotRef = useRef<{
+    bomComments: Record<string, string>;
+    customSections: ProposalCustomSectionBeforeBoq[];
+    textOverrides: Record<string, string | undefined>;
+  } | null>(null);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [syncError, setSyncError]             = useState<string | null>(null);
   const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
@@ -411,10 +418,38 @@ export default function ProposalPreview() {
     }
 
     // 4. Exit edit mode
+    editSnapshotRef.current = null;
     setIsEditing(false);
     setDisplayTextOverrides(textOverrides ?? {});
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
+  };
+
+  const handleStartEdit = () => {
+    if (!canWrite) return;
+    editSnapshotRef.current = {
+      bomComments: { ...bomComments },
+      customSections: JSON.parse(
+        JSON.stringify(normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq)),
+      ) as ProposalCustomSectionBeforeBoq[],
+      textOverrides: { ...displayTextOverrides },
+    };
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (saveStatus === 'saving') return;
+    const snap = editSnapshotRef.current;
+    if (snap) {
+      setBomComments({ ...snap.bomComments });
+      setCustomSectionsBeforeBoq(
+        JSON.parse(JSON.stringify(snap.customSections)) as ProposalCustomSectionBeforeBoq[],
+      );
+      setDisplayTextOverrides({ ...snap.textOverrides });
+    }
+    editSnapshotRef.current = null;
+    setDocRevision((n) => n + 1);
+    setIsEditing(false);
   };
 
   const handleSaveAndClose = async () => {
@@ -1100,33 +1135,37 @@ export default function ProposalPreview() {
           className="mb-4"
         />
       )}
-      <div className="print-hide bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">📄</div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">Proposal Generator</h1>
-                <p className="mt-0.5 text-white/90 text-sm">
-                  {proposal ? `Ref: ${proposal.refNumber}` : 'Generate a full proposal from your Costing Sheet, BOM & ROI data'}
-                </p>
-              </div>
+      <div className={`print-hide ${pageShell}`}>
+        <div className={pageBanner}>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Proposal</h1>
+              <p className="mt-1 text-sm text-white/85">
+                {proposal ? `Ref: ${proposal.refNumber}` : 'Generate a full proposal from your Costing Sheet, BOM & ROI data'}
+              </p>
             </div>
             {proposal && (
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto flex-shrink-0">
                 {/* Edit toggle (Admin/Sales only) */}
-                {canWrite && (
+                {canWrite && !isEditing && (
                   <button
-                    onClick={() => setIsEditing((e) => !e)}
-                    title={isEditing ? 'Exit edit mode' : 'Edit proposal'}
-                    className={`w-full sm:w-auto flex items-center justify-center gap-1.5 border text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] ${
-                      isEditing
-                        ? 'bg-amber-400 border-amber-300 text-gray-900 hover:bg-amber-300'
-                        : 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
-                    }`}
+                    type="button"
+                    onClick={handleStartEdit}
+                    title="Edit proposal"
+                    className={`w-full sm:w-auto ${btnSecondary}`}
                   >
-                    {isEditing ? '✏️ Editing…' : '✏️ Edit'}
+                    Edit
+                  </button>
+                )}
+                {canWrite && isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={saveStatus === 'saving'}
+                    title="Leave edit mode without saving"
+                    className={`w-full sm:w-auto ${btnSecondary}`}
+                  >
+                    Cancel
                   </button>
                 )}
                 {/* Export buttons — full-width row on mobile so they match other buttons */}
@@ -1134,37 +1173,37 @@ export default function ProposalPreview() {
                   <button
                     onClick={handleExportPdf}
                     disabled={!!exporting}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all disabled:opacity-60 min-h-[36px]"
+                    className={`flex-1 sm:flex-none ${btnSecondary}`}
                   >
                     {exporting === 'pdf'
-                      ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      : '⬇'}
+                      ? <span className="w-3 h-3 border-2 border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
+                      : null}
                     PDF
                   </button>
                   <button
                     onClick={handleExportDocx}
                     disabled={!!exporting}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all disabled:opacity-60 min-h-[36px]"
+                    className={`flex-1 sm:flex-none ${btnSecondary}`}
                   >
                     {exporting === 'docx'
-                      ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      : '⬇'}
+                      ? <span className="w-3 h-3 border-2 border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
+                      : null}
                     DOCX
                   </button>
                   {canWrite && (
                     <button
                       onClick={handleOpenShareModal}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all min-h-[36px]"
+                      className={`flex-1 sm:flex-none ${btnSecondary}`}
                       title="Share as link"
                     >
-                      🔗 Share
+                      Share
                     </button>
                   )}
                 </div>
                 {canWrite && (
                   <button
                     onClick={handleRegenerate}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                    className={`w-full sm:w-auto ${btnSecondary}`}
                     title="Rebuild proposal from Costing, BOM, and ROI (keeps custom sections on this page)"
                   >
                     ↻ Regenerate
@@ -1174,25 +1213,25 @@ export default function ProposalPreview() {
                   <button
                     onClick={handleSave}
                     disabled={saveStatus === 'saving' || !!exporting}
-                    className={`w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60 ${
+                    className={`w-full sm:w-auto ${
                       saveStatus === 'saved'
-                        ? 'bg-emerald-500 border-2 border-emerald-300 text-white'
+                        ? 'inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-lg min-h-[36px] bg-emerald-600 text-white'
                         : saveStatus === 'error'
-                          ? 'bg-red-500/90 border-2 border-red-300 text-white'
-                        : 'bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white'
+                          ? 'inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-lg min-h-[36px] bg-red-600 text-white'
+                        : btnPrimary
                     }`}
                   >
                     {saveStatus === 'saving' && (
                       <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     )}
-                    {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'error' ? 'Sync failed' : '💾 Save'}
+                    {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Sync failed' : 'Save'}
                   </button>
                 )}
                 {canWrite && proposal && (
                   <button
                     onClick={handleSaveAndClose}
                     disabled={saveStatus === 'saving' || !!exporting}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60"
+                    className={`w-full sm:w-auto ${btnSecondary}`}
                   >
                     Save &amp; Close
                   </button>
@@ -1227,7 +1266,7 @@ export default function ProposalPreview() {
                   <div className="flex items-center gap-2">
                     <span>✏️</span>
                     <span>
-                      Edit mode — click proposal text to edit inline, use the extra blocks above the <strong>Bill of Quantities</strong> (titles and rich text), and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done (notes, media links, and body save together).
+                      Edit mode — click proposal text to edit inline, use the extra blocks above the <strong>Bill of Quantities</strong> (titles and rich text), and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
                     </span>
                   </div>
                   <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
@@ -1310,7 +1349,7 @@ export default function ProposalPreview() {
 
               {/* Two contentEditable regions: nested editors inside a parent contentEditable break image paste/insert in browsers. */}
               <div className="px-4 sm:px-8 py-6 sm:py-8">
-                <ProposalTextOverridesContext.Provider value={displayTextOverrides}>
+                <ProposalTextOverridesContext.Provider key={docRevision} value={displayTextOverrides}>
                 <div
                   ref={docBodyTopRef}
                   contentEditable={canWrite && isEditing}
@@ -1563,6 +1602,16 @@ export default function ProposalPreview() {
 
                   {/* Right: actions — stack on mobile, row on sm+ */}
                   <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+                    {canWrite && isEditing && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        disabled={saveStatus === 'saving'}
+                        className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 bg-white text-primary-800 border border-primary-200 hover:bg-primary-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
                     {/* Save button (bottom) */}
                     {canWrite && (
                       <button

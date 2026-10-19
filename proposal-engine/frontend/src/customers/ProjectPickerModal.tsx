@@ -124,17 +124,14 @@ export function ProjectPickerModal({
       <div className="absolute inset-0 bg-secondary-900/60 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/60 w-full max-w-3xl flex flex-col" style={{ maxHeight: 'min(96vh, 640px)' }}>
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex items-center gap-3">
-            <span className="text-xl">📂</span>
-            <div>
-              <h2 className="text-white font-extrabold text-base drop-shadow">Select CRM Project</h2>
-              <p className="text-white/80 text-xs">
-                Only projects in <span className="font-semibold">"Proposal"</span> or <span className="font-semibold">"Confirmed"</span> stages in the CRM are shown here.
-              </p>
-            </div>
+        <div className="px-6 py-4 flex items-center justify-between border-b border-secondary-200">
+          <div>
+            <h2 className="text-primary-800 font-semibold text-base">Select CRM Project</h2>
+            <p className="text-secondary-500 text-xs">
+              Only projects in <span className="font-semibold">Proposal</span> or <span className="font-semibold">Confirmed</span> stages in the CRM are shown here.
+            </p>
           </div>
-          <button onClick={onCancel} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onCancel} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
 
         {/* Body */}

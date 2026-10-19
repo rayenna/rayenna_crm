@@ -1,8 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
+import { btnPrimary, btnSecondary, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   getActiveCustomer,
+  getResolvedRoofLayout,
 } from '../lib/customerStore';
 import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
 import {
@@ -20,6 +22,8 @@ import {
   deleteCostingTemplate,
 } from '../lib/apiClient';
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
+import { buildRoiFromCosting } from '../lib/roiFromCosting';
+import { applyRoofLayoutToModuleLines } from '../lib/applyRoofLayoutToCosting';
 import { getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { FormValues, CostingTemplate } from '../costing/types';
 import { EMPTY_ROW, BUILT_IN_TEMPLATES, loadTemplates } from '../costing/builtInTemplates';
@@ -273,8 +277,22 @@ export default function CostingSheet() {
     };
     setLocalStorageItem(wip.roiAutofill, JSON.stringify(roiAutofill));
 
-    // Persist costing artifact and BOM to active customer (single source of truth = Costing Sheet).
+    // Persist costing artifact, BOM, and ROI to the active customer.
     const activeCustomer = getActiveCustomer();
+    const roiBuilt = activeCustomer
+      ? buildRoiFromCosting({
+          grandTotal: grand,
+          costingSystemSizeKw: sizeKw,
+          crmSystemSizeKw: activeCustomer.master.systemSizeKw,
+          crmTariff: activeCustomer.master.tariff,
+          segment: activeCustomer.master.segment,
+          existing: activeCustomer.roi?.result ?? null,
+          savedAt: now,
+        })
+      : null;
+    if (roiBuilt) {
+      setLocalStorageItem(wip.roiResult, JSON.stringify(roiBuilt.artifact.result));
+    }
     if (activeCustomer) {
       const costingArtifact: CostingArtifact = {
         sheetName:     name,
@@ -293,6 +311,7 @@ export default function CostingSheet() {
         {
           costing: costingArtifact,
           bom: bomArtifact,
+          ...(roiBuilt ? { roi: roiBuilt.artifact } : {}),
         },
         PIPELINE_MARK_SYNCED,
       );
@@ -311,9 +330,15 @@ export default function CostingSheet() {
     }
 
     setShowSaveSheetModal(false);
-    showToast(activeCustomer
-      ? `Sheet saved under ${activeCustomer.master.name} — BOM auto-generated!`
-      : `Sheet "${name}" saved — BOM auto-generated!`);
+    const savedFor = activeCustomer
+      ? `Sheet saved under ${activeCustomer.master.name} — BOM updated`
+      : `Sheet "${name}" saved — BOM auto-generated`;
+    const roiNote = roiBuilt
+      ? `. ${roiBuilt.summary}`
+      : activeCustomer
+        ? '. Set a whole-kW system size on the CRM project to save ROI with the sheet.'
+        : '';
+    showToast(`${savedFor}${roiNote}`);
   }, [liveItems, showGst, marginPercent, savedSheets, showToast]);
 
   const handleLoadSheet = useCallback((s: SavedSheet, mode: 'append' | 'replace') => {
@@ -410,6 +435,29 @@ export default function CostingSheet() {
     }
   };
 
+  const handleApplyRoofLayout = () => {
+    const ac = getActiveCustomer();
+    const layout = getResolvedRoofLayout(ac);
+    const panelCount = layout?.panel_count ?? 0;
+    if (!ac || !layout || !Number.isFinite(panelCount) || panelCount <= 0) {
+      showToast('Save a roof layout with panels before applying it to the costing sheet.');
+      return;
+    }
+    const watts =
+      typeof ac.master.panelWattage === 'number' && ac.master.panelWattage > 0
+        ? ac.master.panelWattage
+        : null;
+    const applied = applyRoofLayoutToModuleLines(liveItems, {
+      panelCount,
+      moduleWatts: watts,
+      panelBrand: ac.master.panelBrand ?? null,
+    });
+    initialItemsRef.current = applied.items;
+    reset({ items: applied.items });
+    setResetKey((k) => k + 1);
+    showToast(applied.summary);
+  };
+
   return (
     <>
       {/* Hidden file input */}
@@ -479,22 +527,16 @@ export default function CostingSheet() {
 
       <div>
         {/* Page card */}
-        <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-          {/* Header strip */}
-          <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">
-                  📊
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
-                    Costing Sheet
-                  </h1>
-                  <p className="mt-0.5 text-white/90 text-sm">
-                    Add line items below. Total per row is calculated automatically.
-                  </p>
-                </div>
+        <div className={pageShell}>
+          <div className={pageBanner}>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+                  Costing Sheet
+                </h1>
+                <p className="mt-1 text-sm text-white/85">
+                  Add line items below. Total per row is calculated automatically.
+                </p>
               </div>
 
               {/* Header action buttons — two rows: primary | secondary/export (hidden for read-only: Ops/Finance/Management) */}
@@ -509,11 +551,11 @@ export default function CostingSheet() {
                     onClick={() => setShowGst((v) => !v)}
                     className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors min-h-[36px] ${
                       showGst
-                        ? 'bg-white/25 text-white border-white/50'
-                        : 'bg-white/10 text-white/70 border-white/25 hover:bg-white/20'
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-secondary-600 border-secondary-300 hover:bg-secondary-50'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full inline-block ${showGst ? 'bg-emerald-300' : 'bg-white/40'}`} />
+                    <span className={`w-2 h-2 rounded-full inline-block ${showGst ? 'bg-amber-300' : 'bg-secondary-300'}`} />
                     GST {showGst ? 'ON' : 'OFF'}
                   </button>
 
@@ -521,11 +563,11 @@ export default function CostingSheet() {
                   <button
                     type="button"
                     onClick={() => setShowSheets(true)}
-                    className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors min-h-[36px]"
+                    className={btnSecondary}
                   >
-                    📂 Saved Sheets
+                    Saved Sheets
                     {savedSheets.length > 0 && (
-                      <span className="bg-sky-400 text-primary-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      <span className="bg-secondary-100 text-primary-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                         {savedSheets.length}
                       </span>
                     )}
@@ -535,11 +577,11 @@ export default function CostingSheet() {
                   <button
                     type="button"
                     onClick={() => setShowTemplates(true)}
-                    className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors min-h-[36px]"
+                    className={btnSecondary}
                   >
-                    📋 Templates
+                    Templates
                     {templates.filter((t) => !t.isBuiltIn).length > 0 && (
-                      <span className="bg-yellow-400 text-primary-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                      <span className="bg-secondary-100 text-primary-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                         {templates.filter((t) => !t.isBuiltIn).length}
                       </span>
                     )}
@@ -550,11 +592,11 @@ export default function CostingSheet() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={importing}
-                    className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 min-h-[36px]"
+                    className={btnSecondary}
                   >
                     {importing ? (
-                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : '📥'}
+                      <span className="w-3 h-3 border-2 border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
+                    ) : null}
                     Import Excel
                   </button>
 
@@ -562,9 +604,9 @@ export default function CostingSheet() {
                   <button
                     type="button"
                     onClick={onSubmit}
-                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                    className={btnPrimary}
                   >
-                    💾 Save Sheet
+                    Save Sheet
                   </button>
                 </div>
 
@@ -575,9 +617,9 @@ export default function CostingSheet() {
                     type="button"
                     onClick={() => setShowSaveModal(true)}
                     disabled={liveItems.filter((r) => r.itemName.trim()).length === 0}
-                    className="flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/30 px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-40 min-h-[32px]"
+                    className={btnSecondary}
                   >
-                    💾 Save as Template
+                    Save as Template
                   </button>
 
                   {/* Export XLSX */}
@@ -590,9 +632,9 @@ export default function CostingSheet() {
                       void exportCostingXlsx(liveItems.filter((r) => r.itemName.trim()), name, showGst, marginPercent);
                     }}
                     disabled={liveItems.filter((r) => r.itemName.trim()).length === 0}
-                    className="flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/30 px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-40 min-h-[32px]"
+                    className={btnSecondary}
                   >
-                    📤 XLSX
+                    XLSX
                   </button>
 
                   {/* Export CSV */}
@@ -605,18 +647,18 @@ export default function CostingSheet() {
                       exportCostingCsv(liveItems.filter((r) => r.itemName.trim()), name, showGst, marginPercent);
                     }}
                     disabled={liveItems.filter((r) => r.itemName.trim()).length === 0}
-                    className="flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/30 px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-40 min-h-[32px]"
+                    className={btnSecondary}
                   >
-                    📤 CSV
+                    CSV
                   </button>
 
                   {/* Excel Template download */}
                   <button
                     type="button"
                     onClick={downloadTemplate}
-                    className="flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/30 px-3 py-1.5 rounded-lg transition-colors font-medium min-h-[32px]"
+                    className={btnSecondary}
                   >
-                    ⬇ Template
+                    Template
                   </button>
                 </div>
               </div>
@@ -647,6 +689,40 @@ export default function CostingSheet() {
                   <Link to="/customers" className="text-xs text-amber-700 hover:text-amber-900 font-semibold border border-amber-300 hover:bg-amber-100 px-3 py-1 rounded-lg transition-colors whitespace-nowrap">
                     Select Customer →
                   </Link>
+                </div>
+              );
+            })()}
+
+            {canEdit && (() => {
+              const ac = getActiveCustomer();
+              if (!ac) return null;
+              const layout = getResolvedRoofLayout(ac);
+              const panelCount = layout?.panel_count ?? 0;
+              const canApply = Number.isFinite(panelCount) && panelCount > 0;
+              const watts =
+                typeof ac.master.panelWattage === 'number' && ac.master.panelWattage > 0
+                  ? Math.round(ac.master.panelWattage)
+                  : null;
+              return (
+                <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-orange-900">Roof layout</p>
+                    <p className="text-xs text-orange-800 mt-0.5">
+                      {canApply
+                        ? `Saved layout has ${panelCount} panels${watts ? ` · CRM module ${watts} W` : ''}. This updates the PV module line. Save the sheet afterwards.`
+                        : 'Save a roof layout first. This copies its panel count and the CRM module watts onto the PV module line.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="use-roof-layout"
+                    onClick={handleApplyRoofLayout}
+                    disabled={!canApply}
+                    className="text-xs font-semibold text-white px-3 py-2 rounded-lg min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    style={{ background: '#c2410c' }}
+                  >
+                    Use roof layout
+                  </button>
                 </div>
               );
             })()}

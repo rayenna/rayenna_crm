@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { btnSecondary, IconBolt, IconPin, IconUser, MetaLine, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   getCustomer,
   switchActiveCustomer,
@@ -16,6 +17,7 @@ import {
   clearProjectProposalArtifact,
 } from '../lib/apiClient';
 import { loadProjectFromServer } from '../lib/projectLoadPipeline';
+import { ProposalContinueBar } from '../components/ProposalContinue';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -60,12 +62,9 @@ export function EditCustomerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-secondary-900/50 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-lg flex flex-col" style={{ maxHeight: 'min(96vh, 600px)' }}>
-        <div className="px-6 py-4 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-          <div className="flex items-center gap-3">
-            <span className="text-xl">✏️</span>
-            <h2 className="text-white font-extrabold text-base drop-shadow">Edit Customer Details</h2>
-          </div>
-          <button onClick={onCancel} className="text-white/70 hover:text-white text-xl leading-none">×</button>
+        <div className="px-6 py-4 flex-shrink-0 flex items-center justify-between border-b border-secondary-200">
+          <h2 className="text-primary-800 font-semibold text-base">Edit Customer Details</h2>
+          <button onClick={onCancel} className="text-secondary-400 hover:text-secondary-700 text-xl leading-none">×</button>
         </div>
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -203,6 +202,13 @@ export default function CustomerWorkspace() {
 
   const refresh = useCallback(() => {
     if (id) setRecord(getCustomer(id));
+  }, [id]);
+
+  // Opening this project makes it the job for Costing, BOM, ROI, and Proposal.
+  useEffect(() => {
+    if (!id || getActiveCustomerId() === id) return;
+    if (!getCustomer(id)) return;
+    switchActiveCustomer(id);
   }, [id]);
 
   // When opening a CRM-linked project, fetch backend artifacts and merge into local record (once per id).
@@ -350,57 +356,57 @@ export default function CustomerWorkspace() {
 
   return (
     <>
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        {/* Header */}
-        <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+      <div className={pageShell}>
+        <div className={pageBanner}>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none flex-shrink-0">👤</div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">{record.master.name}</h1>
-                  {hydrating && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white/90 border border-white/30 font-medium flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 border border-white/50 border-t-white rounded-full animate-spin" />
-                      Syncing from CRM…
-                    </span>
-                  )}
-                  {isActive && !hydrating && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/25 text-white border border-white/40 font-semibold">Active</span>
-                  )}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}>
-                    {STATUS_LABELS[record.status]}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">{record.master.name}</h1>
+                {hydrating && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary-50 text-secondary-600 border border-secondary-200 font-medium flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 border border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
+                    Syncing from CRM…
                   </span>
-                </div>
-                {record.master.location && (
-                  <p className="text-white/80 text-sm">📍 {record.master.location}</p>
                 )}
-                {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
-                  <p className="text-white/80 text-xs mt-0.5">
-                    ⚡ {record.master.systemSizeKw} kW system
-                  </p>
+                {isActive && !hydrating && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200 font-semibold">Active</span>
                 )}
-                {(record.master.contactPerson || record.master.phone) && (
-                  <p className="text-white/70 text-xs mt-0.5">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}>
+                  {STATUS_LABELS[record.status]}
+                </span>
+              </div>
+              {record.master.location && (
+                <MetaLine light icon={<IconPin size={12} />}>
+                  <span>{record.master.location}</span>
+                </MetaLine>
+              )}
+              {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
+                <MetaLine light icon={<IconBolt size={12} />}>
+                  <span>{record.master.systemSizeKw} kW system</span>
+                </MetaLine>
+              )}
+              {(record.master.contactPerson || record.master.phone) && (
+                <MetaLine light icon={<IconUser size={12} />}>
+                  <span>
                     {record.master.contactPerson}{record.master.phone ? ` · ${record.master.phone}` : ''}
                     {record.master.email ? ` · ${record.master.email}` : ''}
-                  </p>
-                )}
-              </div>
+                  </span>
+                </MetaLine>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 w-full sm:w-auto flex-shrink-0">
               {!isActive && (
                 <button
                   onClick={handleSetActive}
-                  className="flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-3 py-2 sm:py-1.5 rounded-lg transition-all min-h-[36px] sm:min-h-0"
+                  className={btnSecondary}
                 >
-                  ⚡ Set Active
+                  Set Active
                 </button>
               )}
               <Link
                 to="/customers"
-                className={`flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-3 py-2 sm:py-1.5 rounded-lg transition-all min-h-[36px] sm:min-h-0 ${!isActive ? 'col-span-2 sm:col-span-1' : ''}`}
+                className={`${btnSecondary} ${!isActive ? 'col-span-2 sm:col-span-1' : ''}`}
               >
                 ← All Customers
               </Link>
@@ -410,13 +416,13 @@ export default function CustomerWorkspace() {
           {/* Progress bar */}
           <div className="mt-5 pt-4 border-t border-white/20">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-white/70 font-medium">Proposal Progress</p>
-              <p className="text-xs text-white/90 font-semibold">{completedCount} / 4 artifacts complete</p>
+              <p className="text-xs text-white/80 font-medium">Proposal progress</p>
+              <p className="text-xs text-white font-semibold">{completedCount} / 4 artifacts complete</p>
             </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${progressPct}%`, background: 'linear-gradient(to right, #38bdf8, #eab308)' }}
+                style={{ width: `${progressPct}%`, background: 'linear-gradient(to right, #fde68a, #eab308)' }}
               />
             </div>
           </div>
@@ -428,7 +434,7 @@ export default function CustomerWorkspace() {
           <div className="mb-6 flex flex-col gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wide">Project Status:</p>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 border border-amber-400/70 font-semibold">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary-50 text-secondary-700 border border-secondary-300 font-semibold">
                 {(() => {
                   const raw = (record.master.projectStage || '').toUpperCase();
                   switch (raw) {
@@ -486,29 +492,12 @@ export default function CustomerWorkspace() {
             </div>
           </div>
 
-          {/* Workflow hint */}
-          {completedCount < 4 && (
-            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-              <p className="font-semibold mb-1">Recommended workflow</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                {['1. Costing Sheet', '→ 2. BOM', '→ 3. ROI Calculator', '→ 4. Generate Proposal'].map((step, i) => (
-                  <span key={i} className={`px-2 py-0.5 rounded font-medium ${
-                    i < completedCount ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>{step}</span>
-                ))}
-              </div>
-              <p className="mt-2 text-amber-700">
-                Work through each step in order. When you click <strong>Generate &amp; Save Proposal</strong> on the Proposal page, all four artifacts are saved together under this customer.
-              </p>
-            </div>
-          )}
-
-          {completedCount === 4 && (
-            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-              <p className="font-semibold">All artifacts saved ✓</p>
-              <p className="mt-0.5">The complete proposal package is saved under this customer. Open the Proposal card below to view, regenerate, or export.</p>
-            </div>
-          )}
+          {/* Next step for this project */}
+          <ProposalContinueBar
+            record={record}
+            appearance="light"
+            onContinue={(path) => openWorkPage(path)}
+          />
 
           {/* Active customer banner */}
           {!isActive && (

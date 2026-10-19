@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { btnPrimary, IconBolt, IconPin, IconTrash, IconUser, MetaLine } from '../components/ui/chrome';
 import { artifactSummary } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import {
@@ -37,8 +38,7 @@ export function CustomerCard({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden bg-white rounded-xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'}`}
-      style={{ borderLeftWidth: '4px', borderLeftColor: isActive ? '#0d1b3a' : '#e2e8f0' }}
+      className={`min-w-0 overflow-hidden bg-white rounded-xl border transition-colors cursor-pointer ${isActive ? 'border-primary-400 ring-1 ring-primary-200' : 'border-secondary-200 hover:border-secondary-300'}`}
       onClick={onOpen}
     >
       <div className="p-3 sm:p-4 min-w-0">
@@ -58,8 +58,7 @@ export function CustomerCard({
               type="button"
               onClick={onOpen}
               title="Open on Dashboard"
-              className="text-xs text-white font-semibold px-3 py-2 rounded-lg min-h-[36px] touch-manipulation"
-              style={{ background: '#0d1b3a' }}
+              className={`${btnPrimary} touch-manipulation`}
             >
               Open
             </button>
@@ -70,7 +69,7 @@ export function CustomerCard({
                 title="Remove from Proposal Engine (Admin only)"
                 className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation"
               >
-                🗑
+                <IconTrash size={16} />
               </button>
             )}
           </div>
@@ -89,18 +88,22 @@ export function CustomerCard({
 
         <div className="mt-2 space-y-0.5 min-w-0">
           {record.master.location && (
-            <p className="text-xs text-secondary-500 line-clamp-2 sm:truncate">📍 {record.master.location}</p>
+            <MetaLine icon={<IconPin size={12} />}>
+              <span className="line-clamp-2 sm:truncate">{record.master.location}</span>
+            </MetaLine>
           )}
           {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
-            <p className="text-[11px] text-secondary-400">
-              ⚡ {record.master.systemSizeKw} kW system
-            </p>
+            <MetaLine icon={<IconBolt size={12} />}>
+              <span className="text-[11px]">{record.master.systemSizeKw} kW system</span>
+            </MetaLine>
           )}
           {record.master.contactPerson && (
-            <p className="text-xs text-secondary-400 truncate">
-              👤 {record.master.contactPerson}
-              {record.master.phone ? ` · ${record.master.phone}` : ''}
-            </p>
+            <MetaLine icon={<IconUser size={12} />}>
+              <span className="truncate">
+                {record.master.contactPerson}
+                {record.master.phone ? ` · ${record.master.phone}` : ''}
+              </span>
+            </MetaLine>
           )}
         </div>
 

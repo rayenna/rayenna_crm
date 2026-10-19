@@ -1166,7 +1166,7 @@ export default function AIRoofLayout() {
   return (
     <div className="overflow-x-hidden">
       {/* Page card — matches Costing / BOM / ROI heading pattern */}
-      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
+      <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden">
         <RoofLayoutPageHeader
           layoutMode={layoutMode}
           hasResult={!!result}

@@ -148,7 +148,7 @@ export function runProposalPreflight(ctx: PreflightContext): PreflightResult {
       id: 'missing_roi',
       severity: 'error',
       title: 'ROI result missing',
-      detail: 'Calculate ROI and click Save Result so savings figures appear in the proposal.',
+      detail: 'Open ROI, click Calculate, then Save Result. Saving a costing sheet does this when the project has a whole-kW size.',
       autoFixable: false,
       navigateTo: '/roi',
     });
