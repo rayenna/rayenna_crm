@@ -12,6 +12,10 @@ import {
 import prisma from '../../prisma';
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
+import {
+  buildLifecycleInstallationStatus,
+  formatProjectStatusLifecycleLabel,
+} from './lifecycleInstallationStatus';
 
 const TABLE_CAP = 25;
 const ALL_ASK: UserRole[] = [
@@ -422,21 +426,13 @@ export async function execProjectDetailLookup(
     roof: Boolean(project.roofLayout),
   };
 
-  const installStatuses = Array.isArray(project.installations)
-    ? project.installations
-        .map((i: { status?: string | null }) => i.status)
-        .filter((s): s is string => typeof s === 'string' && s.length > 0)
-        .map((s) => s.replace(/_/g, ' '))
-    : [];
-  const installStatusLabel =
-    installStatuses.length > 0
-      ? [...new Set(installStatuses)].join(', ')
-      : 'No installation record';
+  const installStatusLabel = buildLifecycleInstallationStatus(project);
+  const projectStatusLabel = formatProjectStatusLifecycleLabel(project.projectStatus);
 
   const rows: { field: string; value: string }[] = [
     { field: 'SL No', value: String(project.slNo) },
     { field: 'Customer', value: customerLabel(project.customer) },
-    { field: 'Project status', value: project.projectStatus.replace(/_/g, ' ') },
+    { field: 'Project status', value: projectStatusLabel },
     { field: 'Installation status', value: installStatusLabel },
     {
       field: 'Payment status',
@@ -466,7 +462,10 @@ export async function execProjectDetailLookup(
     { field: 'Registration (KSEB)', value: formatDate(project.registrationDate) },
     { field: 'MNRE portal', value: formatDate(project.mnrePortalRegistrationDate) },
     { field: 'Install complete', value: formatDate(project.installationCompletionDate) },
-    { field: 'Subsidy requested', value: formatDate(project.subsidyRequestDate) },
+    {
+      field: 'Net Meter Installation',
+      value: formatDate(project.subsidyRequestDate),
+    },
     { field: 'Subsidy credited', value: formatDate(project.subsidyCreditedDate) },
     {
       field: 'Expected commissioning',
@@ -555,7 +554,7 @@ export async function execProjectDetailLookup(
   }
 
   return {
-    insight: `SL ${project.slNo} · ${customerLabel(project.customer)} · project ${project.projectStatus.replace(/_/g, ' ')} · install ${installStatusLabel} · payment ${(project.paymentStatus || '—').replace(/_/g, ' ')} · balance ${money(project.balanceAmount)}.`,
+    insight: `SL ${project.slNo} · ${customerLabel(project.customer)} · ${projectStatusLabel} · ${installStatusLabel} · payment ${(project.paymentStatus || '—').replace(/_/g, ' ')} · balance ${money(project.balanceAmount)}.`,
     viz: {
       kind: 'table',
       title: `Project SL ${project.slNo}`,
