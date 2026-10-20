@@ -8,6 +8,10 @@ import type {
   ZenithNlViz,
 } from '../../types/zenithNlQuery'
 import { trackZenithAskEvent } from '../../utils/zenithAskAnalytics'
+import {
+  pickAskTableEmphasisColumn,
+  pickAskTableTitleColumn,
+} from '../../utils/zenithAskTableLayout'
 import ChartPanel from './ChartPanel'
 import { AskBarChart, AskPieChart, buildAskChartData } from './ZenithAskCharts'
 
@@ -83,6 +87,74 @@ function formatCell(v: string | number | null): string {
   return String(v)
 }
 
+function AskTableCards({
+  columns,
+  rows,
+  onDrill,
+}: {
+  columns: { key: string; label: string }[]
+  rows: { href?: string; [key: string]: string | number | null | undefined }[]
+  onDrill?: (href: string) => void
+}) {
+  const titleCol = pickAskTableTitleColumn(columns)
+  const emphasisCol = pickAskTableEmphasisColumn(columns, titleCol?.key ?? null)
+  const detailCols = columns.filter(
+    (c) => c.key !== titleCol?.key && c.key !== emphasisCol?.key,
+  )
+
+  if (rows.length === 0) {
+    return <p className="zenith-ask-table-cards__empty">No rows</p>
+  }
+
+  return (
+    <ul className="zenith-ask-table-cards" aria-label="Ask results as cards">
+      {rows.map((row, i) => {
+        const href = typeof row.href === 'string' ? row.href : ''
+        const clickable = Boolean(href)
+        const titleText = titleCol ? formatCell(row[titleCol.key] ?? null) : `Row ${i + 1}`
+        const emphasisText = emphasisCol ? formatCell(row[emphasisCol.key] ?? null) : null
+        const body = (
+          <>
+            <div className="zenith-ask-table-cards__top">
+              <p className="zenith-ask-table-cards__title">{titleText}</p>
+              {emphasisText != null ? (
+                <p className="zenith-ask-table-cards__emphasis">{emphasisText}</p>
+              ) : null}
+            </div>
+            {detailCols.length > 0 ? (
+              <dl className="zenith-ask-table-cards__grid">
+                {detailCols.map((c) => (
+                  <div key={c.key} className="zenith-ask-table-cards__field">
+                    <dt>{c.label}</dt>
+                    <dd>{formatCell(row[c.key] ?? null)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+            {clickable ? <span className="zenith-ask-table-cards__cta">Open list →</span> : null}
+          </>
+        )
+        return (
+          <li key={i} className="zenith-ask-table-cards__item">
+            {clickable ? (
+              <button
+                type="button"
+                className="zenith-ask-table-cards__card is-clickable"
+                onClick={() => onDrill?.(href)}
+                aria-label={`Open projects for ${titleText}`}
+              >
+                {body}
+              </button>
+            ) : (
+              <div className="zenith-ask-table-cards__card">{body}</div>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function AskViz({
   viz,
   onDrill,
@@ -93,92 +165,107 @@ function AskViz({
   if (viz.kind === 'table') {
     const anyClickable = viz.rows.some((r) => typeof r.href === 'string' && r.href.length > 0)
     const colCount = viz.columns.length
-    // Equal-width cols keep the frozen header table aligned with the scrolling body table.
+    // Wide min-width so equal % columns stay readable; shared overflow-x scrolls head+body together.
+    const tableMinWidthRem = Math.max(36, colCount * 7)
     const colPct = colCount > 0 ? `${(100 / colCount).toFixed(4)}%` : undefined
     return (
       <ChartPanel title={viz.title} contentClassName="min-h-0">
         {anyClickable ? (
-          <p className="mb-1.5 text-[10px] text-[color:var(--text-muted)] sm:text-xs">
-            Click a row to open matching projects
+          <p className="mb-1.5 text-[11px] text-[color:var(--text-muted)] sm:text-xs">
+            <span className="md:hidden">Tap a card to open matching projects</span>
+            <span className="hidden md:inline">Click a row to open matching projects</span>
           </p>
         ) : null}
+
+        {/* Mobile-first: stacked cards — never squash 8 columns into a phone width. */}
+        <div className="md:hidden">
+          <AskTableCards columns={viz.columns} rows={viz.rows} onDrill={onDrill} />
+        </div>
+
         {/*
-          Header lives OUTSIDE the scroll body — position:sticky on <th> fails here
-          (overflow-x + Ask panel stacking). Frozen header + scrolling tbody is reliable.
+          md+: frozen header outside vertical scroll body; both share one horizontal scroller
+          so columns keep readable min widths instead of ellipsis soup.
         */}
-        <div className="zenith-ask-table">
-          <div className="zenith-ask-table__head">
-            <table className="zenith-ask-table__grid">
-              <colgroup>
-                {viz.columns.map((c) => (
-                  <col key={c.key} style={colPct ? { width: colPct } : undefined} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {viz.columns.map((c) => (
-                    <th key={c.key}>{c.label}</th>
-                  ))}
-                </tr>
-              </thead>
-            </table>
-          </div>
-          <div className="zenith-ask-table__body">
-            <table className="zenith-ask-table__grid">
-              <colgroup>
-                {viz.columns.map((c) => (
-                  <col key={c.key} style={colPct ? { width: colPct } : undefined} />
-                ))}
-              </colgroup>
-              <tbody>
-                {viz.rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={colCount} className="zenith-ask-table__empty">
-                      No rows
-                    </td>
-                  </tr>
-                ) : (
-                  viz.rows.map((row, i) => {
-                    const href = typeof row.href === 'string' ? row.href : ''
-                    const clickable = Boolean(href)
-                    return (
-                      <tr
-                        key={i}
-                        className={clickable ? 'is-clickable' : undefined}
-                        onClick={
-                          clickable
-                            ? () => {
-                                onDrill?.(href)
-                              }
-                            : undefined
-                        }
-                        onKeyDown={
-                          clickable
-                            ? (e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  onDrill?.(href)
-                                }
-                              }
-                            : undefined
-                        }
-                        tabIndex={clickable ? 0 : undefined}
-                        role={clickable ? 'link' : undefined}
-                      >
-                        {viz.columns.map((c) => (
-                          <td
-                            key={c.key}
-                            className={clickable && c.key === 'count' ? 'is-drill' : undefined}
-                          >
-                            {formatCell(row[c.key] ?? null)}
-                          </td>
-                        ))}
+        <div className="zenith-ask-table hidden md:block">
+          <div className="zenith-ask-table__xscroll">
+            <div
+              className="zenith-ask-table__inner"
+              style={{ minWidth: `${tableMinWidthRem}rem` }}
+            >
+              <div className="zenith-ask-table__head">
+                <table className="zenith-ask-table__grid">
+                  <colgroup>
+                    {viz.columns.map((c) => (
+                      <col key={c.key} style={colPct ? { width: colPct } : undefined} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      {viz.columns.map((c) => (
+                        <th key={c.key}>{c.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              <div className="zenith-ask-table__body">
+                <table className="zenith-ask-table__grid">
+                  <colgroup>
+                    {viz.columns.map((c) => (
+                      <col key={c.key} style={colPct ? { width: colPct } : undefined} />
+                    ))}
+                  </colgroup>
+                  <tbody>
+                    {viz.rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={colCount} className="zenith-ask-table__empty">
+                          No rows
+                        </td>
                       </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+                    ) : (
+                      viz.rows.map((row, i) => {
+                        const href = typeof row.href === 'string' ? row.href : ''
+                        const clickable = Boolean(href)
+                        return (
+                          <tr
+                            key={i}
+                            className={clickable ? 'is-clickable' : undefined}
+                            onClick={
+                              clickable
+                                ? () => {
+                                    onDrill?.(href)
+                                  }
+                                : undefined
+                            }
+                            onKeyDown={
+                              clickable
+                                ? (e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault()
+                                      onDrill?.(href)
+                                    }
+                                  }
+                                : undefined
+                            }
+                            tabIndex={clickable ? 0 : undefined}
+                            role={clickable ? 'link' : undefined}
+                          >
+                            {viz.columns.map((c) => (
+                              <td
+                                key={c.key}
+                                className={clickable && c.key === 'count' ? 'is-drill' : undefined}
+                              >
+                                {formatCell(row[c.key] ?? null)}
+                              </td>
+                            ))}
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </ChartPanel>
