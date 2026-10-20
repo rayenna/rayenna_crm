@@ -54,7 +54,12 @@ import {
   zenithQueryCacheKey,
 } from '../utils/zenithOfflineCache'
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
-import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
+import { ZENITH_FILTER_DEBOUNCE_MS, ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
+import { useDebounce } from '../hooks/useDebounce'
+import {
+  overlayDashboardAvgDays,
+  salesTeamPerformanceFromExplorer,
+} from '../utils/zenithExplorerDerived'
 import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
 import { zenithAskExampleChips, zenithAskMoreChips } from '../constants/zenithAskExamples'
 import {
@@ -78,6 +83,9 @@ const Zenith = () => {
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+  const queryFYs = useDebounce(selectedFYs, ZENITH_FILTER_DEBOUNCE_MS)
+  const queryQuarters = useDebounce(selectedQuarters, ZENITH_FILTER_DEBOUNCE_MS)
+  const queryMonths = useDebounce(selectedMonths, ZENITH_FILTER_DEBOUNCE_MS)
   const { isVisible, dismiss, showBriefing } = useDailyBriefing()
   const quickAction = useQuickAction()
   const financeQuickDrawer = useFinanceQuickDrawer()
@@ -404,23 +412,13 @@ const Zenith = () => {
     data: dashboardData,
     error: fyError,
     isError: isFyError,
-    isLoading: isFyLoading,
-    isFetching: isFyFetching,
     refetch: refetchFYs,
   } = useQuery({
       queryKey: ['dashboard', 'fys', user?.role],
       queryFn: async () => {
         if (!user?.role) throw new Error('No role')
         return fetchZenithWithOfflineCache(fyCacheKey, async () => {
-          if (user.role === UserRole.SALES) {
-            const res = await axiosInstance.get('/api/dashboard/sales')
-            return res.data as Record<string, unknown>
-          }
-          if (user.role === UserRole.OPERATIONS || user.role === UserRole.FINANCE) {
-            const res = await axiosInstance.get('/api/dashboard/financial-years')
-            return res.data as Record<string, unknown>
-          }
-          const res = await axiosInstance.get('/api/dashboard/management')
+          const res = await axiosInstance.get('/api/dashboard/financial-years')
           return res.data as Record<string, unknown>
         })
       },
@@ -438,20 +436,6 @@ const Zenith = () => {
       ?.map((item) => item.fy)
       .filter(Boolean) ?? []
 
-  const filtersEmpty =
-    selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
-  // Match Dashboard.tsx: only seed from FY fetch when payload exists (never `{}` from strip(undefined)).
-  const initialDataWhenFiltersEmpty =
-    filtersEmpty && dashboardData != null && Object.keys(dashboardDataClean).length > 0
-      ? dashboardDataClean
-      : undefined
-  const awaitingFySeedForExec =
-    filtersEmpty &&
-    execZenithRole &&
-    Object.keys(dashboardDataClean).length === 0 &&
-    !!user &&
-    (isFyLoading || isFyFetching)
-
   const {
     data: zenithData,
     isLoading,
@@ -460,18 +444,12 @@ const Zenith = () => {
     error,
     refetch,
     dataUpdatedAt,
-  } = useZenithMainQuery(
-    user?.role,
-    selectedFYs,
-    selectedQuarters,
-    selectedMonths,
-    initialDataWhenFiltersEmpty,
-  )
+  } = useZenithMainQuery(user?.role, queryFYs, queryQuarters, queryMonths)
 
   const { data: explorerProjects = [] } = useZenithExplorerQuery(
-    selectedFYs,
-    selectedQuarters,
-    selectedMonths,
+    queryFYs,
+    queryQuarters,
+    queryMonths,
     !!user,
   )
 
@@ -519,6 +497,11 @@ const Zenith = () => {
     [zenithData],
   )
 
+  const zenithDataWithExplorerMetrics = useMemo(
+    () => overlayDashboardAvgDays(zenithDataClean, explorerProjects),
+    [zenithDataClean, explorerProjects],
+  )
+
   const isOfflineSnapshot = useMemo(
     () => isZenithOfflineSnapshotPayload((zenithData ?? {}) as Record<string, unknown>),
     [zenithData],
@@ -531,18 +514,17 @@ const Zenith = () => {
   const hasZenithBodyData = Object.keys(zenithDataClean).length > 0
   const showZenithLoadError = !isFyError && isError && !hasZenithBodyData
   const showZenithBodyShell =
-    !isFyError && !showZenithLoadError && (hasZenithBodyData || isLoading || awaitingFySeedForExec)
+    !isFyError && !showZenithLoadError && (hasZenithBodyData || isLoading)
   const showZenithEmptyState =
     !isFyError &&
     !showZenithLoadError &&
     !hasZenithBodyData &&
     !isLoading &&
-    !awaitingFySeedForExec &&
     !!user?.role
 
   const dateFilter = useMemo(
-    () => ({ selectedFYs, selectedQuarters, selectedMonths }),
-    [selectedFYs, selectedQuarters, selectedMonths],
+    () => ({ selectedFYs: queryFYs, selectedQuarters: queryQuarters, selectedMonths: queryMonths }),
+    [queryFYs, queryQuarters, queryMonths],
   )
 
   const filterSummary = useMemo(
@@ -555,26 +537,13 @@ const Zenith = () => {
     user?.role === UserRole.MANAGEMENT ||
     user?.role === UserRole.ADMIN
 
-  const { data: salesPerfInsights } = useQuery({
-    queryKey: ['zenith', 'salesPerf', selectedFYs, selectedQuarters, selectedMonths],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedQuarters.forEach((q) => params.append('quarter', q))
-      selectedMonths.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
-      return res.data as { salesTeamData: { salespersonName: string; totalOrderValue: number }[] }
-    },
-    enabled: !!user && execForInsights,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
-
   const insights = useMemo(() => {
     if (!user?.role) return []
-    return buildZenithAiInsights(user.role, zenithDataClean, dateFilter, {
-      salesTeamPipeline: salesPerfInsights?.salesTeamData,
+    const team = execForInsights ? salesTeamPerformanceFromExplorer(explorerProjects).salesTeamData : []
+    return buildZenithAiInsights(user.role, zenithDataWithExplorerMetrics, dateFilter, {
+      salesTeamPipeline: team,
     })
-  }, [user?.role, zenithDataClean, dateFilter, salesPerfInsights?.salesTeamData])
+  }, [user?.role, zenithDataWithExplorerMetrics, dateFilter, explorerProjects, execForInsights])
 
   const tickerItems = useMemo(() => buildZenithTickerItems(insights), [insights])
 
@@ -616,18 +585,20 @@ const Zenith = () => {
   const mobileTabProp = narrow ? mobileTab : null
   /** Solar News + AI Insights: desktop always; mobile only on Today (overview). */
   const showTickers = !narrow || mobileTab === 'overview'
+  /** First paint / empty cache only — keep previous tiles visible while a new filter refetch is in flight. */
+  const showZenithSkeleton = Boolean(!hasZenithBodyData && isLoading)
 
   const insightsBar =
     showTickers && !isFyError && user?.role && (hasZenithBodyData || !isError) ? (
       <ZenithAiInsightsTicker
         items={tickerItems}
-        isLoading={isLoading && !hasZenithBodyData}
+        isLoading={showZenithSkeleton}
       />
     ) : null
 
   const body = useMemo(() => {
     if (!user?.role) return null
-    const data = zenithDataClean
+    const data = zenithDataWithExplorerMetrics
     switch (user.role) {
       case UserRole.SALES:
       case UserRole.MANAGEMENT:
@@ -636,7 +607,7 @@ const Zenith = () => {
           <ZenithExecutiveBody
             role={user.role}
             data={data}
-            isLoading={isLoading}
+            isLoading={showZenithSkeleton}
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
@@ -655,7 +626,7 @@ const Zenith = () => {
         return (
           <ZenithOperationsBody
             data={data}
-            isLoading={isLoading}
+            isLoading={showZenithSkeleton}
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
@@ -669,7 +640,7 @@ const Zenith = () => {
         return (
           <ZenithFinanceBody
             data={data}
-            isLoading={isLoading}
+            isLoading={showZenithSkeleton}
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
@@ -687,8 +658,8 @@ const Zenith = () => {
     }
   }, [
     user?.role,
-    zenithDataClean,
-    isLoading,
+    zenithDataWithExplorerMetrics,
+    showZenithSkeleton,
     dateFilter,
     openDrawerListMode,
     financeQuickDrawer.open,
@@ -720,7 +691,12 @@ const Zenith = () => {
           isOnline={isOnline}
           filterSummary={filterSummary}
           dataUpdatedAt={dataUpdatedAt}
-          isRefreshing={isFetching && !isLoading}
+          isRefreshing={
+            (isFetching && !isLoading) ||
+            selectedFYs !== queryFYs ||
+            selectedQuarters !== queryQuarters ||
+            selectedMonths !== queryMonths
+          }
           desktopCenterSlot={
             !narrow && showZenithAsk ? (
               <div id="zenith-ask-surface" className="zenith-ask-command-wrap">
@@ -1056,7 +1032,7 @@ const Zenith = () => {
             onDismiss={dismiss}
             role={user.role}
             currentUserName={user.name}
-            data={(zenithData ?? {}) as Record<string, unknown>}
+            data={zenithDataWithExplorerMetrics}
             explorerProjects={explorerProjects}
             myDaySnapshot={myDaySnapQ.data ?? null}
             myDaySnapshotLoading={myDaySnapQ.isLoading}

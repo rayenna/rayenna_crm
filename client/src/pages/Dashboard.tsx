@@ -26,18 +26,7 @@ const Dashboard = () => {
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } = useQuery({
     queryKey: ['dashboard', 'fys', user?.role],
     queryFn: async () => {
-      // Sales: full dashboard payload (also used as initialData when filters empty)
-      if (user?.role === UserRole.SALES) {
-        const res = await axiosInstance.get('/api/dashboard/sales')
-        return res.data
-      }
-      // Operations / Finance: FY list only — avoids loading full /management just for the filter bar
-      if (user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) {
-        const res = await axiosInstance.get('/api/dashboard/financial-years')
-        return res.data
-      }
-      // Management / Admin: full management payload for FYs + initialData when filters empty
-      const res = await axiosInstance.get('/api/dashboard/management')
+      const res = await axiosInstance.get('/api/dashboard/financial-years')
       return res.data
     },
     enabled: !!user, // Fetch to get available FYs
@@ -45,10 +34,6 @@ const Dashboard = () => {
 
   const availableFYs =
     dashboardData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []
-
-  // Reuse first fetch when filters are empty to avoid double request (Management/Admin and Sales)
-  const filtersEmpty = selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
-  const initialDataWhenFiltersEmpty = filtersEmpty ? dashboardData : undefined
 
   const getDashboardComponent = () => {
     switch (user?.role) {
@@ -58,7 +43,6 @@ const Dashboard = () => {
             selectedFYs={selectedFYs}
             selectedQuarters={selectedQuarters}
             selectedMonths={selectedMonths}
-            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
           />
         )
       case UserRole.OPERATIONS:
@@ -71,7 +55,6 @@ const Dashboard = () => {
             selectedFYs={selectedFYs}
             selectedQuarters={selectedQuarters}
             selectedMonths={selectedMonths}
-            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
           />
         )
       case UserRole.ADMIN:
@@ -80,7 +63,6 @@ const Dashboard = () => {
             selectedFYs={selectedFYs}
             selectedQuarters={selectedQuarters}
             selectedMonths={selectedMonths}
-            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
           />
         )
       default:

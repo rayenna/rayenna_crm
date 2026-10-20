@@ -1,6 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import {
   BarChart,
   Bar,
@@ -13,7 +12,6 @@ import {
   Legend,
 } from 'recharts'
 import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, Wallet, HandCoins } from 'lucide-react'
-import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectStatus, ProjectType, UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
@@ -44,8 +42,13 @@ import type {
   ZenithAutoFocusSection,
   ZenithListAmountMode,
 } from '../../hooks/useQuickAction'
-import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import {
+  explorerToHitListRows,
+  mergeSalesTeamChartRows,
+  revenueByLeadSourceFromExplorer,
+  salesTeamPerformanceFromExplorer,
+} from '../../utils/zenithExplorerDerived'
 import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import {
@@ -246,33 +249,20 @@ export default function ZenithExecutiveBody({
   const showHitList =
     role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT
 
-  const { data: focusData, isLoading: focusLoading } = useQuery({
-    queryKey: ['zenith-focus', user?.id, effFYs, effQ, effM],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/dashboard/zenith-focus?${params.toString()}`)
-      return res.data as {
-        focusKind: string
-        salesPipeline?: { rows: HitListProjectRow[] }
-      }
-    },
-    enabled: !!user?.id && showHitList && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
+  const { data: explorerProjects = [], isLoading: explorerLoading } = useZenithExplorerQuery(
+    effFYs,
+    effQ,
+    effM,
+    !!user,
+  )
 
-  const pipelineRows: HitListProjectRow[] =
-    focusData &&
-    (focusData.focusKind === 'SALES' || focusData.focusKind === 'MANAGEMENT') &&
-    focusData.salesPipeline
-      ? focusData.salesPipeline.rows
-      : []
-
-  const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
+  const pipelineRows: HitListProjectRow[] = useMemo(
+    () => (showHitList ? explorerToHitListRows(explorerProjects) : []),
+    [showHitList, explorerProjects],
+  )
 
   const hitListResult = useHitList(pipelineRows, role, user ?? null)
+  const hitListPending = showHitList && explorerLoading && explorerProjects.length === 0
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const pendingSubsidyProjectsUrl = buildProjectsUrl({ pendingSubsidy: true }, dateFilter)
   const lostDealsPageUrl = buildLostDealsUrl(dateFilter)
@@ -503,37 +493,14 @@ export default function ZenithExecutiveBody({
     ],
   )
 
-  const { data: revLeadData } = useQuery({
-    queryKey: ['zenith', 'revenueLead', effFYs, effQ, effM, user?.role],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/dashboard/revenue-by-lead-source?${params.toString()}`)
-      return (res.data as { revenueByLeadSource: { leadSourceLabel: string; revenue: number }[] })
-        .revenueByLeadSource
-    },
-    enabled: !!user && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
-
-  const { data: perfData } = useQuery({
-    queryKey: ['zenith', 'salesPerf', effFYs, effQ, effM],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
-      return res.data as {
-        salesTeamData: { salespersonName: string; totalOrderValue: number }[]
-        revenueBySalesperson: { salespersonName: string; revenue: number }[]
-      }
-    },
-    enabled: !!user && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
+  const revLeadData = useMemo(
+    () => revenueByLeadSourceFromExplorer(explorerProjects),
+    [explorerProjects],
+  )
+  const salesMerge = useMemo(
+    () => mergeSalesTeamChartRows(salesTeamPerformanceFromExplorer(explorerProjects)),
+    [explorerProjects],
+  )
 
   const panelBrandBarRows = useMemo(
     () => buildZenithLifecycleBrandBarRows(explorerProjects, 'panel'),
@@ -655,16 +622,6 @@ export default function ZenithExecutiveBody({
       }
     }) ?? []
 
-  const salesMerge = (() => {
-    const rev = perfData?.revenueBySalesperson ?? []
-    const pipe = perfData?.salesTeamData ?? []
-    const names = new Set([...rev.map((r) => r.salespersonName), ...pipe.map((p) => p.salespersonName)])
-    return Array.from(names).map((name) => ({
-      name,
-      revenue: rev.find((r) => r.salespersonName === name)?.revenue ?? 0,
-      pipeline: pipe.find((p) => p.salespersonName === name)?.totalOrderValue ?? 0,
-    }))
-  })()
 
   const revenueSeg = (data?.projectValueByType ?? []) as {
     type: string
@@ -724,7 +681,7 @@ export default function ZenithExecutiveBody({
           )}
           <ZenithPriorityRibbon
             items={priorityItems}
-            isLoading={focusLoading && showHitList}
+            isLoading={hitListPending}
             onNavigate={onPriorityNavigate ?? (() => {})}
           />
           </div>
@@ -767,7 +724,7 @@ export default function ZenithExecutiveBody({
             >
               <DashboardMyDayPlanCard fillHeight paired className="h-full" />
             </div>
-            {focusLoading ? (
+            {hitListPending ? (
               <div id="zenith-hit-list" className="zenith-overview-panel flex min-h-0 min-w-0 flex-col">
                 <ZenithHitListPanelSkeleton />
               </div>

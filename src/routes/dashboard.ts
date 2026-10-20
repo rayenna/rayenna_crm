@@ -31,6 +31,7 @@ import { parsePeriodCompare } from '../services/zenithNl/periodCompare';
 import { parseZenithNlPriorFilters } from '../services/zenithNl/priorFilters';
 import { listUserAskHistory, persistUserAskHistory } from '../services/zenithNl/askHistory';
 import { logZenithAskEvent } from '../utils/auditLogger';
+import { countFromStatusGroupBy } from '../utils/dashboardStatusCounts';
 
 const router = express.Router();
 
@@ -378,6 +379,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       updatedAt: true,
       stageEnteredAt: true,
       confirmationDate: true,
+      createdAt: true,
       advanceReceived: true,
       grossProfit: true,
       projectRemarks: { orderBy: { createdAt: 'desc' as const }, take: 1, select: { createdAt: true } },
@@ -408,6 +410,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     /** Leaderboard period gate: stage transition time (preferred over updatedAt, which moves on any edit). */
     stage_entered_at: p.stageEnteredAt?.toISOString() ?? null,
     confirmation_date: p.confirmationDate?.toISOString() ?? null,
+    created_at: p.createdAt.toISOString(),
     advance_received: p.advanceReceived != null ? Number(p.advanceReceived) : 0,
     balance_amount: p.balanceAmount != null ? Number(p.balanceAmount) : null,
     expected_close_date: p.expectedCommissioningDate?.toISOString() ?? null,
@@ -639,8 +642,8 @@ function computePeOrderValueExGstFromCosting(costing: {
 }
 
 /**
- * Lightweight FY list for filter dropdowns only (same year scope as dashboard FY series: revenue-eligible projects).
- * Use instead of GET /management when the full management payload is not needed (e.g. Operations, Finance bootstrap).
+ * Lightweight FY list for filter dropdowns (revenue-eligible projects, salesperson-scoped for Sales).
+ * Used by every role on Zenith / Dashboard bootstrap — not a substitute for KPI payloads.
  */
 router.get('/financial-years', authenticate, async (req: Request, res: Response) => {
   try {
@@ -719,24 +722,36 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }
     }
 
+    const whereFYSeries = getRevenueWhere(where);
+    const pipelineWhereBase = {
+      projectCost: { not: null },
+      projectStatus: { not: ProjectStatus.LOST },
+    };
+    const pipelineWhereFY = { ...where, ...pipelineWhereBase };
+
     const [
-      totalLeads,
-      confirmedProjects,
       totalCapacity,
       pipelineCapacity,
       totalRevenue,
       totalProfit,
       projectsByStatusRawFromPromise,
       revenueBySalesperson,
+      projectValueByTypeRaw,
+      pipelineByLeadSourceRaw,
+      pipelineByTypeRaw,
+      projectValueByFY,
+      profitByFY,
+      capacityByFY,
+      pipelineByFY,
+      lostRowsSales,
+      avgDaysByStatusSales,
+      totalPipeline,
+      profitabilityData,
+      availingLoanByBankRaw,
+      availingLoanCount,
+      pendingSubsidyCount,
+      projectsByPaymentStatus,
     ] = await Promise.all([
-      // Total leads
-      prisma.project.count({
-        where: { ...where, projectStatus: ProjectStatus.LEAD },
-      }),
-      // Confirmed projects
-      prisma.project.count({
-        where: { ...where, projectStatus: { not: ProjectStatus.LEAD } },
-      }),
       // Total capacity sold (only confirmed/completed projects, same filter as Total Revenue)
       (async () => {
         const capacityWhere = getRevenueWhere(where);
@@ -753,13 +768,13 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }),
       // Total revenue (only confirmed/completed projects, excluding leads/survey/proposal)
       (async () => {
-        const revenueWhere = getRevenueWhere(where);
+        const revenueWhereInner = getRevenueWhere(where);
         const result = await prisma.project.aggregate({
-          where: revenueWhere,
+          where: revenueWhereInner,
           _sum: { projectCost: true },
         });
         if (process.env.NODE_ENV === 'development') {
-          console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2), 'result:', result);
+          console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhereInner, null, 2), 'result:', result);
         }
         return result;
       })(),
@@ -768,7 +783,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         where: { ...getRevenueWhere(where), grossProfit: { not: null } },
         _sum: { grossProfit: true },
       }),
-      // Projects by status
+      // Projects by status (also used for pipeline tile counts)
       prisma.project.groupBy({
         by: ['projectStatus'],
         where,
@@ -781,6 +796,77 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         _sum: { projectCost: true },
         _count: { id: true },
       }),
+      aggregateProjectsByCustomerType(getRevenueWhere(where)),
+      prisma.project.groupBy({
+        by: ['leadSource'],
+        where: { ...getPipelineWhere(where), leadSource: { not: null } },
+        _sum: { projectCost: true },
+        _count: { id: true },
+      }),
+      aggregateProjectsByCustomerType(getPipelineWhere(where)),
+      prisma.project.groupBy({
+        by: ['year'],
+        where: whereFYSeries,
+        _sum: { projectCost: true },
+      }),
+      prisma.project.groupBy({
+        by: ['year'],
+        where: { ...whereFYSeries, grossProfit: { not: null } },
+        _sum: { grossProfit: true },
+      }),
+      prisma.project.groupBy({
+        by: ['year'],
+        where: { ...whereFYSeries, systemCapacity: { not: null } },
+        _sum: { systemCapacity: true },
+      }),
+      prisma.project.groupBy({
+        by: ['year'],
+        where: pipelineWhereFY,
+        _sum: { projectCost: true },
+      }),
+      loadLostOrderValueRows(where as Prisma.ProjectWhereInput),
+      computeAvgDaysByProjectStatus(where),
+      prisma.project.aggregate({
+        where: { ...where, ...pipelineWhereBase },
+        _sum: { projectCost: true },
+      }),
+      prisma.project.findMany({
+        where: {
+          ...where,
+          projectStatus: { not: ProjectStatus.LOST },
+          profitability: { not: null },
+        },
+        select: {
+          id: true,
+          profitability: true,
+          customer: {
+            select: {
+              firstName: true,
+              customerName: true,
+            },
+          },
+        },
+        orderBy: {
+          profitability: 'desc',
+        },
+        take: 50,
+      }),
+      prisma.project.groupBy({
+        by: ['financingBank'],
+        where: { ...where, availingLoan: true, financingBank: { not: null } },
+        _count: { id: true },
+      }),
+      prisma.project.count({
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+      prisma.project.count({
+        where: {
+          ...where,
+          type: ProjectType.SUBSIDY,
+          projectStatus: ProjectStatus.COMPLETED,
+        },
+      }),
+      buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput),
     ]);
 
     // Get salesperson names for revenue breakdown
@@ -806,18 +892,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }));
     }
 
-    // Revenue by customer type (Customer Master) pie chart
-    const valueByTypeWithPercentage = withChartPercentages(
-      await aggregateProjectsByCustomerType(getRevenueWhere(where)),
-    );
+    const valueByTypeWithPercentage = withChartPercentages(projectValueByTypeRaw);
 
-    // Pipeline by lead source (for Pipeline by Lead Source chart)
-    const pipelineByLeadSourceRaw = await prisma.project.groupBy({
-      by: ['leadSource'],
-      where: { ...getPipelineWhere(where), leadSource: { not: null } },
-      _sum: { projectCost: true },
-      _count: { id: true },
-    });
     const pipelineByLeadSource = pipelineByLeadSourceRaw.map((item) => {
       let label = '';
       switch (item.leadSource) {
@@ -840,48 +916,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     });
     pipelineByLeadSource.sort((a, b) => b.pipeline - a.pipeline);
 
-    // Pipeline by customer type (Customer Master) pie chart
-    const pipelineByTypeWithPercentage = withChartPercentages(
-      await aggregateProjectsByCustomerType(getPipelineWhere(where)),
-    );
+    const pipelineByTypeWithPercentage = withChartPercentages(pipelineByTypeRaw);
 
-    // Calculate project value, profit, capacity and pipeline by financial year.
-    // Use date-filtered where so: selected FY(s) only; quarter/month apply when one FY is selected.
-    const whereFYSeries = getRevenueWhere(where);
-    // Pipeline = sum of order value for all project stages EXCEPT Lost
-    const pipelineWhereBase = {
-      projectCost: { not: null },
-      projectStatus: { not: ProjectStatus.LOST },
-    };
-    const pipelineWhereFY = { ...where, ...pipelineWhereBase };
-    const pipelineWhereForTiles = { ...where, ...pipelineWhereBase };
-
-    const projectValueByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: whereFYSeries,
-      _sum: { projectCost: true },
-    });
-
-    const profitByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...whereFYSeries, grossProfit: { not: null } },
-      _sum: { grossProfit: true },
-    });
-
-    const capacityByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...whereFYSeries, systemCapacity: { not: null } },
-      _sum: { systemCapacity: true },
-    });
-
-    const [pipelineByFY, lostRowsSales] = await Promise.all([
-      prisma.project.groupBy({
-        by: ['year'],
-        where: pipelineWhereFY,
-        _sum: { projectCost: true },
-      }),
-      loadLostOrderValueRows(where as Prisma.ProjectWhereInput),
-    ]);
     const lostByYearSales = lostOrderValueByYear(lostRowsSales);
     const lostOrderValue = sumLostOrderValue(lostRowsSales);
 
@@ -914,17 +950,33 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       'full'
     );
 
-    // Total Leads = deals in Lead stage only (Sales and Management)
-    const totalLeadsCount =
-      projectsByStatusRawFromPromise
-        ?.filter((p) => p.projectStatus === ProjectStatus.LEAD)
-        .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
+    // Total Leads + pipeline tiles: same projectStatus groupBy as Projects by Stage (no extra counts)
+    const totalLeadsCount = countFromStatusGroupBy(
+      projectsByStatusRawFromPromise,
+      ProjectStatus.LEAD,
+    );
+    const pipelineSurvey = countFromStatusGroupBy(
+      projectsByStatusRawFromPromise,
+      ProjectStatus.SITE_SURVEY,
+    );
+    const pipelineProposal = countFromStatusGroupBy(
+      projectsByStatusRawFromPromise,
+      ProjectStatus.PROPOSAL,
+    );
+    const pipelineApproved = countFromStatusGroupBy(
+      projectsByStatusRawFromPromise,
+      ProjectStatus.CONFIRMED,
+    );
+    const pipelineAtRisk = countFromStatusGroupBy(projectsByStatusRawFromPromise, [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+    ]);
 
     // Build chart-ready projects by status (single place)
     let projectsByStatus = buildProjectsByStatus(
       (projectsByStatusRawFromPromise || []).map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
-    const avgDaysByStatusSales = await computeAvgDaysByProjectStatus(where);
     projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusSales);
 
     // The detailed LeadStatus-based metrics (NEW / QUALIFIED / CONVERTED) and
@@ -936,78 +988,6 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     const conversionRate = '0';
 
     const leadsBySourceArray: Array<{ source: string; count: number; expectedValue: number }> = [];
-
-    // Pipeline by stage
-    // NOTE:
-    // The newer project lifecycle implementation does not currently maintain
-    // the legacy projectStage / statusIndicator fields. To keep the Sales
-    // dashboard tiles meaningful (especially for Sales users), we derive the
-    // pipeline counts directly from the primary projectStatus field instead of
-    // relying on projectStage / statusIndicator.
-    //
-    // This ensures the tiles always reflect the actual pipeline even if
-    // stage/SLA tracking is not enabled.
-    const pipelineSurvey = await prisma.project.count({
-      where: { 
-        ...where,
-        projectStatus: ProjectStatus.SITE_SURVEY,
-      },
-    });
-    const pipelineProposal = await prisma.project.count({
-      where: { 
-        ...where,
-        projectStatus: ProjectStatus.PROPOSAL,
-      },
-    });
-    const pipelineApproved = await prisma.project.count({
-      where: { 
-        ...where,
-        projectStatus: ProjectStatus.CONFIRMED,
-      },
-    });
-    // Open Pipeline = deals in Lead, Site Survey, Proposal only
-    const pipelineAtRisk = await prisma.project.count({
-      where: {
-        ...where,
-        projectStatus: {
-          in: [
-            ProjectStatus.LEAD,
-            ProjectStatus.SITE_SURVEY,
-            ProjectStatus.PROPOSAL,
-          ],
-        },
-      },
-    });
-
-    // Total Pipeline = sum of order value for all project stages EXCEPT Lost
-    const totalPipeline = await prisma.project.aggregate({
-      where: { ...where, ...pipelineWhereBase },
-      _sum: { projectCost: true },
-    });
-
-    // Get customer/project profitability data for word cloud
-    const profitabilityData = await prisma.project.findMany({
-      where: {
-        ...where,
-        projectStatus: { not: ProjectStatus.LOST },
-        profitability: { not: null },
-        // customerId is a required field, so it can never be null - no need to filter
-      },
-      select: {
-        id: true,
-        profitability: true,
-        customer: {
-          select: {
-            firstName: true, // Primary - used for word cloud
-            customerName: true, // Fallback only if firstName is null/empty
-          },
-        },
-      },
-      orderBy: {
-        profitability: 'desc',
-      },
-      take: 50, // Limit to top 50 for word cloud
-    });
 
     // Map to word cloud data - use firstName (required), profitability from Sales & Commercial section
     const wordCloudData = profitabilityData.map((p) => {
@@ -1024,25 +1004,6 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       };
     });
 
-    // Availing Loan count + by bank (same semantics as Management/Finance tiles: not Lost, availingLoan true)
-    // Pending Subsidy = Subsidy segment + Completed (same as Projects `pendingSubsidy=true`)
-    const [availingLoanByBankRaw, availingLoanCount, pendingSubsidyCount] = await Promise.all([
-      prisma.project.groupBy({
-        by: ['financingBank'],
-        where: { ...where, availingLoan: true, financingBank: { not: null } },
-        _count: { id: true },
-      }),
-      prisma.project.count({
-        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
-      }),
-      prisma.project.count({
-        where: {
-          ...where,
-          type: ProjectType.SUBSIDY,
-          projectStatus: ProjectStatus.COMPLETED,
-        },
-      }),
-    ]);
     const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRaw);
 
     // When one FY and quarter/month selected: same period in previous year for YoY
@@ -1096,8 +1057,6 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         };
       }
     }
-
-    const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
     const zenithExplorerProjects: Awaited<ReturnType<typeof loadZenithExplorerProjects>> = [];
 
@@ -1898,6 +1857,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
       pendingSubsidyCount,
       profitabilityData,
       availingLoanByBankRawMgmt,
+      avgDaysByStatusMgmt,
+      projectsByPaymentStatus,
     ] = await Promise.all([
       aggregateProjectsByCustomerType(getRevenueWhere(where)),
       prisma.project.groupBy({
@@ -1972,6 +1933,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
         where: { ...where, availingLoan: true, financingBank: { not: null } },
         _count: { id: true },
       }),
+      computeAvgDaysByProjectStatus(where),
+      buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput),
     ]);
 
     const totalPipeline = totalPipelineResult;
@@ -2054,24 +2017,19 @@ router.get('/management', authenticate, async (req: Request, res) => {
     let projectsByStatus = buildProjectsByStatus(
       projectsByStatusRawMgmt.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
-    const avgDaysByStatusMgmt = await computeAvgDaysByProjectStatus(where);
     projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusMgmt);
 
     // Open Deals = Lead, Site Survey, Proposal (for Management/Admin tile)
-    const openDealsStatuses: ProjectStatus[] = [
+    const openDealsCount = countFromStatusGroupBy(projectsByStatusRawMgmt, [
       ProjectStatus.LEAD,
       ProjectStatus.SITE_SURVEY,
       ProjectStatus.PROPOSAL,
-    ];
-    const openDealsCount =
-      projectsByStatusRawMgmt
-        ?.filter((p) => openDealsStatuses.includes(p.projectStatus as ProjectStatus))
-        .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
+    ]);
 
-    const lostProjectsCount =
-      projectsByStatusRawMgmt?.find((p) => (p.projectStatus as ProjectStatus) === ProjectStatus.LOST)?._count?.id || 0;
-
-    const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
+    const lostProjectsCount = countFromStatusGroupBy(
+      projectsByStatusRawMgmt,
+      ProjectStatus.LOST,
+    );
 
     // Availing Loan count and profitabilityData from batch above
 

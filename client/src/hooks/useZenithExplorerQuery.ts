@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 import type { ZenithExplorerProject } from '../types/zenithExplorer'
@@ -43,6 +43,7 @@ export function useZenithExplorerQuery(
       })
     },
     enabled,
+    placeholderData: keepPreviousData,
     staleTime: ZENITH_QUERY_STALE_MS,
     select: (data) => data.zenithExplorerProjects ?? [],
   })

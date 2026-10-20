@@ -13,8 +13,6 @@ import {
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
-import { useQuery } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectStatus, ProjectType } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
@@ -25,7 +23,6 @@ import {
   filterExplorerProjectsByFunnelStage,
   type ZenithFunnelStage,
 } from './zenithFunnel'
-import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithDateFilter } from './zenithTypes'
 import type {
   QuickActionProjectRef,
@@ -50,6 +47,7 @@ import {
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
+import { mergeSalesTeamChartRows, salesTeamPerformanceFromExplorer } from '../../utils/zenithExplorerDerived'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
@@ -146,24 +144,11 @@ export default function ZenithOperationsBody({
   const effQ = dateFilter.selectedQuarters
   const effM = dateFilter.selectedMonths
 
-  const { data: perfData } = useQuery({
-    queryKey: ['zenith', 'opsSalesPerf', effFYs, effQ, effM],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
-      return res.data as {
-        salesTeamData: { salespersonName: string; totalOrderValue: number }[]
-        revenueBySalesperson: { salespersonName: string; revenue: number }[]
-      }
-    },
-    enabled: !!user && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
-
   const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
+  const salesMerge = useMemo(
+    () => mergeSalesTeamChartRows(salesTeamPerformanceFromExplorer(explorerProjects)),
+    [explorerProjects],
+  )
 
   const pendingInstallationProjectsUrl = buildProjectsUrl(
     { status: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
@@ -376,16 +361,6 @@ export default function ZenithOperationsBody({
     outstanding: number
   }[]
 
-  const salesMerge = (() => {
-    const rev = perfData?.revenueBySalesperson ?? []
-    const pipe = perfData?.salesTeamData ?? []
-    const names = new Set([...rev.map((r) => r.salespersonName), ...pipe.map((p) => p.salespersonName)])
-    return Array.from(names).map((name) => ({
-      name,
-      revenue: rev.find((r) => r.salespersonName === name)?.revenue ?? 0,
-      pipeline: pipe.find((p) => p.salespersonName === name)?.totalOrderValue ?? 0,
-    }))
-  })()
 
   const showOverview = isZenithMobileTabActive(mobileTab, 'overview')
   const showPipeline = isZenithMobileTabActive(mobileTab, 'pipeline')

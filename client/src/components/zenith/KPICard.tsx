@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
-import { useCountUp } from '../../hooks/useCountUp'
+import { useCountUp, ZENITH_KPI_COUNT_UP_MS } from '../../hooks/useCountUp'
 import { useChartColors } from '../../hooks/useChartColors'
 import type { ZenithKpiItem } from './zenithKpi'
 import type { LucideIcon } from 'lucide-react'
@@ -45,7 +45,7 @@ export default function KPICard({
   const target =
     item.format === 'percent' && item.key === 'conversion' ? item.value : item.value
 
-  const animated = useCountUp(target, 1200, item.format === 'percent' ? 1 : 0)
+  const animated = useCountUp(target, ZENITH_KPI_COUNT_UP_MS, item.format === 'percent' ? 1 : 0)
 
   const spark = item.sparkline.length ? item.sparkline : [0, 0, 0, 0, 0, 0, 0]
   const sparkData = spark.map((v, i) => ({ i, v }))

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import {
@@ -1759,12 +1759,13 @@ export default function ZenithYourFocus({
       return res.data as ZenithFocusResponse
     },
     enabled: !!user?.id && showForRole && !zenithMainLoading,
+    placeholderData: keepPreviousData,
     staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   if (!showForRole) return null
 
-  if (zenithMainLoading || isLoading) {
+  if (zenithMainLoading || (isLoading && !data)) {
     return (
       <div className="zenith-skeleton rounded-2xl h-36 w-full" aria-hidden />
     )

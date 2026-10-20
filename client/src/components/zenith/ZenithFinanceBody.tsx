@@ -13,8 +13,6 @@ import {
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
-import { useQuery } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectStatus, ProjectType, UserRole } from '../../types'
 import { buildFinanceZenithKpis } from './zenithKpi'
@@ -45,8 +43,12 @@ import {
   funnelChartResetGroup,
 } from '../../utils/zenithChartResetGroup'
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
-import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import {
+  mergeSalesTeamChartRows,
+  revenueByLeadSourceFromExplorer,
+  salesTeamPerformanceFromExplorer,
+} from '../../utils/zenithExplorerDerived'
 import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
@@ -148,38 +150,14 @@ export default function ZenithFinanceBody({
   const effM = dateFilter.selectedMonths
 
   const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
-
-  const { data: revLead } = useQuery({
-    queryKey: ['zenith', 'finRevLead', effFYs, effQ, effM],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/dashboard/revenue-by-lead-source?${params.toString()}`)
-      return (res.data as { revenueByLeadSource: { leadSourceLabel: string; revenue: number }[] })
-        .revenueByLeadSource
-    },
-    enabled: !!user && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
-
-  const { data: perfData } = useQuery({
-    queryKey: ['zenith', 'finSalesPerf', effFYs, effQ, effM],
-    queryFn: async () => {
-      const params = new URLSearchParams()
-      effFYs.forEach((fy) => params.append('fy', fy))
-      effQ.forEach((q) => params.append('quarter', q))
-      effM.forEach((m) => params.append('month', m))
-      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
-      return res.data as {
-        salesTeamData: { salespersonName: string; totalOrderValue: number }[]
-        revenueBySalesperson: { salespersonName: string; revenue: number }[]
-      }
-    },
-    enabled: !!user && !isLoading,
-    staleTime: ZENITH_QUERY_STALE_MS,
-  })
+  const revLead = useMemo(
+    () => revenueByLeadSourceFromExplorer(explorerProjects),
+    [explorerProjects],
+  )
+  const salesMerge = useMemo(
+    () => mergeSalesTeamChartRows(salesTeamPerformanceFromExplorer(explorerProjects)),
+    [explorerProjects],
+  )
 
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const pendingSubsidyProjectsUrl = buildProjectsUrl({ pendingSubsidy: true }, dateFilter)
@@ -354,17 +332,7 @@ export default function ZenithFinanceBody({
     outstanding: number
   }[]
 
-  const leadChart = (revLead ?? []).map((r) => ({ name: r.leadSourceLabel, revenue: r.revenue }))
-  const salesMerge = (() => {
-    const rev = perfData?.revenueBySalesperson ?? []
-    const pipe = perfData?.salesTeamData ?? []
-    const names = new Set([...rev.map((r) => r.salespersonName), ...pipe.map((p) => p.salespersonName)])
-    return Array.from(names).map((name) => ({
-      name,
-      revenue: rev.find((r) => r.salespersonName === name)?.revenue ?? 0,
-      pipeline: pipe.find((p) => p.salespersonName === name)?.totalOrderValue ?? 0,
-    }))
-  })()
+  const leadChart = revLead.map((r) => ({ name: r.leadSourceLabel, revenue: r.revenue }))
 
   const showOverview = isZenithMobileTabActive(mobileTab, 'overview')
   const showPipeline = isZenithMobileTabActive(mobileTab, 'pipeline')
