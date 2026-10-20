@@ -68,6 +68,7 @@ export interface ProposalEngineProjectFromApi {
     customerName?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    companyName?: string | null;
     contactPerson?: string | null;
     phone?: string | null;
     email?: string | null;
@@ -116,7 +117,10 @@ function buildPeProjectsSearchParams(arg?: number | PeProjectsListParams): URLSe
   return params;
 }
 
-async function fetchPeProjectsRaw(params: URLSearchParams): Promise<{
+async function fetchPeProjectsRaw(
+  params: URLSearchParams,
+  init?: { signal?: AbortSignal },
+): Promise<{
   items: ProposalEngineProjectFromApi[];
   total: number;
 }> {
@@ -126,7 +130,7 @@ async function fetchPeProjectsRaw(params: URLSearchParams): Promise<{
   const headers = new Headers();
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, { headers, signal: init?.signal });
   if (response.status === 401) {
     handleUnauthorized();
     throw new Error('Unauthorized');
@@ -160,14 +164,16 @@ async function fetchPeProjectsRaw(params: URLSearchParams): Promise<{
 
 export async function fetchProposalEngineProjects(
   arg?: number | PeProjectsListParams,
+  init?: { signal?: AbortSignal },
 ): Promise<{ items: ProposalEngineProjectFromApi[]; total: number }> {
   const params = buildPeProjectsSearchParams(arg);
   if (!params.has('limit')) params.set('limit', '200');
-  return fetchPeProjectsRaw(params);
+  return fetchPeProjectsRaw(params, init);
 }
 
 export async function fetchProposalEngineProjectsStats(
   filters: Omit<PeProjectsListParams, 'limit' | 'offset' | 'page' | 'sortBy' | 'sortOrder'> = {},
+  init?: { signal?: AbortSignal },
 ): Promise<PeProjectsStatsResponse> {
   const params = buildPeProjectsSearchParams(filters);
   params.delete('limit');
@@ -178,6 +184,7 @@ export async function fetchProposalEngineProjectsStats(
   const qs = params.toString();
   return apiFetch<PeProjectsStatsResponse>(
     `/api/proposal-engine/projects/stats${qs ? `?${qs}` : ''}`,
+    { signal: init?.signal },
   );
 }
 

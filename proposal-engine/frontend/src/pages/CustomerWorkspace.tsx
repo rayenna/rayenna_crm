@@ -9,6 +9,8 @@ import {
   getWipKeysForCurrentUser,
   STATUS_LABELS,
   STATUS_COLORS,
+  costingLineCount,
+  bomLineCount,
 } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import {
@@ -289,7 +291,7 @@ export default function CustomerWorkspace() {
       saved:       !!record.costing,
       savedAt:     record.costing?.savedAt,
       summary:     record.costing
-        ? `${record.costing.items.length} items · ${record.costing.systemSizeKw > 0 ? `${record.costing.systemSizeKw} kW · ` : ''}${fmtINR(record.costing.grandTotal)} (incl. GST)`
+        ? `${costingLineCount(record.costing)} items · ${record.costing.systemSizeKw > 0 ? `${record.costing.systemSizeKw} kW · ` : ''}${fmtINR(record.costing.grandTotal)} (incl. GST)`
         : undefined,
     },
     {
@@ -301,7 +303,7 @@ export default function CustomerWorkspace() {
       saved:       !!record.bom,
       savedAt:     record.bom?.savedAt,
       summary:     record.bom
-        ? `${record.bom.rows.length} line items`
+        ? `${bomLineCount(record.bom)} line items`
         : undefined,
     },
     {

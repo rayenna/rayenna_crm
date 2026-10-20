@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   artifactSummary,
+  bomLineCount,
+  costingLineCount,
   deriveProposalStatusFromArtifacts,
   hasSavedRoofLayout,
   normalizeProposalStatus,
   PE_ARTIFACT_COUNT,
+  stripInactiveCustomerBlobs,
 } from './customerStore';
 import type { CustomerRecord } from './customerStore';
 
@@ -63,6 +66,116 @@ describe('artifactSummary', () => {
     };
     expect(hasSavedRoofLayout(withRoof)).toBe(true);
     expect(artifactSummary(withRoof)).toBe('1 / 5 artifacts');
+  });
+});
+
+describe('stripInactiveCustomerBlobs', () => {
+  const fat: CustomerRecord = {
+    id: 'keep-me',
+    createdAt: '',
+    updatedAt: '',
+    status: 'draft',
+    master: { name: 'A', location: '', contactPerson: '', phone: '', email: '' },
+    costing: {
+      sheetName: 'S',
+      savedAt: '2026-01-01',
+      items: [{ itemName: 'Panel' }] as CustomerRecord['costing'] extends { items: infer I } ? I : never,
+      showGst: true,
+      marginPercent: 10,
+      grandTotal: 1,
+      totalGst: 0,
+      systemSizeKw: 5,
+    },
+    bom: {
+      savedAt: '2026-01-01',
+      rows: [{ itemName: 'Inv' }] as CustomerRecord['bom'] extends { rows: infer I } ? I : never,
+    },
+    roi: {
+      savedAt: '2026-01-01',
+      result: {
+        inputs: {
+          systemSizeKw: 5,
+          tariff: 8.2,
+          generationFactor: 1500,
+          escalationPercent: 5,
+          projectCost: 1,
+        },
+        annualGeneration: 1,
+        annualSavings: 1,
+        paybackYears: 4,
+        totalSavings25Years: 10,
+        roiPercent: 20,
+        lcoe: 1,
+        co2OffsetTons: 1,
+        yearlyBreakdown: [
+          {
+            year: 1,
+            generation: 1,
+            tariffRate: 8.2,
+            savings: 1,
+            cumulativeSavings: 1,
+            paybackReached: false,
+          },
+        ],
+      },
+    },
+    proposal: {
+      refNumber: 'R-1',
+      generatedAt: '2026-01-01',
+      summary: 'ok',
+      editedHtml: '<p>x</p>',
+      proposalView: { foo: 1 },
+      customSectionsBeforeBoq: [{ id: 's', title: 'T', bodyHtml: '<img src="data:image/png;base64,xx">' }],
+    },
+    roofLayout: null,
+  };
+
+  it('keeps blobs on the active record and strips others', () => {
+    const other: CustomerRecord = { ...fat, id: 'other' };
+    const { records, changed } = stripInactiveCustomerBlobs([fat, other], new Set(['keep-me']));
+    expect(changed).toBe(true);
+    expect(records[0]?.costing?.items).toHaveLength(1);
+    expect(records[0]?.proposal?.editedHtml).toBe('<p>x</p>');
+    expect(records[1]?.costing?.items).toEqual([]);
+    expect(records[1]?.costing?.itemCount).toBe(1);
+    expect(records[1]?.bom?.rows).toEqual([]);
+    expect(records[1]?.bom?.rowCount).toBe(1);
+    expect(records[1]?.roi?.result.yearlyBreakdown).toEqual([]);
+    expect(records[1]?.proposal?.editedHtml).toBeUndefined();
+    expect(records[1]?.proposal?.proposalView).toBeUndefined();
+    expect(records[1]?.proposal?.customSectionsBeforeBoq).toBeUndefined();
+    expect(records[1]?.proposal?.refNumber).toBe('R-1');
+  });
+
+  it('reports no change when records are already slim', () => {
+    const slim: CustomerRecord = {
+      ...fat,
+      costing: { ...fat.costing!, items: [], itemCount: 1 },
+      bom: { savedAt: '2026-01-01', rows: [], rowCount: 1 },
+      roi: { ...fat.roi!, result: { ...fat.roi!.result, yearlyBreakdown: [] } },
+      proposal: { refNumber: 'R-1', generatedAt: '2026-01-01', summary: 'ok' },
+    };
+    const { changed } = stripInactiveCustomerBlobs([slim], new Set());
+    expect(changed).toBe(false);
+  });
+});
+
+describe('costingLineCount / bomLineCount', () => {
+  it('falls back to stored counts when arrays were pruned', () => {
+    expect(
+      costingLineCount({
+        sheetName: 'S',
+        savedAt: '',
+        items: [],
+        itemCount: 12,
+        showGst: true,
+        marginPercent: 0,
+        grandTotal: 0,
+        totalGst: 0,
+        systemSizeKw: 0,
+      }),
+    ).toBe(12);
+    expect(bomLineCount({ savedAt: '', rows: [], rowCount: 7 })).toBe(7);
   });
 });
 

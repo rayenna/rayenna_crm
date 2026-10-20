@@ -89,6 +89,11 @@ export default function Customers() {
   const [eligibleProjects, setEligibleProjects] = useState<ProjectOption[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [eligibleLoading, setEligibleLoading] = useState(false);
+  const [eligibleError, setEligibleError] = useState<string | null>(null);
+  const loadAbortRef = useRef<AbortController | null>(null);
+  const loadSeqRef = useRef(0);
+  const hasLoadedProjectsRef = useRef(false);
 
   // Conflict modal state when selecting a CRM project that already has proposals.
   const [conflictProject, setConflictProject] = useState<ProjectOption | null>(null);
@@ -165,7 +170,12 @@ export default function Customers() {
   }, [customers]);
 
   const loadProjects = useCallback(async () => {
-    setProjectsLoading(true);
+    loadAbortRef.current?.abort();
+    const ac = new AbortController();
+    loadAbortRef.current = ac;
+    const seq = ++loadSeqRef.current;
+    const showSpinner = !hasLoadedProjectsRef.current;
+    if (showSpinner) setProjectsLoading(true);
     setProjectsError(null);
     try {
       const q = debouncedSearch.trim() || undefined;
@@ -178,17 +188,23 @@ export default function Customers() {
       };
 
       const [listRes, statsRes] = await Promise.all([
-        fetchProposalEngineProjects({
-          limit: PROJECTS_PAGE_SIZE,
-          offset: projectListPage * PROJECTS_PAGE_SIZE,
-          sortBy: listSortBy,
-          sortOrder: listSortOrder,
-          ...sharedFilters,
-        }),
-        fetchProposalEngineProjectsStats(sharedFilters),
+        fetchProposalEngineProjects(
+          {
+            limit: PROJECTS_PAGE_SIZE,
+            offset: projectListPage * PROJECTS_PAGE_SIZE,
+            sortBy: listSortBy,
+            sortOrder: listSortOrder,
+            ...sharedFilters,
+          },
+          { signal: ac.signal },
+        ),
+        fetchProposalEngineProjectsStats(sharedFilters, { signal: ac.signal }),
       ]);
 
+      if (seq !== loadSeqRef.current) return;
+
       const mapped: ProjectOption[] = listRes.items.map((p) => mapApiProjectToProjectOption(p));
+      hasLoadedProjectsRef.current = true;
       setProjects(mapped);
       setProjectsTotal(listRes.total);
       setProjectStats(statsRes);
@@ -199,9 +215,13 @@ export default function Customers() {
       // Do not prune local customers from paginated list results — the current page is not the full
       // selection set. Removal stays tied to explicit delete / remove-from-list flows.
     } catch (err: any) {
-      setProjectsError(err?.message || 'Failed to load projects.');
+      if (seq !== loadSeqRef.current) return;
+      if (ac.signal.aborted || err?.name === 'AbortError') return;
+      if (!hasLoadedProjectsRef.current) {
+        setProjectsError(err?.message || 'Failed to load projects.');
+      }
     } finally {
-      setProjectsLoading(false);
+      if (seq === loadSeqRef.current) setProjectsLoading(false);
     }
   }, [
     debouncedSearch,
@@ -252,8 +272,8 @@ export default function Customers() {
   }, [filterStages]);
 
   const loadEligibleProjects = useCallback(async () => {
-    setProjectsLoading(true);
-    setProjectsError(null);
+    setEligibleLoading(true);
+    setEligibleError(null);
     try {
       const apiProjects = await fetchProposalEngineEligibleProjects();
       if (!Array.isArray(apiProjects)) {
@@ -262,9 +282,9 @@ export default function Customers() {
       const mapped: ProjectOption[] = apiProjects.map((p) => mapApiProjectToProjectOption(p));
       setEligibleProjects(mapped);
     } catch (err: any) {
-      setProjectsError(err?.message || 'Failed to load eligible projects.');
+      setEligibleError(err?.message || 'Failed to load eligible projects.');
     } finally {
-      setProjectsLoading(false);
+      setEligibleLoading(false);
     }
   }, []);
 
@@ -295,6 +315,9 @@ export default function Customers() {
 
   useEffect(() => {
     void loadProjects();
+    return () => {
+      loadAbortRef.current?.abort();
+    };
   }, [loadProjects]);
 
   /** Create local record from CRM project and hydrate with backend artifacts if any. */
@@ -653,8 +676,8 @@ export default function Customers() {
       {showPicker && (
         <ProjectPickerModal
           projects={eligibleProjects}
-          loading={projectsLoading}
-          error={projectsError}
+          loading={eligibleLoading}
+          error={eligibleError}
           onRetry={loadEligibleProjects}
           onSelect={handleCreateFromProject}
           onCancel={() => setShowPicker(false)}
@@ -885,11 +908,11 @@ export default function Customers() {
           {/* Customer / Project list */}
           {viewAllMode ? (
             <>
-              {projectsLoading ? (
+              {projectsLoading && projects.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
                   <p className="text-secondary-500 font-semibold text-sm">Loading all project proposals…</p>
                 </div>
-              ) : projectsError ? (
+              ) : projectsError && projects.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
                   <p className="text-red-600 font-semibold text-sm">{projectsError}</p>
                   <button type="button" onClick={() => void loadProjects()} className="mt-3 text-sm text-primary-600 hover:underline">Retry</button>
@@ -930,7 +953,7 @@ export default function Customers() {
                   })}
                 </div>
               )}
-              {!projectsLoading && projectsError == null && (
+              {!(projectsLoading && projects.length === 0) && !(projectsError && projects.length === 0) && (
                 <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6 border-t border-secondary-100 text-xs text-secondary-500">
                   <div className="flex flex-wrap items-center gap-3">
                     <p className="tabular-nums text-sm text-secondary-600">

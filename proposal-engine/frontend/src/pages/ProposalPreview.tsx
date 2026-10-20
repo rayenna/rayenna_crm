@@ -8,6 +8,7 @@ import {
   clearProposalArtifact,
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
+import { hydrateProposalIfNeeded } from '../lib/hydrateWorkArtifacts';
 import type {
   CostingArtifact,
   BomArtifact,
@@ -182,53 +183,61 @@ export default function ProposalPreview() {
 
   // Restore generated proposal + BOQ notes + saved text overrides when opening this page or switching customers.
   useEffect(() => {
-    const ac = getActiveCustomer();
-    if (!ac) {
+    let cancelled = false;
+    const clearProposalUi = () => {
       setProposal(null);
       setDisplayTextOverrides({});
       setBomComments({});
       setCustomSectionsBeforeBoq([]);
-      return;
-    }
-    const saved = ac.proposal;
-    if (!saved?.refNumber?.trim() || !saved.generatedAt?.trim()) {
-      setProposal(null);
-      setDisplayTextOverrides({});
-      setBomComments({});
-      setCustomSectionsBeforeBoq([]);
-      return;
-    }
+    };
 
-    const fromView = parseStoredProposalView(saved.proposalView);
-    if (fromView) {
-      setProposal(fromView);
-    } else {
-      const asm = collectProposalAssembly(ac);
-      if (!asm) {
-        setProposal(null);
-        setDisplayTextOverrides({});
-        setBomComments({});
-        setCustomSectionsBeforeBoq([]);
+    void (async () => {
+      let ac = getActiveCustomer();
+      if (!ac) {
+        if (!cancelled) clearProposalUi();
         return;
       }
-      setProposal(
-        rehydrateProposalData(
-          { refNumber: saved.refNumber, generatedAt: saved.generatedAt },
-          asm.customer,
-          asm.sheet,
-          asm.bom,
-          asm.roi,
-          asm.roiAutofill,
-          asm.meta,
-        ),
-      );
-    }
+      if (ac.proposal?.refNumber && !ac.proposal.proposalView && !ac.proposal.editedHtml && ac.master.crmProjectId) {
+        ac = await hydrateProposalIfNeeded(ac);
+      }
+      if (cancelled) return;
+      const saved = ac.proposal;
+      if (!saved?.refNumber?.trim() || !saved.generatedAt?.trim()) {
+        clearProposalUi();
+        return;
+      }
 
-    setBomComments(saved.bomComments ?? {});
-    setDisplayTextOverrides(saved.textOverrides ?? {});
-    setCustomSectionsBeforeBoq(normalizeCustomSectionsBeforeBoq(saved.customSectionsBeforeBoq));
-    setIsEditing(false);
-    setIncludeRoofLayout(!!saved.includeRoofLayout);
+      const fromView = parseStoredProposalView(saved.proposalView);
+      if (fromView) {
+        setProposal(fromView);
+      } else {
+        const asm = collectProposalAssembly(ac);
+        if (!asm) {
+          clearProposalUi();
+          return;
+        }
+        setProposal(
+          rehydrateProposalData(
+            { refNumber: saved.refNumber, generatedAt: saved.generatedAt },
+            asm.customer,
+            asm.sheet,
+            asm.bom,
+            asm.roi,
+            asm.roiAutofill,
+            asm.meta,
+          ),
+        );
+      }
+
+      setBomComments(saved.bomComments ?? {});
+      setDisplayTextOverrides(saved.textOverrides ?? {});
+      setCustomSectionsBeforeBoq(normalizeCustomSectionsBeforeBoq(saved.customSectionsBeforeBoq));
+      setIsEditing(false);
+      setIncludeRoofLayout(!!saved.includeRoofLayout);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [activeCustomerId]);
 
   // Restore roof layout inclusion state when reopening a saved customer/proposal.

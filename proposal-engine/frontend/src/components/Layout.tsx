@@ -31,6 +31,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown]     = useState(60);
   const helpRef                     = useRef<HTMLDivElement>(null);
+  const showIdleWarningRef = useRef(false);
+  const idleCountdownRef = useRef(60);
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
   const hasToken       = !!getToken();
@@ -73,32 +75,45 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     countdownIntervalRef.current = null;
   };
 
+  const setIdleWarningVisible = (visible: boolean) => {
+    if (showIdleWarningRef.current === visible) return;
+    showIdleWarningRef.current = visible;
+    setShowIdleWarning(visible);
+  };
+
+  const setIdleCountdownIfChanged = (value: number) => {
+    if (idleCountdownRef.current === value) return;
+    idleCountdownRef.current = value;
+    setIdleCountdown(value);
+  };
+
   const resetIdleTimer = () => {
     clearIdleTimers();
-    setShowIdleWarning(false);
-    setIdleCountdown(60);
+    // Activity (scroll/key) must restart timers without a React re-render unless
+    // the warning banner is up or the countdown is not already at 60.
+    setIdleWarningVisible(false);
+    setIdleCountdownIfChanged(60);
 
     if (!getToken()) return;
 
     // Warning timer – show 1 minute before auto logout
     warningTimerRef.current = setTimeout(() => {
-      setShowIdleWarning(true);
-      setIdleCountdown(60);
+      setIdleWarningVisible(true);
+      setIdleCountdownIfChanged(60);
 
       countdownIntervalRef.current = setInterval(() => {
-        setIdleCountdown((prev) => {
-          if (prev <= 1) {
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
+        const next = Math.max(0, idleCountdownRef.current - 1);
+        setIdleCountdownIfChanged(next);
+        if (next <= 0 && countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
       }, 1000);
     }, IDLE_TIMEOUT_MS - WARNING_BEFORE_MS);
 
     // Auto-logout timer
     idleTimerRef.current = setTimeout(() => {
-      setShowIdleWarning(false);
+      setIdleWarningVisible(false);
       clearIdleTimers();
       handleLogout();
     }, IDLE_TIMEOUT_MS);

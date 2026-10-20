@@ -6,6 +6,7 @@ import type {
   ProposalArtifact,
   ProposalCustomSectionBeforeBoq,
   RoiArtifact,
+  RoofLayoutArtifact,
 } from '../customerStore';
 import { deriveProposalStatusFromArtifacts, formatEmailForDisplay } from '../customerStore';
 import { apiFetch } from './core';
@@ -13,7 +14,8 @@ import type { ProposalEngineProjectFromApi } from './proposalEngine';
 
 interface ApiCostingArtifact {
   sheetName: string;
-  items: unknown;
+  items?: unknown;
+  itemCount?: number;
   showGst: boolean;
   marginPct: number;
   grandTotal: number;
@@ -22,7 +24,8 @@ interface ApiCostingArtifact {
 }
 
 interface ApiBomArtifact {
-  rows: unknown;
+  rows?: unknown;
+  rowCount?: number;
   savedAt: string;
 }
 
@@ -55,11 +58,13 @@ interface ApiProposalArtifact {
 
 export interface ProposalEngineProjectDetailResponse {
   project: ProposalEngineProjectFromApi;
+  light?: boolean;
   artifacts: {
     costing: ApiCostingArtifact | null;
     bom: ApiBomArtifact | null;
     roi: ApiRoiArtifact | null;
     proposal: ApiProposalArtifact | null;
+    roofLayout?: ApiProposalArtifact['roofLayout'] | null;
   };
 }
 
@@ -68,6 +73,34 @@ export async function fetchProjectWithArtifacts(
 ): Promise<ProposalEngineProjectDetailResponse> {
   return apiFetch<ProposalEngineProjectDetailResponse>(
     `/api/proposal-engine/projects/${projectId}`,
+  );
+}
+
+export async function fetchProjectCostingSheet(
+  projectId: string,
+): Promise<ApiCostingArtifact | null> {
+  return apiFetch<ApiCostingArtifact | null>(
+    `/api/proposal-engine/projects/${projectId}/costing`,
+  );
+}
+
+export async function fetchProjectBomSheet(
+  projectId: string,
+): Promise<ApiBomArtifact | null> {
+  return apiFetch<ApiBomArtifact | null>(`/api/proposal-engine/projects/${projectId}/bom`);
+}
+
+export async function fetchProjectRoiResult(
+  projectId: string,
+): Promise<ApiRoiArtifact | null> {
+  return apiFetch<ApiRoiArtifact | null>(`/api/proposal-engine/projects/${projectId}/roi`);
+}
+
+export async function fetchProjectProposalArtifact(
+  projectId: string,
+): Promise<ApiProposalArtifact | null> {
+  return apiFetch<ApiProposalArtifact | null>(
+    `/api/proposal-engine/projects/${projectId}/proposal`,
   );
 }
 
@@ -85,6 +118,12 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
           items: Array.isArray(artifacts.costing.items)
             ? (artifacts.costing.items as CostingArtifact['items'])
             : [],
+          itemCount:
+            typeof artifacts.costing.itemCount === 'number'
+              ? artifacts.costing.itemCount
+              : Array.isArray(artifacts.costing.items)
+                ? artifacts.costing.items.length
+                : 0,
           showGst: artifacts.costing.showGst,
           marginPercent: artifacts.costing.marginPct,
           grandTotal: artifacts.costing.grandTotal,
@@ -96,6 +135,12 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
       ? {
           savedAt: artifacts.bom.savedAt,
           rows: Array.isArray(artifacts.bom.rows) ? (artifacts.bom.rows as BomArtifact['rows']) : [],
+          rowCount:
+            typeof artifacts.bom.rowCount === 'number'
+              ? artifacts.bom.rowCount
+              : Array.isArray(artifacts.bom.rows)
+                ? artifacts.bom.rows.length
+                : 0,
         }
       : null,
     roi: artifacts.roi
@@ -207,6 +252,18 @@ export function applyProposalEngineProjectDetail(
   };
 
   const fromApi = mapApiArtifactsToRecord(detail.artifacts);
+  const roofSrc = detail.artifacts.roofLayout ?? detail.artifacts.proposal?.roofLayout ?? null;
+  const roofLayout: RoofLayoutArtifact | null = roofSrc
+    ? {
+        savedAt: roofSrc.savedAt ?? existing.roofLayout?.savedAt ?? new Date().toISOString(),
+        roof_area_m2: roofSrc.roof_area_m2,
+        usable_area_m2: roofSrc.usable_area_m2,
+        panel_count: roofSrc.panel_count,
+        layout_image_url: roofSrc.layout_image_url,
+        layout_image_3d_url: roofSrc.layout_image_3d_url,
+        prefer_3d_for_proposal: roofSrc.prefer_3d_for_proposal,
+      }
+    : existing.roofLayout;
   const merged: CustomerRecord = {
     ...existing,
     updatedAt: new Date().toISOString(),
@@ -214,6 +271,7 @@ export function applyProposalEngineProjectDetail(
     costing: fromApi.costing ?? existing.costing,
     bom: fromApi.bom ?? existing.bom,
     roi: fromApi.roi ?? existing.roi,
+    roofLayout,
     proposal: fromApi.proposal ?? existing.proposal,
   };
   return {

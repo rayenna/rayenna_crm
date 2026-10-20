@@ -10,6 +10,8 @@ import {
   artifactSummary,
   formatEmailForDisplay,
   getResolvedRoofLayout,
+  costingLineCount,
+  bomLineCount,
 } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import {
@@ -115,7 +117,7 @@ export default function Dashboard() {
       saved: !!activeCustomer?.costing,
       savedAt: activeCustomer?.costing?.savedAt,
       summary: activeCustomer?.costing
-        ? `${activeCustomer.costing.items?.length ?? 0} items · ${fmtINR(
+        ? `${costingLineCount(activeCustomer.costing)} items · ${fmtINR(
             activeCustomer.costing.grandTotal ?? 0,
           )} (incl. GST)`
         : undefined,
@@ -128,7 +130,7 @@ export default function Dashboard() {
       saved: !!activeCustomer?.bom,
       savedAt: activeCustomer?.bom?.savedAt,
       summary: activeCustomer?.bom
-        ? `${activeCustomer.bom.rows?.length ?? 0} line items`
+        ? `${bomLineCount(activeCustomer.bom)} line items`
         : undefined,
     },
     {

@@ -6,6 +6,7 @@ import {
   getActiveCustomer,
   getResolvedRoofLayout,
 } from '../lib/customerStore';
+import { hydrateCostingIfNeeded } from '../lib/hydrateWorkArtifacts';
 import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
 import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
@@ -75,18 +76,33 @@ export default function CostingSheet() {
   const [showGst, setShowGst]           = useState(_initCosting?.showGst ?? true);
   const [marginPercent, setMarginPercent] = useState(_initCosting?.marginPercent ?? DEFAULT_MARGIN);
 
-  // Re-load if active customer changes (e.g. user switches customer in same session)
+  // Re-load if active customer changes; hydrate line items from the server when the cache is slim.
   React.useEffect(() => {
+    let cancelled = false;
     const ac = getActiveCustomer();
-    if (ac?.costing?.items && ac.costing.items.length > 0) {
-      const migrated = _migrateItems(ac.costing.items);
+    if (!ac) return;
+    const apply = (items: LineItem[], show?: boolean, margin?: number) => {
+      const migrated = _migrateItems(items);
       initialItemsRef.current = migrated;
       reset({ items: migrated });
       setResetKey((k) => k + 1);
-      if (ac.costing.showGst !== undefined) setShowGst(ac.costing.showGst);
-      if (ac.costing.marginPercent !== undefined) setMarginPercent(ac.costing.marginPercent);
+      if (show !== undefined) setShowGst(show);
+      if (margin !== undefined) setMarginPercent(margin);
+    };
+    if (ac.costing?.items && ac.costing.items.length > 0) {
+      apply(ac.costing.items, ac.costing.showGst, ac.costing.marginPercent);
+      return;
     }
-  }, [_initCustomer?.id]);
+    void hydrateCostingIfNeeded(ac).then((next) => {
+      if (cancelled) return;
+      if (next.costing?.items && next.costing.items.length > 0) {
+        apply(next.costing.items, next.costing.showGst, next.costing.marginPercent);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [_initCustomer?.id, reset]);
 
   // ── Template state ────────────────────────
   const [templates, setTemplates]               = useState<CostingTemplate[]>(loadTemplates);

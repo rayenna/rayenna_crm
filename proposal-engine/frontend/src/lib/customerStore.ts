@@ -180,6 +180,8 @@ export interface CostingArtifact {
   sheetName:     string;
   savedAt:       string;
   items:         LineItem[];
+  /** Set when `items` were stripped for cache; Dashboard uses this for the tile count. */
+  itemCount?:    number;
   showGst:       boolean;
   marginPercent: number;
   grandTotal:    number;
@@ -190,6 +192,8 @@ export interface CostingArtifact {
 export interface BomArtifact {
   savedAt:  string;
   rows:     BomRow[];
+  /** Set when `rows` were stripped for cache; Dashboard uses this for the tile count. */
+  rowCount?: number;
 }
 
 export interface RoiArtifact {
@@ -307,7 +311,108 @@ export function normalizeProposalStatus(raw: string | undefined | null): Proposa
   return 'not-started';
 }
 
-/** Derive readiness from which core artifacts exist on the record. */
+/** Line count for Dashboard chrome — prefers stored count when items were pruned. */
+export function costingLineCount(c: CostingArtifact | null | undefined): number {
+  if (!c) return 0;
+  if (Array.isArray(c.items) && c.items.length > 0) return c.items.length;
+  if (typeof c.itemCount === 'number' && c.itemCount > 0) return c.itemCount;
+  return Array.isArray(c.items) ? c.items.length : 0;
+}
+
+/** BOM line count for Dashboard chrome — prefers stored count when rows were pruned. */
+export function bomLineCount(b: BomArtifact | null | undefined): number {
+  if (!b) return 0;
+  if (Array.isArray(b.rows) && b.rows.length > 0) return b.rows.length;
+  if (typeof b.rowCount === 'number' && b.rowCount > 0) return b.rowCount;
+  return Array.isArray(b.rows) ? b.rows.length : 0;
+}
+
+function slimRoiResult(result: RoiArtifact['result']): RoiArtifact['result'] {
+  return { ...result, yearlyBreakdown: [] };
+}
+
+function recordHasStrippableBlobs(c: CustomerRecord): boolean {
+  if ((c.costing?.items?.length ?? 0) > 0) return true;
+  if ((c.bom?.rows?.length ?? 0) > 0) return true;
+  if ((c.roi?.result?.yearlyBreakdown?.length ?? 0) > 0) return true;
+  if (c.proposal?.editedHtml || c.proposal?.proposalView || c.proposal?.textOverrides) return true;
+  if ((c.proposal?.customSectionsBeforeBoq?.length ?? 0) > 0) return true;
+  if (c.proposal?.bomComments && Object.keys(c.proposal.bomComments).length > 0) return true;
+  return false;
+}
+
+function stripRecordBlobs(c: CustomerRecord): CustomerRecord {
+  let next: CustomerRecord = { ...c };
+
+  if (next.costing) {
+    next = {
+      ...next,
+      costing: {
+        ...next.costing,
+        itemCount: costingLineCount(next.costing),
+        items: [],
+      },
+    };
+  }
+
+  if (next.bom) {
+    next = {
+      ...next,
+      bom: {
+        ...next.bom,
+        rowCount: bomLineCount(next.bom),
+        rows: [],
+      },
+    };
+  }
+
+  if (next.roi?.result) {
+    next = {
+      ...next,
+      roi: {
+        ...next.roi,
+        result: slimRoiResult(next.roi.result),
+      },
+    };
+  }
+
+  if (next.proposal) {
+    next = {
+      ...next,
+      proposal: {
+        refNumber: next.proposal.refNumber,
+        generatedAt: next.proposal.generatedAt,
+        summary: next.proposal.summary,
+        bomComments: undefined,
+        editedHtml: undefined,
+        textOverrides: undefined,
+        proposalView: undefined,
+        customSectionsBeforeBoq: undefined,
+        includeRoofLayout: next.proposal.includeRoofLayout,
+        roofLayout: next.proposal.roofLayout ?? null,
+        crmDocumentUrl: next.proposal.crmDocumentUrl,
+        crmArtifactId: next.proposal.crmArtifactId,
+      },
+    };
+  }
+
+  return next;
+}
+
+/** Drop document bodies except for keepIds (active project + the record just written). */
+export function stripInactiveCustomerBlobs(
+  records: CustomerRecord[],
+  keepIds: Set<string>,
+): { records: CustomerRecord[]; changed: boolean } {
+  let changed = false;
+  const next = records.map((c) => {
+    if (keepIds.has(c.id) || !recordHasStrippableBlobs(c)) return c;
+    changed = true;
+    return stripRecordBlobs(c);
+  });
+  return { records: next, changed };
+}
+
 export function deriveProposalStatusFromArtifacts(r: {
   costing: unknown | null;
   bom: unknown | null;
@@ -421,101 +526,65 @@ export function clearHiddenProjectIds(): void {
 // CRUD helpers
 // ─────────────────────────────────────────────
 
+/** In-memory copy of the parsed store so Layout / list renders skip JSON.parse. */
+let customersMem: { key: string; records: CustomerRecord[] } | null = null;
+
+function hydrateCustomers(parsed: CustomerRecord[]): CustomerRecord[] {
+  return parsed.map((c) => ({
+    ...c,
+    roofLayout: c.roofLayout ?? null,
+    status: normalizeProposalStatus((c as { status?: string }).status),
+  }));
+}
+
 export function loadCustomers(): CustomerRecord[] {
+  const key = getCustomersKey();
+  if (customersMem && customersMem.key === key) return customersMem.records;
   try {
-    const raw = localStorage.getItem(getCustomersKey());
-    if (!raw) return [];
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      customersMem = { key, records: [] };
+      return customersMem.records;
+    }
     const parsed = JSON.parse(raw) as CustomerRecord[];
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      customersMem = { key, records: [] };
+      return customersMem.records;
+    }
     // Migrate older records before `roofLayout` existed on CustomerRecord
-    return parsed.map((c) => ({
-      ...c,
-      roofLayout: c.roofLayout ?? null,
-      status: normalizeProposalStatus((c as { status?: string }).status),
-    }));
+    const hydrated = hydrateCustomers(parsed);
+    const activeId = getActiveCustomerId();
+    const keepIds = new Set<string>();
+    if (activeId) keepIds.add(activeId);
+    const { records, changed } = stripInactiveCustomerBlobs(hydrated, keepIds);
+    customersMem = { key, records };
+    if (changed) {
+      setLocalStorageItem(key, JSON.stringify(records));
+    }
+    return customersMem.records;
   } catch {
-    return [];
+    customersMem = { key, records: [] };
+    return customersMem.records;
   }
 }
 
 export function saveCustomers(customers: CustomerRecord[]): void {
-  setLocalStorageItem(getCustomersKey(), JSON.stringify(customers));
+  const key = getCustomersKey();
+  customersMem = { key, records: customers };
+  setLocalStorageItem(key, JSON.stringify(customers));
 }
 
 // ─────────────────────────────────────────────
-// Cache pruning: keep full artifacts only for active + recent N
+// Cache pruning: keep full artifacts only for the active project
 // ─────────────────────────────────────────────
-
-const MAX_FULL_ARTIFACT_RECORDS = 5;
 
 function pruneCustomerArtifacts(activeId: string | null, keepRecordId?: string): void {
   const all = loadCustomers();
-  if (all.length <= MAX_FULL_ARTIFACT_RECORDS + 1) return;
-
-  const sorted = [...all].sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
-
   const keepIds = new Set<string>();
-  // Always keep the most recently updated N records at full fidelity
-  sorted.slice(0, MAX_FULL_ARTIFACT_RECORDS).forEach((c) => keepIds.add(c.id));
-  // And always keep the active customer (if any)
   if (activeId) keepIds.add(activeId);
-  // Never strip the record we just wrote (active may not be switched yet)
   if (keepRecordId) keepIds.add(keepRecordId);
-
-  const pruned = all.map((c) => {
-    if (keepIds.has(c.id)) return c;
-    let next: CustomerRecord = { ...c };
-
-    // Costing: drop heavy items array, keep summary fields
-    if (next.costing) {
-      next = {
-        ...next,
-        costing: {
-          ...next.costing,
-          items: [],
-        },
-      };
-    }
-
-    // BOM: drop rows, keep savedAt
-    if (next.bom) {
-      next = {
-        ...next,
-        bom: {
-          ...next.bom,
-          rows: [],
-        },
-      };
-    }
-
-    // Proposal: keep only lightweight fields; drop HTML, overrides, and heavy view snapshot
-    if (next.proposal) {
-      next = {
-        ...next,
-        proposal: {
-          refNumber: next.proposal.refNumber,
-          generatedAt: next.proposal.generatedAt,
-          summary: next.proposal.summary,
-          bomComments: undefined,
-          editedHtml: undefined,
-          textOverrides: undefined,
-          proposalView: undefined,
-          customSectionsBeforeBoq: next.proposal.customSectionsBeforeBoq,
-          includeRoofLayout: next.proposal.includeRoofLayout,
-          roofLayout: next.proposal.roofLayout ?? null,
-          crmDocumentUrl: next.proposal.crmDocumentUrl,
-          crmArtifactId: next.proposal.crmArtifactId,
-        },
-      };
-    }
-
-    return next;
-  });
-
-  saveCustomers(pruned);
+  const { records, changed } = stripInactiveCustomerBlobs(all, keepIds);
+  if (changed) saveCustomers(records);
 }
 
 export function getCustomer(id: string): CustomerRecord | null {
@@ -639,8 +708,8 @@ export function switchActiveCustomer(id: string): void {
   const record = getCustomer(id);
   if (!record) return;
 
-  // Restore costing sheet from saved artifact
-  if (record.costing) {
+  // Restore costing sheet from saved artifact (skip when items were pruned — work pages hydrate from API).
+  if (record.costing?.items && record.costing.items.length > 0) {
     const sheet = {
       id:            `sheet_${id}`,
       name:          record.costing.sheetName,
@@ -660,16 +729,22 @@ export function switchActiveCustomer(id: string): void {
       grandTotal:   record.costing.grandTotal,
     };
     setLocalStorageItem(wip.roiAutofill, JSON.stringify(roiAutofill));
+  } else if (record.costing) {
+    const roiAutofill = {
+      systemSizeKw: record.costing.systemSizeKw,
+      grandTotal:   record.costing.grandTotal,
+    };
+    setLocalStorageItem(wip.roiAutofill, JSON.stringify(roiAutofill));
   }
 
   // Restore BOM from saved artifact
-  if (record.bom) {
+  if (record.bom?.rows && record.bom.rows.length > 0) {
     const storedBom = { rows: record.bom.rows };
     setLocalStorageItem(wip.bomCosting, JSON.stringify(storedBom));
   }
 
-  // Restore ROI result from saved artifact
-  if (record.roi) {
+  // Restore ROI result from saved artifact (skip stripped 25-year tables)
+  if (record.roi?.result?.yearlyBreakdown && record.roi.result.yearlyBreakdown.length > 0) {
     setLocalStorageItem(wip.roiResult, JSON.stringify(record.roi.result));
   }
 

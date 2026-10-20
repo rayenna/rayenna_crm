@@ -10,6 +10,7 @@ import {
   getActiveCustomer,
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
+import { hydrateBomIfNeeded } from '../lib/hydrateWorkArtifacts';
 import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { BomArtifact } from '../lib/customerStore';
 import { canEditProposalArtifacts } from '../lib/apiClient';
@@ -594,6 +595,21 @@ export default function BOMSheet() {
       reset({ rows });
       setSource('costing-sheet');
       setLoading(false);
+      return;
+    }
+
+    if (ac?.master.crmProjectId) {
+      void hydrateBomIfNeeded(ac).then((next) => {
+        if (next.bom?.rows && next.bom.rows.length > 0) {
+          const rows = (next.bom.rows as Partial<BomRow>[]).map(normalizeRow);
+          initialRowsRef.current = rows;
+          reset({ rows });
+          setSource('api');
+        } else {
+          setSource('costing-sheet');
+        }
+        setLoading(false);
+      });
       return;
     }
 

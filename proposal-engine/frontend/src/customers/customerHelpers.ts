@@ -86,7 +86,7 @@ export function deriveCustomerName(
   if (c.customerName && c.customerName.trim()) return c.customerName.trim();
   const fullName = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
   if (fullName) return fullName;
-  const companyName = (c as any).companyName as string | undefined;
+  const companyName = c.companyName;
   if (companyName && companyName.trim()) return companyName.trim();
   return 'Unnamed customer';
 }

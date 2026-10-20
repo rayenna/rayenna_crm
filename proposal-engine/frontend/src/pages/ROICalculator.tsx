@@ -7,6 +7,7 @@ import {
   upsertCustomer,
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
+import { hydrateRoiIfNeeded } from '../lib/hydrateWorkArtifacts';
 import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { RoiArtifact } from '../lib/customerStore';
 import { canEditProposalArtifacts } from '../lib/apiClient';
@@ -349,59 +350,52 @@ export default function ROICalculator() {
     }
   }, []);
 
-  // Restore last saved result on mount — prefer active customer's ROI artifact
+  // Restore last saved result on mount — hydrate the 25-year table when the cache is slim.
   useEffect(() => {
-    const ac = getActiveCustomer();
-    const crmKw =
-      typeof ac?.master?.systemSizeKw === 'number' && ac.master.systemSizeKw > 0
-        ? Math.round(ac.master.systemSizeKw)
-        : null;
-
-    if (ac?.roi?.result) {
-      const saved = ac.roi.result as ROIResult;
+    let cancelled = false;
+    const applySaved = (saved: ROIResult, crmKw: number | null) => {
       setResult(saved);
       const inp = saved.inputs;
-      if (inp) {
-        // Capacity: CRM wins over any saved decimal from costing autofill
-        if (crmKw != null) setSystemSizeKw(String(crmKw));
-        else if (inp.systemSizeKw > 0) setSystemSizeKw(String(Math.round(inp.systemSizeKw)));
-        if (inp.tariff > 0)       setTariff(String(inp.tariff));
-        if (inp.generationFactor > 0) setGenerationFactor(String(inp.generationFactor));
-        if (inp.escalationPercent >= 0) setEscalationPercent(String(inp.escalationPercent));
-        if (inp.projectCost > 0)  setProjectCost(String(Math.round(inp.projectCost)));
-        if (inp.subsidyEligible) {
-          setSubsidyEligible(true);
-          const sizeForSubsidy = crmKw ?? Math.round(inp.systemSizeKw);
-          const schemeAmt = getSubsidyByCapacityKw(sizeForSubsidy);
-          if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
-            setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
-          }
+      if (!inp) return;
+      if (crmKw != null) setSystemSizeKw(String(crmKw));
+      else if (inp.systemSizeKw > 0) setSystemSizeKw(String(Math.round(inp.systemSizeKw)));
+      if (inp.tariff > 0) setTariff(String(inp.tariff));
+      if (inp.generationFactor > 0) setGenerationFactor(String(inp.generationFactor));
+      if (inp.escalationPercent >= 0) setEscalationPercent(String(inp.escalationPercent));
+      if (inp.projectCost > 0) setProjectCost(String(Math.round(inp.projectCost)));
+      if (inp.subsidyEligible) {
+        setSubsidyEligible(true);
+        const sizeForSubsidy = crmKw ?? Math.round(inp.systemSizeKw);
+        const schemeAmt = getSubsidyByCapacityKw(sizeForSubsidy);
+        if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
+          setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
         }
       }
-      return;
-    }
-    // Fall back to localStorage (per-user key)
-    try {
-      const key = getWipKeysForCurrentUser().roiResult;
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const saved = JSON.parse(raw) as ROIResult;
-        setResult(saved);
-        const inp = saved.inputs;
-        if (crmKw != null) setSystemSizeKw(String(crmKw));
-        else if (inp?.systemSizeKw && inp.systemSizeKw > 0) {
-          setSystemSizeKw(String(Math.round(inp.systemSizeKw)));
-        }
-        if (inp?.subsidyEligible) {
-          setSubsidyEligible(true);
-          const sizeForSubsidy = crmKw ?? Math.round(inp.systemSizeKw ?? 0);
-          const schemeAmt = getSubsidyByCapacityKw(sizeForSubsidy);
-          if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
-            setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
-          }
-        }
+    };
+
+    void (async () => {
+      let ac = getActiveCustomer();
+      const crmKw =
+        typeof ac?.master?.systemSizeKw === 'number' && ac.master.systemSizeKw > 0
+          ? Math.round(ac.master.systemSizeKw)
+          : null;
+      if (ac && (ac.roi?.result?.yearlyBreakdown?.length ?? 0) === 0 && ac.master.crmProjectId) {
+        ac = await hydrateRoiIfNeeded(ac);
       }
-    } catch { /* ignore */ }
+      if (cancelled) return;
+      if (ac?.roi?.result) {
+        applySaved(ac.roi.result as ROIResult, crmKw);
+        return;
+      }
+      try {
+        const key = getWipKeysForCurrentUser().roiResult;
+        const raw = localStorage.getItem(key);
+        if (raw) applySaved(JSON.parse(raw) as ROIResult, crmKw);
+      } catch { /* ignore */ }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Re-populate project cost if autofill key updates while page is open.
