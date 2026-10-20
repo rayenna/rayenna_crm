@@ -200,7 +200,14 @@ export async function repairAndPersistRoofLayoutUrls(projectId: string): Promise
   satelliteImageUrl: string | null;
   repaired: boolean;
 }> {
-  const record = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
+  const record = await prisma.projectRoofLayout.findUnique({
+    where: { projectId },
+    select: {
+      layoutImageUrl: true,
+      layoutImage3dUrl: true,
+      satelliteImageUrl: true,
+    },
+  });
   if (!record) {
     return { layoutImageUrl: '', layoutImage3dUrl: null, satelliteImageUrl: null, repaired: false };
   }

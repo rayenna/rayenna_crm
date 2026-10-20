@@ -1,3 +1,4 @@
+import { ProjectStatus } from '@prisma/client';
 import prisma from '../prisma';
 
 /** Per-project PE artifact flags (authoritative — from DB, not browser storage). */
@@ -90,6 +91,36 @@ export function peDocumentStatusFromFlags(
   if (allFour) return 'proposal-ready';
   if (hasAny) return 'draft';
   return 'not-started';
+}
+
+export type PeProjectsStatsCounts = {
+  total: number;
+  notStarted: number;
+  draft: number;
+  ready: number;
+  confirmed: number;
+};
+
+/** One-pass strip counts from selected rows + artifact flag sets (no extra EXISTS counts). */
+export function tallyPeProjectStats(
+  rows: Array<{ projectId: string; projectStatus: string | null | undefined }>,
+  sets: PeArtifactFlagSets,
+): PeProjectsStatsCounts {
+  const out: PeProjectsStatsCounts = {
+    total: rows.length,
+    notStarted: 0,
+    draft: 0,
+    ready: 0,
+    confirmed: 0,
+  };
+  for (const row of rows) {
+    const status = peDocumentStatusFromFlags(peArtifactFlagsForProject(row.projectId, sets));
+    if (status === 'not-started') out.notStarted += 1;
+    else if (status === 'draft') out.draft += 1;
+    else out.ready += 1;
+    if (row.projectStatus === ProjectStatus.CONFIRMED) out.confirmed += 1;
+  }
+  return out;
 }
 
 /** Saved roof layout metrics for Customers list cards (batch-loaded with artifact flags). */

@@ -178,6 +178,52 @@ export const PE_PROJECTS_SORT_FIELDS = new Set([
   'createdAt',
 ]);
 
+/** Customer columns used by PE list cards (`mapApiProjectToProjectOption`). */
+export const PE_LIST_CUSTOMER_SELECT = {
+  id: true,
+  customerId: true,
+  salespersonId: true,
+  customerName: true,
+  firstName: true,
+  lastName: true,
+  companyName: true,
+  contactPerson: true,
+  phone: true,
+  email: true,
+  city: true,
+  addressLine1: true,
+  addressLine2: true,
+  state: true,
+  pinCode: true,
+  consumerNumber: true,
+  customerType: true,
+  contactNumbers: true,
+  latitude: true,
+  longitude: true,
+} as const;
+
+/** Project columns used by PE list cards — not `include: { customer: true }`. */
+export const PE_LIST_PROJECT_SELECT = {
+  id: true,
+  customerId: true,
+  salespersonId: true,
+  slNo: true,
+  projectStatus: true,
+  projectStage: true,
+  systemCapacity: true,
+  siteAddress: true,
+  type: true,
+  panelCapacityW: true,
+  panelBrand: true,
+  panelType: true,
+  projectCost: true,
+  confirmationDate: true,
+  createdAt: true,
+  updatedAt: true,
+  customer: { select: PE_LIST_CUSTOMER_SELECT },
+  salesperson: { select: { id: true, name: true } },
+} as const;
+
 export function parseStagesFromQuery(raw: unknown): string[] | undefined {
   if (raw == null) return undefined;
   if (Array.isArray(raw)) {

@@ -8,11 +8,10 @@ import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
 import {
   buildPeSelectedWhere,
-  mergePeSelectedProjectWhere,
   orderByForPeList,
   parseStagesFromQuery,
+  PE_LIST_PROJECT_SELECT,
   PE_PROJECTS_SORT_FIELDS,
-  projectWhereForPeArtifactStatus,
   type PeProjectsListFilters,
 } from '../utils/peProjectListQuery';
 import crypto from 'crypto';
@@ -23,7 +22,14 @@ import {
   peArtifactFlagsForProject,
   loadPeRoofLayoutSummariesForList,
   peDocumentStatusFromFlags,
+  tallyPeProjectStats,
 } from '../utils/peProjectArtifactFlags';
+import {
+  jsonArrayLength,
+  PE_PROPOSAL_LIGHT_SELECT,
+  PE_ROOF_LAYOUT_METRICS_SELECT,
+  slimRoiResultForClient,
+} from '../utils/peProjectDetailLight';
 
 const router = express.Router();
 
@@ -135,6 +141,15 @@ async function findLatestPeProposal(projectId: string) {
   }
 }
 
+/** Dashboard / open chrome — no editedHtml, proposalView, or custom-section bodies. */
+async function findLatestPeProposalLight(projectId: string) {
+  return prisma.pEProposal.findFirst({
+    where: { projectId },
+    orderBy: { savedAt: 'desc' },
+    select: PE_PROPOSAL_LIGHT_SELECT,
+  });
+}
+
 /** Only Admin may delete PE data (single proposal artifact or full kit). */
 function ensurePeDeleteAccess(req: Request, res: Response): boolean {
   const roleStr = req.user?.role != null ? String(req.user.role).toUpperCase() : '';
@@ -230,15 +245,11 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
 
     const selections = await prisma.pESelectedProject.findMany({
       where: selectionWhere,
-      include: {
-        project: {
-          include: {
-            customer: true,
-            salesperson: {
-              select: { id: true, name: true },
-            },
-          },
-        },
+      select: {
+        projectId: true,
+        selectedAt: true,
+        selectedById: true,
+        project: { select: PE_LIST_PROJECT_SELECT },
       },
       orderBy: orderByForPeList(sortBy, sortOrder),
       skip: offset,
@@ -310,23 +321,20 @@ router.get('/projects/stats', authenticate, async (req: Request, res: Response) 
 
     const baseWhere = buildPeSelectedWhere(role, userId, filters);
 
-    const [total, notStarted, draft, ready, confirmed] = await Promise.all([
-      prisma.pESelectedProject.count({ where: baseWhere }),
-      prisma.pESelectedProject.count({
-        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('not-started')),
-      }),
-      prisma.pESelectedProject.count({
-        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('draft')),
-      }),
-      prisma.pESelectedProject.count({
-        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('proposal-ready')),
-      }),
-      prisma.pESelectedProject.count({
-        where: mergePeSelectedProjectWhere(baseWhere, { projectStatus: ProjectStatus.CONFIRMED }),
-      }),
-    ]);
-
-    res.json({ total, notStarted, draft, ready, confirmed });
+    const rows = await prisma.pESelectedProject.findMany({
+      where: baseWhere,
+      select: {
+        projectId: true,
+        project: { select: { projectStatus: true } },
+      },
+    });
+    const artifactSets = await loadPeArtifactFlagSets(rows.map((r) => r.projectId));
+    res.json(
+      tallyPeProjectStats(
+        rows.map((r) => ({ projectId: r.projectId, projectStatus: r.project.projectStatus })),
+        artifactSets,
+      ),
+    );
   } catch (error: any) {
     reportPeError(error, 'Error fetching proposal engine project stats');
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -647,13 +655,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
   try {
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
-      include: {
-        customer: true,
-        siteSurveys: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        },
-      },
+      select: PE_LIST_PROJECT_SELECT,
     });
 
     if (!(await ensureProjectAccess(project, req, res))) {
@@ -664,18 +666,36 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
       prisma.pECostingSheet.findFirst({
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
+        select: {
+          sheetName: true,
+          showGst: true,
+          marginPct: true,
+          grandTotal: true,
+          systemSizeKw: true,
+          savedAt: true,
+          items: true,
+        },
       }),
       prisma.pEBomSheet.findFirst({
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
+        select: {
+          savedAt: true,
+          rows: true,
+        },
       }),
       prisma.pERoiResult.findFirst({
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
+        select: {
+          savedAt: true,
+          result: true,
+        },
       }),
-      findLatestPeProposal(req.params.id),
+      findLatestPeProposalLight(req.params.id),
       prisma.projectRoofLayout.findFirst({
         where: { projectId: req.params.id },
+        select: PE_ROOF_LAYOUT_METRICS_SELECT,
       }),
     ]);
 
@@ -718,13 +738,39 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
         }
       : null;
 
+    const costingLight = costing
+      ? {
+          sheetName: costing.sheetName,
+          showGst: costing.showGst,
+          marginPct: costing.marginPct,
+          grandTotal: costing.grandTotal,
+          systemSizeKw: costing.systemSizeKw,
+          savedAt: costing.savedAt,
+          itemCount: jsonArrayLength(costing.items),
+        }
+      : null;
+    const bomLight = bom
+      ? {
+          savedAt: bom.savedAt,
+          rowCount: jsonArrayLength(bom.rows),
+        }
+      : null;
+    const roiLight = roi
+      ? {
+          savedAt: roi.savedAt,
+          result: slimRoiResultForClient(roi.result),
+        }
+      : null;
+
     res.json({
       project,
+      light: true,
       artifacts: {
-        costing,
-        bom,
-        roi,
+        costing: costingLight,
+        bom: bomLight,
+        roi: roiLight,
         proposal: proposalWithRoofLayout,
+        roofLayout: roofLayoutPayload,
       },
     });
   } catch (error: any) {
