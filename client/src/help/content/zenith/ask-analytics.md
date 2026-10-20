@@ -1,9 +1,9 @@
 # Ask Zenith (natural language)
 
-**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for two kinds of requests. On **desktop**, Ask sits under **Solar News**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button).
+**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for two kinds of requests. On **desktop**, Ask sits in the **command bar**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button on Today).
 
 1. **Analytics** — maps the question to a known metric, computes numbers from the same CRM data as the rest of Zenith, and shows **one insight** plus **one chart or table**.
-2. **Tasks** — phrases like **New Customer**, **Open My Day**, **Pending Subsidy**, or **find customer Ramesh** navigate to the matching CRM screen. The same task set is in the global **command palette** (**Ctrl+K** / **⌘K**) from any page — see [Command palette](/help/getting-started#command-palette-anywhere).
+2. **Tasks** — phrases like **New Customer**, **Open My Day**, **Open Pending Subsidy Projects**, or **find customer Ramesh** navigate to the matching CRM screen. **List pending subsidy projects** stays in Ask as a table. The same task set is in the global **command palette** (**Ctrl+K** / **⌘K**) from any page — see [Command palette](/help/getting-started#command-palette-anywhere).
 
 ## How to use Ask
 
@@ -19,6 +19,11 @@ Ask is **disabled while Offline** (typed questions, Dictate, and example chips).
 ## Analytics you can ask
 
 Role packs differ — example chips under the Ask box show questions allowed for **your** role. Outside the catalog, Zenith asks you to clarify.
+
+### Who to call and stalled deals
+
+- **Who should I call today?** — Hit List (overdue / stalled / going cold) plus outstanding payment chase, with a reason for each name
+- **Why is my pipeline stalling?** — Deal Health list of quiet / over-SLA deals
 
 ### Pipeline, revenue, and equipment
 
@@ -40,7 +45,7 @@ Role packs differ — example chips under the Ask box show questions allowed for
 ### Project & customer records
 
 - **Status of SL 123** / **status of Ramesh** — one project card (payments, KSEB/MNRE dates, commissioning, site address, remarks, PE/hub, docs)
-- **Customer details for Ramesh** — customer record (contact, city, GST, linked projects)
+- **Customer details for {name}** — customer record (contact, city, GST, linked projects). Example chips use a name from **your** book. If nobody matches, Ask suggests a nearby name instead of an empty table.
 - **List customers in Kochi** / residential / for salesperson X — customer lists
 - Pair detail lists with **for salesperson X** or **for ops Y** (e.g. payment timeline for salesperson Anoop)
 
@@ -78,8 +83,20 @@ Role packs differ — example chips under the Ask box show questions allowed for
 
 ### Support tickets
 
-- Show me the total support tickets raised / open / overdue *(Sales own book; Ops / Management / Admin company-wide — **not Finance**)*
+- **Who has the oldest open ticket?** · **Show open support tickets** · **Show overdue support tickets** — a queue (age, owner, SLA), not only a pie. Empty books say so and offer **Create a Support Ticket**.
+- **Create a ticket for SL 141 inverter fault** — opens the ticket form with that project and title filled in.
+- Totals pie: **Show me the total support tickets raised**. *(Sales own book; Ops / Management / Admin company-wide — **not Finance**)*
 - Support tickets by salesperson · Ticket resolution time (avg / median days to close)
+
+### Act on an answer
+
+Call-list, stalled-deal, PE-missing, and ticket rows can **Call**, **WhatsApp**, **Add to My Day**, **Remark**, **Proposal** (opens Proposal Engine for that CRM project), or **Ticket** without leaving Ask. Confirm remark/ticket in the drawer.
+
+### Ask everywhere
+
+The header **Ask** button and command palette (**Ask Zenith: “…”**) open the same copilot on Customers, Projects, Support Tickets, and other CRM pages. On Zenith itself, Ask stays in the command bar / Ask tab.
+
+Quota: **60 asks / 10 minutes** per person. The composer shows how many are left.
 
 ### Lost deals
 
@@ -107,4 +124,4 @@ Say the action in plain language; Ask navigates when your role allows. Full pale
 - **Sales** analytics stay scoped to your own book (same as Zenith Sales KPIs).
 - Other roles see company-wide metrics allowed for their pack under the current filters.
 - Classic **AI Insights** ticker and **Daily briefing** stay rule-based and separate from Ask.
-- Prefer **Ctrl+K** / **⌘K** when you are not on Zenith and only need a jump or create action.
+- Prefer **Ctrl+K** / **⌘K** for jumps and create. For analytics on any CRM page, use header **Ask** or **Ask Zenith: “…”** in the palette.

@@ -30,6 +30,8 @@ import { resolveAskDateFilter } from '../services/zenithNl/relativeDates';
 import { parsePeriodCompare } from '../services/zenithNl/periodCompare';
 import { parseZenithNlPriorFilters } from '../services/zenithNl/priorFilters';
 import { listUserAskHistory, persistUserAskHistory } from '../services/zenithNl/askHistory';
+import { loadLiveAskBook } from '../services/zenithNl/askExampleLive';
+import { moreQuestionsForRole, suggestedQuestionsForRole } from '../services/zenithNl/catalog';
 import { logZenithAskEvent } from '../utils/auditLogger';
 import { countFromStatusGroupBy } from '../utils/dashboardStatusCounts';
 
@@ -3195,7 +3197,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
   }
 });
 
-const zenithNlLimiter = rateLimit(30, 10 * 60 * 1000);
+const zenithNlLimiter = rateLimit(60, 10 * 60 * 1000);
 
 /**
  * Zenith Natural Language Ask — Sales / Management / Admin / Operations / Finance.
@@ -3395,7 +3397,15 @@ router.post(
         });
       }
 
-      return res.json(result);
+      const remaining = (req as Request & { rateLimitRemaining?: number }).rateLimitRemaining;
+      const limit = (req as Request & { rateLimitLimit?: number }).rateLimitLimit;
+      return res.json({
+        ...result,
+        quota:
+          typeof remaining === 'number' && typeof limit === 'number'
+            ? { remaining, limit, windowMinutes: 10 }
+            : undefined,
+      });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
       if (req.user?.id && req.user?.role) {
@@ -3419,6 +3429,40 @@ router.post(
       }
       console.error('[zenith-nl-query]', error);
       return res.status(500).json({ error: 'Failed to run Zenith Ask' });
+    }
+  },
+);
+
+/**
+ * Role example chips with a live customer name from this user’s book.
+ */
+router.get(
+  '/zenith-ask-examples',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const live = await loadLiveAskBook(userId, role);
+      return res.json({
+        chips: suggestedQuestionsForRole(role, live),
+        more: moreQuestionsForRole(role, live),
+        customerName: live.customerName,
+        slNo: live.slNo,
+      });
+    } catch (error) {
+      console.error('[zenith-ask-examples]', error);
+      return res.status(500).json({ error: 'Failed to load Ask examples' });
     }
   },
 );
@@ -3540,11 +3584,34 @@ router.get(
       }
       const submitted = byEvent.ask_submitted || 0;
       const clarify = byEvent.ask_clarify || 0;
+      const uniqueRows = await prisma.securityAuditLog.findMany({
+        where: {
+          entityType: 'ZenithAsk',
+          createdAt: { gte: since },
+          actionType: 'zenith_ask_submitted',
+        },
+        distinct: ['userId'],
+        select: { userId: true, role: true },
+      });
+      const uniqueByRole: Record<string, number> = {};
+      for (const u of uniqueRows) {
+        uniqueByRole[u.role] = (uniqueByRole[u.role] || 0) + 1;
+      }
+      const rolePack: Record<string, string> = {
+        SALES: 'Sales copilot',
+        OPERATIONS: 'Ops copilot',
+        FINANCE: 'Finance copilot',
+        MANAGEMENT: 'Management copilot',
+        ADMIN: 'Admin copilot',
+      };
       return res.json({
         days,
         since: since.toISOString(),
         byEvent,
         byRole,
+        uniqueUsers: uniqueRows.length,
+        uniqueByRole,
+        rolePack,
         clarifyRate: submitted > 0 ? Math.round((clarify / submitted) * 1000) / 10 : null,
       });
     } catch (error) {

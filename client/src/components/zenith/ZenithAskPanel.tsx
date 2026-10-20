@@ -14,6 +14,10 @@ import {
 } from '../../utils/zenithAskTableLayout'
 import ChartPanel from './ChartPanel'
 import { AskBarChart, AskPieChart, buildAskChartData } from './ZenithAskCharts'
+import AskRowActions, { askRowProjectId } from './AskRowActions'
+import { isPeAskHref } from '../../lib/openProposalEngine'
+import { openProposalEngineForProject, peProjectIdFromHref } from '../../lib/openProposalEngine'
+import type { ZenithNlTableRow } from '../../types/zenithNlQuery'
 
 function AskClarifyCatalog({
   hints,
@@ -66,7 +70,7 @@ function AskClarifyCatalog({
                   onPick(h.ask)
                 }}
               >
-                <span className="zenith-ask-catalog__title">{h.title}</span>
+                <span className="zenith-ask-catalog__title">{h.ask}</span>
                 <span className="zenith-ask-catalog__desc">{h.description}</span>
               </button>
             </li>
@@ -91,10 +95,12 @@ function AskTableCards({
   columns,
   rows,
   onDrill,
+  metric,
 }: {
   columns: { key: string; label: string }[]
-  rows: { href?: string; [key: string]: string | number | null | undefined }[]
+  rows: ZenithNlTableRow[]
   onDrill?: (href: string) => void
+  metric?: string
 }) {
   const titleCol = pickAskTableTitleColumn(columns)
   const emphasisCol = pickAskTableEmphasisColumn(columns, titleCol?.key ?? null)
@@ -103,7 +109,11 @@ function AskTableCards({
   )
 
   if (rows.length === 0) {
-    return <p className="zenith-ask-table-cards__empty">No rows</p>
+    return (
+      <p className="zenith-ask-table-cards__empty">
+        {metric === 'support_tickets_summary' ? 'No open tickets in your book' : 'No rows'}
+      </p>
+    )
   }
 
   return (
@@ -131,9 +141,10 @@ function AskTableCards({
                 ))}
               </dl>
             ) : null}
-            {clickable ? <span className="zenith-ask-table-cards__cta">Open list →</span> : null}
+            {clickable ? <span className="zenith-ask-table-cards__cta">Open record →</span> : null}
           </>
         )
+        const canAct = Boolean(askRowProjectId(row))
         return (
           <li key={i} className="zenith-ask-table-cards__item">
             {clickable ? (
@@ -141,13 +152,14 @@ function AskTableCards({
                 type="button"
                 className="zenith-ask-table-cards__card is-clickable"
                 onClick={() => onDrill?.(href)}
-                aria-label={`Open projects for ${titleText}`}
+                aria-label={`Open ${titleText}`}
               >
                 {body}
               </button>
             ) : (
               <div className="zenith-ask-table-cards__card">{body}</div>
             )}
+            {canAct ? <AskRowActions row={row} metric={metric} /> : null}
           </li>
         )
       })}
@@ -158,16 +170,19 @@ function AskTableCards({
 function AskViz({
   viz,
   onDrill,
+  metric,
 }: {
   viz: ZenithNlViz
   onDrill?: (href: string) => void
+  metric?: string
 }) {
   if (viz.kind === 'table') {
     const anyClickable = viz.rows.some((r) => typeof r.href === 'string' && r.href.length > 0)
-    const colCount = viz.columns.length
+    const anyAct = viz.rows.some((r) => Boolean(askRowProjectId(r)))
+    const colCount = viz.columns.length + (anyAct ? 1 : 0)
     // Wide min-width so equal % columns stay readable; shared overflow-x scrolls head+body together.
-    const tableMinWidthRem = Math.max(36, colCount * 7)
-    const colPct = colCount > 0 ? `${(100 / colCount).toFixed(4)}%` : undefined
+    const tableMinWidthRem = Math.max(36, viz.columns.length * 7 + (anyAct ? 9 : 0))
+    const colPct = viz.columns.length > 0 ? `${(100 / viz.columns.length).toFixed(4)}%` : undefined
     return (
       <ChartPanel title={viz.title} contentClassName="min-h-0">
         {anyClickable ? (
@@ -179,7 +194,7 @@ function AskViz({
 
         {/* Mobile-first: stacked cards — never squash 8 columns into a phone width. */}
         <div className="md:hidden">
-          <AskTableCards columns={viz.columns} rows={viz.rows} onDrill={onDrill} />
+          <AskTableCards columns={viz.columns} rows={viz.rows} onDrill={onDrill} metric={metric} />
         </div>
 
         {/*
@@ -198,12 +213,14 @@ function AskViz({
                     {viz.columns.map((c) => (
                       <col key={c.key} style={colPct ? { width: colPct } : undefined} />
                     ))}
+                    {anyAct ? <col style={{ width: '9rem' }} /> : null}
                   </colgroup>
                   <thead>
                     <tr>
                       {viz.columns.map((c) => (
                         <th key={c.key}>{c.label}</th>
                       ))}
+                      {anyAct ? <th>Act</th> : null}
                     </tr>
                   </thead>
                 </table>
@@ -214,18 +231,22 @@ function AskViz({
                     {viz.columns.map((c) => (
                       <col key={c.key} style={colPct ? { width: colPct } : undefined} />
                     ))}
+                    {anyAct ? <col style={{ width: '9rem' }} /> : null}
                   </colgroup>
                   <tbody>
                     {viz.rows.length === 0 ? (
                       <tr>
                         <td colSpan={colCount} className="zenith-ask-table__empty">
-                          No rows
+                          {metric === 'support_tickets_summary'
+                            ? 'No open tickets in your book'
+                            : 'No rows'}
                         </td>
                       </tr>
                     ) : (
                       viz.rows.map((row, i) => {
                         const href = typeof row.href === 'string' ? row.href : ''
                         const clickable = Boolean(href)
+                        const canAct = Boolean(askRowProjectId(row))
                         return (
                           <tr
                             key={i}
@@ -258,6 +279,11 @@ function AskViz({
                                 {formatCell(row[c.key] ?? null)}
                               </td>
                             ))}
+                            {anyAct ? (
+                              <td onClick={(e) => e.stopPropagation()}>
+                                {canAct ? <AskRowActions row={row} metric={metric} /> : null}
+                              </td>
+                            ) : null}
                           </tr>
                         )
                       })
@@ -323,6 +349,7 @@ type Props = {
   /** Active filters for this answer (command bar or relative phrase from the question). */
   filterSummary?: string
   role?: string
+  mappedLabel?: string | null
   onClose: () => void
   onAskSuggestion: (q: string, source?: 'follow_up' | 'catalog') => void
   onReplayHistory: (item: ZenithAskHistoryItem) => void
@@ -335,6 +362,7 @@ export default function ZenithAskPanel({
   history,
   filterSummary,
   role,
+  mappedLabel = null,
   onClose,
   onAskSuggestion,
   onReplayHistory,
@@ -371,7 +399,11 @@ export default function ZenithAskPanel({
               {result?.question ? (
                 <p className="zenith-ask-result__question">{result.question}</p>
               ) : loading ? (
-                <p className="zenith-ask-result__question">Thinking with your CRM data…</p>
+                <p className="zenith-ask-result__question">
+                  {mappedLabel
+                    ? `Mapped to ${mappedLabel} — computing numbers…`
+                    : 'Thinking with your CRM data…'}
+                </p>
               ) : (
                 <p className="zenith-ask-result__question">Answer</p>
               )}
@@ -454,20 +486,38 @@ export default function ZenithAskPanel({
         {result && result.ok && result.kind === 'action' ? (
           <>
             <p className="zenith-ask-result__insight">{result.message}</p>
-            <Link
-              to={result.href}
-              className="zenith-ask-result__cta"
-              onClick={() =>
-                trackZenithAskEvent('ask_action', {
-                  role,
-                  action: result.action,
-                  href: result.href,
-                  chipMatch: result.chipMatch,
-                })
-              }
-            >
-              {result.label} →
-            </Link>
+            {isPeAskHref(result.href) ? (
+              <button
+                type="button"
+                className="zenith-ask-result__cta"
+                onClick={() => {
+                  trackZenithAskEvent('ask_action', {
+                    role,
+                    action: result.action,
+                    href: result.href,
+                    chipMatch: result.chipMatch,
+                  })
+                  void openProposalEngineForProject(peProjectIdFromHref(result.href))
+                }}
+              >
+                {result.label} →
+              </button>
+            ) : (
+              <Link
+                to={result.href}
+                className="zenith-ask-result__cta"
+                onClick={() =>
+                  trackZenithAskEvent('ask_action', {
+                    role,
+                    action: result.action,
+                    href: result.href,
+                    chipMatch: result.chipMatch,
+                  })
+                }
+              >
+                {result.label} →
+              </Link>
+            )}
           </>
         ) : null}
 
@@ -476,6 +526,7 @@ export default function ZenithAskPanel({
             <p className="zenith-ask-result__insight">{result.insight}</p>
             <AskViz
               viz={result.viz}
+              metric={result.intent.metric}
               onDrill={(href) => {
                 trackZenithAskEvent('ask_open_projects', {
                   role,
@@ -485,6 +536,13 @@ export default function ZenithAskPanel({
                 navigate(href)
               }}
             />
+            {result.intent.metric === 'support_tickets_summary' &&
+            result.viz.kind === 'table' &&
+            result.viz.rows.length === 0 ? (
+              <Link to="/support-tickets?new=1" className="zenith-ask-result__cta">
+                Create a support ticket →
+              </Link>
+            ) : null}
             {result.followUps && result.followUps.length > 0 ? (
               <div className="zenith-ask-followups">
                 <p className="zenith-ask-followups__label">Follow up</p>

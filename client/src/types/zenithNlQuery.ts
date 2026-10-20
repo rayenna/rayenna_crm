@@ -138,7 +138,15 @@ export type ZenithNlQueryClarify = {
   effectiveDateFilter?: ZenithNlEffectiveDateFilter
 }
 
-export type ZenithNlQueryResult = ZenithNlQuerySuccess | ZenithNlQueryClarify
+export type ZenithAskQuota = {
+  remaining: number
+  limit: number
+  windowMinutes?: number
+}
+
+export type ZenithNlQueryResult = (ZenithNlQuerySuccess | ZenithNlQueryClarify) & {
+  quota?: ZenithAskQuota
+}
 
 /** Ask history entry — server-backed (Neon) with localStorage cache for this browser. */
 export type ZenithAskHistoryItem = {

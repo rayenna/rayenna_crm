@@ -1,50 +1,42 @@
 /**
- * Canonical Ask example chips by role.
- * Keep analytics list in sync with `EXAMPLE_QUESTIONS_BY_ROLE` in
- * `src/services/zenithNl/catalog.ts`.
+ * Fallback Ask chips when GET /zenith-ask-examples is unavailable.
+ * Canonical list + live customer names live in `src/services/zenithNl/catalog.ts`.
  */
 export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   SALES: [
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
     'Which lead sources drove the most revenue?',
-    'Show my stalled pipeline',
-    'Give me a pipeline analysis',
     'Summarise my lost deals by reason',
-    'How many of my projects used Adani panels?',
   ],
   MANAGEMENT: [
-    'Show all apartments in customer master',
-    'List residential projects in Kochi',
-    'List pending subsidy projects',
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
     'Subsidy vs non-subsidy revenue',
-    'Customer details for Ramesh',
+    'Show open support tickets',
   ],
   ADMIN: [
-    'Show all commercial in customer master',
-    'List projects availing loan',
-    'List projects needing review',
-    'Ops workload',
-    'Customer details for Ramesh',
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
+    'Show open support tickets',
+    'List pending subsidy projects',
   ],
   OPERATIONS: [
-    'List under installation projects not fully paid',
-    'List projects with installation pending',
-    'Show installation status breakdown',
+    'Who should I call today?',
+    'List pending subsidy projects',
     'Projects missing documents',
+    'Show open support tickets',
     'AMCs expiring',
   ],
   FINANCE: [
-    'List fully paid projects',
-    'List payment pending projects',
-    'Payment status breakdown',
-    'Pending subsidy',
+    'Who should I call today?',
     'Unpaid invoices',
+    'Payment status breakdown',
+    'Profit summary this quarter',
+    'Payment mode mix',
   ],
 }
 
-/**
- * Extra prompts for the post-answer “More questions” row (not shown in Try asking).
- * Keep short and role-relevant; avoid duplicating primary examples.
- */
 export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Show my ageing pipeline',
@@ -53,40 +45,55 @@ export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
     'Capacity sold',
   ],
   MANAGEMENT: [
+    'DCR vs Non-DCR profitability',
     'Salesperson profitability',
     'City profitability',
-    'Hub station IDs',
-    'Lost deal details',
+    'List pending subsidy projects',
   ],
   ADMIN: [
+    'Ops workload',
     'Salesperson profitability',
-    'Projects missing documents',
     'PE missing BOM',
     'Incentive eligible projects',
   ],
   OPERATIONS: [
-    'Installation status breakdown',
+    'Projects with feasibility pending',
+    'Payment timeline',
     'Hub station IDs',
     'PE missing BOM',
-    'Pending subsidy',
   ],
   FINANCE: [
-    'Payment status breakdown',
+    'Payment timeline',
     'Availing loan',
     'Incentive eligible projects',
     'Pending subsidy',
   ],
 }
 
-/** Side panel “Try asking” — full role pack (default all 5). */
 export function zenithAskExampleChips(role: string | undefined, limit?: number): string[] {
   const list = ZENITH_ASK_EXAMPLES[role ?? ''] ?? ZENITH_ASK_EXAMPLES.MANAGEMENT
   if (limit == null || limit <= 0) return [...list]
   return list.slice(0, limit)
 }
 
-/** After an answer — secondary prompts distinct from the primary pack. */
 export function zenithAskMoreChips(role: string | undefined, limit = 4): string[] {
   const list = ZENITH_ASK_MORE_EXAMPLES[role ?? ''] ?? ZENITH_ASK_MORE_EXAMPLES.MANAGEMENT
   return list.slice(0, limit)
+}
+
+/** Three live-book demo asks — no seeded tenant. Role-packs omit tickets / stall for Finance. */
+export function zenithAskDemoChips(role: string | undefined): string[] {
+  const qs = ['Who should I call today?']
+  if (role === 'FINANCE') {
+    qs.push('Unpaid invoices', 'Payment status breakdown')
+  } else {
+    qs.push('Why is my pipeline stalling?', 'Who has the oldest open ticket?')
+  }
+  return qs
+}
+
+/** Example chips minus the guided-demo set so the two rows do not duplicate. */
+export function zenithAskTryChips(examples: string[], demo: string[]): string[] {
+  const skip = new Set(demo)
+  return examples.filter((q) => !skip.has(q))
 }

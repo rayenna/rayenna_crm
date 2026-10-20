@@ -13,6 +13,7 @@ import {
   matchCustomersListIntent,
 } from './customerDetailAsk';
 import { matchPipelineHealthIntent } from './pipelineHealthAsk';
+import { matchWhoToCallIntent } from './whoToCallAsk';
 import { matchProjectsListFilterIntent } from './listFilterAsk';
 
 function norm(q: string): string {
@@ -42,6 +43,27 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     filters: { detailSlice: 'stalled' },
     insightHints: 'stalled pipeline',
+  },
+  [norm('Why is my pipeline stalling?')]: {
+    metric: 'pipeline_health',
+    viz: 'table',
+    filters: { detailSlice: 'stalled' },
+    insightHints: 'stalled pipeline',
+  },
+  [norm('Who should I call today?')]: {
+    metric: 'who_to_call',
+    viz: 'table',
+    insightHints: 'who to call',
+  },
+  [norm('Who should I call this week?')]: {
+    metric: 'who_to_call',
+    viz: 'table',
+    insightHints: 'who to call',
+  },
+  [norm('List pending subsidy projects')]: {
+    metric: 'pending_subsidy',
+    viz: 'table',
+    insightHints: 'pending subsidy',
   },
   [norm('Show my ageing pipeline')]: {
     metric: 'pipeline_health',
@@ -378,17 +400,21 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
   },
   [norm('Show open support tickets')]: {
     metric: 'support_tickets_summary',
-    viz: 'chart',
-    chartType: 'pie',
-    filters: { ticketStatus: 'OPEN' },
-    insightHints: 'open support tickets',
+    viz: 'table',
+    filters: { ticketStatus: 'OPEN', detailSlice: 'queue' },
+    insightHints: 'open ticket queue',
   },
   [norm('Show overdue support tickets')]: {
     metric: 'support_tickets_summary',
-    viz: 'chart',
-    chartType: 'pie',
-    filters: { ticketStatus: 'OVERDUE' },
-    insightHints: 'overdue support tickets',
+    viz: 'table',
+    filters: { ticketStatus: 'OVERDUE', detailSlice: 'overdue' },
+    insightHints: 'overdue ticket queue',
+  },
+  [norm('Who has the oldest open ticket?')]: {
+    metric: 'support_tickets_summary',
+    viz: 'table',
+    filters: { ticketStatus: 'OPEN', detailSlice: 'oldest' },
+    insightHints: 'oldest open ticket',
   },
   [norm('Subsidy vs non-subsidy revenue')]: {
     metric: 'revenue_by_project_type',
@@ -630,12 +656,19 @@ export function matchSupportTicketIntent(
     (/\btickets?\b/.test(q) && /\b(raised|open|overdue|closed|solar\s*hub)\b/.test(q));
   if (!mentionsTickets) return null;
 
+  const oldest = /\boldest\b/.test(q);
+  const mine = /\b(mine|my tickets?|i opened|i created)\b/.test(q);
+  const queueLike =
+    oldest ||
+    mine ||
+    /\bqueue\b/.test(q) ||
+    (/\bopen\b/.test(q) && !/\b(raised|total|how many|count|breakdown|pie)\b/.test(q));
+
   if (/\boverdue\b/.test(q)) {
     return {
       metric: 'support_tickets_summary',
-      viz: 'chart',
-      chartType: 'pie',
-      filters: { ticketStatus: 'OVERDUE' },
+      viz: 'table',
+      filters: { ticketStatus: 'OVERDUE', detailSlice: 'overdue' },
       insightHints: 'overdue support tickets',
     };
   }
@@ -657,13 +690,15 @@ export function matchSupportTicketIntent(
       insightHints: 'closed support tickets',
     };
   }
-  if (/\bopen\b/.test(q) && !/\bclosed\b/.test(q) && !/\braised\b|\btotal\b/.test(q)) {
+  if (queueLike) {
     return {
       metric: 'support_tickets_summary',
-      viz: 'chart',
-      chartType: 'pie',
-      filters: { ticketStatus: 'OPEN' },
-      insightHints: 'open support tickets',
+      viz: 'table',
+      filters: {
+        ticketStatus: 'OPEN',
+        detailSlice: oldest ? 'oldest' : mine ? 'mine' : 'queue',
+      },
+      insightHints: oldest ? 'oldest open ticket' : mine ? 'my tickets' : 'open ticket queue',
     };
   }
   if (/\b(solar\s*hub|consumer\s*app)\b/.test(q)) {
@@ -1299,6 +1334,7 @@ export function matchExactChipIntent(
       }
     }
     return (
+      matchWhoToCallIntent(question, role) ||
       matchPipelineHealthIntent(question, role) ||
       matchCustomerDetailLookupIntent(question, role) ||
       matchCustomersListIntent(question, role) ||

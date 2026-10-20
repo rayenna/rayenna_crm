@@ -24,6 +24,7 @@ import {
   metricAllowedForRole,
   METRIC_CATALOG,
   suggestedQuestionsForRole,
+  wowSuggestionsForRole,
   type ZenithNlEffectiveDateFilter,
   type ZenithNlIntent,
   type ZenithNlMetric,
@@ -32,6 +33,9 @@ import {
   type ZenithNlViz,
 } from './zenithNl/catalog';
 import { matchAskActionIntent } from './zenithNl/askActions';
+import { execWhoToCall } from './zenithNl/whoToCallAsk';
+import { execTicketQueue, ticketQueueSlice } from './zenithNl/ticketQueueAsk';
+import { loadLiveAskBook } from './zenithNl/askExampleLive';
 import {
   matchEquipmentMixIntent,
   matchExactChipIntent,
@@ -644,16 +648,26 @@ Respond JSON: {"metric":"...","viz":"chart"|"table","chartType":"bar"|"pie"|null
   return normalizeIntent(parsed, role);
 }
 
-function clarifyResult(question: string, role: UserRole, message?: string): ZenithNlQueryResult {
+function clarifyResult(
+  question: string,
+  role: UserRole,
+  message?: string,
+  extra?: { suggestedQuestions?: string[]; live?: { customerName?: string | null } },
+): ZenithNlQueryResult {
+  const wow = wowSuggestionsForRole(role);
+  const suggested =
+    extra?.suggestedQuestions && extra.suggestedQuestions.length > 0
+      ? extra.suggestedQuestions
+      : wow;
   return {
     ok: false,
     clarify: true,
     question,
     message:
       message ||
-      'I can answer analytics questions from the Zenith catalog (revenue, pipeline, payments, PE buckets, and similar). Try one of the examples below, or pick a metric from the catalog.',
-    suggestedQuestions: suggestedQuestionsForRole(role),
-    catalogHints: catalogHintsForRole(role),
+      'I can answer who to call, stalled deals, tickets, and other CRM questions — or run tasks like New Customer. Try one of these, or search the catalog.',
+    suggestedQuestions: suggested,
+    catalogHints: catalogHintsForRole(role, extra?.live),
   };
 }
 
@@ -2294,7 +2308,12 @@ async function executeMetric(
     compareWhere?: Prisma.ProjectWhereInput;
     compareMeta?: ZenithNlQueryInput['compareMeta'];
   },
-): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+): Promise<{
+  viz: ZenithNlViz;
+  insight: string;
+  projectsHref?: string;
+  lookupMiss?: { query: string; suggestions: string[] };
+}> {
   switch (metric) {
     case 'revenue_by_lead_source':
       return execRevenueByLeadSource(where);
@@ -2304,6 +2323,8 @@ async function executeMetric(
       return execPipelineByStage(where);
     case 'pipeline_health':
       return execPipelineHealth(intent, where);
+    case 'who_to_call':
+      return execWhoToCall(where);
     case 'payment_status_breakdown':
       return execPaymentStatusBreakdown(where);
     case 'capacity_sold':
@@ -2327,6 +2348,13 @@ async function executeMetric(
     case 'loan_bank_breakdown':
       return execLoanBankBreakdown(where, intent);
     case 'support_tickets_summary':
+      if (ticketQueueSlice(intent)) {
+        return execTicketQueue(intent, {
+          userId: ctx.userId,
+          role: ctx.role,
+          dateFilter: ctx.dateFilter,
+        });
+      }
       return execSupportTicketsSummary(intent, ctx);
     case 'revenue_by_project_type':
       return execRevenueByProjectType(where, intent);
@@ -2504,6 +2532,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   }
 
   const started = Date.now();
+  const live = await loadLiveAskBook(input.userId, input.role);
 
   // Navigation / create / edit actions — before analytics so "create support ticket" is not a ticket count.
   const actionMatch =
@@ -2527,7 +2556,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
         message: actionMatch.message,
         href: actionMatch.href,
         autoNavigate: actionMatch.autoNavigate,
-        suggestedQuestions: suggestedQuestionsForRole(input.role),
+        suggestedQuestions: suggestedQuestionsForRole(input.role, live),
         chipMatch: true,
       },
       dateMeta,
@@ -2649,6 +2678,8 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     if (
       listProjects &&
       hasListFilter &&
+      intent.metric !== 'pending_subsidy' &&
+      intent.metric !== 'availing_loan' &&
       metricAllowedForRole('projects_list_slice', input.role)
     ) {
       const filters = { ...(intent.filters || {}) };
@@ -2696,7 +2727,8 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       clarifyResult(
         question,
         input.role,
-        'I can answer analytics questions (support tickets, brand mix, banks…) or run tasks like New Customer, New Project, or Create a Support Ticket. Try one of the examples below.',
+        'I can answer who to call, stalled deals, tickets, and other CRM questions — or run tasks like New Customer. Try one of these, or search the catalog.',
+        { live },
       ),
       dateMeta,
     );
@@ -2730,6 +2762,29 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       compareWhere: compareScoped,
       compareMeta: input.compareMeta,
     });
+    if (executed.lookupMiss) {
+      const miss = executed.lookupMiss;
+      const hint = miss.suggestions[0]
+        ? ` Did you mean ${miss.suggestions[0]
+            .replace(/^Customer details for /i, '')
+            .replace(/^What's the status of /i, '')}?`
+        : '';
+      return withDateMeta(
+        clarifyResult(
+          question,
+          input.role,
+          `No match for “${miss.query}”.${hint} Try one of these, or search the catalog.`,
+          {
+            live,
+            suggestedQuestions: [...miss.suggestions, ...wowSuggestionsForRole(input.role)].slice(
+              0,
+              5,
+            ),
+          },
+        ),
+        dateMeta,
+      );
+    }
     let viz = executed.viz;
     viz = maybeForceTable(viz, intent);
     viz = maybeForceChart(viz, intent);
@@ -2762,7 +2817,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
         viz,
         projectsHref,
         intent,
-        suggestedQuestions: suggestedQuestionsForRole(input.role),
+        suggestedQuestions: suggestedQuestionsForRole(input.role, live),
         followUps,
         chipMatch,
       },
@@ -2775,6 +2830,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
         question,
         input.role,
         'I could not compute that answer. Try a different question from the examples.',
+        { live },
       ),
       dateMeta,
     );

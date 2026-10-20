@@ -98,6 +98,15 @@ describe('matchSupportTicketIntent', () => {
       matchSupportTicketIntent('show overdue support tickets', UserRole.OPERATIONS)?.filters
         ?.ticketStatus,
     ).toBe('OVERDUE');
+    expect(matchSupportTicketIntent('show overdue support tickets', UserRole.OPERATIONS)?.viz).toBe(
+      'table',
+    );
+  });
+
+  it('routes oldest open ticket to a queue table', () => {
+    const intent = matchSupportTicketIntent('Who has the oldest open ticket?', UserRole.ADMIN);
+    expect(intent?.viz).toBe('table');
+    expect(intent?.filters?.detailSlice).toBe('oldest');
   });
 });
 

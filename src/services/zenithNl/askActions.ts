@@ -44,6 +44,7 @@ export const ZENITH_ASK_ACTIONS = [
   'assign_project_ops',
   'add_project_remark',
   'edit_customer',
+  'open_proposal',
 ] as const;
 
 export type ZenithAskActionId = (typeof ZENITH_ASK_ACTIONS)[number];
@@ -127,6 +128,7 @@ const ACTION_ROLES: Record<ZenithAskActionId, UserRole[]> = {
   assign_project_ops: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.OPERATIONS],
   add_project_remark: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.OPERATIONS, UserRole.SALES],
   edit_customer: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  open_proposal: EXEC,
 };
 
 export function actionAllowedForRole(action: ZenithAskActionId, role: UserRole): boolean {
@@ -249,7 +251,13 @@ const EXACT: Record<string, ExactBuilder> = {
     'Overdue Support Tickets',
     'Opening overdue support tickets…',
   ),
-  [norm('Pending Subsidy Projects')]: exact(
+  [norm('Open Pending Subsidy Projects')]: exact(
+    'pending_subsidy',
+    '/projects?pendingSubsidy=true',
+    'Pending Subsidy',
+    'Opening projects pending subsidy…',
+  ),
+  [norm('Go to Pending Subsidy')]: exact(
     'pending_subsidy',
     '/projects?pendingSubsidy=true',
     'Pending Subsidy',
@@ -351,13 +359,17 @@ export function matchAskActionIntent(
     /^(create|raise|add)\s+(a\s+)?(new\s+)?support\s+ticket\b/.test(key) ||
     /^new\s+support\s+ticket\b/.test(key)
   ) {
-    if (!actionAllowedForRole('create_support_ticket', role)) return null;
-    return build(
-      'create_support_ticket',
-      '/support-tickets?new=1',
-      'Create Support Ticket',
-      'Opening the create support ticket form…',
-    );
+    if (/\b(?:sl\s*\d+|\d{1,6}\b)/.test(key) && /\b(for|on)\b/.test(key)) {
+      // Prefill is resolved in matchAskEditActionIntent.
+    } else {
+      if (!actionAllowedForRole('create_support_ticket', role)) return null;
+      return build(
+        'create_support_ticket',
+        '/support-tickets?new=1',
+        'Create Support Ticket',
+        'Opening the create support ticket form…',
+      );
+    }
   }
   if (/^(new|create|add)\s+(a\s+)?(new\s+)?user\b/.test(key)) {
     if (!actionAllowedForRole('new_user', role)) return null;
@@ -435,7 +447,9 @@ export function matchAskActionIntent(
 
   // Ticket queues (navigate) — leave “show/how many/total/raised” to analytics metrics
   const looksLikeAnalytics =
-    /\b(show|how many|total|raised|count|summary|breakdown|sold|revenue)\b/.test(key);
+    /\b(show|list|how many|total|raised|count|summary|breakdown|sold|revenue|which|who)\b/.test(
+      key,
+    );
   if (
     !looksLikeAnalytics &&
     /\boverdue\b/.test(key) &&
@@ -466,8 +480,7 @@ export function matchAskActionIntent(
   // Project list filters (navigate) — avoid stealing analytics chips
   if (
     !looksLikeAnalytics &&
-    (/\bpending\s+subsidy\s+projects?\b/.test(key) ||
-      /^(open|go to|view)\s+.*\bpending\s+subsidy\b/.test(key))
+    /^(open|go to|view)\s+.*\bpending\s+subsidy\b/.test(key)
   ) {
     if (!actionAllowedForRole('pending_subsidy', role)) return null;
     return build(
@@ -643,7 +656,7 @@ export function matchAskActionIntent(
 /** Example action chips shown alongside analytics examples (role-filtered). */
 export const ACTION_EXAMPLE_CHIPS_BY_ROLE: Partial<Record<UserRole, string[]>> = {
   [UserRole.SALES]: ['New Customer', 'Open My Day', 'Create a Support Ticket'],
-  [UserRole.MANAGEMENT]: ['Open My Day', 'Overdue Support Tickets', 'Pending Subsidy Projects'],
+  [UserRole.MANAGEMENT]: ['Open My Day', 'Overdue Support Tickets', 'Open Pending Subsidy Projects'],
   [UserRole.ADMIN]: ['New User', 'Open My Day', 'Go to Audit & Security'],
   [UserRole.OPERATIONS]: ['Under Installation Projects', 'Create a Support Ticket', 'Solar Hub Provisioning'],
   [UserRole.FINANCE]: ['Go to Tally Export', 'Availing Loan Projects', 'Customer Search'],

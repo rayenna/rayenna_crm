@@ -385,6 +385,13 @@ export function projectsHrefForIntent(
     }
     case 'pending_subsidy':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
+    case 'who_to_call':
+      return buildZenithNlProjectsHref(
+        {
+          status: ['LEAD', 'SITE_SURVEY', 'PROPOSAL', 'CONFIRMED', 'UNDER_INSTALLATION'],
+        },
+        dateFilter,
+      );
     case 'customer_detail_lookup': {
       const search = intent.filters?.search?.trim() || intent.filters?.city?.trim();
       return search ? `/customers?q=${encodeURIComponent(search)}` : '/customers';
@@ -658,6 +665,7 @@ const PROJECT_LIST_ROW_METRICS = new Set<ZenithNlMetric>([
   'cohort_summary',
   'availing_loan',
   'pending_subsidy',
+  'who_to_call',
   'unpaid_invoices',
   'amc_expiring',
   'top_customers_by_profit',

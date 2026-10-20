@@ -11,6 +11,7 @@ import CommandBar from '../components/zenith/CommandBar'
 import ZenithFilterSegments from '../components/zenith/ZenithFilterSegments'
 import ZenithAskComposer from '../components/zenith/ZenithAskComposer'
 import ZenithAskPanel from '../components/zenith/ZenithAskPanel'
+import ZenithAskAdoptionStats from '../components/zenith/ZenithAskAdoptionStats'
 import DailyBriefing from '../components/zenith/DailyBriefing'
 import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
@@ -61,7 +62,12 @@ import {
   salesTeamPerformanceFromExplorer,
 } from '../utils/zenithExplorerDerived'
 import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
-import { zenithAskExampleChips, zenithAskMoreChips } from '../constants/zenithAskExamples'
+import {
+  zenithAskDemoChips,
+  zenithAskExampleChips,
+  zenithAskMoreChips,
+  zenithAskTryChips,
+} from '../constants/zenithAskExamples'
 import {
   mergeZenithAskHistory,
   readZenithAskHistory,
@@ -69,6 +75,8 @@ import {
   ZENITH_ASK_HISTORY_MAX,
 } from '../utils/zenithAskHistoryStorage'
 import { trackZenithAskEvent } from '../utils/zenithAskAnalytics'
+import { zenithAskMappedLabel } from '../utils/zenithAskMappedLabel'
+import { handleZenithAskAction } from '../utils/zenithAskActionHref'
 import type {
   ZenithAskHistoryItem,
   ZenithNlPriorContext,
@@ -99,6 +107,7 @@ const Zenith = () => {
   const [askHistory, setAskHistory] = useState<ZenithAskHistoryItem[]>([])
   /** Close hides the panel; history is kept for the next ask. */
   const [askPanelDismissed, setAskPanelDismissed] = useState(false)
+  const [remainingAsks, setRemainingAsks] = useState<number | null>(null)
   const askPriorRef = useRef<ZenithNlPriorContext | null>(null)
   const askHistoryHydratedRef = useRef<string | null>(null)
 
@@ -157,8 +166,30 @@ const Zenith = () => {
     selectedQuarters,
     selectedMonths,
   )
-  const askExampleChips = zenithAskExampleChips(user?.role)
-  const askMoreChips = zenithAskMoreChips(user?.role)
+  const askExamplesQ = useQuery({
+    queryKey: ['zenith-ask-examples', user?.id],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ chips?: string[]; more?: string[] }>(
+        '/api/dashboard/zenith-ask-examples',
+      )
+      return {
+        chips: Array.isArray(data.chips) ? data.chips.filter((q) => q.trim()) : [],
+        more: Array.isArray(data.more) ? data.more.filter((q) => q.trim()) : [],
+      }
+    },
+    enabled: Boolean(user?.id && showZenithAsk && isOnline),
+    staleTime: ZENITH_QUERY_STALE_MS,
+  })
+  const askExampleChips =
+    askExamplesQ.data?.chips && askExamplesQ.data.chips.length > 0
+      ? askExamplesQ.data.chips
+      : zenithAskExampleChips(user?.role)
+  const askDemoChips = zenithAskDemoChips(user?.role)
+  const askTryChips = zenithAskTryChips(askExampleChips, askDemoChips)
+  const askMoreChips =
+    askExamplesQ.data?.more && askExamplesQ.data.more.length > 0
+      ? askExamplesQ.data.more
+      : zenithAskMoreChips(user?.role)
   const showAskSideSuggestions = Boolean(
     showZenithAsk && user?.role && !askResult && !askLoading && !askError,
   )
@@ -267,6 +298,9 @@ const Zenith = () => {
           prior: askPriorRef.current,
         })
         setAskResult(res.data)
+        if (typeof res.data.quota?.remaining === 'number') {
+          setRemainingAsks(res.data.quota.remaining)
+        }
         if (res.data.ok && res.data.kind === 'action') {
           trackZenithAskEvent('ask_action', {
             role: user?.role,
@@ -276,8 +310,8 @@ const Zenith = () => {
             source,
             ms: Date.now() - started,
           })
-          if (res.data.autoNavigate && res.data.href) {
-            navigate(res.data.href)
+          await handleZenithAskAction(res.data, navigate)
+          if (res.data.autoNavigate && res.data.href && !res.data.href.startsWith('pe:')) {
             return
           }
         } else if (res.data.ok && res.data.kind === 'metric') {
@@ -671,7 +705,11 @@ const Zenith = () => {
   ])
 
   return (
-    <div className={`zenith-root zenith-animated-bg${narrow ? ' zenith-root--mobile-nav' : ''}`}>
+    <div
+      className={`zenith-root zenith-animated-bg${narrow ? ' zenith-root--mobile-nav' : ''}${
+        narrow && mobileTab === 'ask' ? ' zenith-root--ask-tab' : ''
+      }`}
+    >
       {/* No overflow-x-clip here: CSS pairs non-visible overflow-x with overflow-y:auto and Chrome/Android PWA
           clips Recharts SVG while document-scrolling. Width is contained via zenith-root + min-w-0 / max-w-full. */}
       <div className="min-w-0 max-w-full">
@@ -708,6 +746,8 @@ const Zenith = () => {
                   }}
                   loading={askLoading}
                   isOnline={isOnline}
+                  remainingAsks={remainingAsks}
+                  mappedLabel={askLoading ? zenithAskMappedLabel(askValue) : null}
                 />
               </div>
             ) : null
@@ -748,31 +788,59 @@ const Zenith = () => {
           aria-label="Zenith Ask"
         >
           {narrow ? (
-            <div className="zenith-ask-page-block__row">
-              <div className="zenith-ask-page-block__composer">
-                <ZenithAskComposer
-                  value={askValue}
-                  onChange={setAskValue}
-                  onSubmit={(q, source) => {
-                    void runZenithAsk(q, source ?? 'typed')
-                  }}
-                  loading={askLoading}
-                  isOnline={isOnline}
-                />
-              </div>
-              {showAskSideSuggestions ? (
-                <aside className="zenith-ask-suggestions" aria-label="Example questions">
+            <div className="zenith-ask-page-block__composer">
+              <ZenithAskComposer
+                value={askValue}
+                onChange={setAskValue}
+                onSubmit={(q, source) => {
+                  void runZenithAsk(q, source ?? 'typed')
+                }}
+                loading={askLoading}
+                isOnline={isOnline}
+                touchLayout
+                remainingAsks={remainingAsks}
+                mappedLabel={askLoading ? zenithAskMappedLabel(askValue) : null}
+              />
+            </div>
+          ) : null}
+          {showAskSideSuggestions ? (
+            <aside className="zenith-ask-suggestions" aria-label="Example questions">
+              {isOnline ? (
+                <div className="zenith-ask-demo">
+                  <span className="zenith-ask-demo__label">Guided demo</span>
+                  <div className="zenith-ask-demo__chips">
+                    {askDemoChips.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        className="zenith-ask-examples__chip"
+                        onClick={() => {
+                          trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
+                          void runZenithAsk(q, 'chip')
+                        }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                  <ZenithAskAdoptionStats />
+                </div>
+              ) : null}
+              {askTryChips.length > 0 ? (
+                <>
                   <div className="zenith-ask-suggestions__head">
                     <span className="zenith-ask-examples__label">Try asking</span>
                     <p className="zenith-ask-suggestions__sub">
                       Tap a prompt to run it with your current filters ({askFilterSummary})
                       {!isOnline
                         ? ' — reconnect to run Ask'
-                        : ' · Press / or A to focus Ask'}
+                        : narrow
+                          ? ''
+                          : ' · Press / or A to focus Ask'}
                     </p>
                   </div>
                   <div className="zenith-ask-examples zenith-ask-examples--panel">
-                    {askExampleChips.map((q) => (
+                    {askTryChips.map((q) => (
                       <button
                         key={q}
                         type="button"
@@ -787,39 +855,9 @@ const Zenith = () => {
                       </button>
                     ))}
                   </div>
-                </aside>
+                </>
               ) : null}
-            </div>
-          ) : showAskSideSuggestions ? (
-            <div className="zenith-ask-page-block__row zenith-ask-page-block__row--follow-only">
-              <aside className="zenith-ask-suggestions" aria-label="Example questions">
-                <div className="zenith-ask-suggestions__head">
-                  <span className="zenith-ask-examples__label">Try asking</span>
-                  <p className="zenith-ask-suggestions__sub">
-                    Tap a prompt to run it with your current filters ({askFilterSummary})
-                    {!isOnline
-                      ? ' — reconnect to run Ask'
-                      : ' · Press / or A to focus Ask'}
-                  </p>
-                </div>
-                <div className="zenith-ask-examples zenith-ask-examples--panel">
-                  {askExampleChips.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      disabled={!isOnline}
-                      onClick={() => {
-                        trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
-                        void runZenithAsk(q, 'chip')
-                      }}
-                      className="zenith-ask-examples__chip"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </aside>
-            </div>
+            </aside>
           ) : null}
           {!askPanelDismissed ? (
             <ZenithAskPanel
@@ -829,6 +867,7 @@ const Zenith = () => {
               history={askHistory}
               filterSummary={askFilterSummary}
               role={user?.role}
+              mappedLabel={askLoading ? zenithAskMappedLabel(askValue) : null}
               onClose={() => {
                 setAskResult(null)
                 setAskError(null)
@@ -1011,6 +1050,8 @@ const Zenith = () => {
           <ZenithMobileStickyActions
             onShowBriefing={showBriefing}
             showAskLauncher={showZenithAsk && mobileTab !== 'ask'}
+            showBriefingLauncher={mobileTab !== 'ask'}
+            showBackToTop={mobileTab !== 'ask'}
             onOpenAsk={focusAskInput}
           />
           <ZenithMobileBottomNav
@@ -1037,6 +1078,9 @@ const Zenith = () => {
             myDaySnapshot={myDaySnapQ.data ?? null}
             myDaySnapshotLoading={myDaySnapQ.isLoading}
             myDaySnapshotError={myDaySnapQ.isError}
+            onAskZenith={(q) => {
+              void runZenithAsk(q, 'chip')
+            }}
           />
         ) : null}
       </AnimatePresence>

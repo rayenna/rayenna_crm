@@ -348,7 +348,12 @@ export async function execProjectDetailLookup(
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
   role: UserRole,
-): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+): Promise<{
+  viz: ZenithNlViz;
+  insight: string;
+  projectsHref?: string;
+  lookupMiss?: { query: string; suggestions: string[] };
+}> {
   const raw = intent.filters?.search?.trim() || '';
   const slMatch = raw.match(/^SL:(\d+)$/i) || raw.match(/^(\d+)$/);
   let project =
@@ -399,6 +404,20 @@ export async function execProjectDetailLookup(
   }
 
   if (!project) {
+    const nearby = await prisma.project.findMany({
+      where,
+      select: {
+        slNo: true,
+        customer: { select: { firstName: true, customerName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+    });
+    const suggestions = nearby
+      .filter((p) => p.slNo != null)
+      .slice(0, 3)
+      .map((p) => `What's the status of SL ${p.slNo}?`);
+    const label = raw.replace(/^SL:/i, 'SL ');
     return {
       insight: raw
         ? `No project found for “${raw}” under your filters.`
@@ -412,6 +431,7 @@ export async function execProjectDetailLookup(
         ],
         rows: [],
       },
+      lookupMiss: raw ? { query: label, suggestions } : undefined,
     };
   }
 
@@ -1221,29 +1241,43 @@ async function listMissingPe(
       distinct: ['projectId'],
     }),
   ]);
-  const have = new Set(
-    (kind === 'costing' ? cost : kind === 'bom' ? bom : kind === 'roi' ? roi : prop).map(
-      (x) => x.projectId,
-    ),
-  );
+  const costSet = new Set(cost.map((x) => x.projectId));
+  const bomSet = new Set(bom.map((x) => x.projectId));
+  const roiSet = new Set(roi.map((x) => x.projectId));
+  const propSet = new Set(prop.map((x) => x.projectId));
+  const have =
+    kind === 'costing' ? costSet : kind === 'bom' ? bomSet : kind === 'roi' ? roiSet : propSet;
   const missing = all.filter((p) => !have.has(p.id)).slice(0, TABLE_CAP);
+  const mark = (ok: boolean) => (ok ? 'Ready' : 'Missing');
   return {
     insight: missing.length
-      ? `PE missing ${kind}: ${missing.length} projects (sample of up to ${TABLE_CAP}).`
+      ? `PE missing ${kind}: ${missing.length} projects. Open Proposal on a row to jump into that CRM project.`
       : `No projects missing PE ${kind}.`,
     viz: {
       kind: 'table' as const,
-      title: `PE missing ${kind}`,
+      title: `PE checklist — missing ${kind}`,
       columns: [
         { key: 'slNo', label: 'SL No' },
         { key: 'customer', label: 'Customer' },
-        { key: 'status', label: 'Status' },
+        { key: 'bom', label: 'BOM' },
+        { key: 'roi', label: 'ROI' },
+        { key: 'costing', label: 'Costing' },
+        { key: 'proposal', label: 'Proposal' },
       ],
-      rows: missing.map((p) => ({
-        slNo: p.slNo,
-        customer: customerLabel(p.customer),
-        status: p.projectStatus,
-      })),
+      rows: missing.map((p) => {
+        const customer = customerLabel(p.customer);
+        return {
+          slNo: p.slNo,
+          customer,
+          bom: mark(bomSet.has(p.id)),
+          roi: mark(roiSet.has(p.id)),
+          costing: mark(costSet.has(p.id)),
+          proposal: mark(propSet.has(p.id)),
+          projectId: p.id,
+          customerName: customer,
+          stageStatus: p.projectStatus,
+        };
+      }),
     },
   };
 }

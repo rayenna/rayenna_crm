@@ -82,6 +82,7 @@ const SupportTicketsDashboard = () => {
   const [listSearch, setListSearch] = useState('')
   const [useAttentionSort, setUseAttentionSort] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createPrefill, setCreatePrefill] = useState<{ projectId?: string; title?: string }>({})
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [tableSortBy, setTableSortBy] = useState<SupportTicketsTableSortKey>('createdAt')
@@ -108,13 +109,18 @@ const SupportTicketsDashboard = () => {
     }
   }, [searchParams])
 
-  // Open create modal from Ask / deep-link: /support-tickets?new=1
+  // Open create modal from Ask / deep-link: /support-tickets?new=1&projectId=&title=
   useEffect(() => {
     if (searchParams.get('new') !== '1') return
+    const projectId = searchParams.get('projectId')?.trim() || undefined
+    const title = searchParams.get('title')?.trim() || undefined
     const next = new URLSearchParams(searchParams)
     next.delete('new')
+    next.delete('projectId')
+    next.delete('title')
     setSearchParams(next, { replace: true })
     if (!canCreate) return
+    setCreatePrefill({ projectId, title })
     setShowCreateModal(true)
   }, [searchParams, setSearchParams, canCreate])
 
@@ -717,9 +723,15 @@ const SupportTicketsDashboard = () => {
 
       {showCreateModal ? (
         <CreateTicketModal
-          onClose={() => setShowCreateModal(false)}
+          projectId={createPrefill.projectId}
+          initialTitle={createPrefill.title}
+          onClose={() => {
+            setShowCreateModal(false)
+            setCreatePrefill({})
+          }}
           onSuccess={() => {
             setShowCreateModal(false)
+            setCreatePrefill({})
             queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
             queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
           }}

@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
+import { openZenithAskDock } from '../utils/zenithAskOpen'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDayContext } from '../contexts/MyDayContext'
 import {
@@ -158,6 +159,17 @@ export default function CommandPalette({ open, onClose }: Props) {
       const params = new URLSearchParams(location.search)
       params.set('showTip', '1')
       navigate({ pathname: location.pathname, search: params.toString() })
+      return
+    }
+    if (
+      (item.id === 'ask_zenith' || item.id === 'ask_zenith_query') &&
+      !location.pathname.startsWith('/zenith')
+    ) {
+      openZenithAskDock({
+        question: item.id === 'ask_zenith_query' ? query.trim() : undefined,
+        run: item.id === 'ask_zenith_query' && Boolean(query.trim()),
+        focus: true,
+      })
       return
     }
     navigate(resolved.href)

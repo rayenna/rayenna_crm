@@ -10,6 +10,8 @@ import { stGhostBtn, stInputCls, stLabelCls, stMutedCls, stPrimaryBtn, stSection
 
 interface CreateTicketModalProps {
   projectId?: string
+  /** Prefill the title (Ask “create ticket for SL … inverter fault”). */
+  initialTitle?: string
   onClose: () => void
   onSuccess: () => void
 }
@@ -21,8 +23,13 @@ type PickerProject = {
   customer?: { customerName?: string | null }
 }
 
-const CreateTicketModal = ({ projectId: lockedProjectId, onClose, onSuccess }: CreateTicketModalProps) => {
-  const [title, setTitle] = useState('')
+const CreateTicketModal = ({
+  projectId: lockedProjectId,
+  initialTitle = '',
+  onClose,
+  onSuccess,
+}: CreateTicketModalProps) => {
+  const [title, setTitle] = useState(initialTitle)
   const [description, setDescription] = useState('')
   const [followUpDate, setFollowUpDate] = useState(() => defaultNextFollowUpYmd())
   const [pickedProjectId, setPickedProjectId] = useState(lockedProjectId ?? '')
@@ -46,6 +53,16 @@ const CreateTicketModal = ({ projectId: lockedProjectId, onClose, onSuccess }: C
     const t = window.setTimeout(() => setDebouncedQuery(projectQuery.trim()), 280)
     return () => window.clearTimeout(t)
   }, [projectQuery])
+
+  const { data: lockedProject } = useQuery({
+    queryKey: ['support-ticket-locked-project', lockedProjectId],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/projects/${lockedProjectId}`)
+      return res.data as PickerProject
+    },
+    enabled: Boolean(lockedProjectId),
+    staleTime: 30_000,
+  })
 
   const { data: pickerResults, isFetching: pickerLoading } = useQuery({
     queryKey: ['support-ticket-project-picker', debouncedQuery],
@@ -158,6 +175,16 @@ const CreateTicketModal = ({ projectId: lockedProjectId, onClose, onSuccess }: C
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket Details</h3>
               </div>
               <div className="space-y-4">
+                {!needsPicker && lockedProjectId ? (
+                  <p className={`${stMutedCls}`}>
+                    Project:{' '}
+                    <span className="font-semibold text-[color:var(--text-primary)]">
+                      {lockedProject
+                        ? projectLabel(lockedProject)
+                        : 'Linked from Ask'}
+                    </span>
+                  </p>
+                ) : null}
                 {needsPicker ? (
                   <div>
                     <label className={stLabelCls} htmlFor="st-project-search">

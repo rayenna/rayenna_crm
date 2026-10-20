@@ -37,10 +37,17 @@ export const rateLimit = (maxRequests: number, windowMs: number) => {
         count: 1,
         resetTime: now + windowMs,
       };
-      return next();
+    } else {
+      store[key].count += 1;
     }
 
-    store[key].count += 1;
+    const remaining = Math.max(0, maxRequests - store[key].count);
+    res.setHeader('X-RateLimit-Limit', String(maxRequests));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(store[key].resetTime / 1000)));
+    ;(req as Request & { rateLimitRemaining?: number; rateLimitLimit?: number }).rateLimitRemaining =
+      remaining;
+    ;(req as Request & { rateLimitLimit?: number }).rateLimitLimit = maxRequests;
 
     if (store[key].count > maxRequests) {
       return res.status(429).json({

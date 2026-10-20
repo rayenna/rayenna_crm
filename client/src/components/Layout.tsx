@@ -17,6 +17,7 @@ import MyDayDrawer from './my-day/MyDayDrawer'
 import MyDayNavEntry from './my-day/MyDayNavEntry'
 import MyDayJournalNudge from './my-day/MyDayJournalNudge'
 import MyDayUrlBridge from './my-day/MyDayUrlBridge'
+import ZenithAskDock, { ZenithAskNavButton } from './zenith/ZenithAskDock'
 import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
@@ -478,7 +479,8 @@ const Layout = () => {
                 {user?.name}
               </span>
 
-              {/* My Day button — visible at all breakpoints */}
+              {/* Ask + My Day — visible at all breakpoints */}
+              <ZenithAskNavButton />
               <MyDayNavEntry />
 
               {/* Profile menu — lg+; consolidates role + theme + actions */}
@@ -717,6 +719,7 @@ const Layout = () => {
       {user ? <MyDayUrlBridge /> : null}
       {user ? <MyDayJournalNudge /> : null}
       {user ? <MyDayDrawer /> : null}
+      {user ? <ZenithAskDock /> : null}
     </div>
     </MyDayProvider>
   )

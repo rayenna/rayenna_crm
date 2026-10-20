@@ -10,6 +10,11 @@ type Props = {
   onSubmit: (question: string, source?: AskSubmitSource) => void
   loading?: boolean
   isOnline?: boolean
+  /** Hide keyboard shortcuts that do not apply on touch layouts. */
+  touchLayout?: boolean
+  inputId?: string
+  remainingAsks?: number | null
+  mappedLabel?: string | null
 }
 
 /**
@@ -21,6 +26,10 @@ export default function ZenithAskComposer({
   onSubmit,
   loading = false,
   isOnline = true,
+  touchLayout = false,
+  inputId = 'zenith-ask-input',
+  remainingAsks = null,
+  mappedLabel = null,
 }: Props) {
   const askSpeech = useZenithAskSpeech({
     enabled: isOnline && !loading,
@@ -61,9 +70,16 @@ export default function ZenithAskComposer({
           <span className="zenith-ask-composer__badge">
             <Sparkles className="w-3.5 h-3.5" aria-hidden />
             Ask Zenith
+            {remainingAsks != null ? (
+              <span className="zenith-ask-composer__quota">
+                {remainingAsks} left
+              </span>
+            ) : null}
           </span>
           <div className="zenith-ask-composer__header-meta">
-            {hasText || askSpeech.listening ? (
+            {loading && mappedLabel ? (
+              <span className="zenith-ask-composer__hint">Mapped: {mappedLabel}</span>
+            ) : hasText || askSpeech.listening ? (
               <button
                 type="button"
                 onClick={handleClear}
@@ -77,17 +93,21 @@ export default function ZenithAskComposer({
               </button>
             ) : (
               <span className="zenith-ask-composer__hint">
-                {isOnline ? 'Type, speak, or press /' : 'Needs connection'}
+                {isOnline
+                  ? touchLayout
+                    ? 'Type or speak'
+                    : 'Type, speak, or press /'
+                  : 'Needs connection'}
               </span>
             )}
           </div>
         </div>
 
-        <label className="sr-only" htmlFor="zenith-ask-input">
+        <label className="sr-only" htmlFor={inputId}>
           Ask Zenith
         </label>
         <textarea
-          id="zenith-ask-input"
+          id={inputId}
           rows={3}
           value={value}
           onChange={(e) => {

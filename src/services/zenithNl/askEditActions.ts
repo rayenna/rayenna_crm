@@ -63,6 +63,112 @@ export async function matchAskEditActionIntent(
   const q = norm(question);
   if (!q || q.length < 6) return null;
 
+  // Open / draft proposal for SL or named customer → Proposal Engine (does not leave Ask as a project search).
+  if (
+    /\b(open|draft|show|generate)\b/.test(q) &&
+    /\b(proposal|pe)\b/.test(q) &&
+    !/\b(engine\s+buckets?|missing\s+bom|status\s+breakdown)\b/.test(q)
+  ) {
+    if (!actionAllowedForRole('open_proposal', role)) return null;
+    const sl = parseSlNo(q);
+    const name =
+      q
+        .replace(/\b(open|draft|show|generate)\b/g, '')
+        .replace(/\b(the|a|an)\b/g, '')
+        .replace(/\b(proposal|pe)\b/g, '')
+        .replace(/\b(for|on|of|project|engine)\b/g, '')
+        .replace(/\bsl\s*\d+\b/g, '')
+        .trim() || null;
+    const project = sl
+      ? await prisma.project.findFirst({ where: { slNo: sl }, select: { id: true, slNo: true } })
+      : name && name.length >= 2
+        ? await prisma.project.findFirst({
+            where: {
+              OR: [
+                { customer: { firstName: { contains: name, mode: 'insensitive' } } },
+                { customer: { customerName: { contains: name, mode: 'insensitive' } } },
+              ],
+            },
+            orderBy: { updatedAt: 'desc' },
+            select: { id: true, slNo: true },
+          })
+        : null;
+    if (!project) {
+      return build(
+        'open_proposal',
+        '/projects?peBucket=draft',
+        'Open proposal',
+        sl
+          ? `No project found for SL ${sl}.`
+          : name
+            ? `No project found for “${name}”.`
+            : 'Ask “open proposal for SL 123” or a customer name.',
+      );
+    }
+    return {
+      action: 'open_proposal',
+      href: `pe:${project.id}`,
+      label: 'Open proposal',
+      message: `Opening Proposal Engine for SL ${project.slNo}…`,
+      autoNavigate: false,
+    };
+  }
+
+  // Create ticket for SL 141 inverter fault — prefill tickets form.
+  // Do not steal “open support tickets” queue analytics.
+  {
+    const creating = /\b(create|raise|add)\b/.test(q) && /\b(support\s+)?tickets?\b/.test(q);
+    const openOne =
+      /\bopen\b/.test(q) &&
+      /\b(support\s+)?tickets?\b/.test(q) &&
+      (/\b(for|on)\b/.test(q) || /\bsl\s*\d+/.test(q));
+    if (
+      (creating || openOne) &&
+      !/\b(show|list|who|oldest|overdue|queue|how many|total|raised)\b/.test(q)
+    ) {
+      if (!actionAllowedForRole('create_support_ticket', role)) return null;
+      const sl = parseSlNo(q);
+      const title = q
+        .replace(/\b(create|raise|add|open)\b/g, '')
+        .replace(/\b(a|an|the)\b/g, '')
+        .replace(/\b(support\s+)?tickets?\b/g, '')
+        .replace(/\b(for|on|of)\b/g, '')
+        .replace(/\bsl\s*\d+\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (sl) {
+        const project = await prisma.project.findFirst({
+          where: { slNo: sl },
+          select: { id: true, slNo: true },
+        });
+        if (project) {
+          const qs = new URLSearchParams({ new: '1', projectId: project.id });
+          if (title) qs.set('title', title.slice(0, 120));
+          return build(
+            'create_support_ticket',
+            `/support-tickets?${qs.toString()}`,
+            'Create Support Ticket',
+            `Opening a ticket on SL ${project.slNo}${title ? ` — ${title}` : ''}…`,
+          );
+        }
+        return build(
+          'create_support_ticket',
+          '/support-tickets?new=1',
+          'Create Support Ticket',
+          `No project found for SL ${sl}. Opening a blank ticket form…`,
+        );
+      }
+      return build(
+        'create_support_ticket',
+        '/support-tickets?new=1',
+        'Create Support Ticket',
+        title
+          ? `Opening a ticket form${title ? ` — ${title}` : ''}…`
+          : 'Opening the create support ticket form…',
+      );
+    }
+  }
+
   // Update payment for SL …
   if (
     /\b(update|edit|enter|record|add)\b/.test(q) &&

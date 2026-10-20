@@ -6,6 +6,7 @@ export const ZENITH_NL_METRICS = [
   'revenue_by_salesperson',
   'pipeline_by_stage',
   'pipeline_health',
+  'who_to_call',
   'payment_status_breakdown',
   'capacity_sold',
   'outstanding_balance',
@@ -225,6 +226,12 @@ export type ZenithNlCatalogHint = {
   ask: string;
 };
 
+/** Empty project/customer lookup → clarify with did-you-mean asks. */
+export type ZenithNlLookupMiss = {
+  query: string;
+  suggestions: string[];
+};
+
 export type ZenithNlQueryClarify = {
   ok: false;
   clarify: true;
@@ -316,6 +323,13 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: [...EXEC, UserRole.OPERATIONS],
   },
   {
+    metric: 'who_to_call',
+    description:
+      'Who to call today: Hit List (overdue / stalled / going cold) plus outstanding payment chase — named people with a reason',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
     metric: 'payment_status_breakdown',
     description: 'Payment status counts and outstanding balance',
     defaultViz: 'chart',
@@ -394,7 +408,7 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'support_tickets_summary',
     description:
-      'Support tickets raised: total count, status breakdown (Open / In progress / Closed), overdue open queue, and Solar Hub (consumer app) share. Date filters apply to ticket created date.',
+      'Open / overdue / oldest / mine ticket queue (one row per ticket with age and owner) or a status pie for totals raised. Date filters apply to ticket created date.',
     defaultViz: 'chart',
     defaultChartType: 'pie',
     roles: SUPPORT_TICKET_ROLES,
@@ -642,49 +656,173 @@ export function isZenithNlMetric(v: unknown): v is ZenithNlMetric {
 
 /**
  * Canonical Ask examples by role.
- * Keep in sync with `client/src/constants/zenithAskExamples.ts`.
+ * `{customer}` is filled from the user’s book (dropped when no live name).
+ * Keep fallbacks in `client/src/constants/zenithAskExamples.ts` in the same order.
  * Dates come from the Zenith command bar — avoid “this FY” in chip copy.
  */
 export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
     'Which lead sources drove the most revenue?',
-    'Show my stalled pipeline',
-    'Give me a pipeline analysis',
     'Summarise my lost deals by reason',
-    'How many of my projects used Adani panels?',
+    'Customer details for {customer}',
   ],
   MANAGEMENT: [
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
     'Subsidy vs non-subsidy revenue',
-    'DCR vs Non-DCR profitability',
-    'Revenue by city',
-    'Profit summary this quarter',
-    'Customer details for Ramesh',
+    'Show open support tickets',
+    'Customer details for {customer}',
   ],
   ADMIN: [
-    'Profit summary this quarter',
-    'Compare bank profitability',
-    'Ops workload',
-    'Customer details for Ramesh',
-    'Outstanding by salesperson',
+    'Who should I call today?',
+    'Why is my pipeline stalling?',
+    'Show open support tickets',
+    'List pending subsidy projects',
+    'Customer details for {customer}',
   ],
   OPERATIONS: [
-    'Ops workload',
-    'Projects with feasibility pending',
+    'Who should I call today?',
+    'List pending subsidy projects',
     'Projects missing documents',
-    'Payment timeline',
+    'Show open support tickets',
     'AMCs expiring',
   ],
   FINANCE: [
-    'Profit summary this quarter',
-    'Payment timeline',
-    'Compare bank profitability',
-    'Payment mode mix',
+    'Who should I call today?',
     'Unpaid invoices',
+    'Payment status breakdown',
+    'Profit summary this quarter',
+    'Payment mode mix',
   ],
 };
 
-export function suggestedQuestionsForRole(role: UserRole): string[] {
-  return EXAMPLE_QUESTIONS_BY_ROLE[role] ?? EXAMPLE_QUESTIONS_BY_ROLE.MANAGEMENT;
+export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
+  SALES: [
+    'Show my ageing pipeline',
+    'Show my pipeline by stage',
+    'Payment status breakdown',
+    'Capacity sold',
+  ],
+  MANAGEMENT: [
+    'DCR vs Non-DCR profitability',
+    'Salesperson profitability',
+    'City profitability',
+    'List pending subsidy projects',
+  ],
+  ADMIN: [
+    'Ops workload',
+    'Salesperson profitability',
+    'PE missing BOM',
+    'Incentive eligible projects',
+  ],
+  OPERATIONS: [
+    'Projects with feasibility pending',
+    'Payment timeline',
+    'Hub station IDs',
+    'PE missing BOM',
+  ],
+  FINANCE: [
+    'Payment timeline',
+    'Availing loan',
+    'Incentive eligible projects',
+    'Pending subsidy',
+  ],
+};
+
+/** Spoken questions for catalog rows — never fall back to Title Case metric ids. */
+const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
+  revenue_by_lead_source: 'Which lead sources drove the most revenue?',
+  revenue_by_salesperson: 'Revenue by salesperson',
+  pipeline_by_stage: 'Show my pipeline by stage',
+  pipeline_health: 'Why is my pipeline stalling?',
+  who_to_call: 'Who should I call today?',
+  payment_status_breakdown: 'Payment status breakdown',
+  capacity_sold: 'Capacity sold',
+  outstanding_balance: 'Show projects with outstanding balance',
+  top_customers_by_profit: 'Show top customers by profit',
+  lost_deals_summary: 'Summarise my lost deals by reason',
+  proposal_engine_buckets: 'Proposal Engine buckets',
+  projects_list_slice: 'List under installation projects not fully paid',
+  cohort_summary: 'How many of my projects used Adani panels?',
+  panel_brand_mix: 'Which panel brands sold most?',
+  inverter_brand_mix: 'Which inverter brands sold most?',
+  loan_bank_breakdown: 'Which banks are financing loans?',
+  support_tickets_summary: 'Show open support tickets',
+  install_by_status: 'Show installation status breakdown',
+  pending_subsidy: 'List pending subsidy projects',
+  availing_loan: 'Which projects are availing loan?',
+  revenue_by_project_type: 'Subsidy vs non-subsidy revenue',
+  revenue_by_customer_type: 'Revenue by customer type',
+  service_type_mix: 'Service type mix',
+  panel_type_mix: 'DCR vs Non-DCR profitability',
+  roof_type_mix: 'Roof type mix',
+  system_type_mix: 'System type mix',
+  capacity_by_band: 'Capacity sold by size band',
+  revenue_by_city: 'Revenue by city',
+  ops_workload: 'Ops workload',
+  project_stage_mix: 'Project stage mix',
+  sla_indicator_mix: 'SLA status indicators',
+  lost_competition_breakdown: 'Lost to competition reasons',
+  loan_vs_cash_revenue: 'Loan vs cash revenue',
+  outstanding_by_salesperson: 'Outstanding by salesperson',
+  profit_summary: 'Profit summary this quarter',
+  tickets_by_salesperson: 'Support tickets by salesperson',
+  compliance_backlog: 'Compliance backlog',
+  subsidy_funnel: 'Subsidy funnel',
+  installation_model_status: 'Show installation status breakdown',
+  payment_mode_mix: 'Payment mode mix',
+  unpaid_invoices: 'Unpaid invoices',
+  amc_expiring: 'AMCs expiring',
+  ticket_resolution_time: 'Ticket resolution time',
+  hub_plant_link_summary: 'Hub plant link status',
+  period_compare: 'Quarter on quarter revenue growth',
+  project_detail_lookup: 'Status of SL 1',
+  projects_ops_detail: 'Projects missing documents',
+  customer_detail_lookup: 'Customer details for {customer}',
+  customers_list_slice: 'List customers in Kochi',
+};
+
+export function fillAskPlaceholders(
+  questions: string[],
+  live: { customerName?: string | null },
+): string[] {
+  const name = live.customerName?.trim();
+  const out: string[] = [];
+  for (const q of questions) {
+    if (q.includes('{customer}')) {
+      if (!name || name.length < 2) continue;
+      out.push(q.split('{customer}').join(name));
+    } else {
+      out.push(q);
+    }
+  }
+  return out;
+}
+
+export function suggestedQuestionsForRole(role: UserRole, live?: { customerName?: string | null }): string[] {
+  const list = EXAMPLE_QUESTIONS_BY_ROLE[role] ?? EXAMPLE_QUESTIONS_BY_ROLE.MANAGEMENT ?? [];
+  return fillAskPlaceholders(list, live ?? {});
+}
+
+export function moreQuestionsForRole(role: UserRole, live?: { customerName?: string | null }): string[] {
+  const list = EXAMPLE_MORE_QUESTIONS_BY_ROLE[role] ?? EXAMPLE_MORE_QUESTIONS_BY_ROLE.MANAGEMENT ?? [];
+  return fillAskPlaceholders(list, live ?? {});
+}
+
+/** First-impression asks when Zenith cannot map a question. */
+export function wowSuggestionsForRole(role: UserRole): string[] {
+  const qs = ['Who should I call today?', 'Why is my pipeline stalling?'];
+  if (SUPPORT_TICKET_ROLES.includes(role)) qs.push('Show open support tickets');
+  else qs.push('Unpaid invoices');
+  return qs.filter((q) => {
+    if (q === 'Why is my pipeline stalling?') return metricAllowedForRole('pipeline_health', role);
+    if (q === 'Who should I call today?') return metricAllowedForRole('who_to_call', role);
+    if (q === 'Show open support tickets') return metricAllowedForRole('support_tickets_summary', role);
+    if (q === 'Unpaid invoices') return metricAllowedForRole('unpaid_invoices', role);
+    return true;
+  });
 }
 
 function humanizeMetric(metric: string): string {
@@ -695,24 +833,20 @@ function humanizeMetric(metric: string): string {
 }
 
 /** Browseable catalog for clarify — one row per metric allowed for the role. */
-export function catalogHintsForRole(role: UserRole): ZenithNlCatalogHint[] {
-  const examples = suggestedQuestionsForRole(role);
+export function catalogHintsForRole(
+  role: UserRole,
+  live?: { customerName?: string | null },
+): ZenithNlCatalogHint[] {
   return METRIC_CATALOG.filter((m) => m.metric !== 'clarify' && m.roles.includes(role)).map(
     (m) => {
       const title = humanizeMetric(m.metric);
-      const titleLower = title.toLowerCase();
-      const matchedExample = examples.find((q) => {
-        const ql = q.toLowerCase();
-        return (
-          ql.includes(titleLower) ||
-          titleLower.split(' ').every((part) => part.length < 3 || ql.includes(part))
-        );
-      });
+      const rawAsk = METRIC_EXAMPLE_ASK[m.metric] || m.description;
+      const filled = fillAskPlaceholders([rawAsk], live ?? {});
       return {
         metric: m.metric,
         title,
         description: m.description,
-        ask: matchedExample || title,
+        ask: filled[0] || m.description,
       };
     },
   );
@@ -726,6 +860,26 @@ export function catalogPromptBlock(role: UserRole): string {
 
 /** Follow-up prompts after a successful answer (session polish). */
 export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): string[] {
+  if (metric === 'who_to_call') {
+    const picks: string[] = [];
+    if (metricAllowedForRole('pipeline_health', role)) picks.push('Why is my pipeline stalling?');
+    if (metricAllowedForRole('outstanding_balance', role)) {
+      picks.push('Show projects with outstanding balance');
+    }
+    if (metricAllowedForRole('support_tickets_summary', role)) {
+      picks.push('Show open support tickets');
+    }
+    if (picks.length < 3 && metricAllowedForRole('pending_subsidy', role)) {
+      picks.push('List pending subsidy projects');
+    }
+    if (picks.length < 3 && metricAllowedForRole('unpaid_invoices', role)) {
+      picks.push('Unpaid invoices');
+    }
+    if (picks.length < 3 && metricAllowedForRole('payment_status_breakdown', role)) {
+      picks.push('Payment status breakdown');
+    }
+    return picks.slice(0, 3);
+  }
   const common: Partial<Record<ZenithNlMetric, string[]>> = {
     revenue_by_lead_source: [
       'Show that as a table',
@@ -743,9 +897,9 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Payment status breakdown',
     ],
     pipeline_health: [
+      'Who should I call today?',
       'Show my pipeline by stage',
       'Show my ageing pipeline',
-      'Summarise my lost deals by reason',
     ],
     payment_status_breakdown: [
       'Show projects with outstanding balance',
@@ -803,9 +957,9 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Which inverter brands sold most?',
     ],
     support_tickets_summary: [
-      'Show open support tickets',
+      'Who has the oldest open ticket?',
       'Show overdue support tickets',
-      'Show installation status breakdown',
+      'Create a Support Ticket',
     ],
     install_by_status: [
       'Projects pending subsidy credit',
@@ -945,7 +1099,7 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
     project_detail_lookup: [
       'Projects with feasibility pending',
       'Payment timeline',
-      'Customer details for Ramesh',
+      'Who should I call today?',
     ],
     projects_ops_detail: [
       'Status of SL 1',
@@ -958,7 +1112,7 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Payment timeline',
     ],
     customers_list_slice: [
-      'Customer details for Ramesh',
+      'Who should I call today?',
       'Revenue by city',
       'List residential customers',
     ],

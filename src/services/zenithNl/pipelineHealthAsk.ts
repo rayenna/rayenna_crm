@@ -6,6 +6,7 @@ import prisma from '../../prisma';
 import { computeDealHealthScoreForProjectList } from '../../utils/dealHealthScore';
 import type { ZenithNlIntent, ZenithNlTableRow, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
+import { primaryPhoneFromCustomer } from '../../utils/consumerCustomerProfile';
 
 const TABLE_CAP = 20;
 const SCAN_CAP = 400;
@@ -155,6 +156,7 @@ type ScoredDeal = {
   id: string;
   slNo: number;
   customer: string;
+  phone?: string;
   status: ProjectStatus;
   stage: string;
   value: number;
@@ -201,6 +203,9 @@ async function loadScoredPipeline(
           firstName: true,
           lastName: true,
           prefix: true,
+          phone: true,
+          contactNumbers: true,
+          contacts: true,
         },
       },
       projectRemarks: {
@@ -255,6 +260,9 @@ async function loadScoredPipeline(
       id: p.id,
       slNo: p.slNo,
       customer,
+      phone:
+        primaryPhoneFromCustomer(p.customer as Parameters<typeof primaryPhoneFromCustomer>[0]) ||
+        undefined,
       status: p.projectStatus,
       stage: STATUS_LABEL[p.projectStatus] || p.projectStatus.replace(/_/g, ' '),
       value: Number(p.projectCost) || 0,
@@ -291,6 +299,11 @@ function dealRows(deals: ScoredDeal[]): ZenithNlTableRow[] {
     quietDays: d.daysSinceActivity,
     value: Math.round(d.value),
     href: d.href,
+    projectId: d.id,
+    slNo: d.slNo,
+    phone: d.phone,
+    customerName: d.customer,
+    stageStatus: d.status,
   }));
 }
 

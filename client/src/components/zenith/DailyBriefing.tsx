@@ -72,7 +72,12 @@ function generateBriefing(args: {
   currentUserName?: string | null
   data: Record<string, unknown>
   explorerProjects?: ZenithExplorerProject[]
-}): { greeting: string; firstName: string; lines: BriefingLine[] } {
+}): {
+  greeting: string
+  firstName: string
+  lines: BriefingLine[]
+  askCta: { question: string; label: string }
+} {
   const { role, currentUserName, data, explorerProjects = [] } = args
   const now = new Date()
   const greeting = greetingForHour(now.getHours())
@@ -225,7 +230,23 @@ function generateBriefing(args: {
     })
   }
 
-  return { greeting, firstName, lines: lines.slice(0, 5) }
+  const stallRoles =
+    role === UserRole.SALES ||
+    role === UserRole.MANAGEMENT ||
+    role === UserRole.ADMIN ||
+    role === UserRole.OPERATIONS
+  const askCta =
+    stallRoles && atRiskCount > 0
+      ? {
+          question: 'Why is my pipeline stalling?',
+          label: `Ask why ${atRiskCount} deal${atRiskCount === 1 ? ' is' : 's are'} stalling`,
+        }
+      : {
+          question: 'Who should I call today?',
+          label: 'Ask who to call today',
+        }
+
+  return { greeting, firstName, lines: lines.slice(0, 5), askCta }
 }
 
 function briefingJumpTabClass(active?: boolean) {
@@ -247,6 +268,7 @@ export default function DailyBriefing({
   myDaySnapshot = null,
   myDaySnapshotLoading = false,
   myDaySnapshotError = false,
+  onAskZenith,
 }: {
   isVisible: boolean
   onDismiss: (dontShowToday: boolean) => void
@@ -257,6 +279,7 @@ export default function DailyBriefing({
   myDaySnapshot?: MyDaySnapshot | null
   myDaySnapshotLoading?: boolean
   myDaySnapshotError?: boolean
+  onAskZenith?: (question: string) => void
 }) {
   const { openTab } = useMyDayContext()
   const [dontShowToday, setDontShowToday] = useState(false)
@@ -498,13 +521,27 @@ export default function DailyBriefing({
             {/* Right block: primary actions */}
             <div className="flex items-center gap-2 sm:shrink-0">
               <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
-              <button
-                type="button"
-                onClick={() => onDismiss(dontShowToday)}
-                className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
-              >
-                Got it →
-              </button>
+              {onAskZenith ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const q = briefing.askCta.question
+                    onDismiss(dontShowToday)
+                    onAskZenith(q)
+                  }}
+                  className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+                >
+                  {briefing.askCta.label} →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onDismiss(dontShowToday)}
+                  className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+                >
+                  Got it →
+                </button>
+              )}
             </div>
           </div>
         </div>

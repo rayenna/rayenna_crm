@@ -277,7 +277,12 @@ const customerDetailSelect = {
 export async function execCustomerDetailLookup(
   intent: ZenithNlIntent,
   opts?: { salespersonId?: string },
-): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+): Promise<{
+  viz: ZenithNlViz;
+  insight: string;
+  projectsHref?: string;
+  lookupMiss?: { query: string; suggestions: string[] };
+}> {
   const raw = intent.filters?.search?.trim() || '';
   if (!raw) {
     return {
@@ -307,10 +312,28 @@ export async function execCustomerDetailLookup(
   });
 
   if (matches.length === 0) {
+    const nearby = await prisma.customer.findMany({
+      where: opts?.salespersonId ? { salespersonId: opts.salespersonId } : {},
+      select: { firstName: true, customerName: true },
+      orderBy: { updatedAt: 'desc' },
+      take: 12,
+    });
+    const needle = raw.toLowerCase();
+    const names = nearby
+      .map((c) => displayName(c))
+      .filter((n) => n && n !== 'Unknown')
+      .filter((n, i, arr) => arr.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i);
+    const ranked = names.sort((a, b) => {
+      const as = a.toLowerCase().startsWith(needle.slice(0, 1)) ? 0 : 1;
+      const bs = b.toLowerCase().startsWith(needle.slice(0, 1)) ? 0 : 1;
+      return as - bs;
+    });
+    const suggestions = ranked.slice(0, 3).map((n) => `Customer details for ${n}`);
     return {
       insight: `No customer found for “${raw}”.`,
       viz: emptyCustomerTable('Customer detail'),
       projectsHref: `/customers?q=${encodeURIComponent(raw)}`,
+      lookupMiss: { query: raw, suggestions },
     };
   }
 
