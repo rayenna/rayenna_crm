@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, type ReactNode } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Customer, Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
@@ -44,6 +44,19 @@ import { useDebounce } from '../hooks/useDebounce'
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
 }
+
+const CONFIRMED_OR_BEYOND_STATUSES: ProjectStatus[] = [
+  ProjectStatus.CONFIRMED,
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+  ProjectStatus.COMPLETED,
+  ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+]
+
+function isConfirmedOrBeyondStatus(status: string | undefined): boolean {
+  return !!status && CONFIRMED_OR_BEYOND_STATUSES.includes(status as ProjectStatus)
+}
+
 import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 
 const ZENITH_FIELD_LABEL_CLS =
@@ -249,11 +262,13 @@ const ProjectForm = () => {
   const navigate = useNavigate()
   const { hasRole, user } = useAuth()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
   const isEdit = !!id
   const [customerSearch, setCustomerSearch] = useState('')
   const isFinanceOnly = user?.role === UserRole.FINANCE && isEdit
   /** Edit flow: return to project detail. New project: return to list. (ErrorModal uses capture-phase Esc first.) */
   const exitPath = isEdit && id ? `/projects/${id}` : '/projects'
+  const opsFieldRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -277,6 +292,14 @@ const ProjectForm = () => {
     queryFn: async () => {
       const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
+    },
+  })
+
+  const { data: opsUsers = [] } = useQuery({
+    queryKey: ['opsUsers'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/api/users/role/operations')
+      return res.data as { id: string; name: string; email: string }[]
     },
   })
 
@@ -1083,6 +1106,27 @@ const ProjectForm = () => {
   // Sales & Commercial section: Admin, Sales, and Operations can edit
   const canEditSalesCommercial =
     hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections
+  const canChooseOpsAssignee =
+    hasRole([UserRole.ADMIN, UserRole.SALES]) && canEditOtherSections
+  const showOpsAssigneeField = isConfirmedOrBeyondStatus(projectStatus)
+  const soleOpsUser = opsUsers.length === 1 ? opsUsers[0] : null
+  const multiOpsUsers = opsUsers.length >= 2
+
+  // Sole Ops user: keep Assigned Ops synced whenever status is Confirmed+.
+  useEffect(() => {
+    if (!showOpsAssigneeField || !soleOpsUser) return
+    setValue('assignedOpsId', soleOpsUser.id, { shouldDirty: false })
+  }, [showOpsAssigneeField, soleOpsUser, setValue])
+
+  useEffect(() => {
+    if (searchParams.get('focus') !== 'ops') return
+    const t = window.setTimeout(() => {
+      opsFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const select = opsFieldRef.current?.querySelector('select')
+      if (select instanceof HTMLElement) select.focus()
+    }, 200)
+    return () => window.clearTimeout(t)
+  }, [searchParams, showOpsAssigneeField, opsUsers.length])
 
   const formAccessNotice = getProjectFormAccessNotice(project, user, {
     isEdit,
@@ -1650,6 +1694,55 @@ const ProjectForm = () => {
                   <option value={ProjectStatus.LOST}>Lost</option>
                 </select>
               </div>
+              {showOpsAssigneeField ? (
+                <div
+                  ref={opsFieldRef}
+                  id="project-assigned-ops"
+                  className={
+                    searchParams.get('focus') === 'ops'
+                      ? 'rounded-xl ring-2 ring-[color:var(--accent-gold-border)] ring-offset-2 ring-offset-[color:var(--bg-page)]'
+                      : undefined
+                  }
+                >
+                  <label className={labelCls}>Assigned Ops</label>
+                  {soleOpsUser ? (
+                    <>
+                      <input type="hidden" {...register('assignedOpsId')} />
+                      <p className={`${inputCls} ${disabledControlCls}`}>
+                        {soleOpsUser.name}
+                        <span className="ml-1 text-[color:var(--text-muted)]">(default)</span>
+                      </p>
+                      <p className={ZENITH_FIELD_HINT_CLS}>
+                        Only one Operations user — Confirmed+ projects are assigned to them automatically.
+                      </p>
+                    </>
+                  ) : multiOpsUsers ? (
+                    <>
+                      <select
+                        {...register('assignedOpsId')}
+                        disabled={!canChooseOpsAssignee}
+                        className={`zenith-native-select ${selectCls} ${!canChooseOpsAssignee ? disabledControlCls : ''}`}
+                      >
+                        <option value="">Select Operations user</option>
+                        {opsUsers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className={ZENITH_FIELD_HINT_CLS}>
+                        {canChooseOpsAssignee
+                          ? 'Admin and Sales can assign which Operations user owns this project.'
+                          : 'Only Admin or Sales can change the Operations assignee.'}
+                      </p>
+                    </>
+                  ) : (
+                    <p className={`${inputCls} ${disabledControlCls} text-[color:var(--text-muted)]`}>
+                      No active Operations user
+                    </p>
+                  )}
+                </div>
+              ) : null}
               {/* Lost Status Fields - Show when Lost is selected */}
               {projectStatus === ProjectStatus.LOST && (canEditLostFields || canEditSales || hasRole([UserRole.OPERATIONS])) && (
                 <>

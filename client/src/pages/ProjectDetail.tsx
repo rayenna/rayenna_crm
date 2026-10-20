@@ -766,6 +766,11 @@ const ProjectDetail = () => {
                 {project.salesperson.name}
               </DetailRow>
             )}
+            <DetailRow label="Assigned Ops" valueClassName="font-medium">
+              {project.opsPerson?.name?.trim()
+                ? project.opsPerson.name
+                : 'Unassigned'}
+            </DetailRow>
           </dl>
         </InfoSection>
 

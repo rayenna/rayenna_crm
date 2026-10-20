@@ -21,6 +21,11 @@ import {
   dataSenseImpossibleHttpBody,
 } from '../utils/dataSense';
 import { sendErrorResponse } from '../utils/publicApiError';
+import {
+  canChooseOpsAssignee,
+  listActiveOpsUsers,
+  resolveAssignedOpsId,
+} from '../utils/opsAssignee';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = [
@@ -898,6 +903,16 @@ router.post(
         return isNaN(date.getTime()) ? null : date;
       };
 
+      const createStatus = projectStatus || ProjectStatus.LEAD;
+      const opsUsersOnCreate = await listActiveOpsUsers();
+      const resolvedAssignedOpsId = resolveAssignedOpsId({
+        finalStatus: createStatus,
+        currentOpsId: null,
+        requestedOpsId: assignedOpsId ?? null,
+        canChooseOps: canChooseOpsAssignee(req.user?.role),
+        opsUsers: opsUsersOnCreate,
+      });
+
       // Manually calculate and set slNo to prevent unique constraint violations
       // This is necessary when data is migrated and sequences are out of sync
       // Wrap in transaction to prevent race condition: MAX query + create must be atomic
@@ -954,7 +969,7 @@ router.post(
             : {}),
           lostOtherReason: lostOtherReason || null,
           leadId: leadId || null,
-          assignedOpsId: assignedOpsId || null,
+          assignedOpsId: resolvedAssignedOpsId,
           panelBrand: panelBrand || null,
           panelType: finalPanelType || null,
           panelCapacityW: panelCapacityW != null && Number.isInteger(Number(panelCapacityW)) && Number(panelCapacityW) >= 0 ? Number(panelCapacityW) : null,
@@ -1569,6 +1584,7 @@ router.put(
           'leadSourceDetails', // Sales can update lead source details
           'roofType', // Sales can update roof type
           'systemType', // Sales can update system type
+          'assignedOpsId', // Sales can assign Ops when multiple Ops users exist
           // Lost taxonomy — required when marking Lost (was previously dropped by allowlist)
           'lostDate',
           'lostReason',
@@ -1579,6 +1595,12 @@ router.put(
         // Only process allowed fields
         for (const key of allowedFields) {
           if (req.body[key] !== undefined) {
+            if (key === 'assignedOpsId') {
+              const raw = req.body[key];
+              updateData[key] =
+                raw === null || raw === '' || raw === 'null' ? null : String(raw).trim() || null;
+              continue;
+            }
             if (key.includes('Date')) {
               // Handle date fields - convert empty strings and invalid dates to null
               const dateValue = req.body[key];
@@ -1895,36 +1917,13 @@ router.put(
           }
         }
         
-        // Handle assignedOpsId - Admin can update it
+        // assignedOpsId is normalized below via resolveAssignedOpsId (Admin/Sales + sole-ops auto)
         if (updateData.assignedOpsId !== undefined) {
-          if (updateData.assignedOpsId === null || updateData.assignedOpsId === '' || updateData.assignedOpsId === 'null') {
-            updateData.assignedOpsId = null;
-          } else {
-            // Convert to string to ensure proper format
-            const opsIdStr = String(updateData.assignedOpsId).trim();
-            if (!opsIdStr) {
-              updateData.assignedOpsId = null;
-            } else {
-              try {
-                // Validate that the ops user exists (if provided)
-                const opsUser = await prisma.user.findUnique({
-                  where: { id: opsIdStr },
-                  select: { id: true, role: true },
-                });
-                if (!opsUser) {
-                  return res.status(400).json({ error: 'Invalid assigned operations ID: User not found' });
-                }
-                // Set the validated ID
-                updateData.assignedOpsId = opsIdStr;
-              } catch (error: any) {
-                // If Prisma query fails (e.g., invalid ID format), return error
-                console.error('Error validating assignedOpsId:', error);
-                return res.status(400).json({ error: `Invalid assigned operations ID format: ${error.message}` });
-              }
-            }
-          }
+          const raw = updateData.assignedOpsId;
+          updateData.assignedOpsId =
+            raw === null || raw === '' || raw === 'null' ? null : String(raw).trim() || null;
         }
-        
+
         // Remove customerId from updates (should not be changed after creation)
         delete updateData.customerId;
         // Recalculate payments if payment fields or project cost changed
@@ -1990,6 +1989,23 @@ router.put(
       // Normalize LOST: keep order value on projectCost (excluded from pipeline/revenue by status filters).
       // Mirror to lostRevenue for legacy/analysis readers. Do not zero projectCost or rewrite payments.
       const finalStatus = updateData.projectStatus ?? project.projectStatus;
+
+      // Ops assignee: sole Ops user auto-assigned on Confirmed+; Admin/Sales pick when 2+ Ops users.
+      {
+        const opsUsers = await listActiveOpsUsers();
+        const requestedOpsId =
+          updateData.assignedOpsId !== undefined
+            ? (updateData.assignedOpsId as string | null)
+            : (req.body.assignedOpsId as string | null | undefined);
+        updateData.assignedOpsId = resolveAssignedOpsId({
+          finalStatus,
+          currentOpsId: project.assignedOpsId,
+          requestedOpsId,
+          canChooseOps: canChooseOpsAssignee(req.user?.role),
+          opsUsers,
+        });
+      }
+
       if (finalStatus === ProjectStatus.LOST) {
         const projLostRevenue = (project as { lostRevenue?: number | null }).lostRevenue;
         const fromBody =
@@ -2110,6 +2126,9 @@ router.put(
             select: { id: true, name: true, email: true },
           },
           salesperson: {
+            select: { id: true, name: true, email: true },
+          },
+          opsPerson: {
             select: { id: true, name: true, email: true },
           },
         },

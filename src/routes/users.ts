@@ -306,4 +306,26 @@ router.get('/role/sales', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// Get operations users (for Assigned Ops dropdown)
+router.get('/role/operations', authenticate, async (_req: Request, res: Response) => {
+  try {
+    const opsUsers = await prisma.user.findMany({
+      where: {
+        role: UserRole.OPERATIONS,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    res.json(opsUsers);
+  } catch (error: any) {
+    sendErrorResponse(res, 500, error);
+  }
+});
+
 export default router;
