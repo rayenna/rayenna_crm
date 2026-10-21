@@ -90,22 +90,23 @@ export default function CommandBar({
   const showDesktopCenter = Boolean(desktopCenterSlot) || !deferDesktopFilters
 
   const briefingAndLive = (
-    <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 text-[10px] sm:text-[11px] font-sans text-[color:var(--text-muted)]">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 text-[10px] sm:text-[11px] font-sans text-[color:var(--text-muted)]">
       {onShowBriefing ? (
         <button
           type="button"
           onClick={onShowBriefing}
           title="Open Daily Briefing"
-          className="inline-flex items-center gap-1 rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-xs font-semibold text-[color:var(--accent-gold)] cursor-pointer transition-all duration-200 touch-manipulation hover:opacity-95"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-xs font-semibold text-[color:var(--accent-gold)] cursor-pointer transition-all duration-200 touch-manipulation hover:opacity-95"
         >
           ✦ Briefing
         </button>
       ) : null}
-      <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
+      <span className="inline-flex min-w-0 items-center gap-1">
         {isOnline ? (
           <>
-            <span className="zenith-command-live-dot inline-block align-middle" aria-hidden />
-            <span>Live · {liveLabel}</span>
+            <span className="zenith-command-live-dot inline-block align-middle shrink-0" aria-hidden />
+            <span className="hidden lg:inline">Live · {liveLabel}</span>
+            <span className="sr-only lg:hidden">{liveLabel}</span>
           </>
         ) : (
           <>

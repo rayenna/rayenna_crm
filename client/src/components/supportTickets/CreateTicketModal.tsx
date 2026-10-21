@@ -132,7 +132,13 @@ const CreateTicketModal = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-[color:var(--bg-overlay)] backdrop-blur-sm"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-ticket-title"
@@ -141,7 +147,7 @@ const CreateTicketModal = ({
       }}
     >
       <div
-        className="zenith-root my-auto flex max-h-[min(90vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color:var(--border-strong)]"
+        className="my-auto flex max-h-[min(90dvh,720px)] w-full min-w-0 max-w-2xl flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color:var(--border-strong)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-5 py-4 backdrop-blur-xl sm:px-6">
@@ -281,7 +287,7 @@ const CreateTicketModal = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-[color:var(--border-default)] pt-4">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[color:var(--border-default)] pt-4">
               <button type="button" onClick={onClose} className={stGhostBtn} disabled={createMutation.isPending}>
                 Cancel
               </button>

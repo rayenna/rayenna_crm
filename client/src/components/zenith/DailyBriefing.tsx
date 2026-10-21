@@ -76,7 +76,7 @@ function generateBriefing(args: {
   greeting: string
   firstName: string
   lines: BriefingLine[]
-  askCta: { question: string; label: string }
+  askCta: { question: string; label: string; shortLabel: string }
 } {
   const { role, currentUserName, data, explorerProjects = [] } = args
   const now = new Date()
@@ -240,10 +240,12 @@ function generateBriefing(args: {
       ? {
           question: 'Why is my pipeline stalling?',
           label: `Ask why ${atRiskCount} deal${atRiskCount === 1 ? ' is' : 's are'} stalling`,
+          shortLabel: `Ask why ${atRiskCount} ${atRiskCount === 1 ? 'deal' : 'deals'}`,
         }
       : {
           question: 'Who should I call today?',
           label: 'Ask who to call today',
+          shortLabel: 'Ask who to call',
         }
 
   return { greeting, firstName, lines: lines.slice(0, 5), askCta }
@@ -251,7 +253,7 @@ function generateBriefing(args: {
 
 function briefingJumpTabClass(active?: boolean) {
   return [
-    'text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors',
+    'text-xs font-bold min-h-[36px] px-3 py-1.5 rounded-lg border transition-colors touch-manipulation',
     active
       ? 'border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
       : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]',
@@ -305,8 +307,14 @@ export default function DailyBriefing({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[950] flex items-start sm:items-center justify-center p-3 sm:p-5 backdrop-blur-md"
-      style={{ background: 'var(--bg-overlay)' }}
+      className="fixed inset-0 z-[950] flex items-start sm:items-center justify-center backdrop-blur-md"
+      style={{
+        background: 'var(--bg-overlay)',
+        paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(0.75rem, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(0.75rem, env(safe-area-inset-left, 0px))',
+      }}
       onClick={() => onDismiss(false)}
       role="presentation"
     >
@@ -315,7 +323,7 @@ export default function DailyBriefing({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-[560px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-4 sm:p-7 max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col relative"
+        className="relative flex w-full min-w-0 max-w-[560px] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-4 sm:p-7"
         style={{ boxShadow: 'var(--shadow-modal)' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -457,92 +465,66 @@ export default function DailyBriefing({
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-[color:var(--border-default)] shrink-0">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            {/* Left block: shortcuts + dismissal (desktop/landscape keeps it tidy) */}
-            <div className="flex flex-col gap-2 sm:gap-2">
-              {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
-                <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-                  <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
-                    Tasks
-                  </button>
-                  <button
-                    type="button"
-                    className={briefingJumpTabClass()}
-                    onClick={() => jumpToMyDayTab('reminders')}
-                  >
-                    Reminders
-                  </button>
-                  <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
-                    Journal
-                  </button>
-                </div>
-              ) : null}
+        <div className="mt-4 min-w-0 shrink-0 border-t border-[color:var(--border-default)] pt-4">
+          <div className="flex min-w-0 flex-col gap-3">
+            {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
+              <div className="flex min-w-0 flex-wrap gap-2">
+                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
+                  Tasks
+                </button>
+                <button
+                  type="button"
+                  className={briefingJumpTabClass()}
+                  onClick={() => jumpToMyDayTab('reminders')}
+                >
+                  Reminders
+                </button>
+                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
+                  Journal
+                </button>
+              </div>
+            ) : null}
 
-              {/* Mobile: big tap-friendly toggle row */}
-              <button
-                type="button"
-                onClick={() => setDontShowToday((v) => !v)}
-                className={[
-                  'sm:hidden w-full flex items-center justify-between gap-2',
-                  'rounded-xl border px-4 py-3 text-[13px] font-semibold select-none',
-                  dontShowToday
-                    ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)]'
-                    : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)]',
-                ].join(' ')}
-                aria-pressed={dontShowToday}
-                aria-label="Don't show this briefing again today"
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={dontShowToday}
-                    onChange={(e) => setDontShowToday(e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
-                  />
-                  Don&apos;t show again today
-                </span>
-                <span className="text-xs font-bold text-[color:var(--text-muted)]">{dontShowToday ? 'ON' : 'OFF'}</span>
-              </button>
-
-              {/* Desktop/landscape: single-line checkbox under the shortcuts */}
-              <label className="hidden sm:flex items-center gap-2 text-[13px] font-semibold text-[color:var(--text-secondary)] select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={dontShowToday}
-                  onChange={(e) => setDontShowToday(e.target.checked)}
-                  style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
-                />
-                <span className="text-[color:var(--text-primary)]">Don&apos;t show again today</span>
-              </label>
-            </div>
-
-            {/* Right block: primary actions */}
-            <div className="flex items-center gap-2 sm:shrink-0">
-              <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
+            <div className="flex min-w-0 w-full flex-col gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-stretch">
+              <MyDayButton
+                variant="briefing"
+                className="w-full min-[420px]:w-auto min-[420px]:shrink-0"
+                onBeforeOpen={() => onDismiss(dontShowToday)}
+              />
               {onAskZenith ? (
                 <button
                   type="button"
+                  aria-label={briefing.askCta.label}
                   onClick={() => {
                     const q = briefing.askCta.question
                     onDismiss(dontShowToday)
                     onAskZenith(q)
                   }}
-                  className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+                  className="min-h-[44px] min-w-0 w-full min-[420px]:min-w-[12rem] min-[420px]:flex-1 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-center text-sm font-bold leading-snug text-[color:var(--text-inverse)] text-pretty"
                 >
-                  {briefing.askCta.label} →
+                  <span className="min-[520px]:hidden">{briefing.askCta.shortLabel} →</span>
+                  <span className="hidden min-[520px]:inline">{briefing.askCta.label} →</span>
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => onDismiss(dontShowToday)}
-                  className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+                  className="min-h-[44px] min-w-0 w-full min-[420px]:flex-1 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-center text-sm font-bold text-[color:var(--text-inverse)]"
                 >
                   Got it →
                 </button>
               )}
             </div>
+
+            <label className="flex min-h-[44px] cursor-pointer select-none items-center gap-2 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+              <input
+                type="checkbox"
+                checked={dontShowToday}
+                onChange={(e) => setDontShowToday(e.target.checked)}
+                style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+              />
+              <span className="text-[color:var(--text-primary)]">Don&apos;t show again today</span>
+            </label>
           </div>
         </div>
       </motion.div>

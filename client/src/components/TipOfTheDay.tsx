@@ -55,7 +55,15 @@ const TipOfTheDay = () => {
   if (!show) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-[3px] sm:p-6">
+    <div
+      className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-[color:var(--bg-overlay)] backdrop-blur-[3px]"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+      }}
+    >
       {/* Do not use .zenith-root here — it applies min-h ~ viewport and the Zenith page grid to the panel. */}
       <div
         className="mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] sm:max-w-lg"

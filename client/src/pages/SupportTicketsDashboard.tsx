@@ -427,7 +427,7 @@ const SupportTicketsDashboard = () => {
           listErrorPanel
         ) : (
         <>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <button type="button" onClick={() => handleKPIClick(SupportTicketStatus.OPEN)} className="text-left">
             <MetricCard variant="zenith" title="Open" value={stats.open} icon={<FaTicketAlt />} gradient="from-[color:var(--accent-blue)] to-[color:var(--accent-teal)]" />
           </button>

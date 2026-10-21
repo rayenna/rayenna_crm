@@ -553,7 +553,7 @@ export default function AuditSecurity() {
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[color:var(--text-muted)] sm:mb-4">
           Last {SUMMARY_DAYS} days at a glance
         </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <MetricCard
             variant="zenith"
             title={`Failed logins · ${SUMMARY_DAYS}d`}

@@ -34,12 +34,18 @@ export default function ZenithLogActivityModal({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex items-start sm:items-center justify-center bg-[color:var(--bg-overlay)] backdrop-blur-sm"
+      style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+      }}
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] p-5 ring-1 ring-[color:var(--border-default)]"
+        className="my-auto w-full min-w-0 max-w-md max-h-[min(90dvh,720px)] overflow-y-auto rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] p-5 ring-1 ring-[color:var(--border-default)]"
         role="dialog"
         aria-labelledby="zenith-log-activity-title"
         onClick={(e) => e.stopPropagation()}
@@ -55,7 +61,7 @@ export default function ZenithLogActivityModal({
           placeholder="Note follow-up, call, meeting…"
           className="mt-4 w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
         />
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onClose}

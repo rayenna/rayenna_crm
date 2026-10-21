@@ -95,6 +95,10 @@ const Login = () => {
   return (
     <div
       className="relative flex min-h-screen min-h-[100dvh] items-center justify-center overflow-auto bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]"
+      style={{
+        paddingTop: 'max(3rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(3rem, env(safe-area-inset-bottom, 0px))',
+      }}
     >
       <div
         className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"

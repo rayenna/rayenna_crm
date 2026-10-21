@@ -140,8 +140,15 @@ export default function ReminderModal({
         <motion.div
           key="reminder-overlay"
           role="presentation"
-          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-          style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(6px)' }}
+          className="fixed inset-0 z-[1000] flex items-start sm:items-center justify-center overflow-y-auto"
+          style={{
+            background: 'var(--bg-overlay)',
+            backdropFilter: 'blur(6px)',
+            paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -151,7 +158,7 @@ export default function ReminderModal({
           <motion.div
             role="dialog"
             aria-labelledby="reminder-modal-title"
-            className="relative w-full max-w-[480px] rounded-2xl p-6 text-left"
+            className="relative my-auto w-full min-w-0 max-w-[480px] max-h-[min(90dvh,720px)] overflow-y-auto rounded-2xl p-5 text-left sm:p-6"
             style={{
               background: 'var(--bg-modal)',
               border: '1px solid var(--border-card)',
@@ -196,7 +203,7 @@ export default function ReminderModal({
                 <p className="mt-6 text-[12px] mb-3 text-[color:var(--text-muted)]">
                   Choose how to send:
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col min-[380px]:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() => setChannel('whatsapp')}

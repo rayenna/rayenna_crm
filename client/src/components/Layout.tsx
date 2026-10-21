@@ -473,13 +473,8 @@ const Layout = () => {
                 </div>
               </div>
             </div>
-            <div className="flex shrink-0 items-center space-x-1.5 sm:space-x-2">
-              {/* User name next to hamburger when in mobile/tablet view (md up to lg) */}
-              <span className="hidden max-w-[min(7rem,28vw)] truncate text-sm font-medium text-[color:var(--nav-text-hover)] md:inline lg:hidden">
-                {user?.name}
-              </span>
-
-              {/* Ask + My Day — visible at all breakpoints */}
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {/* Ask + My Day — visible at all breakpoints. Name lives in the hamburger below lg. */}
               <ZenithAskNavButton />
               <MyDayNavEntry />
 

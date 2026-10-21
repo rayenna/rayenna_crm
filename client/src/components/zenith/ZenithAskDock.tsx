@@ -53,7 +53,7 @@ export function ZenithAskNavButton() {
       }}
     >
       <Sparkles className="h-4 w-4" aria-hidden />
-      <span className="hidden sm:inline">Ask</span>
+      <span className="hidden lg:inline">Ask</span>
     </button>
   )
 }

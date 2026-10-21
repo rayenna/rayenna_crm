@@ -17,7 +17,7 @@ export default function SolarHubQuickPresets({ presets, activeId, onSelect }: Pr
         </span>
         <span className="text-[11px] text-[color:var(--text-secondary)]">One tap for Ops attention</span>
       </div>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-wrap gap-1.5">
         {presets.map((p) => {
           const active = activeId === p.id
           return (

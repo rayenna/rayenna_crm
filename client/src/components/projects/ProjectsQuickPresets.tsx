@@ -23,8 +23,7 @@ export default function ProjectsQuickPresets({
           One tap — replaces pipeline flags
         </span>
       </div>
-      {/* Mobile: single-row horizontal scroll. Desktop: wrap. */}
-      <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-wrap gap-1.5">
         {presets.map((p) => {
           const active = activeId === p.id
           return (

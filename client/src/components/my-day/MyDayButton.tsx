@@ -6,6 +6,7 @@ interface Props {
   onBeforeOpen?: () => void
   /** Opens My Day on this tab when supported (nav + briefing). */
   targetTab?: MyDayTabId
+  className?: string
 }
 
 /** Sunrise icon — a sun disc with 8 short rays, feels warm and inviting */
@@ -43,7 +44,7 @@ function SunriseIcon({ size = 20 }: { size?: number }) {
   )
 }
 
-export default function MyDayButton({ variant, onBeforeOpen, targetTab }: Props) {
+export default function MyDayButton({ variant, onBeforeOpen, targetTab, className }: Props) {
   const { open, openTab, isOpen, incompleteTasks } = useMyDayContext()
 
   const handleClick = () => {
@@ -87,12 +88,15 @@ export default function MyDayButton({ variant, onBeforeOpen, targetTab }: Props)
     <button
       type="button"
       onClick={handleClick}
+      className={className}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 8,
+        minHeight: 44,
         height: 44,
-        padding: '0 20px',
+        padding: '0 16px',
         borderRadius: 14,
         border: '1.5px solid color-mix(in srgb, var(--accent-gold) 55%, transparent)',
         background:
@@ -102,7 +106,7 @@ export default function MyDayButton({ variant, onBeforeOpen, targetTab }: Props)
         fontSize: 14,
         cursor: 'pointer',
         whiteSpace: 'nowrap',
-        flexShrink: 0,
+        boxSizing: 'border-box',
         transition: 'transform 160ms, box-shadow 160ms',
       }}
       onMouseEnter={e => {

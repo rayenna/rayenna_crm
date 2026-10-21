@@ -115,8 +115,15 @@ export default function HandoffBriefModal({
         <motion.div
           key="handoff-overlay"
           role="presentation"
-          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-          style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(6px)' }}
+          className="fixed inset-0 z-[1000] flex items-start sm:items-center justify-center overflow-y-auto"
+          style={{
+            background: 'var(--bg-overlay)',
+            backdropFilter: 'blur(6px)',
+            paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+            paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+            paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
