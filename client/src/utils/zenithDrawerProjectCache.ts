@@ -24,6 +24,9 @@ function explorerPatchFromProject(patch: Partial<Project>): Partial<ZenithExplor
     out.deal_value = Number(patch.projectCost ?? 0)
     out.has_deal_value = patch.projectCost != null && Number(patch.projectCost) > 0
   }
+  if (patch.salesProbability !== undefined) {
+    out.sales_probability = patch.salesProbability ?? null
+  }
   if (patch.confirmationDate !== undefined) {
     out.confirmation_date = patch.confirmationDate ?? null
   }

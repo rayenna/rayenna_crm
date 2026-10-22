@@ -27,7 +27,7 @@ Role packs differ — example chips under the Ask box show questions allowed for
 
 ### Pipeline, revenue, and equipment
 
-- Which lead sources drove the most revenue? · Revenue by salesperson · Show my pipeline by stage
+- Which lead sources drove the most revenue? · Revenue by salesperson · Show my pipeline by stage · What's my weighted pipeline? (order value × Sales Probability)
 - How many projects used Adani panels? / revenue with Deye inverters / SBI loans
 - Which panel brands sold most? · Which inverter brands sold most? · Which banks are financing loans? *(Management / Admin / Finance)*
 - Top customers by profit · Proposal Engine bucket counts · Capacity sold

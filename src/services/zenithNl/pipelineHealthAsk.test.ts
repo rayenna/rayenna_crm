@@ -52,4 +52,13 @@ describe('chip wiring', () => {
       'pipeline_by_stage',
     );
   });
+
+  it('routes weighted pipeline to expected pipeline_by_stage', () => {
+    const intent = matchExactChipIntent("What's my weighted pipeline?", UserRole.SALES);
+    expect(intent?.metric).toBe('pipeline_by_stage');
+    expect(intent?.filters?.detailSlice).toBe('weighted');
+    expect(matchExactChipIntent('Weighted open pipeline', UserRole.FINANCE)?.filters?.detailSlice).toBe(
+      'weighted',
+    );
+  });
 });

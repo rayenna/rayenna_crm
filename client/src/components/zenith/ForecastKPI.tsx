@@ -17,6 +17,7 @@ import {
   forecastTimingLabel,
   getForecastOpenDeals,
   weightedDealValue,
+  FORECAST_LEGACY_STAGE_WEIGHT_CHIPS,
   FORECAST_STAGE_WEIGHT_CHIPS,
   ZENITH_EXPLORER_PROJECT_CAP,
   type ForecastBand,
@@ -195,7 +196,7 @@ export default function ForecastKPI({
   const updateLegendPos = useCallback(() => {
     const el = legendBtnRef.current
     if (!el) return
-    setLegendPos(placeBelowOrAbove(el.getBoundingClientRect(), 288, 280))
+    setLegendPos(placeBelowOrAbove(el.getBoundingClientRect(), 300, 400))
   }, [])
 
   const updateMorePos = useCallback(() => {
@@ -365,7 +366,7 @@ export default function ForecastKPI({
               ref={legendPanelRef}
               id="forecast-weight-legend"
               role="dialog"
-              aria-label="Stage win probabilities"
+              aria-label="Sales Probability weights"
               className="fixed z-[5900] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] p-3 shadow-xl ring-1 ring-[color:var(--border-default)] backdrop-blur-xl"
               style={{
                 top: legendPos.top,
@@ -377,7 +378,7 @@ export default function ForecastKPI({
             >
               <div className="flex items-center justify-between gap-2 mb-2">
                 <p className="text-[12px] font-semibold text-[color:var(--text-primary)]">
-                  Deal value × stage %
+                  Deal value × Sales Probability
                 </p>
                 <button
                   type="button"
@@ -389,8 +390,13 @@ export default function ForecastKPI({
                 </button>
               </div>
               <p className="text-[11px] text-[color:var(--text-muted)] mb-2.5 leading-snug">
-                Early stages are discounted; Confirmed+ count at 100%. When filters use expected
-                commissioning only (IST) — deals without that date stay under Any time. Not cash.
+                Each open deal uses its Sales Probability on Sales &amp; Commercial (stage default
+                unless you override). Lost is 0%; Completed and Subsidy Credited are 100%. When
+                filters use expected commissioning only (IST) — deals without that date stay under
+                Any time. Not cash.
+              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)] mb-1">
+                Stage defaults
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {FORECAST_STAGE_WEIGHT_CHIPS.map((chip) => (
@@ -399,6 +405,20 @@ export default function ForecastKPI({
                     className="inline-flex items-center gap-1 rounded-full border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-[10px] text-[color:var(--accent-teal)]"
                   >
                     <span className="text-[color:var(--text-secondary)]">{chip.label}</span>
+                    <span className="font-semibold">{Math.round(chip.probability * 100)}%</span>
+                  </span>
+                ))}
+              </div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)] mt-2.5 mb-1">
+                Previous stage table
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {FORECAST_LEGACY_STAGE_WEIGHT_CHIPS.map((chip) => (
+                  <span
+                    key={`legacy-${chip.label}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-2 py-0.5 text-[10px] text-[color:var(--text-muted)]"
+                  >
+                    <span>{chip.label}</span>
                     <span className="font-semibold">{Math.round(chip.probability * 100)}%</span>
                   </span>
                 ))}
@@ -641,7 +661,7 @@ export default function ForecastKPI({
             className="zenith-forecast-weights inline-flex w-fit items-center gap-1 rounded-md border border-[color:var(--border-default)] px-2 py-1 text-[10px] text-[color:var(--text-muted)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
             aria-expanded={legendOpen}
             aria-controls="forecast-weight-legend"
-            title="Stage win probabilities"
+            title="Sales Probability defaults vs previous stage table"
           >
             <Info className="w-3 h-3 shrink-0 opacity-80" aria-hidden />
             Weights

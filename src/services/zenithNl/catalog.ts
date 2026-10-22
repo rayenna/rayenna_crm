@@ -311,9 +311,10 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'pipeline_by_stage',
-    description: 'Open pipeline deal counts and value by project status / stage',
+    description:
+      'Open pipeline deal counts, order value, and expected value (order value × Sales Probability) by stage',
     defaultViz: 'table',
-    roles: [...EXEC, UserRole.OPERATIONS],
+    roles: [...EXEC, UserRole.OPERATIONS, UserRole.FINANCE],
   },
   {
     metric: 'pipeline_health',
@@ -702,20 +703,20 @@ export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Show my ageing pipeline',
     'Show my pipeline by stage',
+    "What's my weighted pipeline?",
     'Payment status breakdown',
-    'Capacity sold',
   ],
   MANAGEMENT: [
     'DCR vs Non-DCR profitability',
     'Salesperson profitability',
     'City profitability',
-    'List pending subsidy projects',
+    "What's my weighted pipeline?",
   ],
   ADMIN: [
     'Ops workload',
     'Salesperson profitability',
     'PE missing BOM',
-    'Incentive eligible projects',
+    "What's my weighted pipeline?",
   ],
   OPERATIONS: [
     'Projects with feasibility pending',
@@ -727,7 +728,7 @@ export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
     'Payment timeline',
     'Availing loan',
     'Incentive eligible projects',
-    'Pending subsidy',
+    "What's my weighted pipeline?",
   ],
 };
 
@@ -892,9 +893,9 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Pipeline by stage',
     ],
     pipeline_by_stage: [
+      "What's my weighted pipeline?",
       'Show my stalled pipeline',
       'Give me a pipeline analysis',
-      'Payment status breakdown',
     ],
     pipeline_health: [
       'Who should I call today?',

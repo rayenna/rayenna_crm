@@ -18,12 +18,24 @@ function isoIst(ymd: string, time = '12:00:00'): string {
 
 const NOW = new Date('2026-08-30T12:00:00+05:30')
 
+const STAGE_TO_STATUS: Record<string, string> = {
+  Lead: 'LEAD',
+  'Site Survey': 'SITE_SURVEY',
+  Proposal: 'PROPOSAL',
+  'Confirmed Order': 'CONFIRMED',
+  'Under Installation': 'UNDER_INSTALLATION',
+  'Submitted for Subsidy': 'SUBMITTED_FOR_SUBSIDY',
+  Completed: 'COMPLETED',
+  'Completed - Subsidy Credited': 'COMPLETED_SUBSIDY_CREDITED',
+  Lost: 'LOST',
+}
+
 function deal(
   partial: Partial<ZenithExplorerProject> & { stageLabel: string; deal_value: number },
 ): ZenithExplorerProject {
   return {
     id: partial.id ?? 'p1',
-    projectStatus: 'PROPOSAL',
+    projectStatus: STAGE_TO_STATUS[partial.stageLabel] ?? 'PROPOSAL',
     lead_source: 'Sales',
     customer_segment: 'Residential',
     financial_year: '2026-27',
@@ -238,16 +250,32 @@ describe('computeForecast timing authenticity', () => {
     expect(month.totalRaw).toBe(300_000)
   })
 
-  it('weights Confirmed+ at 100% and early stages discounted', () => {
+  it('weights by Sales Probability defaults (Confirmed 75%, early stages discounted)', () => {
     const month = computeForecast(cohort, { timing: 'month', now: NOW })
-    // overdue install 200k@100% + confirmed 100k@100%
-    expect(month.totalForecast).toBe(300_000)
+    // overdue install 200k@100% + confirmed 100k@75%
+    expect(month.totalForecast).toBe(275_000)
     const quarter = computeForecast(cohort, { timing: 'quarter', now: NOW })
     // + lead 1M @ 10%
-    expect(quarter.totalForecast).toBe(400_000)
+    expect(quarter.totalForecast).toBe(375_000)
     const rest = computeForecast(cohort, { timing: 'rest_of_fy', now: NOW })
-    // proposal 130k @ 45%
-    expect(rest.totalForecast).toBe(58_500)
+    // proposal 130k @ 30%
+    expect(rest.totalForecast).toBe(39_000)
+  })
+
+  it('uses a per-deal Sales Probability override', () => {
+    const rest = computeForecast(
+      [
+        deal({
+          id: 'oct-custom',
+          stageLabel: 'Proposal',
+          deal_value: 130_000,
+          sales_probability: 50,
+          expected_close_date: isoIst('2026-10-10'),
+        }),
+      ],
+      { timing: 'rest_of_fy', now: NOW },
+    )
+    expect(rest.totalForecast).toBe(65_000)
   })
 
   it('excludes Completed from all buckets', () => {
@@ -260,10 +288,34 @@ describe('computeForecast timing authenticity', () => {
 describe('Phase C concentration + role accents', () => {
   it('computes top-3 share of weighted forecast', () => {
     const deals = [
-      deal({ id: 'a', stageLabel: 'Confirmed Order', deal_value: 100, customer_name: 'A' }),
-      deal({ id: 'b', stageLabel: 'Confirmed Order', deal_value: 100, customer_name: 'B' }),
-      deal({ id: 'c', stageLabel: 'Confirmed Order', deal_value: 100, customer_name: 'C' }),
-      deal({ id: 'd', stageLabel: 'Confirmed Order', deal_value: 100, customer_name: 'D' }),
+      deal({
+        id: 'a',
+        stageLabel: 'Confirmed Order',
+        deal_value: 100,
+        sales_probability: 100,
+        customer_name: 'A',
+      }),
+      deal({
+        id: 'b',
+        stageLabel: 'Confirmed Order',
+        deal_value: 100,
+        sales_probability: 100,
+        customer_name: 'B',
+      }),
+      deal({
+        id: 'c',
+        stageLabel: 'Confirmed Order',
+        deal_value: 100,
+        sales_probability: 100,
+        customer_name: 'C',
+      }),
+      deal({
+        id: 'd',
+        stageLabel: 'Confirmed Order',
+        deal_value: 100,
+        sales_probability: 100,
+        customer_name: 'D',
+      }),
     ]
     const c = computeForecastConcentration(deals, 400, 3)
     expect(c.dealCount).toBe(3)
@@ -291,6 +343,7 @@ describe('Phase C concentration + role accents', () => {
       deal({
         stageLabel: 'Confirmed Order',
         deal_value: 100_000,
+        sales_probability: 100,
         payment_status: 'PARTIAL',
         balance_amount: 40_000,
       }),

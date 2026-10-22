@@ -10,6 +10,8 @@ export type ZenithExplorerProject = {
   has_deal_value?: boolean
   stageLabel: string
   deal_value: number
+  /** 0–100 Sales Probability from Sales & Commercial (stage default unless overridden). */
+  sales_probability?: number | null
   lead_source: string
   customer_segment: string
   financial_year: string

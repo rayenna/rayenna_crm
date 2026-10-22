@@ -11,7 +11,7 @@ A: Same rules and data; different **layout**. Check **filters** and **scope** (S
 A: Yes — classic **Dashboard** charts are **clickable** and open **Projects** with the same slice logic as **Zenith** for matching charts. Dashboard = **direct** navigation; Zenith = **Quick Actions** drawer first, then **Open in Projects →**. See Help → **Dashboard** → [Classic Dashboard chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects).
 
 **Q: Forecast dropped when a deal moved Proposal → Lead?**  
-A: **Lower stage weight** in the weighted total.
+A: **Lower Sales Probability** (Proposal default 30% vs Lead 10%, or whatever % is saved on the deal).
 
 **Q: Edit payments from Zenith?**  
 A: Use **Project detail** / Finance areas.

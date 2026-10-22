@@ -78,7 +78,7 @@ By the end of this session, participants should be able to:
 
 1. **Open Zenith** and set **FY**, **Quarter**, and **Month** (desktop chips or mobile dropdowns) — same rules as [Dashboard filters](/help/dashboard#dashboard-filters).
 2. **Use** **Solar News** (RSS — click opens publisher) and **AI Insights** (CRM data — click jumps to a section).
-3. **Read** the **KPI strip**, **Today's Hit List** (where shown), and **Revenue forecast** (stage-weighted logic).
+3. **Read** the **KPI strip**, **Today's Hit List** (where shown), and **Revenue forecast** (order value × Sales Probability).
 4. Use **The Board**, **Your Focus**, **Deal flow funnel**, **Availing Loan** KPI, and **Proposal Engine** rows → **Quick Actions** → **Open in Projects →** when needed.
 5. **Explore** charts; distinguish **order value** vs **gross profit** on FY profit drill-downs.
 6. **Recognise** role differences (own vs company pipeline, **view-only** drawer for Management) and **Victory** toast.

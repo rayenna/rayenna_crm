@@ -170,8 +170,8 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
-- **Not** cash; early stages discounted, **Confirmed+ at 100%**.
-- Compare **Raw** and **Win rate**; **Weights** shows stage %.
+- **Not** cash; each open deal is **order value × Sales Probability** (stage default unless overridden on the project).
+- Compare **Raw** and **Win rate**; **Weights** shows current stage defaults and the previous stage table.
 - **All / Early / Committed** plus **When** (Month / Quarter / Rest of FY) — commissioning date required for When.
 - **Top 3 = X%** concentration; role accent (source risk / open balance / Confirmed+ kW).
 - **Tabs** split the same total; **click a row** or **+N more** category → that slice’s deals.

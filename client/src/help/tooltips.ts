@@ -192,7 +192,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.revenue-forecast',
     title: 'Weighted open pipeline (Zenith)',
     content:
-      'Headline = order value × stage % (Confirmed+ at 100%; not cash). When filters use expected commissioning only. Band All/Early/Committed; tabs split the total; rows and +N more open that salesperson / source / type / stage. The drawer header shows the same weighted total; rows still list order value. Open in Projects keeps that slice (not the whole team). Shown for Sales, Management, Admin, and Finance — not on Operations Zenith.',
+      'Headline = order value × Sales Probability (stage default unless you override on Sales & Commercial; Lost 0%, Completed 100%; not cash). When filters use expected commissioning only. Band All/Early/Committed; tabs split the total; rows and +N more open that salesperson / source / type / stage. The drawer header and rows show expected value; Weights compares the new defaults with the previous stage table. Open in Projects keeps that slice (not the whole team). Shown for Sales, Management, Admin, and Finance — not on Operations Zenith.',
   },
   'zenith.revenue-profit-fy-chart': {
     key: 'zenith.revenue-profit-fy-chart',
@@ -210,7 +210,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.chart-drill-down',
     title: 'Click to explore',
     content:
-      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. Each row shows Sales (assigned salesperson) under the customer name. FY profit lists use gross profit totals; Weighted open pipeline lists show weighted headline + order value on rows; most other slices use order value. Open in Projects → applies the same logical filters (including salesperson) on the Projects page. The Board uses the same drawer for period / salesperson drill-down.',
+      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. Each row shows Sales (assigned salesperson) under the customer name. FY profit lists use gross profit totals; Weighted open pipeline lists show expected (order value × Sales Probability) plus order value; most other slices use order value. Open in Projects → applies the same logical filters (including salesperson) on the Projects page. The Board uses the same drawer for period / salesperson drill-down.',
   },
   'zenith.deal-flow-funnel': {
     key: 'zenith.deal-flow-funnel',

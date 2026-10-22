@@ -4,6 +4,7 @@
 import { ProjectStatus, type Prisma, UserRole } from '@prisma/client';
 import prisma from '../../prisma';
 import { computeDealHealthScoreForProjectList } from '../../utils/dealHealthScore';
+import { dealExpectedValue } from '../../utils/salesProbability';
 import type { ZenithNlIntent, ZenithNlTableRow, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 import { primaryPhoneFromCustomer } from '../../utils/consumerCustomerProfile';
@@ -160,6 +161,7 @@ type ScoredDeal = {
   status: ProjectStatus;
   stage: string;
   value: number;
+  expected: number;
   score: number;
   band: string;
   grade: string;
@@ -194,6 +196,7 @@ async function loadScoredPipeline(
       advanceReceivedDate: true,
       lastPaymentDate: true,
       expectedCommissioningDate: true,
+      salesProbability: true,
       paymentStatus: true,
       balanceAmount: true,
       leadSource: true,
@@ -266,6 +269,11 @@ async function loadScoredPipeline(
       status: p.projectStatus,
       stage: STATUS_LABEL[p.projectStatus] || p.projectStatus.replace(/_/g, ' '),
       value: Number(p.projectCost) || 0,
+      expected: dealExpectedValue({
+        projectCost: p.projectCost,
+        salesProbability: p.salesProbability,
+        projectStatus: p.projectStatus,
+      }),
       score,
       band,
       grade,
@@ -340,6 +348,7 @@ export async function execPipelineHealth(
   }
 
   const totalValue = deals.reduce((s, d) => s + d.value, 0);
+  const totalExpected = deals.reduce((s, d) => s + d.expected, 0);
   const stalled = deals.filter(isStalled).sort((a, b) => a.score - b.score || b.daysInStage - a.daysInStage);
   const stalledValue = stalled.reduce((s, d) => s + d.value, 0);
 
@@ -438,7 +447,7 @@ export async function execPipelineHealth(
   const worst = [...deals].sort((a, b) => a.score - b.score || b.daysInStage - a.daysInStage);
 
   const insight = [
-    `Pipeline analysis: ${deals.length} open deals · ${money(totalValue)}.`,
+    `Pipeline analysis: ${deals.length} open deals · order value ${money(totalValue)} · expected ${money(totalExpected)} (order value × Sales Probability).`,
     stalled.length
       ? `${stalled.length} need attention (${money(stalledValue)}) — Deal Health D/F, over-SLA, or quiet too long.`
       : 'No deals currently look stalled under Deal Health rules.',

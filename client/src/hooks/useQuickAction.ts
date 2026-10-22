@@ -24,7 +24,7 @@ export type ZenithQuickActionHandle = {
   filteredProjects: ZenithExplorerProject[]
   /** When set, list-mode footer shows “Open in Projects” with this href. */
   projectsPageHref: string | null
-  /** FY profit uses gross profit; weighted pipeline uses stage-weighted order value; else order value. */
+  /** FY profit uses gross profit; weighted pipeline uses order value × Sales Probability; else order value. */
   listAmountMode: ZenithListAmountMode
   autoFocusSection: ZenithAutoFocusSection
   saving: boolean

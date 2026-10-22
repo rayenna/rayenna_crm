@@ -1,19 +1,25 @@
 import type { ZenithExplorerProject } from '../types/zenithExplorer'
 import { UserRole } from '../types'
 import { calendarYmdInTimeZone } from './istCalendar'
+import { defaultSalesProbabilityForStatus } from './salesProbability'
 
-/**
- * Keep in sync with `ZENITH_FUNNEL_METRICS_PROJECT_CAP` in `src/routes/dashboard.ts`.
- * Explorer / forecast cohort is truncated at this many projects (newest `updatedAt` first).
- */
-export const ZENITH_EXPLORER_PROJECT_CAP = 2000
+const STAGE_LABEL_TO_STATUS: Record<string, string> = {
+  Lead: 'LEAD',
+  'Site Survey': 'SITE_SURVEY',
+  Proposal: 'PROPOSAL',
+  'Confirmed Order': 'CONFIRMED',
+  'Under Installation': 'UNDER_INSTALLATION',
+  'Submitted for Subsidy': 'SUBMITTED_FOR_SUBSIDY',
+  Completed: 'COMPLETED',
+  'Completed - Subsidy Credited': 'COMPLETED_SUBSIDY_CREDITED',
+  Lost: 'LOST',
+}
 
-/** Stage display labels → win probability for early / open pipeline. */
-export const STAGE_PROBABILITY: Record<string, number> = {
+/** Previous Zenith stage table — comparison only; headline uses Sales Probability. */
+export const LEGACY_STAGE_PROBABILITY: Record<string, number> = {
   Lead: 0.1,
   'Site Survey': 0.25,
   Proposal: 0.45,
-  /** Confirmed+ use 100% for schedule forecasting (still open until Completed). */
   'Confirmed Order': 1,
   'Under Installation': 1,
   'Submitted for Subsidy': 1,
@@ -22,8 +28,37 @@ export const STAGE_PROBABILITY: Record<string, number> = {
   Lost: 0,
 }
 
-/** Ordered chips for the weight legend (open stages only). */
+/** Stage defaults for Sales Probability (0–1). Sales may override per deal. */
+export const STAGE_PROBABILITY: Record<string, number> = {
+  Lead: 0.1,
+  'Site Survey': 0.2,
+  Proposal: 0.3,
+  'Confirmed Order': 0.75,
+  'Under Installation': 1,
+  'Submitted for Subsidy': 1,
+  Completed: 1,
+  'Completed - Subsidy Credited': 1,
+  Lost: 0,
+}
+
+/**
+ * Keep in sync with `ZENITH_FUNNEL_METRICS_PROJECT_CAP` in `src/routes/dashboard.ts`.
+ * Explorer / forecast cohort is truncated at this many projects (newest `updatedAt` first).
+ */
+export const ZENITH_EXPLORER_PROJECT_CAP = 2000
+
+/** Ordered chips for the weight legend (open stages only) — Sales Probability defaults. */
 export const FORECAST_STAGE_WEIGHT_CHIPS: { label: string; probability: number }[] = [
+  { label: 'Lead', probability: 0.1 },
+  { label: 'Site Survey', probability: 0.2 },
+  { label: 'Proposal', probability: 0.3 },
+  { label: 'Confirmed Order', probability: 0.75 },
+  { label: 'Under Installation', probability: 1 },
+  { label: 'Submitted for Subsidy', probability: 1 },
+]
+
+/** Previous stage table, shown in Weights as comparison only. */
+export const FORECAST_LEGACY_STAGE_WEIGHT_CHIPS: { label: string; probability: number }[] = [
   { label: 'Lead', probability: 0.1 },
   { label: 'Site Survey', probability: 0.25 },
   { label: 'Proposal', probability: 0.45 },
@@ -91,6 +126,16 @@ export type ComputeForecastOpts = {
 
 export function probForStage(stageLabel: string): number {
   return STAGE_PROBABILITY[stageLabel] ?? 0.1
+}
+
+/** 0–1: stored Sales Probability, else stage default. */
+export function dealWinRate(p: ZenithExplorerProject): number {
+  if (p.sales_probability != null && Number.isFinite(Number(p.sales_probability))) {
+    const n = Number(p.sales_probability)
+    return Math.min(1, Math.max(0, n / 100))
+  }
+  const status = p.projectStatus || STAGE_LABEL_TO_STATUS[p.stageLabel] || 'LEAD'
+  return defaultSalesProbabilityForStatus(status) / 100
 }
 
 export function isOpenForecastDeal(p: ZenithExplorerProject): boolean {
@@ -222,7 +267,7 @@ function groupAndWeight(
   for (const p of deals) {
     const key = keyFn(p)
     const value = Number(p.deal_value ?? 0)
-    const weighted = value * probForStage(p.stageLabel)
+    const weighted = value * dealWinRate(p)
     if (!groups[key]) {
       groups[key] = { label: key, weighted: 0, count: 0, raw: 0 }
     }
@@ -280,7 +325,7 @@ export function computeForecast(
   for (const p of openDeals) {
     const value = Number(p.deal_value ?? 0)
     totalRaw += value
-    totalForecast += value * probForStage(p.stageLabel)
+    totalForecast += value * dealWinRate(p)
   }
   totalForecast = Math.round(totalForecast)
   totalRaw = Math.round(totalRaw)
@@ -302,9 +347,9 @@ export function computeForecast(
   }
 }
 
-/** Weighted value for sorting drill-down lists. */
+/** Expected value: order value × Sales Probability. */
 export function weightedDealValue(p: ZenithExplorerProject): number {
-  return Number(p.deal_value ?? 0) * probForStage(p.stageLabel)
+  return Number(p.deal_value ?? 0) * dealWinRate(p)
 }
 
 function sliceKey(p: ZenithExplorerProject, dimension: ForecastBreakdownDimension): string {

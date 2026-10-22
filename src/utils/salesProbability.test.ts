@@ -1,11 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import {
   applySalesProbabilityHygiene,
+  dealExpectedValue,
   defaultSalesProbabilityForStatus,
   isSalesProbabilityLocked,
   parseSalesProbabilityInput,
   resolveSalesProbabilityForSave,
 } from './salesProbability';
+
+describe('dealExpectedValue', () => {
+  it('multiplies order value by stored probability', () => {
+    expect(
+      dealExpectedValue({
+        projectCost: 350_000,
+        salesProbability: 45,
+        projectStatus: 'PROPOSAL',
+      }),
+    ).toBe(157_500);
+  });
+
+  it('falls back to the stage default when probability is missing', () => {
+    expect(
+      dealExpectedValue({
+        projectCost: 100_000,
+        salesProbability: null,
+        projectStatus: 'CONFIRMED',
+      }),
+    ).toBe(75_000);
+  });
+});
 
 describe('defaultSalesProbabilityForStatus', () => {
   it('maps each project status', () => {

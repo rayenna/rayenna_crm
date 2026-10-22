@@ -20,6 +20,27 @@ export function defaultSalesProbabilityForStatus(status: string | null | undefin
   return SALES_PROBABILITY_BY_STATUS[status] ?? SALES_PROBABILITY_BY_STATUS.LEAD
 }
 
+/** 0–1 win rate from stored % or stage default. */
+export function dealWinRateFromFields(opts: {
+  salesProbability?: number | null
+  projectStatus?: string | null
+}): number {
+  if (opts.salesProbability != null && Number.isFinite(Number(opts.salesProbability))) {
+    const n = Number(opts.salesProbability)
+    return Math.min(1, Math.max(0, n / 100))
+  }
+  return defaultSalesProbabilityForStatus(opts.projectStatus) / 100
+}
+
+/** Order value × Sales Probability. */
+export function dealExpectedValue(opts: {
+  projectCost?: number | null
+  salesProbability?: number | null
+  projectStatus?: string | null
+}): number {
+  return (Number(opts.projectCost) || 0) * dealWinRateFromFields(opts)
+}
+
 export function isSalesProbabilityLocked(status: string | null | undefined): boolean {
   return status === 'LOST' || status === 'COMPLETED' || status === 'COMPLETED_SUBSIDY_CREDITED'
 }

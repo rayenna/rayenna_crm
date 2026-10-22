@@ -38,6 +38,18 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     insightHints: 'pipeline by stage',
   },
+  [norm("What's my weighted pipeline?")]: {
+    metric: 'pipeline_by_stage',
+    viz: 'table',
+    filters: { detailSlice: 'weighted' },
+    insightHints: 'weighted pipeline',
+  },
+  [norm('Weighted open pipeline')]: {
+    metric: 'pipeline_by_stage',
+    viz: 'table',
+    filters: { detailSlice: 'weighted' },
+    insightHints: 'weighted pipeline',
+  },
   [norm('Show my stalled pipeline')]: {
     metric: 'pipeline_health',
     viz: 'table',
@@ -1100,9 +1112,23 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
   },
   {
     test: (q) =>
+      /\b(weighted\s+(open\s+)?pipeline|expected\s+(open\s+)?pipeline|pipeline\s+forecast)\b/.test(
+        q,
+      ) && !/\b(stalled|age?ing|aeging|analys[ei]s|health|at[- ]?risk|stuck|neglected)\b/.test(q),
+    intent: {
+      metric: 'pipeline_by_stage',
+      viz: 'table',
+      filters: { detailSlice: 'weighted' },
+      insightHints: 'weighted pipeline',
+    },
+  },
+  {
+    test: (q) =>
       /\b(pipeline\s+by\s+stage|show\s+(my\s+)?pipeline|deals?\s+by\s+stage)\b/.test(q) &&
       !/\blost\b/.test(q) &&
-      !/\b(stalled|age?ing|aeging|analys[ei]s|health|at[- ]?risk|stuck|neglected)\b/.test(q),
+      !/\b(stalled|age?ing|aeging|analys[ei]s|health|at[- ]?risk|stuck|neglected|weighted|forecast)\b/.test(
+        q,
+      ),
     intent: {
       metric: 'pipeline_by_stage',
       viz: 'table',

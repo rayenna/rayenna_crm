@@ -16,6 +16,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import prisma from '../prisma';
+import { dealExpectedValue } from '../utils/salesProbability';
 import {
   catalogHintsForRole,
   catalogPromptBlock,
@@ -154,6 +155,16 @@ const PIPELINE_STATUSES: ProjectStatus[] = [
   ProjectStatus.SITE_SURVEY,
   ProjectStatus.PROPOSAL,
   ProjectStatus.CONFIRMED,
+];
+
+/** Matches Zenith Weighted open pipeline (Lead through Subsidy submitted). */
+const OPEN_FORECAST_STATUSES: ProjectStatus[] = [
+  ProjectStatus.LEAD,
+  ProjectStatus.SITE_SURVEY,
+  ProjectStatus.PROPOSAL,
+  ProjectStatus.CONFIRMED,
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
 ];
 
 type PeBucketKey = 'proposal-ready' | 'draft' | 'not-started' | 'rest';
@@ -804,41 +815,59 @@ async function execRevenueBySalesperson(
 
 async function execPipelineByStage(
   where: Prisma.ProjectWhereInput,
+  intent?: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
-  const pipelineWhere: Prisma.ProjectWhereInput = {
-    ...where,
-    projectStatus: { in: PIPELINE_STATUSES },
-  };
-  const rows = await prisma.project.groupBy({
-    by: ['projectStatus'],
-    where: pipelineWhere,
-    _sum: { projectCost: true },
-    _count: { id: true },
+  const weighted = intent?.filters?.detailSlice === 'weighted';
+  const statuses = weighted ? OPEN_FORECAST_STATUSES : PIPELINE_STATUSES;
+  const projects = await prisma.project.findMany({
+    where: {
+      ...where,
+      projectStatus: { in: statuses },
+    },
+    select: { projectStatus: true, projectCost: true, salesProbability: true },
+    take: 2000,
   });
-  const byStatus = new Map(rows.map((r) => [r.projectStatus, r]));
-  const tableRows = PIPELINE_STATUSES.map((st) => {
-    const r = byStatus.get(st);
+  const byStatus = new Map<ProjectStatus, { count: number; value: number; expected: number }>();
+  for (const st of statuses) byStatus.set(st, { count: 0, value: 0, expected: 0 });
+  for (const p of projects) {
+    const cur = byStatus.get(p.projectStatus) || { count: 0, value: 0, expected: 0 };
+    const cost = Number(p.projectCost) || 0;
+    cur.count += 1;
+    cur.value += cost;
+    cur.expected += dealExpectedValue({
+      projectCost: p.projectCost,
+      salesProbability: p.salesProbability,
+      projectStatus: p.projectStatus,
+    });
+    byStatus.set(p.projectStatus, cur);
+  }
+  const tableRows = statuses.map((st) => {
+    const r = byStatus.get(st)!;
     return {
       status: st,
       stage: PROJECT_STATUS_LABELS[st],
-      count: r?._count.id ?? 0,
-      value: Math.round(Number(r?._sum.projectCost) || 0),
+      count: r.count,
+      value: Math.round(r.value),
+      expected: Math.round(r.expected),
     };
   });
   const totalCount = tableRows.reduce((s, r) => s + Number(r.count), 0);
   const totalValue = tableRows.reduce((s, r) => s + Number(r.value), 0);
+  const totalExpected = tableRows.reduce((s, r) => s + Number(r.expected), 0);
+  const rangeLabel = weighted ? 'Lead → Subsidy submitted' : 'Lead → Confirmed';
   const insight = totalCount
-    ? `Open pipeline (Lead → Confirmed): ${totalCount} deals worth ${formatInr(totalValue)} under your filters. Click a stage to open those projects.`
+    ? `${weighted ? 'Weighted open pipeline' : 'Open pipeline'} (${rangeLabel}): ${totalCount} deals · order value ${formatInr(totalValue)} · expected ${formatInr(totalExpected)} (order value × Sales Probability). Click a stage to open those projects.`
     : 'No open pipeline deals match your filters.';
   return {
     insight,
     viz: {
       kind: 'table',
-      title: 'Pipeline by stage',
+      title: weighted ? 'Weighted open pipeline' : 'Pipeline by stage',
       columns: [
         { key: 'stage', label: 'Stage' },
         { key: 'count', label: 'Deals' },
         { key: 'value', label: 'Order value (₹)' },
+        { key: 'expected', label: 'Expected (₹)' },
       ],
       rows: tableRows,
     },
@@ -2320,7 +2349,7 @@ async function executeMetric(
     case 'revenue_by_salesperson':
       return execRevenueBySalesperson(where, intent);
     case 'pipeline_by_stage':
-      return execPipelineByStage(where);
+      return execPipelineByStage(where, intent);
     case 'pipeline_health':
       return execPipelineHealth(intent, where);
     case 'who_to_call':

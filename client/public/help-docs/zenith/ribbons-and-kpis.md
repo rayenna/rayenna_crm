@@ -47,13 +47,13 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 
 ## Weighted open pipeline (Revenue Forecast tile)
 
-**Where** — On **Sales / Management / Admin**: below the full-width KPI grid, beside **Things needing attention**. On **Finance / Operations**: beside **Today’s plan**.
+**Where** — On **Sales / Management / Admin**: below the full-width KPI grid, beside **Things needing attention**. On **Finance**: beside **Today’s plan**. **Operations** does **not** see this tile (early / open-pipeline forecast is out of Ops scope — use **Installation pulse** and execution KPIs instead).
 
-**What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage**. **Early** stages are discounted (Lead 10% … Proposal 45%); **Confirmed+** count at **100%** for scheduling.
+**What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × Sales Probability**. Sales Probability is the 0–100% field on **Sales & Commercial** (filled from status, then editable except Lost = 0% and Completed / Subsidy Credited = 100%). Stage defaults: Lead 10%, Site Survey 20%, Proposal 30%, Confirmed 75%, Under Installation / Subsidy submitted 100%.
 
-**Adjust (progressive disclosure)** — By default the tile shows the **hero ₹**, breakdown **tabs**, the **top three rows**, and **+N more**. Tap **Adjust** to open band (**All / Early / Committed**), when (**Any time / Month / Quarter / Rest of FY**), **Weights** (stage win %), raw/win-rate context, concentration, and role accent lines. Your last **Adjust** open/closed state and filter choices are remembered per user on this device.
+**Adjust (progressive disclosure)** — By default the tile shows the **hero ₹**, breakdown **tabs**, the **top three rows**, and **+N more**. Tap **Adjust** to open band (**All / Early / Committed**), when (**Any time / Month / Quarter / Rest of FY**), **Weights** (current Sales Probability defaults plus the previous stage table for comparison), raw/win-rate context, concentration, and role accent lines. Your last **Adjust** open/closed state and filter choices are remembered per user on this device.
 
-**Dual context** — Under the headline when Adjust is open: **Raw** = sum of order values for the same open cohort; **Win rate** = weighted ÷ raw (implied blend of stage mix).
+**Dual context** — Under the headline when Adjust is open: **Raw** = sum of order values for the same open cohort; **Win rate** = weighted ÷ raw (implied blend of Sales Probability).
 
 **Band: All / Early / Committed** — **All** = every open stage. **Early** = Lead, Site Survey, Proposal. **Committed** = Confirmed Order, Under Installation, Submitted for Subsidy.
 
@@ -67,7 +67,6 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 - **Sales** — commissioning / past-due nudge on your scoped book
 - **Management / Admin** — warning if one lead source is ≥ 50% of the weighted forecast
 - **Finance** — weighted value of deals with open balance (PENDING/PARTIAL or balance > 0)
-- **Operations** — Confirmed+ weighted value and kW in the current filter
 
 **Tabs: Source, Sales, Customer type, Stage** — Tabs only **split the same weighted total** for the active band + when. Each row is **clickable** and opens the drawer for that slice. Bars are relative to the **largest row in the current tab**. **+N more** opens a floating list of **remaining categories**; pick one to open its deals.
 

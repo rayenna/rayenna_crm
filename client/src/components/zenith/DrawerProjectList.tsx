@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Inbox } from 'lucide-react'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
-import { weightedDealValue } from '../../utils/revenueForecast'
+import { dealWinRate, weightedDealValue } from '../../utils/revenueForecast'
 import HealthBadge from './HealthBadge'
 import {
   formatZenithDealInrParts,
@@ -13,9 +13,14 @@ import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 import { computeDealHealth, zenithExplorerProjectToHealthProject } from '../../utils/dealHealthScore'
 
-function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
+function rowRawAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
   if (mode === 'gross_profit') return Number(p.gross_profit ?? 0)
   return Number(p.deal_value ?? 0)
+}
+
+function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
+  if (mode === 'weighted_pipeline') return weightedDealValue(p)
+  return rowRawAmount(p, mode)
 }
 
 type SortKey = 'value' | 'health' | 'activity'
@@ -73,7 +78,10 @@ export default function DrawerProjectList({
     return copy
   }, [projects, sortDir, sortField, amountMode])
 
-  const total = useMemo(() => sorted.reduce((s, p) => s + rowAmount(p, amountMode), 0), [sorted, amountMode])
+  const total = useMemo(
+    () => sorted.reduce((s, p) => s + rowRawAmount(p, amountMode), 0),
+    [sorted, amountMode],
+  )
   const weightedTotal = useMemo(
     () =>
       amountMode === 'weighted_pipeline'
@@ -86,12 +94,18 @@ export default function DrawerProjectList({
     amountMode === 'gross_profit' || amountMode === 'weighted_pipeline'
       ? 'var(--accent-teal)'
       : 'var(--accent-gold)'
-  const valuePillLabel = amountMode === 'gross_profit' ? 'Gross profit' : 'Order value'
+  const valuePillLabel =
+    amountMode === 'gross_profit'
+      ? 'Gross profit'
+      : amountMode === 'weighted_pipeline'
+        ? 'Expected'
+        : 'Order value'
 
   const pill = (key: SortKey, label: string) => {
     const active = sortField === key
     const arrow = active ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''
-    const profitSort = key === 'value' && amountMode === 'gross_profit'
+    const profitSort =
+      key === 'value' && (amountMode === 'gross_profit' || amountMode === 'weighted_pipeline')
     return (
       <button
         type="button"
@@ -135,11 +149,14 @@ export default function DrawerProjectList({
         {sorted.map((p) => {
           const assignee = (p.assigned_to_name || '').trim() || null
           const assigneeColor = zenithSalespersonNameColor(assignee)
-          const raw = rowAmount(p, amountMode)
+          const raw = rowRawAmount(p, amountMode)
+          const expected = amountMode === 'weighted_pipeline' ? weightedDealValue(p) : raw
           const dealParts =
             amountMode === 'gross_profit'
               ? { text: raw === 0 ? '—' : formatINR(raw), muted: raw === 0 }
-              : formatZenithDealInrParts(raw)
+              : formatZenithDealInrParts(expected)
+          const winPct =
+            amountMode === 'weighted_pipeline' ? Math.round(dealWinRate(p) * 100) : null
           return (
             <div
               key={p.id}
@@ -181,6 +198,15 @@ export default function DrawerProjectList({
                 >
                   {dealParts.text}
                 </div>
+                {winPct != null ? (
+                  <div
+                    className="mt-0.5 text-[10px] tabular-nums leading-tight text-[color:var(--text-muted)]"
+                    style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                    title="Sales Probability × order value"
+                  >
+                    {winPct}% · {formatINR(raw)}
+                  </div>
+                ) : null}
                 <div
                   className="mt-0.5 text-[10px] tabular-nums leading-tight text-[color:var(--text-muted)]"
                   style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}

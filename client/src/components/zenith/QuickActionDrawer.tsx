@@ -434,7 +434,7 @@ export default function QuickActionDrawer({
                   </div>
                   {listAmountMode === 'weighted_pipeline' ? (
                     <div className="mt-0.5 text-[10px] leading-tight text-[color:var(--text-muted)]">
-                      weighted
+                      expected
                       {listRawTotal !== listTotal ? (
                         <>
                           <br />

@@ -274,8 +274,12 @@ export function projectsHrefForIntent(
       if (st) {
         return buildZenithNlProjectsHref({ status: [st], zenithSlice: 'pipeline' }, dateFilter);
       }
+      const statuses =
+        intent.filters?.detailSlice === 'weighted'
+          ? [...PIPELINE_STATUSES, 'UNDER_INSTALLATION', 'SUBMITTED_FOR_SUBSIDY']
+          : [...PIPELINE_STATUSES];
       return buildZenithNlProjectsHref(
-        { status: [...PIPELINE_STATUSES], zenithSlice: 'pipeline' },
+        { status: statuses, zenithSlice: 'pipeline' },
         dateFilter,
       );
     }

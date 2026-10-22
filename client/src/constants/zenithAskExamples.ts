@@ -41,20 +41,20 @@ export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Show my ageing pipeline',
     'Show my pipeline by stage',
+    "What's my weighted pipeline?",
     'Payment status breakdown',
-    'Capacity sold',
   ],
   MANAGEMENT: [
     'DCR vs Non-DCR profitability',
     'Salesperson profitability',
     'City profitability',
-    'List pending subsidy projects',
+    "What's my weighted pipeline?",
   ],
   ADMIN: [
     'Ops workload',
     'Salesperson profitability',
     'PE missing BOM',
-    'Incentive eligible projects',
+    "What's my weighted pipeline?",
   ],
   OPERATIONS: [
     'Projects with feasibility pending',
@@ -66,7 +66,7 @@ export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
     'Payment timeline',
     'Availing loan',
     'Incentive eligible projects',
-    'Pending subsidy',
+    "What's my weighted pipeline?",
   ],
 }
 
