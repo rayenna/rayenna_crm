@@ -2,11 +2,7 @@ import { useMemo, useState } from 'react'
 import { Inbox } from 'lucide-react'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
-
-function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
-  if (mode === 'gross_profit') return Number(p.gross_profit ?? 0)
-  return Number(p.deal_value ?? 0)
-}
+import { weightedDealValue } from '../../utils/revenueForecast'
 import HealthBadge from './HealthBadge'
 import {
   formatZenithDealInrParts,
@@ -16,6 +12,11 @@ import {
 import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 import { computeDealHealth, zenithExplorerProjectToHealthProject } from '../../utils/dealHealthScore'
+
+function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
+  if (mode === 'gross_profit') return Number(p.gross_profit ?? 0)
+  return Number(p.deal_value ?? 0)
+}
 
 type SortKey = 'value' | 'health' | 'activity'
 
@@ -73,8 +74,18 @@ export default function DrawerProjectList({
   }, [projects, sortDir, sortField, amountMode])
 
   const total = useMemo(() => sorted.reduce((s, p) => s + rowAmount(p, amountMode), 0), [sorted, amountMode])
+  const weightedTotal = useMemo(
+    () =>
+      amountMode === 'weighted_pipeline'
+        ? Math.round(sorted.reduce((s, p) => s + weightedDealValue(p), 0))
+        : 0,
+    [sorted, amountMode],
+  )
 
-  const valueAccent = amountMode === 'gross_profit' ? 'var(--accent-teal)' : 'var(--accent-gold)'
+  const valueAccent =
+    amountMode === 'gross_profit' || amountMode === 'weighted_pipeline'
+      ? 'var(--accent-teal)'
+      : 'var(--accent-gold)'
   const valuePillLabel = amountMode === 'gross_profit' ? 'Gross profit' : 'Order value'
 
   const pill = (key: SortKey, label: string) => {
@@ -202,9 +213,18 @@ export default function DrawerProjectList({
         style={{ paddingBottom: 4 }}
       >
         <span className="text-xs text-[color:var(--text-muted)]">{sorted.length} projects</span>
-        <span className="text-xs font-medium" style={{ color: valueAccent }}>
-          Total: {formatINR(total)}
-        </span>
+        {amountMode === 'weighted_pipeline' ? (
+          <span className="text-xs font-medium text-right" style={{ color: valueAccent }}>
+            Weighted: {formatINR(weightedTotal)}
+            <span className="block font-normal text-[color:var(--text-muted)]">
+              Order value: {formatINR(total)}
+            </span>
+          </span>
+        ) : (
+          <span className="text-xs font-medium" style={{ color: valueAccent }}>
+            Total: {formatINR(total)}
+          </span>
+        )}
       </div>
     </div>
   )

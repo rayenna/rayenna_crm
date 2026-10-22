@@ -11,7 +11,7 @@ export type QuickActionProjectRef = {
 }
 
 /** Passed from `Zenith` into `ZenithExecutiveBody` for drawer + chart drill-down. */
-export type ZenithListAmountMode = 'deal_value' | 'gross_profit'
+export type ZenithListAmountMode = 'deal_value' | 'gross_profit' | 'weighted_pipeline'
 
 /** After open, scroll/focus note field in Quick Action (Installation Pulse "Log update"). */
 export type ZenithAutoFocusSection = 'note' | null
@@ -24,7 +24,7 @@ export type ZenithQuickActionHandle = {
   filteredProjects: ZenithExplorerProject[]
   /** When set, list-mode footer shows “Open in Projects” with this href. */
   projectsPageHref: string | null
-  /** FY profit drill-down uses gross profit; all other lists use order value. */
+  /** FY profit uses gross profit; weighted pipeline uses stage-weighted order value; else order value. */
   listAmountMode: ZenithListAmountMode
   autoFocusSection: ZenithAutoFocusSection
   saving: boolean

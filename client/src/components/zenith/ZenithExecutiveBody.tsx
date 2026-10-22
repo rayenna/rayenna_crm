@@ -80,7 +80,7 @@ import {
 } from '../../utils/zenithChartResetGroup'
 import { buildProjectsUrl, buildLostDealsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
 import {
-  buildForecastOpenDealsProjectsHref,
+  buildForecastDrawerOpenPayload,
   buildZenithDrawerListProjectsHref,
 } from '../../utils/zenithListProjectsDeepLink'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
@@ -291,8 +291,8 @@ export default function ZenithExecutiveBody({
       const sample =
         dimension === 'loan_bank'
           ? filtered.find((p) => p.financing_bank) ?? null
-          : dimension === 'assigned_to'
-            ? filtered.find((p) => p.assigned_to_id) ?? null
+          : dimension === 'assigned_to' || dimension === 'outstanding_sales'
+            ? filtered.find((p) => p.assigned_to_id) ?? filtered[0] ?? null
             : filtered[0] ?? null
       const projectsPageHref = buildZenithDrawerListProjectsHref(
         dimension,
@@ -707,10 +707,7 @@ export default function ZenithExecutiveBody({
                 role={role}
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
-                  onOpenDrawerListMode({
-                    ...args,
-                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
-                  })
+                  onOpenDrawerListMode(buildForecastDrawerOpenPayload(dateFilter, args))
                 }
               />
             </div>

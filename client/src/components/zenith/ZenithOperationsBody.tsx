@@ -230,8 +230,8 @@ export default function ZenithOperationsBody({
       const sample =
         dimension === 'loan_bank'
           ? filtered.find((p) => p.financing_bank) ?? null
-          : dimension === 'assigned_to'
-            ? filtered.find((p) => p.assigned_to_id) ?? null
+          : dimension === 'assigned_to' || dimension === 'outstanding_sales'
+            ? filtered.find((p) => p.assigned_to_id) ?? filtered[0] ?? null
             : filtered[0] ?? null
       const projectsPageHref = buildZenithDrawerListProjectsHref(
         dimension,

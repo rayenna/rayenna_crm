@@ -53,7 +53,7 @@ import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import {
-  buildForecastOpenDealsProjectsHref,
+  buildForecastDrawerOpenPayload,
   buildZenithDrawerListProjectsHref,
 } from '../../utils/zenithListProjectsDeepLink'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
@@ -175,8 +175,8 @@ export default function ZenithFinanceBody({
       const sample =
         dimension === 'loan_bank'
           ? filtered.find((p) => p.financing_bank) ?? null
-          : dimension === 'assigned_to'
-            ? filtered.find((p) => p.assigned_to_id) ?? null
+          : dimension === 'assigned_to' || dimension === 'outstanding_sales'
+            ? filtered.find((p) => p.assigned_to_id) ?? filtered[0] ?? null
             : filtered[0] ?? null
       const projectsPageHref = buildZenithDrawerListProjectsHref(
         dimension,
@@ -397,10 +397,7 @@ export default function ZenithFinanceBody({
                 role={UserRole.FINANCE}
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
-                  onOpenDrawerListMode({
-                    ...args,
-                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
-                  })
+                  onOpenDrawerListMode(buildForecastDrawerOpenPayload(dateFilter, args))
                 }
               />
             </div>

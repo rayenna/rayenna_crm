@@ -11,6 +11,7 @@ import { Project, ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithAutoFocusSection, ZenithListAmountMode } from '../../hooks/useQuickAction'
+import { weightedDealValue } from '../../utils/revenueForecast'
 import DrawerProjectList from './DrawerProjectList'
 import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
@@ -97,10 +98,16 @@ type QueuedToastState = { text: string; shownAt: number } | null
 type ListSubview = 'list' | 'single'
 
 function sumListAmount(projects: ZenithExplorerProject[], mode: ZenithListAmountMode): number {
-  return projects.reduce((s, p) => {
+  const sum = projects.reduce((s, p) => {
     if (mode === 'gross_profit') return s + Number(p.gross_profit ?? 0)
+    if (mode === 'weighted_pipeline') return s + weightedDealValue(p)
     return s + Number(p.deal_value ?? 0)
   }, 0)
+  return mode === 'weighted_pipeline' ? Math.round(sum) : sum
+}
+
+function sumRawDealValue(projects: ZenithExplorerProject[]): number {
+  return projects.reduce((s, p) => s + Number(p.deal_value ?? 0), 0)
 }
 
 export default function QuickActionDrawer({
@@ -327,6 +334,10 @@ export default function QuickActionDrawer({
     () => sumListAmount(filteredProjects, listAmountMode),
     [filteredProjects, listAmountMode],
   )
+  const listRawTotal = useMemo(
+    () => sumRawDealValue(filteredProjects),
+    [filteredProjects],
+  )
 
   const showSingleChrome = !listMode || listSubview === 'single'
   const showListBody = listMode && listSubview === 'list'
@@ -409,14 +420,29 @@ export default function QuickActionDrawer({
                 </div>
               </div>
               <div className="shrink-0 flex flex-row items-center gap-3">
-                <div
-                  className="text-[13px] font-medium text-right"
-                  style={{
-                    color:
-                      listAmountMode === 'gross_profit' ? 'var(--accent-teal)' : 'var(--accent-gold)',
-                  }}
-                >
-                  {formatINRAlways(listTotal)}
+                <div className="text-right">
+                  <div
+                    className="text-[13px] font-medium"
+                    style={{
+                      color:
+                        listAmountMode === 'gross_profit' || listAmountMode === 'weighted_pipeline'
+                          ? 'var(--accent-teal)'
+                          : 'var(--accent-gold)',
+                    }}
+                  >
+                    {formatINRAlways(listTotal)}
+                  </div>
+                  {listAmountMode === 'weighted_pipeline' ? (
+                    <div className="mt-0.5 text-[10px] leading-tight text-[color:var(--text-muted)]">
+                      weighted
+                      {listRawTotal !== listTotal ? (
+                        <>
+                          <br />
+                          Order value {formatINRAlways(listRawTotal)}
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"

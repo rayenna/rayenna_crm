@@ -26,6 +26,16 @@ import {
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { UserRole } from '../../types'
 
+export type OpenForecastListArgs = {
+  filterLabel: string
+  filteredProjects: ZenithExplorerProject[]
+  kind: 'slice' | 'top'
+  dimension?: ForecastBreakdownDimension
+  label?: string
+  band: ForecastBand
+  timing: ForecastTiming
+}
+
 function formatINR(value: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -107,7 +117,7 @@ export default function ForecastKPI({
   role = null,
 }: {
   projects: ZenithExplorerProject[] | null | undefined
-  onOpenForecastList: (args: { filterLabel: string; filteredProjects: ZenithExplorerProject[] }) => void
+  onOpenForecastList: (args: OpenForecastListArgs) => void
   /** Narrower card when placed beside the executive KPI grid on lg+. */
   compactSidebar?: boolean
   /** Drives the thin role accent under concentration (shared tile). */
@@ -285,6 +295,11 @@ export default function ForecastKPI({
     onOpenForecastList({
       filterLabel: `Weighted pipeline · ${dimTitle} · ${label}${bandSuffix}${timingSuffix}`,
       filteredProjects: filtered,
+      kind: 'slice',
+      dimension: activeTab,
+      label,
+      band,
+      timing,
     })
   }
 
@@ -298,6 +313,9 @@ export default function ForecastKPI({
     onOpenForecastList({
       filterLabel: `Weighted pipeline · Top ${top.length} deals${bandSuffix}${timingSuffix}`,
       filteredProjects: top,
+      kind: 'top',
+      band,
+      timing,
     })
   }
 

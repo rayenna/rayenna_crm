@@ -5,6 +5,7 @@ import type { ZenithChartDrilldownDimension, ZenithExplorerProject } from '../ty
 import type { DrilldownOpts } from './zenithChartDrilldown'
 import { buildProjectsUrl } from './dashboardTileLinks'
 import { getPeriodRange, type LeaderboardPeriod } from './leaderboardUtils'
+import type { ForecastBand, ForecastBreakdownDimension } from './revenueForecast'
 
 const FORECAST_OPEN_STATUS_STRINGS: string[] = [
   ProjectStatus.LEAD,
@@ -14,6 +15,24 @@ const FORECAST_OPEN_STATUS_STRINGS: string[] = [
   ProjectStatus.UNDER_INSTALLATION,
   ProjectStatus.SUBMITTED_FOR_SUBSIDY,
 ]
+
+const FORECAST_EARLY_STATUS_STRINGS: string[] = [
+  ProjectStatus.LEAD,
+  ProjectStatus.SITE_SURVEY,
+  ProjectStatus.PROPOSAL,
+]
+
+const FORECAST_COMMITTED_STATUS_STRINGS: string[] = [
+  ProjectStatus.CONFIRMED,
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+]
+
+export function forecastOpenStatusesForBand(band: ForecastBand = 'all'): string[] {
+  if (band === 'early') return [...FORECAST_EARLY_STATUS_STRINGS]
+  if (band === 'committed') return [...FORECAST_COMMITTED_STATUS_STRINGS]
+  return [...FORECAST_OPEN_STATUS_STRINGS]
+}
 
 const LEADERBOARD_WINNING_STRINGS: string[] = [
   ProjectStatus.CONFIRMED,
@@ -151,6 +170,21 @@ export function buildZenithDrawerListProjectsHref(
     }
     case 'forecast':
       return buildProjectsUrl({ status: [...FORECAST_OPEN_STATUS_STRINGS] }, dateFilter)
+    case 'outstanding_sales': {
+      const paymentStatus = ['PENDING', 'PARTIAL']
+      if (value === 'Unassigned') {
+        return buildProjectsUrl({ paymentStatus, salespersonUnassigned: true }, dateFilter)
+      }
+      if (sample?.assigned_to_id) {
+        return buildProjectsUrl(
+          { paymentStatus, salespersonId: [sample.assigned_to_id] },
+          dateFilter,
+        )
+      }
+      const name = value.trim()
+      if (!name) return null
+      return buildProjectsUrl({ paymentStatus, salespersonName: name }, dateFilter)
+    }
     case 'loan_bank': {
       const raw = sample?.financing_bank?.trim()
       if (!raw) return null
@@ -181,8 +215,103 @@ export function buildZenithDrawerListProjectsHref(
   }
 }
 
-export function buildForecastOpenDealsProjectsHref(dateFilter: ZenithDateFilter): string {
-  return buildProjectsUrl({ status: [...FORECAST_OPEN_STATUS_STRINGS] }, dateFilter)
+export type ForecastProjectsHrefSlice = {
+  /** `top` = concentration (Top 3 deals) — cannot be expressed as Projects filters. */
+  kind: 'slice' | 'top'
+  dimension?: ForecastBreakdownDimension
+  label?: string
+  band?: ForecastBand
+  sample?: ZenithExplorerProject | null
+}
+
+/**
+ * Open-pipeline Projects URL for Weighted open pipeline.
+ * Always includes the open-stage set (or the Early/Committed subset). Slice tabs add
+ * salesperson / lead source / customer type / stage so Open in Projects matches the bar.
+ */
+export function buildForecastOpenDealsProjectsHref(
+  dateFilter: ZenithDateFilter,
+  slice?: ForecastProjectsHrefSlice | null,
+): string | null {
+  if (slice?.kind === 'top') return null
+
+  const band = slice?.band ?? 'all'
+  const params: Parameters<typeof buildProjectsUrl>[0] = {
+    status: forecastOpenStatusesForBand(band),
+  }
+
+  if (slice?.kind === 'slice' && slice.dimension && slice.label) {
+    switch (slice.dimension) {
+      case 'sales': {
+        if (slice.label === 'Unassigned') {
+          params.salespersonUnassigned = true
+          break
+        }
+        if (slice.sample?.assigned_to_id) {
+          params.salespersonId = [slice.sample.assigned_to_id]
+        } else if (slice.label.trim()) {
+          params.salespersonName = slice.label.trim()
+        }
+        break
+      }
+      case 'source': {
+        if (slice.label === 'Unknown') {
+          params.leadSourceIsNull = true
+          break
+        }
+        const ls = LEAD_LABEL_TO_ENUM[slice.label]
+        if (ls) params.leadSource = [ls]
+        break
+      }
+      case 'segment': {
+        const ct = resolveCustomerTypeFromChartLabel(slice.label)
+        if (ct) params.customerType = [ct]
+        break
+      }
+      case 'stage': {
+        const st = STAGE_LABEL_TO_STATUS[slice.label]
+        if (st) params.status = [st]
+        break
+      }
+    }
+  }
+
+  return buildProjectsUrl(params, dateFilter)
+}
+
+/** Payload for Weighted open pipeline → Quick Actions list (href matches the clicked bar). */
+export function buildForecastDrawerOpenPayload(
+  dateFilter: ZenithDateFilter,
+  args: {
+    filterLabel: string
+    filteredProjects: ZenithExplorerProject[]
+    kind: 'slice' | 'top'
+    dimension?: ForecastBreakdownDimension
+    label?: string
+    band: ForecastBand
+  },
+): {
+  filterLabel: string
+  filteredProjects: ZenithExplorerProject[]
+  listAmountMode: 'weighted_pipeline'
+  projectsPageHref: string | null
+} {
+  const sample =
+    args.dimension === 'sales'
+      ? args.filteredProjects.find((p) => p.assigned_to_id) ?? args.filteredProjects[0] ?? null
+      : args.filteredProjects[0] ?? null
+  return {
+    filterLabel: args.filterLabel,
+    filteredProjects: args.filteredProjects,
+    listAmountMode: 'weighted_pipeline',
+    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter, {
+      kind: args.kind,
+      dimension: args.dimension,
+      label: args.label,
+      band: args.band,
+      sample,
+    }),
+  }
 }
 
 export function buildLeaderboardPeriodProjectsHref(
