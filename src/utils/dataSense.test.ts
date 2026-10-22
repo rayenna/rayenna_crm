@@ -33,6 +33,42 @@ describe('dataSenseNeedsReviewPrismaOr', () => {
     expect(clause).toContain('expectedCommissioningDate');
     expect(clause).toContain('confirmationDate');
   });
+
+  it('dataSensePrismaClause A5 is past confirmation on early pipeline only', () => {
+    const clause = JSON.stringify(dataSensePrismaClause(NOW, 'A5'));
+    expect(clause).toContain('confirmationDate');
+    expect(clause).toContain(startOfTodayInIst(NOW).toISOString());
+    expect(clause).toContain('LEAD');
+    expect(clause).toContain('SITE_SURVEY');
+    expect(clause).toContain('PROPOSAL');
+    expect(clause).not.toContain('CONFIRMED');
+  });
+});
+
+describe('evaluateDataSense A5 (server)', () => {
+  it('does not flag a future confirmation date on Lead', () => {
+    expect(
+      evaluateDataSense(
+        {
+          projectStatus: ProjectStatus.LEAD,
+          confirmationDate: new Date('2026-09-15T00:00:00+05:30'),
+        },
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
+  it('flags an expired confirmation date on Proposal as critical', () => {
+    const f = evaluateDataSense(
+      {
+        projectStatus: ProjectStatus.PROPOSAL,
+        confirmationDate: new Date('2026-08-01T00:00:00+05:30'),
+      },
+      NOW,
+    );
+    expect(f.map((x) => x.id)).toEqual(['A5']);
+    expect(f[0]?.severity).toBe('critical');
+  });
 });
 
 describe('evaluateDataSense (server)', () => {

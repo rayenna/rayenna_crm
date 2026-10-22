@@ -312,6 +312,8 @@ model Project {
   projectValue      Float? // Alternative name for projectCost
   marginEstimate    Float? // Margin estimate
   confirmationDate  DateTime?
+  /// 0–100. Defaults from projectStatus; user-overridable except Lost=0 and Completed=100.
+  salesProbability  Int       @default(10)
   loanDetails       String? // JSON: { hasLoan: boolean, remarks: string }
   // Financing / Loan details (Sales & Admin editable, visible to all)
   availingLoan        Boolean?

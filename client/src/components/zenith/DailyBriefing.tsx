@@ -271,9 +271,12 @@ export default function DailyBriefing({
   myDaySnapshotLoading = false,
   myDaySnapshotError = false,
   onAskZenith,
+  onDontShowTodayChange,
 }: {
   isVisible: boolean
   onDismiss: (dontShowToday: boolean) => void
+  /** Persist/clear “don’t show today” as soon as the checkbox changes (survives × / login). */
+  onDontShowTodayChange?: (dontShowToday: boolean) => void
   role: UserRole
   currentUserName?: string | null
   data: Record<string, unknown>
@@ -292,12 +295,14 @@ export default function DailyBriefing({
     [role, currentUserName, data, explorerProjects],
   )
 
+  const close = () => onDismiss(dontShowToday)
+
   const jumpToMyDayTab = (tab: MyDayTabId) => {
-    onDismiss(dontShowToday)
+    close()
     openTab(tab)
   }
 
-  useModalEscape(isVisible, () => onDismiss(false))
+  useModalEscape(isVisible, close)
 
   if (!isVisible) return null
 
@@ -315,7 +320,7 @@ export default function DailyBriefing({
         paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
         paddingLeft: 'max(0.75rem, env(safe-area-inset-left, 0px))',
       }}
-      onClick={() => onDismiss(false)}
+      onClick={close}
       role="presentation"
     >
       <motion.div
@@ -331,7 +336,7 @@ export default function DailyBriefing({
       >
         <button
           type="button"
-          onClick={() => onDismiss(false)}
+          onClick={close}
           className="absolute z-10"
           style={{
             top: 16,
@@ -489,7 +494,7 @@ export default function DailyBriefing({
               <MyDayButton
                 variant="briefing"
                 className="w-full min-[420px]:w-auto min-[420px]:shrink-0"
-                onBeforeOpen={() => onDismiss(dontShowToday)}
+                onBeforeOpen={close}
               />
               {onAskZenith ? (
                 <button
@@ -497,7 +502,7 @@ export default function DailyBriefing({
                   aria-label={briefing.askCta.label}
                   onClick={() => {
                     const q = briefing.askCta.question
-                    onDismiss(dontShowToday)
+                    close()
                     onAskZenith(q)
                   }}
                   className="min-h-[44px] min-w-0 w-full min-[420px]:min-w-[12rem] min-[420px]:flex-1 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-center text-sm font-bold leading-snug text-[color:var(--text-inverse)] text-pretty"
@@ -508,7 +513,7 @@ export default function DailyBriefing({
               ) : (
                 <button
                   type="button"
-                  onClick={() => onDismiss(dontShowToday)}
+                  onClick={close}
                   className="min-h-[44px] min-w-0 w-full min-[420px]:flex-1 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-center text-sm font-bold text-[color:var(--text-inverse)]"
                 >
                   Got it →
@@ -520,7 +525,11 @@ export default function DailyBriefing({
               <input
                 type="checkbox"
                 checked={dontShowToday}
-                onChange={(e) => setDontShowToday(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setDontShowToday(checked)
+                  onDontShowTodayChange?.(checked)
+                }}
                 style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
               />
               <span className="text-[color:var(--text-primary)]">Don&apos;t show again today</span>

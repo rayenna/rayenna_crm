@@ -185,12 +185,77 @@ describe('evaluateDataSense P2', () => {
     expect(f.map((x) => x.id)).toEqual(['A4'])
   })
 
-  it('A5: confirmation date on Lead', () => {
+  it('A5: future confirmation date on Lead is expected, not a review issue', () => {
+    expect(
+      evaluateDataSense(
+        { projectStatus: 'LEAD', confirmationDate: isoIst('2026-09-15') },
+        NOW,
+      ),
+    ).toEqual([])
+  })
+
+  it('A5: confirmation date today on Proposal is not expired', () => {
+    expect(
+      evaluateDataSense(
+        { projectStatus: 'PROPOSAL', confirmationDate: isoIst('2026-08-29') },
+        NOW,
+      ),
+    ).toEqual([])
+  })
+
+  it('A5: expired confirmation on Lead is critical', () => {
     const f = evaluateDataSense(
       { projectStatus: 'LEAD', confirmationDate: isoIst('2026-08-01') },
       NOW,
     )
     expect(f.map((x) => x.id)).toEqual(['A5'])
+    expect(f[0]?.severity).toBe('critical')
+    expect(f[0]?.title).toBe('Confirmation date has passed')
+  })
+
+  it('A5: expired confirmation on Site Survey / Proposal is critical', () => {
+    expect(
+      evaluateDataSense(
+        { projectStatus: 'SITE_SURVEY', confirmationDate: isoIst('2026-08-28') },
+        NOW,
+      ).map((x) => x.id),
+    ).toEqual(['A5'])
+    expect(
+      evaluateDataSense(
+        { projectStatus: 'PROPOSAL', confirmationDate: isoIst('2026-08-01') },
+        NOW,
+      ).map((x) => x.id),
+    ).toEqual(['A5'])
+  })
+
+  it('A5: past confirmation on Confirmed+ is not a review issue', () => {
+    expect(
+      evaluateDataSense(
+        {
+          projectStatus: 'CONFIRMED',
+          confirmationDate: isoIst('2026-08-01'),
+          systemCapacity: 5,
+          projectCost: 100_000,
+          advanceReceived: 10_000,
+          paymentStatus: 'PARTIAL',
+        },
+        NOW,
+      ),
+    ).toEqual([])
+  })
+
+  it('A5: past confirmation on Lost is not a review issue', () => {
+    expect(
+      evaluateDataSense(
+        {
+          projectStatus: 'LOST',
+          confirmationDate: isoIst('2026-08-01'),
+          lostDate: isoIst('2026-08-02'),
+          lostReason: 'PRICE',
+        },
+        NOW,
+      ),
+    ).toEqual([])
   })
 
   it('A6: past Deal Health SLA for Lead', () => {

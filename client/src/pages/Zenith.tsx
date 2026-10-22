@@ -94,7 +94,7 @@ const Zenith = () => {
   const queryFYs = useDebounce(selectedFYs, ZENITH_FILTER_DEBOUNCE_MS)
   const queryQuarters = useDebounce(selectedQuarters, ZENITH_FILTER_DEBOUNCE_MS)
   const queryMonths = useDebounce(selectedMonths, ZENITH_FILTER_DEBOUNCE_MS)
-  const { isVisible, dismiss, showBriefing } = useDailyBriefing()
+  const { isVisible, dismiss, rememberToday, showBriefing } = useDailyBriefing(user?.id)
   const quickAction = useQuickAction()
   const financeQuickDrawer = useFinanceQuickDrawer()
   const operationsQuickDrawer = useOperationsQuickDrawer()
@@ -1071,6 +1071,7 @@ const Zenith = () => {
           <DailyBriefing
             isVisible={isVisible}
             onDismiss={dismiss}
+            onDontShowTodayChange={rememberToday}
             role={user.role}
             currentUserName={user.name}
             data={zenithDataWithExplorerMetrics}

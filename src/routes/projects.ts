@@ -26,6 +26,10 @@ import {
   listActiveOpsUsers,
   resolveAssignedOpsId,
 } from '../utils/opsAssignee';
+import {
+  defaultSalesProbabilityForStatus,
+  resolveSalesProbabilityForSave,
+} from '../utils/salesProbability';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = [
@@ -86,6 +90,7 @@ const PROJECT_UPDATE_DATA_KEYS = new Set([
   'projectValue',
   'marginEstimate',
   'confirmationDate',
+  'salesProbability',
   'loanDetails',
   'availingLoan',
   'financingBank',
@@ -676,6 +681,7 @@ router.post(
         systemCapacity,
         projectCost,
         confirmationDate,
+        salesProbability,
         loanDetails,
         incentiveEligible,
         leadSource,
@@ -813,6 +819,18 @@ router.post(
       let financingBankValue: string | null = null;
       let financingBankOtherValue: string | null = null;
 
+      const createStatus = (projectStatus as ProjectStatus) || ProjectStatus.LEAD;
+      const createProbability = resolveSalesProbabilityForSave({
+        currentStatus: undefined,
+        nextStatus: createStatus,
+        requested: salesProbability,
+      });
+      if (!createProbability.ok) {
+        return res.status(400).json({ error: createProbability.error });
+      }
+      const salesProbabilityValue =
+        createProbability.value ?? defaultSalesProbabilityForStatus(createStatus);
+
       if (req.user?.role === UserRole.ADMIN || req.user?.role === UserRole.SALES) {
         const rawAvailing = availingLoan;
         const truthyValues = ['true', 'YES', 'yes', '1', 'on', true, 1];
@@ -903,7 +921,6 @@ router.post(
         return isNaN(date.getTime()) ? null : date;
       };
 
-      const createStatus = projectStatus || ProjectStatus.LEAD;
       const opsUsersOnCreate = await listActiveOpsUsers();
       const resolvedAssignedOpsId = resolveAssignedOpsId({
         finalStatus: createStatus,
@@ -947,6 +964,7 @@ router.post(
           // Mirror snapshot for Lost analysis / legacy readers (SSOT remains projectCost)
           ...(projectStatus === ProjectStatus.LOST && projectCostNum != null ? { lostRevenue: projectCostNum } : {}),
           confirmationDate: confirmationDate ? new Date(confirmationDate) : null,
+          salesProbability: salesProbabilityValue,
           loanDetails: loanDetails ? (typeof loanDetails === 'object' ? JSON.stringify(loanDetails) : loanDetails) : null,
           availingLoan: availingLoanValue,
           financingBank: financingBankValue,
@@ -1345,6 +1363,7 @@ router.put(
           'systemCapacity',
           'projectCost',
           'confirmationDate',
+          'salesProbability',
           'year',
           'roofType',
           'systemType',
@@ -1502,6 +1521,8 @@ router.put(
               } else {
                 continue;
               }
+            } else if (field === 'salesProbability') {
+              updateData[field] = req.body[field];
             } else if (field === 'lostToCompetitionReason') {
               const value = req.body[field];
               if (
@@ -1572,6 +1593,7 @@ router.put(
           'systemCapacity',
           'projectCost',
           'confirmationDate',
+          'salesProbability',
           'loanDetails',
           'availingLoan',
           'financingBank',
@@ -2099,6 +2121,26 @@ router.put(
 
       // Final cleanup: keep only Prisma-safe scalar update keys (strips relations / UI-only fields)
       updateData = pickProjectUpdateData(updateData as Record<string, unknown>);
+
+      const canEditSalesProbability =
+        req.user?.role === UserRole.ADMIN ||
+        req.user?.role === UserRole.SALES ||
+        req.user?.role === UserRole.OPERATIONS;
+      if (canEditSalesProbability) {
+        const resolvedProbability = resolveSalesProbabilityForSave({
+          currentStatus: project.projectStatus,
+          nextStatus: String(updateData.projectStatus ?? project.projectStatus),
+          requested: req.body.salesProbability,
+        });
+        if (!resolvedProbability.ok) {
+          return res.status(400).json({ error: resolvedProbability.error });
+        }
+        if (resolvedProbability.value !== undefined) {
+          updateData.salesProbability = resolvedProbability.value;
+        }
+      } else {
+        delete updateData.salesProbability;
+      }
 
       // Segment mandates Panel Type: Subsidy → DCR, Non-Subsidy → Non-DCR (heal mismatches on every save).
       {

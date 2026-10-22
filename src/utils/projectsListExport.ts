@@ -49,6 +49,7 @@ export function mapProjectToExportRow(project: {
   systemCapacity?: number | null;
   projectCost?: number | null;
   projectStatus: string;
+  salesProbability?: number | null;
   paymentStatus?: string | null;
   year?: string | null;
   confirmationDate?: Date | null;
@@ -77,6 +78,10 @@ export function mapProjectToExportRow(project: {
     'System Capacity (kW)': project.systemCapacity || 0,
     'Project Cost': project.projectCost || 0,
     'Project Status': project.projectStatus.replace(/_/g, ' ') || '',
+    'Sales Probability %':
+      project.salesProbability != null && Number.isFinite(Number(project.salesProbability))
+        ? Number(project.salesProbability)
+        : '',
     'Payment Status': project.paymentStatus?.replace(/_/g, ' ') || '',
     Salesperson: project.salesperson?.name || '',
     'Salesperson Email': project.salesperson?.email || '',

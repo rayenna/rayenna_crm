@@ -40,6 +40,12 @@ import {
 } from '../utils/dataSense'
 import { calculateFYInIst } from '../utils/istCalendar'
 import { useDebounce } from '../hooks/useDebounce'
+import {
+  applySalesProbabilityHygiene,
+  defaultSalesProbabilityForStatus,
+  isSalesProbabilityLocked,
+  parseSalesProbabilityInput,
+} from '../utils/salesProbability'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -385,6 +391,37 @@ const ProjectForm = () => {
     }
   }, [projectStatus, setValue, watch])
 
+  const lastProbabilityStatusRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!projectStatus) {
+      if (!isEdit) {
+        setValue('projectStatus', ProjectStatus.LEAD)
+        setValue('salesProbability', defaultSalesProbabilityForStatus(ProjectStatus.LEAD))
+        lastProbabilityStatusRef.current = ProjectStatus.LEAD
+      }
+      return
+    }
+    if (isEdit && !project) return
+
+    const prev = lastProbabilityStatusRef.current
+    if (prev === projectStatus) return
+
+    if (prev == null && isEdit && project) {
+      lastProbabilityStatusRef.current = projectStatus
+      const stored = project.salesProbability
+      const next = isSalesProbabilityLocked(projectStatus)
+        ? defaultSalesProbabilityForStatus(projectStatus)
+        : stored != null
+          ? stored
+          : defaultSalesProbabilityForStatus(projectStatus)
+      setValue('salesProbability', next)
+      return
+    }
+
+    lastProbabilityStatusRef.current = projectStatus
+    setValue('salesProbability', defaultSalesProbabilityForStatus(projectStatus))
+  }, [projectStatus, isEdit, project, setValue])
+
   // Clear leadSourceDetails when leadSource changes to a value that doesn't need details
   const leadSource = watch('leadSource')
   useEffect(() => {
@@ -728,6 +765,13 @@ const ProjectForm = () => {
       data.inverterCapacityKw = Number.isInteger(invKw) && invKw >= 0 ? invKw : null;
     } else {
       data.inverterCapacityKw = null;
+    }
+    const parsedProbability = parseSalesProbabilityInput(data.salesProbability)
+    const statusForProbability = String(data.projectStatus ?? projectStatus ?? ProjectStatus.LEAD)
+    if (parsedProbability.provided && parsedProbability.ok) {
+      data.salesProbability = applySalesProbabilityHygiene(statusForProbability, parsedProbability.value)
+    } else {
+      data.salesProbability = defaultSalesProbabilityForStatus(statusForProbability)
     }
     
     // Remove customerId from update requests (customer cannot be changed after project creation)
@@ -1693,6 +1737,48 @@ const ProjectForm = () => {
                   <option value="COMPLETED_SUBSIDY_CREDITED">Completed - Subsidy Credited</option>
                   <option value={ProjectStatus.LOST}>Lost</option>
                 </select>
+              </div>
+              <div>
+                <label className={labelCls}>Sales Probability (%)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min={0}
+                  max={100}
+                  {...register('salesProbability', {
+                    setValueAs: (v) => {
+                      if (v === '' || v == null) return undefined
+                      const n = parseInt(String(v), 10)
+                      return Number.isNaN(n) ? undefined : n
+                    },
+                    validate: (value) => {
+                      if (isSalesProbabilityLocked(projectStatus)) return true
+                      const parsed = parseSalesProbabilityInput(value)
+                      if (!parsed.provided) return 'Sales Probability is required'
+                      return parsed.ok ? true : parsed.error
+                    },
+                  })}
+                  readOnly={
+                    isSalesProbabilityLocked(projectStatus) ||
+                    isProjectLost ||
+                    !canEditSalesCommercial
+                  }
+                  className={`${inputCls} ${
+                    isSalesProbabilityLocked(projectStatus) ||
+                    isProjectLost ||
+                    !canEditSalesCommercial
+                      ? disabledControlCls
+                      : ''
+                  }`}
+                />
+                <p className={ZENITH_FIELD_HINT_CLS}>
+                  {isSalesProbabilityLocked(projectStatus)
+                    ? projectStatus === ProjectStatus.LOST
+                      ? 'Lost deals are always 0%.'
+                      : 'Completed deals are always 100%.'
+                    : 'Filled from status (Lead 10%, Site Survey 20%, Proposal 30%, Confirmed 75%, Installation and later 100%). You can override.'}
+                </p>
               </div>
               {showOpsAssigneeField ? (
                 <div

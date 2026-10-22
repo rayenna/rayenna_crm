@@ -196,13 +196,13 @@ export function evaluateDataSense(project: DataSenseInput, now: Date = new Date(
     })
   }
 
-  if (isEarlyPipeline(status) && confirm) {
+  if (isEarlyPipeline(status) && isPastCalendarDate(project.confirmationDate, now)) {
     findings.push({
       id: 'A5',
-      severity: 'warning',
-      title: 'Confirmation date on an early-stage deal',
+      severity: 'critical',
+      title: 'Confirmation date has passed',
       detail:
-        'A confirmation date is set while status is still Lead, Site Survey, or Proposal. Move the stage or clear the date.',
+        'The confirmation date is in the past but this deal is still Lead, Site Survey, or Proposal. Move it to Confirmed (or later), or update the date.',
     })
   }
 
@@ -336,8 +336,8 @@ export function isDataSenseImpossibleResponse(data: unknown): data is {
   return rec.code === DATA_SENSE_IMPOSSIBLE_CODE && Array.isArray(rec.findings)
 }
 
-/** My Day: impossibilities + original P0 action items + aged no-advance (not SLA / Lost / capacity). */
-export const DATA_SENSE_MY_DAY_RULE_IDS: DataSenseRuleId[] = ['A1', 'A2', 'A4', 'B1', 'B2', 'B3', 'B5']
+/** My Day: impossibilities + original P0 action items + expired confirmation + aged no-advance (not SLA / Lost / capacity). */
+export const DATA_SENSE_MY_DAY_RULE_IDS: DataSenseRuleId[] = ['A1', 'A2', 'A4', 'A5', 'B1', 'B2', 'B3', 'B5']
 
 /** Zenith Things needing attention — explorer can evaluate these (not A3; Lost fields missing). */
 export const DATA_SENSE_ZENITH_RULE_IDS: DataSenseRuleId[] = [
@@ -359,7 +359,7 @@ export const DATA_SENSE_RULE_SHORT_LABEL: Record<DataSenseRuleId, string> = {
   A2: 'Missing confirmation',
   A3: 'Incomplete Lost',
   A4: 'Dates reversed',
-  A5: 'Confirm date too early',
+  A5: 'Expired confirmation',
   A6: 'Stuck in stage',
   B1: 'No advance',
   B2: 'Advance overdue',
@@ -390,7 +390,7 @@ export function dataSenseMyDayTaskContent(ruleId: DataSenseRuleId, customerName:
     case 'A4':
       return `Fix commissioning vs confirmation dates — ${name}`
     case 'A5':
-      return `Align stage with confirmation date — ${name}`
+      return `Move to Confirmed or update confirmation date — ${name}`
     case 'A6':
       return `Move stage or log blocker — ${name}`
     case 'B1':

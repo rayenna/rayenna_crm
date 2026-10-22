@@ -805,6 +805,9 @@ const ProjectDetail = () => {
                 {format(new Date(project.confirmationDate), 'MMM dd, yyyy')}
               </DetailRow>
             )}
+            <DetailRow label="Sales Probability" valueClassName="font-medium">
+              {project.salesProbability != null ? `${project.salesProbability}%` : '—'}
+            </DetailRow>
             <DetailRow label="Gross Profit" valueClassName="font-semibold">
               <span
                 className={

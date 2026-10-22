@@ -201,13 +201,13 @@ export function evaluateDataSense(project: DataSenseInput, now: Date = new Date(
     });
   }
 
-  if (isEarlyPipeline(status) && confirm) {
+  if (isEarlyPipeline(status) && isPastCalendarDate(project.confirmationDate, now)) {
     findings.push({
       id: 'A5',
-      severity: 'warning',
-      title: 'Confirmation date on an early-stage deal',
+      severity: 'critical',
+      title: 'Confirmation date has passed',
       detail:
-        'A confirmation date is set while status is still Lead, Site Survey, or Proposal. Move the stage or clear the date.',
+        'The confirmation date is in the past but this deal is still Lead, Site Survey, or Proposal. Move it to Confirmed (or later), or update the date.',
     });
   }
 
@@ -396,14 +396,14 @@ export function dataSenseImpossibleHttpBody(findings: DataSenseFinding[]) {
   };
 }
 
-export const DATA_SENSE_MY_DAY_RULE_IDS: DataSenseRuleId[] = ['A1', 'A2', 'A4', 'B1', 'B2', 'B3', 'B5'];
+export const DATA_SENSE_MY_DAY_RULE_IDS: DataSenseRuleId[] = ['A1', 'A2', 'A4', 'A5', 'B1', 'B2', 'B3', 'B5'];
 
 export const DATA_SENSE_RULE_SHORT_LABEL: Record<DataSenseRuleId, string> = {
   A1: 'Overdue commissioning',
   A2: 'Missing confirmation',
   A3: 'Incomplete Lost',
   A4: 'Dates reversed',
-  A5: 'Confirm date too early',
+  A5: 'Expired confirmation',
   A6: 'Stuck in stage',
   B1: 'No advance',
   B2: 'Advance overdue',
@@ -494,6 +494,7 @@ export function dataSensePrismaClauseForRule(now: Date, rule: DataSenseRuleId): 
         AND: [
           { projectStatus: { in: DATA_SENSE_EARLY_PIPELINE_STATUSES } },
           { confirmationDate: { not: null } },
+          { confirmationDate: { lt: startToday } },
         ],
       };
     case 'A6':

@@ -164,6 +164,7 @@ export interface Project {
   systemCapacity?: number
   projectCost?: number
   confirmationDate?: string
+  salesProbability?: number
   loanDetails?: string
   // Financing / loan fields
   availingLoan?: boolean

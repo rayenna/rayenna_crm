@@ -86,7 +86,8 @@ If **Lead Source** is **Referral**, **Channel Partner**, or **Other**, the corre
 
 ### Sales & Commercial
 
-- **Sales**, **Operations**, and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, **System Type**, and related non-payment financial details (e.g. loan details, incentive eligibility).
+- **Sales**, **Operations**, and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **Sales Probability**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, **System Type**, and related non-payment financial details (e.g. loan details, incentive eligibility).
+- **Sales Probability** is a whole number from **0–100%**. It is filled from **Project Status** when you choose a stage (Lead 10%, Site Survey 20%, Proposal 30%, Confirmed 75%, Under Installation / Submitted for Subsidy / Completed / Subsidy Credited 100%, Lost 0%). You may override it except: **Lost is always 0%**, and **Completed** or **Completed – Subsidy Credited** is always **100%**.
 - **Finance** and **Management** can **view** Sales & Commercial but cannot edit it.
 - Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
 
@@ -153,7 +154,7 @@ The read-only **Individual Project** view groups information into **cards** with
 The detail page also shows:
 
 - **Needs review** banner when dates, payments, or capacity do not match stage — same rules as the list filter; **Fix →** opens Edit when you can edit. See [Needs review (Data Sense)](#needs-review-data-sense).
-- **Customer** information, **Project** and **Sales & Commercial** details (including **System Capacity** in whole kW where set)
+- **Customer** information, **Project** and **Sales & Commercial** details (including **System Capacity** in whole kW where set, and **Sales Probability**)
 - **Project Lifecycle** (execution dates, costs, equipment — including **Panel / Inverter** brands, **Panel Capacity (W)**, and **Inverter Capacity (kW)** when captured)
 - **Deal Health Score** (0–100) — full **illustration and calculation tables** are in [Deal Health Score](#deal-health-score) (this help section) (hidden for completed / subsidy-credited / lost projects).
 - **Payment Tracking** (status, amounts, balance)
@@ -172,7 +173,7 @@ Each project displays:
 - **Project Number (SL No)**, **Customer**, **Segment**, **Project Type**
 - **Order Value**, **Payment Status**, **Balance**
 - **Confirmation Date**, **Financial Year**
-- **Project Status**, **Lead Source**
+- **Project Status**, **Sales Probability**, **Lead Source**
 - **Availing Loan/Financing** (Yes/No) and **Financing Bank** when applicable
 - **System Capacity**, **Roof Type**, **System Type**
 - **Support tickets** (count and status) and **documents** (in Key Artifacts)
@@ -187,7 +188,7 @@ Each project displays:
 
 | Surface | What you see |
 | :-- | :-- |
-| **Projects** list | **Needs review** filter; active-filter chip; amber **Review** pill on matching rows |
+| **Projects** list | **Needs review** filter; active-filter chip; **Review** pill on matching rows (**red** when critical, amber otherwise) |
 | **Project detail** | Banner with each reason and **Fix →** (Edit) when you can edit |
 | **New / Edit Project** | Most flags are reminders only. **Commissioning before confirmation** or **advance greater than order value** opens a warning: **Go back** or **Save anyway** (the save is not rejected) |
 | **Zenith → Things needing attention** | Card beside **Today's plan** (Today / KPIs). Count chips filter the card **in place**. **Projects →** opens the list with the same slice. Incomplete **Lost** rows are **not** listed here |
@@ -203,7 +204,7 @@ Each project displays:
 | **Missing confirmation** | Status is Confirmed or later, but confirmation date is empty |
 | **Incomplete Lost** | Status is Lost, but lost date and/or reason is missing — on **detail** and when the Projects list includes **Lost**; not on the Zenith attention card |
 | **Dates reversed** | Expected commissioning is **before** confirmation — **Save anyway** on save |
-| **Confirm date too early** | A confirmation date is set while status is still Lead, Site Survey, or Proposal |
+| **Expired confirmation** | Confirmation date is already past and status is still Lead, Site Survey, or Proposal — **red**. A future confirmation date on an early-stage deal is expected and is **not** a review issue |
 | **Stuck in stage** | Time in the current stage is past Deal Health expected days (Lead 7, Site Survey 14, Proposal 21, Confirmed 30, Under Installation 60, Subsidy submitted 21) |
 | **No advance** | Confirmed or later, order value above ₹0, payment still Pending, advance ₹0 |
 | **Advance overdue** | Same as no advance, and more than **14 days** after confirmation |
