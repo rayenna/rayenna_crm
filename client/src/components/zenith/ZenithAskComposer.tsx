@@ -1,5 +1,6 @@
 import { type FormEvent } from 'react'
-import { ArrowUp, Mic, MicOff, Sparkles, X } from 'lucide-react'
+import { ArrowUp, Mic, MicOff, X } from 'lucide-react'
+import { ZenithAskIcon } from './zenithAskIcon'
 import { useZenithAskSpeech } from '../../hooks/useZenithAskSpeech'
 
 type AskSubmitSource = 'typed' | 'dictate'
@@ -15,6 +16,8 @@ type Props = {
   inputId?: string
   remainingAsks?: number | null
   mappedLabel?: string | null
+  /** Parent already shows the Ask Zenith heading (e.g. the floating dock). */
+  hideTitle?: boolean
 }
 
 /**
@@ -30,6 +33,7 @@ export default function ZenithAskComposer({
   inputId = 'zenith-ask-input',
   remainingAsks = null,
   mappedLabel = null,
+  hideTitle = false,
 }: Props) {
   const askSpeech = useZenithAskSpeech({
     enabled: isOnline && !loading,
@@ -57,6 +61,8 @@ export default function ZenithAskComposer({
   }
 
   const hasText = Boolean(value.trim())
+  const showHeader =
+    !hideTitle || Boolean(loading && mappedLabel) || hasText || askSpeech.listening
 
   return (
     <form
@@ -66,42 +72,46 @@ export default function ZenithAskComposer({
       aria-label="Zenith Ask"
     >
       <div className="zenith-ask-composer__shell">
-        <div className="zenith-ask-composer__header">
-          <span className="zenith-ask-composer__badge">
-            <Sparkles className="w-3.5 h-3.5" aria-hidden />
-            Ask Zenith
-            {remainingAsks != null ? (
-              <span className="zenith-ask-composer__quota">
-                {remainingAsks} left
-              </span>
-            ) : null}
-          </span>
-          <div className="zenith-ask-composer__header-meta">
-            {loading && mappedLabel ? (
-              <span className="zenith-ask-composer__hint">Mapped: {mappedLabel}</span>
-            ) : hasText || askSpeech.listening ? (
-              <button
-                type="button"
-                onClick={handleClear}
-                disabled={loading}
-                className="zenith-ask-composer__clear"
-                title="Clear text"
-                aria-label="Clear ask text"
-              >
-                <X className="w-3.5 h-3.5" aria-hidden strokeWidth={2.5} />
-                <span>Clear</span>
-              </button>
-            ) : (
-              <span className="zenith-ask-composer__hint">
-                {isOnline
-                  ? touchLayout
-                    ? 'Type or speak'
-                    : 'Type, speak, or press /'
-                  : 'Needs connection'}
+        {showHeader ? (
+          <div className="zenith-ask-composer__header">
+            {hideTitle ? null : (
+              <span className="zenith-ask-composer__badge">
+                <ZenithAskIcon className="w-3.5 h-3.5" aria-hidden />
+                Ask Zenith
+                {remainingAsks != null ? (
+                  <span className="zenith-ask-composer__quota">
+                    {remainingAsks} left
+                  </span>
+                ) : null}
               </span>
             )}
+            <div className="zenith-ask-composer__header-meta">
+              {loading && mappedLabel ? (
+                <span className="zenith-ask-composer__hint">Mapped: {mappedLabel}</span>
+              ) : hasText || askSpeech.listening ? (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  disabled={loading}
+                  className="zenith-ask-composer__clear"
+                  title="Clear text"
+                  aria-label="Clear ask text"
+                >
+                  <X className="w-3.5 h-3.5" aria-hidden strokeWidth={2.5} />
+                  <span>Clear</span>
+                </button>
+              ) : hideTitle ? null : (
+                <span className="zenith-ask-composer__hint">
+                  {isOnline
+                    ? touchLayout
+                      ? 'Type or speak'
+                      : 'Type, speak, or press /'
+                    : 'Needs connection'}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <label className="sr-only" htmlFor={inputId}>
           Ask Zenith

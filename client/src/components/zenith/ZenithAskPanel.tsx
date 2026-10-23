@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Sparkles, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
+import { ZenithAskIcon } from './zenithAskIcon'
 import type {
   ZenithAskHistoryItem,
   ZenithNlCatalogHint,
@@ -390,7 +391,7 @@ export default function ZenithAskPanel({
           ) : (
             <>
               <p className="zenith-ask-result__eyebrow">
-                <Sparkles className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
+                <ZenithAskIcon className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
                 Zenith Ask
                 {datePhrase ? (
                   <span className="zenith-ask-result__filters"> · Using {datePhrase}</span>

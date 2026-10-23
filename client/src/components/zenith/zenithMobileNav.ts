@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, LayoutGrid, MessageSquareText, MoreHorizontal, Target, TrendingUp } from 'lucide-react'
+import { BarChart3, LayoutGrid, MoreHorizontal, Target, TrendingUp } from 'lucide-react'
+import { ZenithAskIcon } from './zenithAskIcon'
 import { UserRole } from '../../types'
 
 export type ZenithMobileTab = 'overview' | 'ask' | 'pipeline' | 'charts' | 'more'
@@ -25,7 +26,7 @@ export function getZenithMobileNavItems(
       role === UserRole.OPERATIONS ||
       role === UserRole.FINANCE)
 
-  const askItem: ZenithMobileNavItem = { id: 'ask', label: 'Ask', icon: MessageSquareText }
+  const askItem: ZenithMobileNavItem = { id: 'ask', label: 'Ask', icon: ZenithAskIcon }
 
   switch (role) {
     case UserRole.SALES:

@@ -3339,13 +3339,41 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.4rem;
 }
 
 .zenith-ask-dock__title {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--accent-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+  background: linear-gradient(
+    120deg,
+    var(--accent-gold) 0%,
+    color-mix(in srgb, var(--accent-gold) 70%, #c9a227) 100%
+  );
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-gold) 40%, transparent);
+}
+
+.zenith-ask-dock__title .zenith-ask-composer__quota {
+  color: color-mix(in srgb, var(--text-inverse) 82%, #000 18%);
+}
+
+/* Dock composer has no badge — give that width to the input. Keep the original one-row bar. */
+@media (min-width: 1024px) {
+  .zenith-root.zenith-ask-dock .zenith-ask-composer__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
 }
 
 .zenith-root .zenith-ask-adoption,

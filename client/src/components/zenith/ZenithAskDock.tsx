@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Sparkles, X } from 'lucide-react'
+import { X } from 'lucide-react'
+import { ZenithAskIcon } from './zenithAskIcon'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -44,6 +45,7 @@ export function ZenithAskNavButton() {
       type="button"
       className="zenith-ask-dock-launcher"
       title="Ask Zenith"
+      aria-label="Ask Zenith"
       onClick={() => {
         if (onZenith) {
           navigate('/zenith?askFocus=1')
@@ -52,7 +54,7 @@ export function ZenithAskNavButton() {
         openZenithAskDock({ focus: true })
       }}
     >
-      <Sparkles className="h-4 w-4" aria-hidden />
+      <ZenithAskIcon className="h-4 w-4" aria-hidden />
       <span className="hidden lg:inline">Ask</span>
     </button>
   )
@@ -195,7 +197,13 @@ export default function ZenithAskDock() {
   const overlay = (
     <div className="zenith-root zenith-ask-dock" role="dialog" aria-label="Ask Zenith">
       <div className="zenith-ask-dock__bar">
-        <p className="zenith-ask-dock__title">Ask Zenith</p>
+        <p className="zenith-ask-dock__title">
+          <ZenithAskIcon className="h-3.5 w-3.5" aria-hidden />
+          Ask Zenith
+          {remainingAsks != null ? (
+            <span className="zenith-ask-composer__quota">{remainingAsks} left</span>
+          ) : null}
+        </p>
         <button
           type="button"
           className="zenith-ask-result__close"
@@ -212,8 +220,8 @@ export default function ZenithAskDock() {
         loading={askLoading}
         isOnline
         inputId="zenith-ask-dock-input"
-        remainingAsks={remainingAsks}
         mappedLabel={mapped}
+        hideTitle
       />
       {!askResult && !askLoading && !askError ? (
         <div className="zenith-ask-examples zenith-ask-examples--panel">

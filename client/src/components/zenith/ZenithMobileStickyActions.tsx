@@ -1,4 +1,5 @@
-import { ArrowUp, MessageSquareText, Sparkles } from 'lucide-react'
+import { ArrowUp, Sparkles } from 'lucide-react'
+import { ZenithAskIcon } from './zenithAskIcon'
 import { scrollToZenithElementId } from './zenithScrollToSection'
 
 type Props = {
@@ -27,7 +28,7 @@ export default function ZenithMobileStickyActions({
           title="Ask Zenith"
           className="zenith-mobile-sticky-btn zenith-mobile-sticky-btn--ask touch-manipulation"
         >
-          <MessageSquareText className="h-5 w-5" aria-hidden />
+          <ZenithAskIcon className="h-5 w-5" aria-hidden />
           <span className="sr-only">Ask Zenith</span>
         </button>
       ) : null}
