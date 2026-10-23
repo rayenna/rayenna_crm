@@ -84,6 +84,7 @@ const SORT_LABELS: Record<string, string> = {
   projectCost: 'Sort: order value',
   confirmationDate: 'Sort: confirmation date',
   creationDate: 'Sort: created date',
+  modifiedDate: 'Sort: modified date',
   profitability: 'Sort: profitability',
   slNo: 'Sort: SL no.',
   leadSource: 'Sort: lead source',

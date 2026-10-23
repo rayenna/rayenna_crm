@@ -90,6 +90,7 @@ function defaultOrderForProjectsSortKey(key: string): 'asc' | 'desc' {
     'dealHealthScore',
     'profitability',
     'creationDate',
+    'modifiedDate',
     'slNo',
   ])
   return descFirst.has(key) ? 'desc' : 'asc'
@@ -1938,8 +1939,9 @@ const Projects = () => {
                           { value: 'paymentStatus', label: 'Payment status' },
                           { value: 'leadSource', label: 'Lead source' },
                           { value: 'confirmationDate', label: 'Confirmation date' },
-                          { value: 'profitability', label: 'Profitability' },
                           { value: 'creationDate', label: 'Creation date' },
+                          { value: 'modifiedDate', label: 'Modified date' },
+                          { value: 'profitability', label: 'Profitability' },
                           { value: 'slNo', label: 'Project number (#)' },
                         ]}
                         allowEmpty

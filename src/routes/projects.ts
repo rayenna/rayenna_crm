@@ -185,6 +185,9 @@ function buildProjectsTableOrderBy(
     case 'creationDate':
       orderBy = [{ createdAt: order }];
       break;
+    case 'modifiedDate':
+      orderBy = [{ updatedAt: order }, { createdAt: 'desc' }];
+      break;
     case 'profitability':
       orderBy = [
         { profitability: order === 'asc' ? nullsAsc : nullsDesc },
@@ -234,6 +237,7 @@ router.get(
         'projectCost',
         'confirmationDate',
         'creationDate',
+        'modifiedDate',
         'profitability',
         'customerName',
         'dealHealthScore',
@@ -2359,6 +2363,7 @@ const projectsExportSortValidators = [
       'projectCost',
       'confirmationDate',
       'creationDate',
+      'modifiedDate',
       'profitability',
       'customerName',
       'dealHealthScore',
