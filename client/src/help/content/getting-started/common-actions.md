@@ -169,8 +169,8 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 **For a project**
 1. Open **Project detail**.
-2. Click the yellow **Proposals** button when it is shown (always on **Proposal** and **Confirmed**; on later stages when a proposal is already stored).
-3. On **Under Installation**, **Completed**, or **Completed - Subsidy Credited**, confirm the closed-project notice, then continue.
+2. Click the yellow **Proposals** button when it is shown (always on **Proposal** and **Confirmed**; on later stages — including **Lost** — when a proposal is already stored).
+3. On **Under Installation**, **Completed**, or **Completed - Subsidy Credited**, confirm the closed-project notice, then continue. On **Lost**, confirm **This is a Lost Project.**, then continue.
 
 **For the PE list (no project selected)**
 1. Open **More** (desktop) or the hamburger menu.

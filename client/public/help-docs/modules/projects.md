@@ -173,12 +173,13 @@ The yellow **Proposals** button on **Project detail** opens the Proposal Engine 
 **When Proposals appears** (Sales, Operations, Management, Finance, Admin):
 
 - Always on **Proposal** and **Confirmed**.
-- On **any other stage**, including **Under Installation**, **Completed**, and **Completed - Subsidy Credited**, when costing, BOM, ROI, or a proposal is already stored in Proposal Engine.
+- On **any other stage**, including **Under Installation**, **Completed**, **Completed - Subsidy Credited**, and **Lost**, when costing, BOM, ROI, or a proposal is already stored in Proposal Engine. Open a Lost deal from **Lost Deals** (or Project detail) to see **Proposals** if work was saved.
 
 **Before Proposal Engine opens**
 
 - **Proposal** / **Confirmed**: if required project data is incomplete, you see a quality warning and can continue or cancel.
 - **Under Installation**, **Completed**, and **Completed - Subsidy Credited**: a short notice — **This is a closed project that is [stage]**. Continue or Cancel. The incomplete-data warning is not used on these stages.
+- **Lost**: a warning — **This is a Lost Project.** Continue or Cancel. The incomplete-data warning is not used.
 
 **Open the PE list with no project selected**
 

@@ -81,4 +81,18 @@ describe('dimensionFilters', () => {
     expect(extractZenithDimensions('SLA status indicators').wantsSlaMix).toBe(true);
     expect(extractZenithDimensions('projects in Kochi').city?.toLowerCase()).toContain('kochi');
   });
+
+  it('extracts Lost deals and active PE Ready/Draft', () => {
+    const lost = extractZenithDimensions(
+      'List the Lost Deals that have Active Proposals in Proposal Engine',
+    );
+    expect(lost.projectStatus).toBe('LOST');
+    expect(lost.peBucket).toBe('active');
+    const anyStage = extractZenithDimensions(
+      'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
+    );
+    expect(anyStage.projectStatus).toBeUndefined();
+    expect(anyStage.peBucket).toBe('active');
+    expect(anyStage.city).toBeUndefined();
+  });
 });

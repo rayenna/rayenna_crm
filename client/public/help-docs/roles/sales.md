@@ -58,7 +58,7 @@ Turn on **Needs review** to list deals whose dates, payments, or system size do 
 
 ### Proposals
 
-Use **Proposals** on Project detail for **Proposal** or **Confirmed**, and on later stages when a proposal is already stored. Closed stages (**Under Installation**, **Completed**, **Completed - Subsidy Credited**) show a short closed-project notice first. **More → Proposal Engine** opens the PE list with no project selected. [Projects → Proposal Engine](/help/modules#proposal-engine)
+Use **Proposals** on Project detail for **Proposal** or **Confirmed**, and on later stages when a proposal is already stored, including **Lost**. Closed stages (**Under Installation**, **Completed**, **Completed - Subsidy Credited**) show a short closed-project notice first. **Lost** shows **This is a Lost Project.** first. **More → Proposal Engine** opens the PE list with no project selected. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Support tickets
 

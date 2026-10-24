@@ -225,7 +225,8 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     availingLoanActive: availingLoan === 'true',
     pendingSubsidyActive: pendingSubsidy === 'true',
     peBucket:
-      typeof peBucket === 'string' && ['proposal-ready', 'draft', 'not-started', 'rest'].includes(peBucket)
+      typeof peBucket === 'string' &&
+      ['proposal-ready', 'draft', 'not-started', 'rest', 'active'].includes(peBucket)
         ? peBucket
         : null,
     zenithClosedFrom: typeof zenithClosedFrom === 'string' ? zenithClosedFrom : null,
@@ -708,10 +709,20 @@ export function buildProjectsWhere(
                   },
                 ],
               }
-            : {
-                peSelection: { is: null },
-                projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] },
-              };
+            : filters.peBucket === 'active'
+              ? {
+                  peSelection: { isNot: null },
+                  OR: [
+                    { peCostingSheets: { some: {} } },
+                    { peBomSheets: { some: {} } },
+                    { peRoiResults: { some: {} } },
+                    { peProposals: { some: {} } },
+                  ],
+                }
+              : {
+                  peSelection: { is: null },
+                  projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] },
+                };
 
     pushOntoWhereAnd(where, peBucketClause);
   }
@@ -817,5 +828,5 @@ export const projectsListQueryValidators = [
   query('installationStatus').optional().isIn(Object.values(InstallationStatus)),
   query('paymentMode').optional().isIn(Object.values(PaymentMode)),
   query('notAvailingLoan').optional().isIn(['true']),
-  query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
+  query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest', 'active']),
 ];

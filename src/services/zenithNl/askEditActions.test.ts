@@ -37,6 +37,21 @@ describe('matchAskEditActionIntent', () => {
     expect(m?.autoNavigate).toBe(true);
   });
 
+  it('does not steal PE Ready/Draft deal lists into open-proposal', async () => {
+    expect(
+      await matchAskEditActionIntent(
+        'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
+        UserRole.ADMIN,
+      ),
+    ).toBeNull();
+    expect(
+      await matchAskEditActionIntent(
+        'List lost deals with active PE proposals',
+        UserRole.MANAGEMENT,
+      ),
+    ).toBeNull();
+  });
+
   it('opens a blank ticket form when SL is not found', async () => {
     const m = await matchAskEditActionIntent(
       'Create a ticket for SL 99999 inverter fault',

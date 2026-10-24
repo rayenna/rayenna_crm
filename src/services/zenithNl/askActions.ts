@@ -139,6 +139,21 @@ function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Ask analytics list of PE Ready/Draft deals — do not navigate to Lost Deals or a single PE bucket. */
+export function wantsPeDealList(key: string): boolean {
+  const q = key.trim().toLowerCase().replace(/\s+/g, ' ');
+  const listLike = /\b(list|show|which|find)\b/.test(q) && /\b(deals?|projects?)\b/.test(q);
+  const bothReadyAndDraft =
+    /\b(pe\s+ready|proposal[- ]ready)\b/.test(q) && /\bdrafts?\b/.test(q);
+  const active =
+    /\bactive\s+(pe\s+)?proposals?\b/.test(q) || /\bactive\s+\(?\s*pe\s+ready/.test(q);
+  if (active || bothReadyAndDraft) return true;
+  return (
+    listLike &&
+    /\b(proposal\s+engine|pe\s+ready|pe\s+draft|proposal[- ]ready)\b/.test(q)
+  );
+}
+
 /** Payment not complete — PENDING + PARTIAL (not FULLY_PAID). */
 export function wantsNotFullyPaidPayment(key: string): boolean {
   const q = key.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -545,7 +560,7 @@ export function matchAskActionIntent(
       'Opening projects needing review…',
     );
   }
-  if (/\bproposal\s+engine\b/.test(key) && /\bnot\s+started\b/.test(key)) {
+  if (!wantsPeDealList(key) && /\bproposal\s+engine\b/.test(key) && /\bnot\s+started\b/.test(key)) {
     if (!actionAllowedForRole('pe_not_started', role)) return null;
     return build(
       'pe_not_started',
@@ -554,7 +569,7 @@ export function matchAskActionIntent(
       'Opening Proposal Engine — not started…',
     );
   }
-  if (/\bproposal\s+engine\b/.test(key) && /\bdrafts?\b/.test(key)) {
+  if (!wantsPeDealList(key) && /\bproposal\s+engine\b/.test(key) && /\bdrafts?\b/.test(key)) {
     if (!actionAllowedForRole('pe_draft', role)) return null;
     return build(
       'pe_draft',
@@ -563,7 +578,7 @@ export function matchAskActionIntent(
       'Opening Proposal Engine drafts…',
     );
   }
-  if (/\bproposal\s+engine\b/.test(key) && /\b(ready|proposal[- ]ready)\b/.test(key)) {
+  if (!wantsPeDealList(key) && /\bproposal\s+engine\b/.test(key) && /\b(ready|proposal[- ]ready)\b/.test(key)) {
     if (!actionAllowedForRole('pe_ready', role)) return null;
     return build(
       'pe_ready',
@@ -601,7 +616,8 @@ export function matchAskActionIntent(
   }
   if (
     /\blost\s+deals?\b/.test(key) &&
-    !/\b(summarise|summarize|reason|by reason|details?)\b/.test(key)
+    !/\b(summarise|summarize|reason|by reason|details?)\b/.test(key) &&
+    !wantsPeDealList(key)
   ) {
     if (!actionAllowedForRole('go_lost_deals', role)) return null;
     return build('go_lost_deals', '/lost-deals', 'Lost Deals', 'Opening Lost Deals…');

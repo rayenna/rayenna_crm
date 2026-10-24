@@ -99,7 +99,7 @@ function defaultOrderForProjectsSortKey(key: string): 'asc' | 'desc' {
 /** Valid paymentStatus URL params (matches paymentStatusOptions values) */
 const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
-const VALID_PE_BUCKET_VALUES = ['proposal-ready', 'draft', 'not-started', 'rest'] as const
+const VALID_PE_BUCKET_VALUES = ['proposal-ready', 'draft', 'not-started', 'rest', 'active'] as const
 
 function parsePeBucketFromSearch(search: string): PeBucketParam | null {
   const p = new URLSearchParams(search)

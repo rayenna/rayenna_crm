@@ -34,6 +34,11 @@ import { loadLiveAskBook } from '../services/zenithNl/askExampleLive';
 import { moreQuestionsForRole, suggestedQuestionsForRole } from '../services/zenithNl/catalog';
 import { logZenithAskEvent } from '../utils/auditLogger';
 import { countFromStatusGroupBy } from '../utils/dashboardStatusCounts';
+import {
+  loadPeArtifactFlagSets,
+  peArtifactFlagsForProject,
+  peDocumentStatusFromFlags,
+} from '../utils/peProjectArtifactFlags';
 
 const router = express.Router();
 
@@ -2260,6 +2265,8 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
       .map(([fy, v]) => ({ fy, count: v.count, value: v.value }))
       .sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
 
+    const peSets = await loadPeArtifactFlagSets(lostProjects.map((p) => p.id));
+
     res.json({
       summary: {
         lostCount,
@@ -2286,6 +2293,9 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
         lostOtherReason: p.lostOtherReason,
         lostDate: p.lostDate?.toISOString() ?? null,
         confirmationDate: p.confirmationDate?.toISOString() ?? null,
+        peReady:
+          peDocumentStatusFromFlags(peArtifactFlagsForProject(p.id, peSets)) ===
+          'proposal-ready',
       })),
     });
   } catch (error: any) {

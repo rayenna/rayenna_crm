@@ -23,8 +23,9 @@
 
 - **Phones (under ~744px):** **cards** — customer, value, Uncategorized/reason; **tap the whole card** to open the project.
 - **Wider screens:** sortable **table**; **tap the row** (or # / customer) to open the project.
-- **Search** — customer, project #, salesperson, or reason text.
-- **How to read this list** — short legend for Uncategorized, competition subtypes, and value.
+- **PE Ready icon** — a small gold proposal icon next to the customer name means a **PE Ready** proposal is still stored in Proposal Engine (all four artifacts saved). Open the project and use **Proposals** to review it.
+- **Search** — customer, project #, salesperson, or reason text. Type **PE Ready** to list only those with a saved proposal.
+- **How to read this list** — short legend for Uncategorized, competition subtypes, the PE Ready icon, and value.
 - **Filter: uncategorized** — one tap for deals with no Lost reason (same as the cue / banner).
 
 Filters and search apply on the already-loaded lost projects for the date scope (client-side).

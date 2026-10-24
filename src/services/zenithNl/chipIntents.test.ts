@@ -271,4 +271,47 @@ describe('matchPhraseChipIntent', () => {
     expect(intent?.metric).toBe('customers_list_slice');
     expect(intent?.filters?.city).toMatch(/kochi/i);
   });
+
+  it('lists Lost deals with active PE proposals instead of bucket counts', () => {
+    const exact = matchExactChipIntent(
+      'List the Lost Deals that have Active Proposals in Proposal Engine',
+      UserRole.ADMIN,
+    );
+    expect(exact?.metric).toBe('projects_list_slice');
+    expect(exact?.filters).toEqual({ projectStatus: 'LOST', peBucket: 'active' });
+    const paraphrased = matchExactChipIntent(
+      'Show lost deals with active PE proposals',
+      UserRole.SALES,
+    );
+    expect(paraphrased?.metric).toBe('projects_list_slice');
+    expect(paraphrased?.filters?.projectStatus).toBe('LOST');
+    expect(paraphrased?.filters?.peBucket).toBe('active');
+  });
+
+  it('lists any-stage deals with PE Ready or Draft', () => {
+    const exact = matchExactChipIntent(
+      'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
+      UserRole.MANAGEMENT,
+    );
+    expect(exact?.metric).toBe('projects_list_slice');
+    expect(exact?.filters).toEqual({ peBucket: 'active' });
+    const chip = matchExactChipIntent(
+      'List deals with PE Ready or Draft proposals',
+      UserRole.ADMIN,
+    );
+    expect(chip?.filters?.peBucket).toBe('active');
+    expect(chip?.filters?.projectStatus).toBeUndefined();
+  });
+
+  it('lists PE Ready / Draft projects instead of bucket counts', () => {
+    expect(matchExactChipIntent('Show PE Ready projects', UserRole.ADMIN)?.filters?.peBucket).toBe(
+      'proposal-ready',
+    );
+    expect(matchExactChipIntent('Show PE Draft projects', UserRole.SALES)?.filters?.peBucket).toBe(
+      'draft',
+    );
+    expect(matchExactChipIntent('What is my Proposal Engine status?', UserRole.ADMIN)?.metric).toBe(
+      'proposal_engine_buckets',
+    );
+  });
 });

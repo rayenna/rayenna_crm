@@ -83,4 +83,26 @@ describe('matchAskActionIntent', () => {
     expect(wantsNotFullyPaidPayment('not fully paid')).toBe(true);
     expect(wantsNotFullyPaidPayment('under installation only')).toBe(false);
   });
+
+  it('does not navigate away from Lost + active PE list questions', () => {
+    expect(
+      matchAskActionIntent(
+        'List the Lost Deals that have Active Proposals in Proposal Engine',
+        UserRole.ADMIN,
+      ),
+    ).toBeNull();
+    expect(
+      matchAskActionIntent(
+        'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
+        UserRole.MANAGEMENT,
+      ),
+    ).toBeNull();
+  });
+
+  it('still opens Lost Deals and PE Drafts as shortcuts', () => {
+    expect(matchAskActionIntent('Lost Deals', UserRole.ADMIN)?.href).toBe('/lost-deals');
+    expect(matchAskActionIntent('Proposal Engine drafts', UserRole.ADMIN)?.href).toBe(
+      '/projects?peBucket=draft',
+    );
+  });
 });

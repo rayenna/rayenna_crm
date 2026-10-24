@@ -6,6 +6,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '../../prisma';
 import {
   actionAllowedForRole,
+  wantsPeDealList,
   type ZenithAskActionMatch,
   type ZenithAskActionId,
 } from './askActions';
@@ -67,7 +68,9 @@ export async function matchAskEditActionIntent(
   if (
     /\b(open|draft|show|generate)\b/.test(q) &&
     /\b(proposal|pe)\b/.test(q) &&
-    !/\b(engine\s+buckets?|missing\s+bom|status\s+breakdown)\b/.test(q)
+    !/\b(engine\s+buckets?|missing\s+bom|status\s+breakdown)\b/.test(q) &&
+    !wantsPeDealList(q) &&
+    !/\b(list|which|find)\b/.test(q)
   ) {
     if (!actionAllowedForRole('open_proposal', role)) return null;
     const sl = parseSlNo(q);

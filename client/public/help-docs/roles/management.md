@@ -23,7 +23,7 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 
 **Zenith:** executive **Your focus**, Hit List, and landscape charts. [Zenith command center](/help/zenith#zenith-command-center)
 
-**Proposal Engine card:** visible for Management (with Sales and Admin) when monitoring proposal-stage work. **More → Proposal Engine** opens the PE Customers/Projects list with no project selected. On Project detail, **Proposals** appears on **Proposal** / **Confirmed** and on later stages when a proposal is already stored. [Projects → Proposal Engine](/help/modules#proposal-engine)
+**Proposal Engine card:** visible for Management (with Sales and Admin) when monitoring proposal-stage work. **More → Proposal Engine** opens the PE Customers/Projects list with no project selected. On Project detail, **Proposals** appears on **Proposal** / **Confirmed** and on later stages when a proposal is already stored, including **Lost**. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Projects (read-only)
 
@@ -35,7 +35,7 @@ Use filters (salesperson, status, PE buckets, **Needs review**) to review team d
 
 ## Lost Deals
 
-Open **Lost Deals** from the menu for lost count / ₹, win rates, reason mix, and a working list of lost projects. Tap a chart slice to filter the list; finish tagging **Reason for Loss** on the project when deals are uncategorized. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
+Open **Lost Deals** from the menu for lost count / ₹, win rates, reason mix, and a working list of lost projects. A gold **proposal icon** next to a customer means a **PE Ready** proposal is still in Proposal Engine. Tap a chart slice to filter the list; finish tagging **Reason for Loss** on the project when deals are uncategorized. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Customers (limited write)
 

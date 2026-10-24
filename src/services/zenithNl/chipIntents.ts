@@ -352,6 +352,44 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     insightHints: 'proposal engine buckets',
   },
+  [norm('List lost deals with active PE proposals')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectStatus: 'LOST', peBucket: 'active' },
+    insightHints: 'lost deals with active PE',
+  },
+  [norm('List the Lost Deals that have Active Proposals in Proposal Engine')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { projectStatus: 'LOST', peBucket: 'active' },
+    insightHints: 'lost deals with active PE',
+  },
+  [norm('List deals with PE Ready or Draft proposals')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { peBucket: 'active' },
+    insightHints: 'deals with PE Ready or Draft',
+  },
+  [norm(
+    'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
+  )]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { peBucket: 'active' },
+    insightHints: 'deals with PE Ready or Draft',
+  },
+  [norm('Show PE Ready projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { peBucket: 'proposal-ready' },
+    insightHints: 'PE Ready projects',
+  },
+  [norm('Show PE Draft projects')]: {
+    metric: 'projects_list_slice',
+    viz: 'table',
+    filters: { peBucket: 'draft' },
+    insightHints: 'PE Draft projects',
+  },
   [norm('Which customers have the highest profit?')]: {
     metric: 'top_customers_by_profit',
     viz: 'table',
@@ -776,6 +814,68 @@ type PhraseSalvage = {
 };
 
 const PHRASE_SALVAGE: PhraseSalvage[] = [
+  {
+    // Lost deals that still have PE Ready or PE Draft work.
+    test: (q) =>
+      /\b(list|show|which|find)\b/.test(q) &&
+      /\b(lost\s+deals?|lost\s+projects?)\b/.test(q) &&
+      !/\b(by\s+reason|summaris|summary)\b/.test(q) &&
+      /\b(proposal\s+engine|active\s+(pe\s+)?proposals?|pe\s+ready|proposal[- ]ready|pe\s+draft)\b/.test(
+        q,
+      ),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { projectStatus: 'LOST', peBucket: 'active' },
+      insightHints: 'lost deals with active PE',
+    },
+  },
+  {
+    // Any-stage deals with PE Ready and/or Draft (active proposals).
+    test: (q) =>
+      /\b(list|show|which|find)\b/.test(q) &&
+      /\b(deals?|projects?)\b/.test(q) &&
+      !/\blost\b/.test(q) &&
+      !/\b(by\s+reason|summaris|status|buckets?|counts?)\b/.test(q) &&
+      (/\bactive\s+(pe\s+)?(proposals?|proposal\s+engine)\b/.test(q) ||
+        (/\b(pe\s+ready|proposal[- ]ready)\b/.test(q) && /\bdraft\b/.test(q)) ||
+        (/\bany\s+stage\b/.test(q) &&
+          /\b(proposal\s+engine|pe\s+ready|pe\s+draft|active)\b/.test(q))),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { peBucket: 'active' },
+      insightHints: 'deals with PE Ready or Draft',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(list|show)\b/.test(q) &&
+      /\b(pe\s+ready|proposal[- ]ready)\b/.test(q) &&
+      !/\bdraft\b/.test(q) &&
+      !/\blost\b/.test(q) &&
+      /\b(projects?|deals?)\b/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { peBucket: 'proposal-ready' },
+      insightHints: 'PE Ready projects',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(list|show)\b/.test(q) &&
+      /\b(pe\s+draft|proposal\s+engine\s+draft)\b/.test(q) &&
+      !/\b(pe\s+ready|proposal[- ]ready)\b/.test(q) &&
+      !/\blost\b/.test(q) &&
+      /\b(projects?|deals?)\b/.test(q),
+    intent: {
+      metric: 'projects_list_slice',
+      viz: 'table',
+      filters: { peBucket: 'draft' },
+      insightHints: 'PE Draft projects',
+    },
+  },
   {
     // Under installation where payment is not complete (PENDING + PARTIAL).
     test: (q) =>
@@ -1227,7 +1327,12 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
   },
   {
     test: (q) =>
-      /\b(proposal\s+engine|pe\s+(status|buckets?)|proposal[- ]ready)\b/.test(q),
+      /\b(proposal\s+engine|pe\s+(status|buckets?)|proposal[- ]ready)\b/.test(q) &&
+      !(
+        /\b(list|show|which|find)\b/.test(q) &&
+        /\b(projects?|deals?)\b/.test(q)
+      ) &&
+      !/\bactive\s+(pe\s+)?proposals?\b/.test(q),
     intent: {
       metric: 'proposal_engine_buckets',
       viz: 'table',

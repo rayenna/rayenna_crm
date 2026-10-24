@@ -70,7 +70,7 @@ export type ZenithNlIntent = {
     paymentStatus?: string;
     /** Installation record status: PENDING | IN_PROGRESS | COMPLETED (not project stage) */
     installationStatus?: string;
-    peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+    peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest' | 'active';
     leadSource?: string;
     search?: string;
     /** Canonical panel brand label (e.g. Adani Solar) or distinctive token. */
@@ -364,14 +364,15 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'proposal_engine_buckets',
-    description: 'Proposal Engine buckets: Ready, Draft, Not Yet Created, Rest',
+    description:
+      'Proposal Engine bucket counts (Ready, Draft, Not Yet Created, Rest). For a deal list use projects_list_slice with peBucket active|proposal-ready|draft',
     defaultViz: 'table',
     roles: EXEC,
   },
   {
     metric: 'projects_list_slice',
     description:
-      'Show a filtered list of projects matching status, payment, PE bucket, customer search, panel brand, inverter brand, or financing bank',
+      'Show a filtered list of projects/deals matching status, payment, PE bucket (including active = PE Ready or Draft), customer search, panel brand, inverter brand, or financing bank. Lost + active PE → projectStatus=LOST and peBucket=active',
     defaultViz: 'table',
     roles: ALL_ASK,
   },
@@ -703,18 +704,18 @@ export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Show my ageing pipeline',
     'Show my pipeline by stage',
-    "What's my weighted pipeline?",
-    'Payment status breakdown',
+    'List lost deals with active PE proposals',
+    'List deals with PE Ready or Draft proposals',
   ],
   MANAGEMENT: [
     'DCR vs Non-DCR profitability',
-    'Salesperson profitability',
-    'City profitability',
+    'List lost deals with active PE proposals',
+    'List deals with PE Ready or Draft proposals',
     "What's my weighted pipeline?",
   ],
   ADMIN: [
-    'Ops workload',
-    'Salesperson profitability',
+    'List lost deals with active PE proposals',
+    'List deals with PE Ready or Draft proposals',
     'PE missing BOM',
     "What's my weighted pipeline?",
   ],
@@ -923,13 +924,13 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Show capacity sold',
     ],
     lost_deals_summary: [
-      'Revenue by salesperson',
+      'List lost deals with active PE proposals',
       'Pipeline by stage',
       'Which lead sources drove revenue?',
     ],
     proposal_engine_buckets: [
       'Show PE Draft projects',
-      'Pipeline by stage',
+      'List deals with PE Ready or Draft proposals',
       'Show PE Ready projects',
     ],
     projects_list_slice: [

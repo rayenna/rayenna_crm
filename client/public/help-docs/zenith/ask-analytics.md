@@ -101,6 +101,13 @@ Quota: **60 asks / 10 minutes** per person. The composer shows how many are left
 ### Lost deals
 
 - Summarise lost deals by reason · Lost to competition reasons (price, features, timeline, brand, relationship)
+- **List the Lost Deals that have Active Proposals in Proposal Engine** — Lost deals that still have **PE Ready** or **PE Draft** work (not Not Yet Created)
+
+### Proposal Engine lists
+
+- **List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal Engine** — every stage, including Lost, Completed, and Under Installation, where costing/BOM/ROI/proposal is stored
+- **Show PE Ready projects** / **Show PE Draft projects** — one bucket at a time
+- **Proposal Engine bucket counts** — Ready / Draft / Not Yet Created / Rest totals (not a deal list)
 
 ### Filters you can say in a question
 

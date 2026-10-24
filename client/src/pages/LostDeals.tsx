@@ -32,6 +32,7 @@ import {
   type LostListInsightFilter,
 } from '../utils/lostDealsListInsightFilter'
 import LostDealsMobileCardList from '../components/lostDeals/LostDealsMobileCardList'
+import LostDealPeReadyIcon from '../components/lostDeals/LostDealPeReadyIcon'
 import LostDealsInsightsSection from '../components/lostDeals/LostDealsInsightsSection'
 import LostDealsHowToRead from '../components/lostDeals/LostDealsHowToRead'
 import LostDealsPageSkeleton from '../components/lostDeals/LostDealsPageSkeleton'
@@ -65,6 +66,7 @@ type LostDealsResponse = {
     lostOtherReason: string | null
     lostDate: string | null
     confirmationDate: string | null
+    peReady?: boolean
   }[]
 }
 
@@ -458,6 +460,7 @@ const LostDeals = () => {
           p.slNo != null ? String(p.slNo) : '',
           p.year ?? '',
           reason,
+          p.peReady ? 'pe ready proposal engine' : '',
         ]
           .join(' ')
           .toLowerCase()
@@ -842,14 +845,17 @@ const LostDeals = () => {
                               {p.slNo ?? '—'}
                             </Link>
                           </td>
-                          <td className="max-w-[12rem] truncate px-2 py-2 text-[color:var(--text-primary)]">
-                            <Link
-                              to={`/projects/${p.id}`}
-                              className="hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {p.customerName || '—'}
-                            </Link>
+                          <td className="max-w-[14rem] px-2 py-2 text-[color:var(--text-primary)]">
+                            <span className="inline-flex max-w-full items-center gap-1.5">
+                              <Link
+                                to={`/projects/${p.id}`}
+                                className="min-w-0 truncate hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {p.customerName || '—'}
+                              </Link>
+                              {p.peReady ? <LostDealPeReadyIcon /> : null}
+                            </span>
                           </td>
                           <td className="px-2 py-2 text-[color:var(--text-secondary)]">
                             {p.salespersonName || '—'}

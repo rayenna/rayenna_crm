@@ -57,6 +57,15 @@ function peClosedStageLabel(status: ProjectStatus | string): string {
   return 'Completed'
 }
 
+function needsPeOpenNotice(status: ProjectStatus | string): boolean {
+  return status === ProjectStatus.LOST || PE_CLOSED_STAGES.has(status as ProjectStatus)
+}
+
+function peOpenNoticeMessage(status: ProjectStatus | string): string {
+  if (status === ProjectStatus.LOST) return 'This is a Lost Project.'
+  return `This is a closed project that is ${peClosedStageLabel(status)}.`
+}
+
 function hasStoredPeWork(peStatus: 'none' | 'draft' | 'proposal-ready' | undefined): boolean {
   return peStatus === 'draft' || peStatus === 'proposal-ready'
 }
@@ -381,7 +390,7 @@ const ProjectDetail = () => {
 
   const handleProposalsClick = () => {
     if (!id || !project) return
-    if (PE_CLOSED_STAGES.has(project.projectStatus) && hasStoredPe) {
+    if (needsPeOpenNotice(project.projectStatus) && hasStoredPe) {
       setShowPeClosedConfirm(true)
       return
     }
@@ -533,13 +542,9 @@ const ProjectDetail = () => {
       <ErrorModal
         open={showPeClosedConfirm}
         onClose={() => setShowPeClosedConfirm(false)}
-        type="info"
+        type={project?.projectStatus === ProjectStatus.LOST ? 'warning' : 'info'}
         surface="zenith"
-        message={
-          project
-            ? `This is a closed project that is ${peClosedStageLabel(project.projectStatus)}.`
-            : ''
-        }
+        message={project ? peOpenNoticeMessage(project.projectStatus) : ''}
         actions={[
           { label: 'Cancel', variant: 'ghost', onClick: () => setShowPeClosedConfirm(false) },
           {

@@ -167,7 +167,7 @@ const OPEN_FORECAST_STATUSES: ProjectStatus[] = [
   ProjectStatus.SUBMITTED_FOR_SUBSIDY,
 ];
 
-type PeBucketKey = 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+type PeBucketKey = 'proposal-ready' | 'draft' | 'not-started' | 'rest' | 'active';
 
 export type ZenithNlQueryInput = {
   question: string;
@@ -260,7 +260,8 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
       filtersRaw.peBucket === 'proposal-ready' ||
       filtersRaw.peBucket === 'draft' ||
       filtersRaw.peBucket === 'not-started' ||
-      filtersRaw.peBucket === 'rest'
+      filtersRaw.peBucket === 'rest' ||
+      filtersRaw.peBucket === 'active'
         ? filtersRaw.peBucket
         : undefined;
     const panelBrand = resolvePanelBrand(
@@ -600,7 +601,7 @@ Rules:
   - projectStatus = CRM Project Status / stage only (LEAD|SITE_SURVEY|PROPOSAL|CONFIRMED|UNDER_INSTALLATION|SUBMITTED_FOR_SUBSIDY|COMPLETED|COMPLETED_SUBSIDY_CREDITED|LOST). "Under installation" → UNDER_INSTALLATION. Never use this for payment or Installation Status.
   - paymentStatus = Payment Status only (PENDING|PARTIAL|FULLY_PAID|NOT_FULLY_PAID). "Payment pending" / "fully paid" / "not fully paid" → here. Never map payment language to projectStatus.
   - installationStatus = Installation Status on Installation records only (PENDING|IN_PROGRESS|COMPLETED). "Installation pending" / "installation in progress" / "installation completed" → here. Distinct from projectStatus UNDER_INSTALLATION.
-  - peBucket (proposal-ready|draft|not-started|rest)
+  - peBucket (proposal-ready|draft|not-started|rest|active). "active PE" / "PE Ready or Draft" / "active proposals in Proposal Engine" → active (union of Ready + Draft). "list lost deals with active PE" → projects_list_slice, filters.projectStatus=LOST, peBucket=active. "list deals in any stage with PE Ready or Draft" → projects_list_slice, peBucket=active (no projectStatus).
   - leadSource (label or enum)
   - search (customer name ONLY — never put panel/inverter/bank names here)
   - panelBrand (e.g. "Adani Solar", "Waaree", "Vikram Solar" — from "Adani panels", "Adani Solar modules")
@@ -617,7 +618,7 @@ Rules:
   - "status of SL 123" / "what's the status of Ramesh" → project_detail_lookup with filters.search ("SL:123" or customer name)
   - "customer details for Ramesh" → customer_detail_lookup; "list customers in Kochi" → customers_list_slice
   - "show all apartments/residential/commercial in customer master" → customers_list_slice with filters.customerType (APARTMENT|RESIDENTIAL|COMMERCIAL); never put "customer master" in filters.city
-  - "list/show … projects" with any Projects-list filter (project status, payment status, installation status, type, customer type, city, salesperson, ops, loan, pending subsidy, documents, PE bucket, panel/inverter brand, bank, DCR, system/roof, capacity, hub link, incentive, data sense) → projects_list_slice with those filters
+  - "list/show … projects/deals" with any Projects-list filter (project status, payment status, installation status, type, customer type, city, salesperson, ops, loan, pending subsidy, documents, PE bucket, panel/inverter brand, bank, DCR, system/roof, capacity, hub link, incentive, data sense) → projects_list_slice with those filters. Do not use proposal_engine_buckets for a named list of deals.
   - "list projects with installation pending" → projects_list_slice filters.installationStatus=PENDING (not projectStatus)
   - "list under installation projects" → projects_list_slice filters.projectStatus=UNDER_INSTALLATION
   - "list fully paid projects" → projects_list_slice filters.paymentStatus=FULLY_PAID
@@ -1138,14 +1139,15 @@ async function execProposalEngineBuckets(
   const hasBom = new Set(boms.map((r) => r.projectId));
   const hasRoi = new Set(rois.map((r) => r.projectId));
   const hasProposal = new Set(proposals.map((r) => r.projectId));
-  const metrics: Record<PeBucketKey, { label: string; count: number; crmOrderValue: number }> = {
+  type PeDashboardBucketKey = Exclude<PeBucketKey, 'active'>;
+  const metrics: Record<PeDashboardBucketKey, { label: string; count: number; crmOrderValue: number }> = {
     'proposal-ready': { label: 'PE Ready', count: 0, crmOrderValue: 0 },
     draft: { label: 'PE Draft', count: 0, crmOrderValue: 0 },
     'not-started': { label: 'PE Not Yet Created', count: 0, crmOrderValue: 0 },
     rest: { label: 'Rest', count: 0, crmOrderValue: 0 },
   };
   for (const project of projects) {
-    let bucket: PeBucketKey | null = null;
+    let bucket: PeDashboardBucketKey | null = null;
     if (selectedSet.has(project.id)) {
       const allFour =
         hasCosting.has(project.id) &&
@@ -1168,7 +1170,7 @@ async function execProposalEngineBuckets(
     metrics[bucket].count += 1;
     metrics[bucket].crmOrderValue += toPositiveNumber(project.projectCost);
   }
-  const rows = (Object.keys(metrics) as PeBucketKey[]).map((key) => ({
+  const rows = (Object.keys(metrics) as PeDashboardBucketKey[]).map((key) => ({
     bucket: metrics[key].label,
     count: metrics[key].count,
     crmOrderValue: Math.round(metrics[key].crmOrderValue),
@@ -1311,7 +1313,8 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
   if (intent.filters?.pendingSubsidy) bits.push('pending subsidy');
   if (intent.filters?.hasDocuments) bits.push('with documents');
   if (intent.filters?.missingDocuments) bits.push('missing documents');
-  if (intent.filters?.peBucket) bits.push(`PE ${intent.filters.peBucket}`);
+  if (intent.filters?.peBucket === 'active') bits.push('PE Ready or Draft');
+  else if (intent.filters?.peBucket) bits.push(`PE ${intent.filters.peBucket}`);
   if (intent.filters?.leadSource) bits.push(`lead ${intent.filters.leadSource}`);
   if (intent.filters?.incentiveEligible) bits.push('incentive eligible');
   if (intent.filters?.dataSenseNeedsReview) bits.push('needs review');
@@ -1322,31 +1325,50 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
   return bits.length ? bits.join(' · ') : 'your filters';
 }
 
+function peListTitle(intent: ZenithNlIntent): string {
+  if (intent.filters?.projectStatus === 'LOST' && intent.filters?.peBucket === 'active') {
+    return 'Lost deals with active PE';
+  }
+  if (intent.filters?.peBucket === 'active') return 'Deals with PE Ready or Draft';
+  if (intent.filters?.peBucket === 'proposal-ready') return 'PE Ready projects';
+  if (intent.filters?.peBucket === 'draft') return 'PE Draft projects';
+  return 'Projects';
+}
+
 async function execProjectsListSlice(
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
   let w = applyStatusPaymentLeadSearchFilters(where, intent);
 
+  let peById: Map<string, 'PE Ready' | 'PE Draft'> | null = null;
   if (intent.filters?.peBucket) {
     const pe = await loadPeBucketProjectIds(where);
-    const projectIdsFilter = pe[intent.filters.peBucket] ?? [];
+    const bucket = intent.filters.peBucket;
+    const projectIdsFilter =
+      bucket === 'active'
+        ? [...pe['proposal-ready'], ...pe.draft]
+        : (pe[bucket] ?? []);
     if (projectIdsFilter.length === 0) {
       return {
         insight: 'No projects in that Proposal Engine bucket for your filters.',
         viz: {
           kind: 'table',
-          title: 'Projects',
+          title: peListTitle(intent),
           columns: [
             { key: 'slNo', label: 'SL No' },
             { key: 'customer', label: 'Customer' },
             { key: 'stage', label: 'Stage' },
+            { key: 'pe', label: 'PE' },
             { key: 'value', label: 'Order value (₹)' },
           ],
           rows: [],
         },
       };
     }
+    peById = new Map();
+    for (const id of pe['proposal-ready']) peById.set(id, 'PE Ready');
+    for (const id of pe.draft) peById.set(id, 'PE Draft');
     w = { ...w, id: { in: projectIdsFilter } };
   }
 
@@ -1358,6 +1380,7 @@ async function execProjectsListSlice(
     prisma.project.findMany({
       where: w,
       select: {
+        id: true,
         slNo: true,
         projectStatus: true,
         paymentStatus: true,
@@ -1393,6 +1416,7 @@ async function execProjectsListSlice(
     { key: 'customer', label: 'Customer' },
     { key: 'city', label: 'City' },
     { key: 'stage', label: 'Stage' },
+    ...(peById ? [{ key: 'pe', label: 'PE' }] : []),
     ...(showPayment
       ? [
           { key: 'payment', label: 'Payment' },
@@ -1414,13 +1438,14 @@ async function execProjectsListSlice(
     insight,
     viz: {
       kind: 'table',
-      title: 'Projects',
+      title: peListTitle(intent),
       columns,
       rows: projects.map((p) => ({
         slNo: p.slNo,
         customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
         city: p.customer?.city?.trim() || '—',
         stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+        ...(peById ? { pe: peById.get(p.id) || '—' } : {}),
         ...(showPayment
           ? {
               payment: p.paymentStatus
@@ -1525,6 +1550,7 @@ async function loadPeBucketProjectIds(
     draft: [],
     'not-started': [],
     rest: [],
+    active: [],
   };
   if (projects.length === 0) return out;
   const projectIds = projects.map((p) => p.id);
@@ -1576,6 +1602,7 @@ async function loadPeBucketProjectIds(
       bucket = 'rest';
     }
     if (bucket) out[bucket].push(project.id);
+    if (bucket === 'proposal-ready' || bucket === 'draft') out.active.push(project.id);
   }
   return out;
 }
@@ -2667,7 +2694,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   {
     const listProjects =
       /\b(list|show|all|which|find)\b/.test(qLower) &&
-      /\bprojects?\b/.test(qLower) &&
+      /\b(projects?|deals?)\b/.test(qLower) &&
       !/\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|workload|analys[ei]s)\b/.test(
         qLower,
       );
@@ -2714,8 +2741,11 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       const filters = { ...(intent.filters || {}) };
       if (
         filters.projectStatus &&
-        !/\b(confirmed|proposal|under\s+installation|lead|completed|lost|site\s+survey)\b/.test(
-          qLower,
+        !/\b(confirmed|under\s+installation|lead|completed|lost|site\s+survey)\b/.test(qLower) &&
+        !(
+          /\bproposal\b/.test(qLower) &&
+          !/\bproposal\s+engine\b/.test(qLower) &&
+          !/\b(pe\s+ready|proposal[- ]ready)\b/.test(qLower)
         )
       ) {
         delete filters.projectStatus;

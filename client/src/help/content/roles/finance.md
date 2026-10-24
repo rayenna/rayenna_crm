@@ -47,7 +47,7 @@ Payment status on the list uses the same **Pending / Partial / Fully paid** logi
 
 You see projects in **every status**, including early pipeline and **Lost**, for reporting. You still **cannot** change non-payment fields.
 
-**Proposal Engine:** you can open **Proposals** on Project detail (Proposal / Confirmed, and later stages with stored PE) to **review** costing, BOM, ROI, and the proposal. Closed stages show a short notice first. **More → Proposal Engine** opens the PE list with no project selected. You do not see the Dashboard **Proposal Engine** card. [Projects → Proposal Engine](/help/modules#proposal-engine)
+**Proposal Engine:** you can open **Proposals** on Project detail (Proposal / Confirmed, and later stages with stored PE, including **Lost**) to **review** costing, BOM, ROI, and the proposal. Closed stages show a short notice first; **Lost** shows **This is a Lost Project.** **More → Proposal Engine** opens the PE list with no project selected. You do not see the Dashboard **Proposal Engine** card. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Tally export
 

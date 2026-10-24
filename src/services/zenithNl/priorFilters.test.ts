@@ -22,6 +22,7 @@ describe('parseZenithNlPriorFilters', () => {
 
   it('accepts peBucket only when valid', () => {
     expect(parseZenithNlPriorFilters({ peBucket: 'draft' })?.peBucket).toBe('draft');
+    expect(parseZenithNlPriorFilters({ peBucket: 'active' })?.peBucket).toBe('active');
     expect(parseZenithNlPriorFilters({ peBucket: 'nope' })).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { lostReasonLabel } from '../../utils/lostReasonLabels'
+import LostDealPeReadyIcon from './LostDealPeReadyIcon'
 
 export type LostDealCardProject = {
   id: string
@@ -10,6 +11,7 @@ export type LostDealCardProject = {
   projectCost: number | null
   lostReason: string | null
   lostDate: string | null
+  peReady?: boolean
 }
 
 type Props = {
@@ -65,8 +67,9 @@ export default function LostDealsMobileCardList({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-semibold text-[color:var(--text-primary)]">
-                    {p.customerName || '—'}
+                  <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-[color:var(--text-primary)]">
+                    <span className="truncate">{p.customerName || '—'}</span>
+                    {p.peReady ? <LostDealPeReadyIcon /> : null}
                   </p>
                   <p className="mt-0.5 truncate text-[11px] text-[color:var(--text-muted)]">
                     #{p.slNo ?? '—'}

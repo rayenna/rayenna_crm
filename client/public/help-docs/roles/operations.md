@@ -58,7 +58,7 @@ Save after each batch of updates so audit history stays clear.
 
 ### Proposal Engine
 
-On projects you can open, the yellow **Proposals** button appears when a proposal is already stored (typical for **Confirmed**, **Under Installation**, **Completed**, and **Completed - Subsidy Credited**). Closed stages show a short notice before PE opens. **More → Proposal Engine** opens the PE list with no project selected (review in read-only mode). [Projects → Proposal Engine](/help/modules#proposal-engine)
+On projects you can open, the yellow **Proposals** button appears when a proposal is already stored (typical for **Confirmed**, **Under Installation**, **Completed**, **Completed - Subsidy Credited**, and **Lost**). Closed stages show a short notice before PE opens; **Lost** shows **This is a Lost Project.** **More → Proposal Engine** opens the PE list with no project selected (review in read-only mode). [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ### Sales & commercial (on your projects)
 

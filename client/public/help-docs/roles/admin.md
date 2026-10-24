@@ -65,7 +65,7 @@ Same access as **Finance** — you can run exports for troubleshooting; Finance 
 
 You may use any dashboard view; Zenith loads the **management-style** executive layout for Admin (same endpoint as Management). Use this for company-wide checks without impersonating another user.
 
-**Proposal Engine:** **More → Proposal Engine** opens the PE list with no project selected. On Project detail, **Proposals** is on **Proposal** / **Confirmed** and on later stages when a proposal is already stored. [Projects → Proposal Engine](/help/modules#proposal-engine)
+**Proposal Engine:** **More → Proposal Engine** opens the PE list with no project selected. On Project detail, **Proposals** is on **Proposal** / **Confirmed** and on later stages when a proposal is already stored, including **Lost**. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Role assignment guide
 

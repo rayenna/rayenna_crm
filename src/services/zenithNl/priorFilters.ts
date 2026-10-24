@@ -2,7 +2,7 @@ import type { ZenithNlIntent } from './catalog';
 
 type PriorFilters = NonNullable<ZenithNlIntent['filters']>;
 
-const PE_BUCKETS = new Set(['proposal-ready', 'draft', 'not-started', 'rest']);
+const PE_BUCKETS = new Set(['proposal-ready', 'draft', 'not-started', 'rest', 'active']);
 
 function asTrimmedString(v: unknown): string | undefined {
   if (typeof v !== 'string') return undefined;

@@ -3,7 +3,7 @@ import type { DataSenseRuleId } from './dataSense'
 
 /** Build query params for GET /api/projects and export endpoints (same filters; optional pagination). */
 
-export type PeBucketParam = 'proposal-ready' | 'draft' | 'not-started' | 'rest'
+export type PeBucketParam = 'proposal-ready' | 'draft' | 'not-started' | 'rest' | 'active'
 
 export type ProjectsListFiltersState = {
   status: string[]

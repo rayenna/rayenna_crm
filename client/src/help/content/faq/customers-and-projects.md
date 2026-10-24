@@ -38,7 +38,7 @@ Open **Solar Hub** → **Users**, **Maintenance**, or **Provisioning**. On phone
 **Pending subsidy** means **Segment = Subsidy** and **Status = Completed** (not yet **Completed – Subsidy Credited**). Use the **Quick views** chip or the checkbox under **Show Filters**. Guide: [Projects module](/help/modules#projects-module).
 
 ### What is the Lost Deals page?
-**Lost Deals** (Admin / Management) shows lost count and ₹, win rates, reason / competition charts, and a working list of lost projects. On phones the list uses **cards** and charts sit in an **Insights** accordion. Tap a chart slice to filter the list. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
+**Lost Deals** (Admin / Management) shows lost count and ₹, win rates, reason / competition charts, and a working list of lost projects. A gold **proposal icon** next to a name means a **PE Ready** proposal is still in Proposal Engine. On phones the list uses **cards** and charts sit in an **Insights** accordion. Tap a chart slice to filter the list. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Support Tickets
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import LostDealPeReadyIcon from './LostDealPeReadyIcon'
 
 const HOWTO_STORAGE_KEY = 'rayenna_lost_deals_howto_closed'
 
@@ -69,6 +70,13 @@ export default function LostDealsHowToRead() {
               {' — '}
               subtypes (Price, Features, Timeline, …) live under that reason; tap the competition
               chart to filter them.
+            </li>
+            <li className="flex flex-wrap items-center gap-2">
+              <LostDealPeReadyIcon />
+              <span>
+                Gold proposal icon — this Lost deal still has a <strong>PE Ready</strong> proposal in
+                Proposal Engine
+              </span>
             </li>
             <li>
               <span className="font-semibold text-[color:var(--text-primary)]">Value</span>

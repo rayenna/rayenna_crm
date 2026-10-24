@@ -216,7 +216,7 @@ export type ExtractedDimensions = {
   paymentStatus?: string;
   /** Installation.status — distinct from Project Status UNDER_INSTALLATION */
   installationStatus?: InstallationStatus;
-  peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+  peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest' | 'active';
   leadSource?: string;
   wantsProjectTypeMix?: boolean;
   wantsCustomerTypeMix?: boolean;
@@ -411,13 +411,14 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   const cityCandidate = cityMatch?.[1]?.trim();
   const cityIsJunk =
     cityCandidate &&
-    /^(customer\s+master|master|crm|pipeline|progress|subsidy|loan|revenue|projects?|customers?)$/i.test(
+    (/^(customer\s+master|master|crm|pipeline|progress|subsidy|loan|revenue|projects?|customers?|proposal\s+engine|any\s+stage)$/i.test(
       cityCandidate,
-    );
+    ) ||
+      /\b(proposal|engine|stage|ready|draft)\b/i.test(cityCandidate));
   if (
     cityCandidate &&
     !cityIsJunk &&
-    !/\b(pipeline|progress|subsidy|loan|revenue)\b/i.test(cityCandidate)
+    !/\b(pipeline|progress|subsidy|loan|revenue|proposal|engine)\b/i.test(cityCandidate)
   ) {
     // only if phrased as "projects in Kochi" / "customers in Kochi"
     if (/\b(?:projects?|customers?|deals?)\s+in\s+/i.test(q)) {
@@ -428,7 +429,8 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
     const c = q.match(/\bprojects?\s+in\s+([A-Za-z][A-Za-z\s-]{2,30})/i)?.[1]?.trim();
     if (
       c &&
-      !/^(customer\s+master|master|crm|pipeline|subsidy|loan)$/i.test(c)
+      !/^(customer\s+master|master|crm|pipeline|subsidy|loan|proposal\s+engine)$/i.test(c) &&
+      !/\b(proposal|engine|stage|ready|draft)\b/i.test(c)
     ) {
       out.city = c;
     }
@@ -522,7 +524,13 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   //   Project Status (stage) · Installation Status (install record) · Payment Status (cash)
   Object.assign(out, extractCrmStatusFilters(lower));
 
-  if (/\bproposal[\s-]?ready\b/.test(lower) || /\bpe\s+proposal[\s-]?ready\b/.test(lower)) {
+  if (
+    /\bactive\s+(pe\s+)?(proposals?|proposal\s+engine)\b/.test(lower) ||
+    (/\b(pe\s+ready|proposal[- ]ready)\b/.test(lower) && /\b(pe\s+)?draft\b/.test(lower)) ||
+    /\bactive\s+\(?\s*pe\s+ready/.test(lower)
+  ) {
+    out.peBucket = 'active';
+  } else if (/\bproposal[\s-]?ready\b/.test(lower) || /\bpe\s+proposal[\s-]?ready\b/.test(lower)) {
     out.peBucket = 'proposal-ready';
   } else if (/\bpe\s+draft\b|\bproposal\s+engine\s+draft\b/.test(lower)) {
     out.peBucket = 'draft';
@@ -643,8 +651,9 @@ export function extractCrmStatusFilters(lower: string): Pick<
       out.projectStatus = ProjectStatus.LEAD;
     } else if (
       /\blost\b/.test(lower) &&
-      /\bprojects?\b/.test(lower) &&
-      !/\blost\s+deals?\s+by\b/.test(lower)
+      (/\bprojects?\b/.test(lower) || /\bdeals?\b/.test(lower)) &&
+      !/\blost\s+deals?\s+by\b/.test(lower) &&
+      !/\b(summaris|summary|by\s+reason)\b/.test(lower)
     ) {
       out.projectStatus = ProjectStatus.LOST;
     } else if (
@@ -892,7 +901,7 @@ export function salvageMetricFromDimensions(
   const listLike =
     Boolean(q) &&
     /\b(list|show|all|which|find)\b/.test(q) &&
-    /\bprojects\b/.test(q) &&
+    /\b(projects?|deals?)\b/.test(q) &&
     !/\b(vs|versus|mix|breakdown|share|how\s+many|revenue)\b/.test(q);
 
   return (
@@ -983,6 +992,8 @@ export function salvageMetricFromDimensions(
         (intent.metric === 'clarify' ||
           intent.metric === 'projects_list_slice' ||
           intent.metric === 'cohort_summary' ||
+          intent.metric === 'proposal_engine_buckets' ||
+          intent.metric === 'lost_deals_summary' ||
           intent.metric === 'revenue_by_project_type' ||
           intent.metric === 'revenue_by_customer_type' ||
           intent.metric === 'pending_subsidy' ||
@@ -991,8 +1002,13 @@ export function salvageMetricFromDimensions(
         const next = pick(intent, 'projects_list_slice', 'table');
         if (
           next.filters?.projectStatus &&
-          !/\b(confirmed|proposal|under\s+installation|lead|completed|lost|site\s+survey|project\s+status|submitted\s+for\s+subsidy)\b/.test(
+          !/\b(confirmed|under\s+installation|lead|completed|lost|site\s+survey|project\s+status|submitted\s+for\s+subsidy)\b/.test(
             q,
+          ) &&
+          !(
+            /\bproposal\b/.test(q) &&
+            !/\bproposal\s+engine\b/.test(q) &&
+            !/\b(pe\s+ready|proposal[- ]ready)\b/.test(q)
           )
         ) {
           const { projectStatus: _drop, ...rest } = next.filters;

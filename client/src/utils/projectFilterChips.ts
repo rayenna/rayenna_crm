@@ -37,6 +37,7 @@ const PE_BUCKET_LABELS: Record<PeBucketParam, string> = {
   draft: 'PE: Draft',
   'not-started': 'PE: Not started',
   rest: 'PE: No PE activity',
+  active: 'PE: Ready or Draft',
 }
 
 const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
