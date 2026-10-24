@@ -13,6 +13,7 @@ Menus are **role-based**. Examples:
 | **Lost Deals** | Admin and Management |
 | **Solar Hub** | Operations and Admin |
 | **Support Tickets** | Not Finance |
+| **More → Proposal Engine** | Sales, Operations, Finance, Management, Admin (same as Dashboard / Zenith menu roles) |
 
 If you need access, contact your administrator. Per-role guides: [Roles](/help/roles).
 

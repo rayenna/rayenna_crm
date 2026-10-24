@@ -9,7 +9,7 @@ The **data modules** in Rayenna CRM are where you create and maintain business r
 | Module | What it does | Guide |
 | :-- | :-- | :-- |
 | **Customer Master** | Contacts, addresses, salesperson, customer type | [Customer Master](#customer-master-module) |
-| **Projects** | Lead → completion, payments, lifecycle, PE entry, **Needs review** | [Projects](#projects-module) · [Needs review](#needs-review-data-sense) |
+| **Projects** | Lead → completion, payments, lifecycle, PE entry, **Needs review** | [Projects](#projects-module) · [Proposal Engine](#proposal-engine) · [Needs review](#needs-review-data-sense) |
 | **Deal Health** | 0–100 pipeline score on open deals | [Deal Health](#deal-health-score) |
 | **Key Artifacts** | Photos, PDFs, sheets on a project | [Key Artifacts](#key-artifacts-module) |
 | **Support Tickets** | Service requests linked to projects | [Support Tickets](#support-tickets-module) |
@@ -27,6 +27,7 @@ These use the same data but are documented separately — do not duplicate them 
 | **Zenith ✦** — command center, Hit List, drill-downs | [Zenith command center](/help/zenith#zenith-command-center) |
 | **Users** & **Audit & Security** | [Security](/help/security) |
 | **Roles & permissions** | [Roles → Permission matrix](/help/roles#permission-matrix) |
+| **Proposal Engine** — costing, BOM, ROI, customer proposal (SSO from CRM) | [Projects → Proposal Engine](#proposal-engine) · [FAQ](/help/faq#proposal-engine) |
 
 Many dashboard tiles and Zenith charts **open Projects** with filters already applied. See [Dashboard → chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects).
 

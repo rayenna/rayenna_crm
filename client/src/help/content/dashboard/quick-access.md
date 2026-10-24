@@ -53,6 +53,6 @@ Not opened in PE yet; CRM status **Proposal** or **Confirmed** — ready to star
 
 Each row shows **project count** and **CRM order value (₹)**. **PE Ready**, **PE Draft**, and **PE Not Yet Created** may show **PE ex GST** when costing exists (**Rest** uses CRM order value only).
 
-> **Tip:** Rows open **Projects** with the right PE filter. To edit costing/BOM/ROI/document, open **Proposal Engine** from the project.
+> **Tip:** Rows open **Projects** with the right PE filter. To work in costing/BOM/ROI/document, open **Proposals** on the project, or **More → Proposal Engine** for the PE list with no project selected. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 **Who does not see it:** Operations, Finance.

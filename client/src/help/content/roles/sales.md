@@ -58,7 +58,7 @@ Turn on **Needs review** to list deals whose dates, payments, or system size do 
 
 ### Proposals
 
-For projects in **Proposal** or **Confirmed**, use **Proposals (New)** / Proposal Engine from the project or dashboard card. [Modules](/help/modules)
+Use **Proposals** on Project detail for **Proposal** or **Confirmed**, and on later stages when a proposal is already stored. Closed stages (**Under Installation**, **Completed**, **Completed - Subsidy Credited**) show a short closed-project notice first. **More → Proposal Engine** opens the PE list with no project selected. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Support tickets
 

@@ -38,6 +38,6 @@ Administrators can review **logins**, **password resets**, **user changes**, **p
 
 ## Getting help
 
-- Press **?** when you are not typing in a field, or use **Help (?)** in the user menu.
+- Press **?** when you are not typing in a field, or use **Help (?)** in the **Help** menu (top bar).
 - For forgotten passwords (non-Admin): ask an Administrator for a **Reset password** link from [Users](#users).
 - For access policy questions, contact your system administrator.

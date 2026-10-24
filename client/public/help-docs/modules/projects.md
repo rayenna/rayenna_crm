@@ -112,7 +112,7 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 
 1. Navigate to **Projects** from the top menu (or click a dashboard Quick Access tile).
 2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
-3. **Quick views** (one tap) — presets such as **Open pipeline**, **Needs review**, **Availing loan**, **Pending subsidy**, and **Outstanding payment**. They replace the matching pipeline flags; use **Clear All** to reset.
+3. **Quick views** (one tap) — presets such as **Open pipeline**, **Needs review**, **Availing loan**, **Pending subsidy**, and **Outstanding payment**. They replace the matching pipeline flags; use **Clear All** to reset. **Operations** does **not** see **Open pipeline** (Lead / Site Survey / Proposal are outside the Ops project list).
 4. Apply **filters** (click **Show Filters** to expand):
    - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
    - **Pipeline** (status): Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
@@ -162,9 +162,29 @@ The detail page also shows:
 - **Support / Service Tickets** (create, view, manage)
 - **Key Artifacts** (view, download, manage documents)
 
-From here you can **Edit** the project (within your role’s permissions), open **Proposals (New)** / **Proposal Engine** where your role allows (**Proposal** or **Confirmed** stages; **Sales**, **Management**, **Admin** on dashboard PE buckets), or use **Back** to return to the Projects list.
+From here you can **Edit** the project (within your role’s permissions), open **Proposals** when it is shown ([Proposal Engine](#proposal-engine)), or use **Back** to return to the Projects list.
 
 Full **My Day** behaviour (Hit List pin, CRM suggestions, journal nudges): [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).
+
+## Proposal Engine
+
+The yellow **Proposals** button on **Project detail** opens the Proposal Engine app in a new tab with your CRM login (no extra password). The button is **not** labelled New.
+
+**When Proposals appears** (Sales, Operations, Management, Finance, Admin):
+
+- Always on **Proposal** and **Confirmed**.
+- On **any other stage**, including **Under Installation**, **Completed**, and **Completed - Subsidy Credited**, when costing, BOM, ROI, or a proposal is already stored in Proposal Engine.
+
+**Before Proposal Engine opens**
+
+- **Proposal** / **Confirmed**: if required project data is incomplete, you see a quality warning and can continue or cancel.
+- **Under Installation**, **Completed**, and **Completed - Subsidy Credited**: a short notice — **This is a closed project that is [stage]**. Continue or Cancel. The incomplete-data warning is not used on these stages.
+
+**Open the PE list with no project selected**
+
+**More → Proposal Engine** (desktop) or the same item in the hamburger menu, **above Dashboard (Old)**. Command palette **Go to Proposal Engine** does the same. You stay signed in and land on **Customers / Projects** with nothing pre-selected.
+
+Dashboard **Proposal Engine** buckets (Sales / Management / Admin) still open the **Projects** list with a PE filter — they do not open the Proposal Engine app. [Dashboard → Proposal Engine card](/help/dashboard#proposal-engine-card) · [FAQ](/help/faq#proposal-engine)
 
 ## Project Information at a Glance
 

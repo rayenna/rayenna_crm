@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import HealthDetail from '../components/zenith/HealthDetail'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FaProjectDiagram } from 'react-icons/fa'
-import { ArrowLeft, Edit3, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit3, FileText, Trash2 } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { ProjectDetailSkeleton } from '../components/projects/ProjectDetailSkeleton'
 import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
@@ -43,6 +43,23 @@ import {
   projectToReminderTemplate,
 } from '../utils/reminderTemplates'
 import { evaluatePeCapacityDrift } from '../utils/peSyncSteward'
+import { openProposalEngineForProject } from '../lib/openProposalEngine'
+
+const PE_CLOSED_STAGES = new Set<ProjectStatus>([
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.COMPLETED,
+  ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+])
+
+function peClosedStageLabel(status: ProjectStatus | string): string {
+  if (status === ProjectStatus.UNDER_INSTALLATION) return 'Under Installation'
+  if (status === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) return 'Completed - Subsidy Credited'
+  return 'Completed'
+}
+
+function hasStoredPeWork(peStatus: 'none' | 'draft' | 'proposal-ready' | undefined): boolean {
+  return peStatus === 'draft' || peStatus === 'proposal-ready'
+}
 
 const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
   EPC_PROJECT: 'EPC Project',
@@ -106,12 +123,10 @@ function ProjectDetailActionBar({
           onClick={onProposals}
           disabled={peSummaryPending}
           title={peSummaryPending ? 'Checking Proposal Engine status…' : undefined}
-          className={`${actionBtnBase} bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 disabled:cursor-wait disabled:opacity-60`}
+          className={`${actionBtnBase} min-w-0 bg-[color:var(--accent-gold)] px-4 text-[color:var(--text-inverse)] hover:opacity-95 disabled:cursor-wait disabled:opacity-60 sm:min-w-[8.5rem]`}
         >
-          <span className="truncate">Proposals</span>
-          <span className="shrink-0 rounded bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
-            New
-          </span>
+          <FileText className="h-4 w-4 shrink-0" aria-hidden />
+          Proposals
         </button>
       ) : null}
       {canEdit ? (
@@ -193,6 +208,7 @@ const ProjectDetail = () => {
   const canOpenLostDeals = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPeQualityConfirm, setShowPeQualityConfirm] = useState(false)
+  const [showPeClosedConfirm, setShowPeClosedConfirm] = useState(false)
   const [showPaymentReminder, setShowPaymentReminder] = useState(false)
   const [showHandoffBrief, setShowHandoffBrief] = useState(false)
 
@@ -214,13 +230,28 @@ const ProjectDetail = () => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (showDeleteConfirm || showPeQualityConfirm || showPaymentReminder || showHandoffBrief) return
+      if (
+        showDeleteConfirm ||
+        showPeQualityConfirm ||
+        showPeClosedConfirm ||
+        showPaymentReminder ||
+        showHandoffBrief
+      )
+        return
       e.preventDefault()
       navigate(backPath)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate, backPath, showDeleteConfirm, showPeQualityConfirm, showPaymentReminder, showHandoffBrief])
+  }, [
+    navigate,
+    backPath,
+    showDeleteConfirm,
+    showPeQualityConfirm,
+    showPeClosedConfirm,
+    showPaymentReminder,
+    showHandoffBrief,
+  ])
 
   // Lightweight Proposal Engine summary for this project (status + last updated)
   const {
@@ -228,7 +259,7 @@ const ProjectDetail = () => {
     isFetched: peSummaryFetched,
   } = useQuery({
     queryKey: ['proposal-engine-summary', id],
-    enabled: !!id && !!project && (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED),
+    enabled: !!id && !!project,
     queryFn: async () => {
       try {
         const res = await axiosInstance.get(`/api/proposal-engine/projects/${id}`)
@@ -300,12 +331,13 @@ const ProjectDetail = () => {
     staleTime: 60_000,
   })
 
-  const peSummaryNeeded =
+  const isPipelinePeStage =
     !!project &&
     (project.projectStatus === ProjectStatus.PROPOSAL ||
       project.projectStatus === ProjectStatus.CONFIRMED)
-  /** Avoid soft-gate race: wait until PE summary has settled before enabling Proposals. */
-  const peSummaryPending = peSummaryNeeded && !peSummaryFetched
+  const hasStoredPe = hasStoredPeWork(peSummary?.peStatus)
+  /** Avoid soft-gate race on Proposal/Confirmed; later stages wait to know if PE work exists. */
+  const peSummaryPending = !!project && !peSummaryFetched && isPipelinePeStage
 
   const canEdit = canEditProject(project, user)
   const canDelete = canDeleteProject(project, user)
@@ -347,39 +379,17 @@ const ProjectDetail = () => {
       ? evaluatePeCapacityDrift(project, peSummary)
       : []
 
-  const openProposalEngine = async () => {
-    if (!id) return
-    const base = import.meta.env.VITE_PROPOSAL_ENGINE_URL
-    if (!base) {
-      toast.error('Proposal Engine URL is not configured.')
+  const handleProposalsClick = () => {
+    if (!id || !project) return
+    if (PE_CLOSED_STAGES.has(project.projectStatus) && hasStoredPe) {
+      setShowPeClosedConfirm(true)
       return
     }
-    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
-    try {
-      const { data } = await axiosInstance.post<{ ticket: string }>('/api/auth/sso-ticket')
-      const ticket = data?.ticket
-      const url = ticket
-        ? `${normalizedBase}/customers?ticket=${encodeURIComponent(ticket)}&openProjectId=${encodeURIComponent(id)}`
-        : `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id)}`
-      window.open(url, '_blank', 'noopener,noreferrer')
-      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
-    } catch (err: unknown) {
-      toast.error(getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine.')
-      window.open(
-        `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id)}`,
-        '_blank',
-        'noopener,noreferrer',
-      )
-      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
-    }
-  }
-
-  const handleProposalsClick = () => {
     if (peGateFindings.length > 0) {
       setShowPeQualityConfirm(true)
       return
     }
-    void openProposalEngine()
+    void openProposalEngineForProject(id)
   }
 
   // Fetch support tickets count for delete confirmation
@@ -463,10 +473,7 @@ const ProjectDetail = () => {
 
   const actionBarProps = {
     showHandoff: canOpenRoleActions,
-    showProposals:
-      canOpenRoleActions &&
-      (project.projectStatus === ProjectStatus.PROPOSAL ||
-        project.projectStatus === ProjectStatus.CONFIRMED),
+    showProposals: canOpenRoleActions && (isPipelinePeStage || hasStoredPe),
     peSummaryPending,
     canEdit,
     canDelete,
@@ -518,7 +525,29 @@ const ProjectDetail = () => {
             variant: 'primary',
             onClick: () => {
               setShowPeQualityConfirm(false)
-              void openProposalEngine()
+              if (id) void openProposalEngineForProject(id)
+            },
+          },
+        ]}
+      />
+      <ErrorModal
+        open={showPeClosedConfirm}
+        onClose={() => setShowPeClosedConfirm(false)}
+        type="info"
+        surface="zenith"
+        message={
+          project
+            ? `This is a closed project that is ${peClosedStageLabel(project.projectStatus)}.`
+            : ''
+        }
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setShowPeClosedConfirm(false) },
+          {
+            label: 'Continue to Proposal Engine',
+            variant: 'primary',
+            onClick: () => {
+              setShowPeClosedConfirm(false)
+              if (id) void openProposalEngineForProject(id)
             },
           },
         ]}
@@ -633,7 +662,7 @@ const ProjectDetail = () => {
                     </div>
                   )}
                 </div>
-                {(project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
+                {(isPipelinePeStage || hasStoredPe) && (
                   <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-3 py-2 shadow-inner">
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--accent-gold)]">Proposal Engine</span>
                     {peSummary?.peStatus === 'proposal-ready' && (

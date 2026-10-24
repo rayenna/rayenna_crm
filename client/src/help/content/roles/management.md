@@ -23,7 +23,7 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 
 **Zenith:** executive **Your focus**, Hit List, and landscape charts. [Zenith command center](/help/zenith#zenith-command-center)
 
-**Proposal Engine card:** visible for Management (with Sales and Admin) when monitoring proposal-stage work.
+**Proposal Engine card:** visible for Management (with Sales and Admin) when monitoring proposal-stage work. **More → Proposal Engine** opens the PE Customers/Projects list with no project selected. On Project detail, **Proposals** appears on **Proposal** / **Confirmed** and on later stages when a proposal is already stored. [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ## Projects (read-only)
 

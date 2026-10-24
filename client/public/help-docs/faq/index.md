@@ -22,4 +22,4 @@ Short answers to common questions. For step-by-step guides, use the full help se
 - [Dashboard](/help/dashboard) · [Zenith](/help/zenith#zenith-command-center) · [Security](/help/security)
 - [Training](/help/training)
 
-Press **?** (when not typing in a field) for context-sensitive Help from your current page.
+Press **?** (when not typing in a field) or **Help (?)** in the **Help** menu for context-sensitive Help from your current page.

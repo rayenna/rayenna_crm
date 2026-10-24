@@ -16,11 +16,11 @@ User menu → **Logout**. Always log out on shared or public computers.
 The session ends after **inactivity** for security. Log in again; change your password if you suspect unauthorised access. [Security → Privacy and account](/help/security#privacy-and-account).
 
 ### How do I get help in the app?
-Press **?** when you are not typing in a field, or **Help (?)** in the user menu. Sections: Getting Started, Roles, Modules, Dashboard, Zenith, Security, FAQ, Training. **Search help…** searches all sections. **Esc** on a Help page returns to the Dashboard.
+Press **?** when you are not typing in a field, or **Help (?)** in the **Help** menu (top bar — not your name). Sections: Getting Started, Roles, Modules (including **Proposal Engine**), Dashboard, Zenith, Security, FAQ, Training. **Search help…** searches all sections. **Esc** on a Help page returns to the Dashboard.
 
 - Dashboard: [Dashboard help](/help/dashboard)
 - Zenith: [Zenith command center](/help/zenith#zenith-command-center)
 - Tips, Tip of the Day, Support shortcuts: [Zenith → Help and tips](/help/zenith#help-and-tips)
 
 ### What is Tip of the Day?
-A rotating library of short hints (Dashboard, Zenith, Projects, shortcuts, and more). May appear once per day after login. Reopen from user menu → **Tip of the Day**. **Next tip** browses the library; **Don’t show again** stops automatic tips until you clear site data (stored in the browser, not synced across devices). Details: [Zenith → Help and tips](/help/zenith#help-and-tips).
+A rotating library of short hints (Dashboard, Zenith, Projects, shortcuts, and more). May appear once per day after login. Reopen from the **Help** menu → **Tip of the Day**. **Next tip** browses the library; **Don’t show again** stops automatic tips until you clear site data (stored in the browser, not synced across devices). Details: [Zenith → Help and tips](/help/zenith#help-and-tips).

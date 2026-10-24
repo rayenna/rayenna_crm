@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { openZenithAskDock } from '../utils/zenithAskOpen'
+import { openProposalEngine } from '../lib/openProposalEngine'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDayContext } from '../contexts/MyDayContext'
 import {
@@ -74,6 +75,7 @@ const ITEM_ICONS: Record<string, LucideIcon> = {
   ask_zenith: MessageSquareText,
   ask_zenith_query: MessageSquareText,
   go_zenith: Binoculars,
+  go_proposal_engine: FileText,
   go_dashboard: LayoutDashboard,
   go_customers: Users,
   go_projects: FolderKanban,
@@ -161,6 +163,10 @@ export default function CommandPalette({ open, onClose }: Props) {
       const params = new URLSearchParams(location.search)
       params.set('showTip', '1')
       navigate({ pathname: location.pathname, search: params.toString() })
+      return
+    }
+    if (resolved.type === 'open_proposal_engine') {
+      void openProposalEngine()
       return
     }
     if (

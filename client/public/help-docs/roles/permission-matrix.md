@@ -64,6 +64,7 @@ Roles: **ADMIN** · **SALES** · **OPS** (Operations) · **FINANCE** · **MGMT**
 | Manage users | ✓ | — | — | — | — |
 | View audit & security log | ✓ | — | — | — | — |
 | Proposal Engine card / PE buckets (dashboard) | ✓ | ✓ | — | — | ✓ |
+| Open Proposals / Proposal Engine (project or **More** menu) | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 **Own** = assigned salesperson on that project or customer. **Gated** = Operations status rules above.
 

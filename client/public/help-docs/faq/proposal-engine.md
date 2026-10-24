@@ -1,13 +1,19 @@
 # Proposal Engine
 
 ### What is the Proposal Engine?
-A companion app for consistent, auditable proposals: **Costing Sheet**, **BOM Sheet**, **ROI Calculator**, and **Proposal**. Integrated with **Projects** and logged in **Audit & Security**. Opens from CRM via **Proposals** on Project detail (SSO).
+A companion app for consistent, auditable proposals: **Costing Sheet**, **BOM Sheet**, **ROI Calculator**, and **Proposal**. Integrated with **Projects** and logged in **Audit & Security**. Opens from CRM via **Proposals** on Project detail, or **More → Proposal Engine** for the list (SSO — no extra login).
 
 ### How do I open the Proposal Engine for a project?
-**Project detail** → **Proposals** when status is **Proposal** or **Confirmed**. Opens Proposal Engine in a new tab with your login. [Projects module](/help/modules#projects-module).
+**Project detail** → yellow **Proposals** (not labelled New) on **Proposal** or **Confirmed**, and on later stages (**Under Installation**, **Completed**, **Completed - Subsidy Credited**) when a proposal is already stored. Opens in a new tab with your CRM login. [Projects → Proposal Engine](/help/modules#proposal-engine).
+
+### How do I open Proposal Engine with no project selected?
+**More → Proposal Engine** (desktop) or the same item in the hamburger menu, **above Dashboard (Old)**. Command palette **Go to Proposal Engine** does the same. Lands on PE **Customers / Projects** with nothing pre-selected.
+
+### Why do some stages ask me to confirm before opening?
+**Proposal** and **Confirmed** may show a quality warning if project data is incomplete — you can continue or cancel. **Under Installation**, **Completed**, and **Completed - Subsidy Credited** only mention **This is a closed project that is [stage]**.
 
 ### Who can use the Proposal Engine?
-The **Proposals** button appears for **Sales**, **Operations**, **Management**, **Finance**, and **Admin** on eligible projects. **Sales** and **Admin** typically create and save all four artifacts; other roles usually **review** in read-only mode inside Proposal Engine. Dashboard **Proposal Engine** card: **Sales**, **Management**, and **Admin**.
+The **Proposals** button appears for **Sales**, **Operations**, **Management**, **Finance**, and **Admin** on **Proposal** or **Confirmed**, and on later stages when a proposal is already stored. **Sales** and **Admin** typically create and save all four artifacts; other roles usually **review** in read-only mode inside Proposal Engine. Dashboard **Proposal Engine** card: **Sales**, **Management**, and **Admin**.
 
 ### When does a project show as Proposal Ready?
 Only when **all four** artifacts are saved in Proposal Engine:

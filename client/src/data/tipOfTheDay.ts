@@ -92,11 +92,11 @@ export const TIPS: string[] = [
   'Management role is read-only: you can view all dashboards, projects, and reports but cannot edit records.',
   'Use Revenue by Sales Team and Pipeline by Customer Type charts on the Management dashboard to spot trends and gaps.',
   // Proposal Engine
-  'Use the Proposals (New) button on Project Detail to open Proposal Engine with your CRM login and link proposals to that project.',
+  'Use the Proposals button on Project Detail to open Proposal Engine with your CRM login. It stays available on later stages when a proposal is already stored.',
   'A project is marked Proposal Ready only when all four artifacts are saved in Proposal Engine: Costing Sheet, BOM, ROI, and Proposal.',
   'Save frequently used Costing configurations as templates in Proposal Engine – they are shared across all Sales and Admin users.',
   'Only Admin can delete shared Costing templates in Proposal Engine; Sales can save and use them but not remove them.',
-  'Operations, Management, and Finance can open Proposal Engine from Proposals (New) to review Costing, BOM, ROI, and Proposal in read-only mode.',
+  'Operations, Management, and Finance can open Proposal Engine from Proposals to review Costing, BOM, ROI, and Proposal in read-only mode.',
   'Proposal Engine custom sections (before the Bill of Quantities) now support a full word-processor toolbar — font, size, colour, highlight, bold/italic/underline, lists, tables with row/column controls, and image upload. Add project-specific content like case studies or site photos directly in the proposal.',
   // Zenith Command Center
   'Open Zenith ✦ from the Dashboard menu for a full-screen analytics view — same FY, Quarter, and Month rules as the classic dashboard.',

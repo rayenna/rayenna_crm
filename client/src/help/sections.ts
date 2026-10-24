@@ -32,6 +32,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Overview', hash: 'modules' },
     { label: 'Customer Master', hash: 'customer-master-module' },
     { label: 'Projects', hash: 'projects-module' },
+    { label: 'Proposal Engine', hash: 'proposal-engine' },
     { label: 'Needs review', hash: 'needs-review-data-sense' },
     { label: 'Deal Health', hash: 'deal-health-score' },
     { label: 'Key Artifacts', hash: 'key-artifacts-module' },

@@ -6,7 +6,7 @@
 | :-- | :-- | :-- |
 | **Ctrl+K** | **⌘K** | **Command palette** — search and jump to create, lists, and common screens. Works even while typing in a field. (**Ctrl+Shift+K** / **⌘⇧K** still opens Support Tickets.) |
 
-Press **Ctrl+K** (Windows/Linux) or **⌘K** (Mac) from **any** CRM page. Type to filter; **Enter** runs the highlighted row; **Esc** closes. Items are **filtered by your role** — you only see actions you are allowed to use.
+Press **Ctrl+K** (Windows/Linux) or **⌘K** (Mac) from **any** CRM page. Type to filter; **Enter** runs the highlighted row; **Esc** closes. Items are **filtered by your role** — you only see actions you are allowed to use. **Go to Proposal Engine** opens PE **Customers / Projects** with your CRM login and no project pre-selected (same as **More → Proposal Engine**).
 
 The same task set also works from **Ask Zenith** on the Zenith page (type the phrase and press Ask). Analytics questions (charts/tables) are Ask-only — see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
 
@@ -18,7 +18,7 @@ From the palette you can also choose **Ask Zenith…** (focuses the Ask box) or 
 | :-- | :-- |
 | **Create** | New Customer · New Project · Create Support Ticket · New User |
 | **Lists** | Overdue Support Tickets · Open Support Tickets (queue) · Solar Hub Support Tickets · Proposal-stage / Confirmed / Under Installation projects · Pending Subsidy · Availing Loan · Projects Needing Review · Proposal Engine — Not Started / Drafts / Proposal Ready |
-| **Go to** | Zenith · Customers · Projects · Support Tickets · Dashboard (classic) · Solar Hub · Solar Hub Provisioning · Solar Hub — Unlinked Plants · Solar Hub Maintenance · Lost Deals · Tally Export · Users · Audit & Security · Change Password · Open Help · Open My Day · Open My Day Journal · Show Tip of the Day |
+| **Go to** | Zenith · Customers · Projects · Support Tickets · Proposal Engine · Dashboard (classic) · Solar Hub · Solar Hub Provisioning · Solar Hub — Unlinked Plants · Solar Hub Maintenance · Lost Deals · Tally Export · Users · Audit & Security · Change Password · Open Help · Open My Day · Open My Day Journal · Show Tip of the Day |
 | **Search** | Type a name or keyword to also get **Search customers for…** / **Search projects for…** |
 
 **Tip:** Palette is fastest for navigation and creates. Use **Ask Zenith** when you want an insight, chart, or table from CRM data.

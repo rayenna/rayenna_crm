@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { ROUTE_ROLES } from '../constants/routeRoles'
@@ -19,6 +19,7 @@ import MyDayJournalNudge from './my-day/MyDayJournalNudge'
 import MyDayUrlBridge from './my-day/MyDayUrlBridge'
 import ZenithAskDock, { ZenithAskNavButton } from './zenith/ZenithAskDock'
 import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
+import { openProposalEngine } from '../lib/openProposalEngine'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -128,6 +129,12 @@ const Layout = () => {
     setSessionStorageItem('helpReferrer', location.pathname)
     navigate(getHelpPath())
     setHelpDropdownOpen(false)
+  }
+
+  const openProposalEngineList = () => {
+    setMoreDropdownOpen(false)
+    setMobileMenuOpen(false)
+    void openProposalEngine()
   }
 
   // Keyboard: ⌘/Ctrl+K palette · ? → Help · Ctrl/Cmd+Shift+ D C P K Z N E · Esc → leave Help
@@ -370,19 +377,30 @@ const Layout = () => {
                         aria-label="More menu"
                       >
                         {secondaryNav.map((item) => (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            role="menuitem"
-                            className={`block px-4 py-2.5 text-sm font-medium ${
-                              location.pathname.startsWith(item.path)
-                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
-                                : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                            }`}
-                            onClick={() => setMoreDropdownOpen(false)}
-                          >
-                            {item.name}
-                          </Link>
+                          <Fragment key={item.path}>
+                            {item.path === '/dashboard' && canAccessDashboardMenu ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="block w-full px-4 py-2.5 text-left text-sm font-medium text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]"
+                                onClick={openProposalEngineList}
+                              >
+                                Proposal Engine
+                              </button>
+                            ) : null}
+                            <Link
+                              to={item.path}
+                              role="menuitem"
+                              className={`block px-4 py-2.5 text-sm font-medium ${
+                                location.pathname.startsWith(item.path)
+                                  ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                  : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
+                              }`}
+                              onClick={() => setMoreDropdownOpen(false)}
+                            >
+                              {item.name}
+                            </Link>
+                          </Fragment>
                         ))}
                       </div>
                     ) : null}
@@ -576,18 +594,28 @@ const Layout = () => {
                   </Link>
                 ) : null}
                 {filteredNav.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                      location.pathname.startsWith(item.path)
-                        ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
-                        : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
+                  <Fragment key={item.path}>
+                    {item.path === '/dashboard' && canAccessDashboardMenu ? (
+                      <button
+                        type="button"
+                        onClick={openProposalEngineList}
+                        className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[color:var(--nav-text)] transition-colors duration-200 hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]"
+                      >
+                        Proposal Engine
+                      </button>
+                    ) : null}
+                    <Link
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                        location.pathname.startsWith(item.path)
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  </Fragment>
                 ))}
                 {/* Help Menu Items for Mobile */}
                 {helpMenuItems.map((item) =>

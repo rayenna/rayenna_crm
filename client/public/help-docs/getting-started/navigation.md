@@ -23,7 +23,8 @@ The navigation bar is located at the top of every page and contains:
 
 Menu items are displayed based on your user role:
 
-- **Dashboard**: Your personalized overview page
+- **Dashboard**: Your personalized overview page (Zenith in the main bar; **Dashboard (Old)** under **More**)
+- **Proposal Engine**: under **More**, above **Dashboard (Old)** — opens Proposal Engine Customers/Projects with your CRM login and no project pre-selected
 - **Customers**: Customer database and management
 - **Projects**: Project management and tracking
 - **Lost Deals**: Lost analytics (Admin and Management)
@@ -40,12 +41,18 @@ Menu items are displayed based on your user role:
 
 ### Help Menu
 
-Located in the top navigation bar:
+The **Help** control is in the top navigation bar (next to Ask / My Day — **not** your name). On phones it is inside the hamburger menu.
 
 - **Help (?)**: Opens context-sensitive help documentation
   - Automatically shows relevant help based on your current page
-  - Press ? from any page for quick help access
+  - Press **?** from any page (when you are not typing in a field) for the same Help
+  - Help topics include Getting Started, Roles, Modules (including **Proposal Engine**), Dashboard, Zenith, Security, FAQ, and Training
 - **About**: System information and version details
+- **Tip of the Day**: Reopens the rotating hint on your **current** page
+
+### More menu
+
+On desktop, less-used links sit under **More**. **Proposal Engine** is listed **above Dashboard (Old)** and opens Proposal Engine **Customers / Projects** with your CRM login and no project pre-selected. The hamburger menu uses the same order.
 
 ### Keyboard shortcuts
 
@@ -161,7 +168,7 @@ The main projects page displays all projects you have access to.
 
 - **Filter Section**:
   - **Search** bar and **Show Filters** / **Hide Filters** / **Clear All**
-  - **Quick views** — one-tap presets (Open pipeline, Needs review, Availing loan, Pending subsidy, Outstanding payment)
+  - **Quick views** — one-tap presets (Open pipeline, Needs review, Availing loan, Pending subsidy, Outstanding payment). **Operations** does **not** see **Open pipeline** (early stages are outside Ops project scope).
   - **Active filter chips** under search (remove one filter at a time; admins see export hint)
   - Expanded grid: FY/quarter/month, status, **Segment**, **Customer type**, service type, payment, tickets, pipeline, PE bucket, **Pending subsidy**, etc.
 

@@ -14,7 +14,7 @@ Use this section when you are **new to the system** or onboarding a colleague. P
 2. **Open your Dashboard** — metrics and charts are tailored to your **role** (Sales, Operations, Finance, Management, or Admin).
 3. **Customers, then Projects** — most daily work is: find or create a **customer**, then create or update a **project** for that customer. → [Common actions](#common-actions-guide)
 4. **Use the top menu** — jump between Dashboard, Customers, Projects, and other modules you are allowed to see. → [Navigation guide](#navigation-guide)
-5. **Get help anytime** — **?** for this page’s area, **Search help…** at the top of Help, or **Tip of the Day** in the user menu.
+5. **Get help anytime** — **?** for this page’s area, **Search help…** at the top of Help, or **Tip of the Day** in the **Help** menu.
 
 ## Choose your path
 
@@ -42,7 +42,7 @@ Use this section when you are **new to the system** or onboarding a colleague. P
 - **Ask Zenith** — natural-language analytics and task jumps on Zenith (same tasks as the palette). [Ask Zenith](/help/zenith#ask-zenith-natural-language)
 - **Command palette** — **Ctrl+K** / **⌘K** from any page for create, queues, and Go to. [Command palette](#command-palette-anywhere)
 - **My Day** — personal tasks pinned from the dashboard or Zenith (**Ctrl+Shift+M** / **⌘⇧M**, **☀** in the nav, or palette **Open My Day**). [My Day drawer](/help/zenith#my-day-personal-productivity-drawer)
-- **Proposal Engine** — from a project in **Proposal** or **Confirmed** stage: **Proposals (New)** for costing, BOM, ROI, and customer proposal. [Modules](/help/modules)
+- **Proposal Engine** — **More → Proposal Engine** opens the PE Customers/Projects list (your CRM login; no project pre-selected). From a project: **Proposals** on **Proposal** or **Confirmed**, and on later stages when a proposal is already stored. [Modules](/help/modules)
 - **Help search** — use **Search help…** on the Help page to find topics across all sections.
 
 ## What's next

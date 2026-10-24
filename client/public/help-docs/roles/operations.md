@@ -22,7 +22,7 @@ You drive **execution** after the sale is confirmed: installations, compliance d
 
 **Filters:** financial year and month apply across cards and charts.
 
-Use **Zenith ✦** for installation-focused panels and chart drill-downs. [Zenith help](/help/zenith#zenith-command-center)
+Use **Zenith ✦** for installation-focused panels and chart drill-downs. Ops Zenith does **not** include **Weighted open pipeline** or **Pipeline ageing** (sales-style open-pipeline views). [Zenith help](/help/zenith#zenith-command-center) · [Operations playbook](/help/zenith#operations-playbook-installation-pulse)
 
 ## Which projects you see
 
@@ -41,7 +41,7 @@ If you need an early-stage project, ask the assigned **Sales** user or **Managem
 
 ### Find work
 
-1. **Projects** → filter by status (Confirmed, Installation, etc.).
+1. **Projects** → filter by status (Confirmed, Installation, etc.), or use **Quick views** (**Needs review**, **Availing loan**, **Pending subsidy**, **Outstanding payment** — not **Open pipeline**).
 2. Or start from dashboard **Pending installation** / subsidy widgets.
 3. Search by customer name or project number.
 
@@ -55,6 +55,10 @@ Open project → **Edit** → **Project lifecycle / execution**:
 - Panel / inverter brands where your process requires them  
 
 Save after each batch of updates so audit history stays clear.
+
+### Proposal Engine
+
+On projects you can open, the yellow **Proposals** button appears when a proposal is already stored (typical for **Confirmed**, **Under Installation**, **Completed**, and **Completed - Subsidy Credited**). Closed stages show a short notice before PE opens. **More → Proposal Engine** opens the PE list with no project selected (review in read-only mode). [Projects → Proposal Engine](/help/modules#proposal-engine)
 
 ### Sales & commercial (on your projects)
 
@@ -92,7 +96,7 @@ No **Tally export** or **Projects Excel/CSV** — request from **Finance** or **
 2. Update **lifecycle dates** as milestones complete.  
 3. Raise **support tickets** for blockers on site.  
 4. Coordinate with **Sales** when commercial fields on confirmed jobs need correction.  
-5. At install/handover, use **Install Hub on this visit** on the project (and Solar Hub admin for accounts). Map **SolisCloud** or **Deye Cloud** (one plant per project) so Hub Track shows live kWh. [Solar Hub handover](/help/modules#solar-hub-handover) · [Plants](/help/modules#solar-hub-plants-and-generation)  
+5. At install/handover, use **Install Hub on this visit** on the project (and **Solar Hub** for accounts). On phones, Users / Provisioning use **cards** and **Quick views**; map **SolisCloud** or **Deye Cloud** (one plant per project) so Hub Track shows live kWh. [Solar Hub handover](/help/modules#solar-hub-handover) · [Staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation)  
 6. Pin follow-ups in **My Day** (**Ctrl+Shift+M** / **⌘⇧M**).
 
 ## Shortcuts

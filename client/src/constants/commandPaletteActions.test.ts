@@ -16,6 +16,7 @@ describe('filterCommandPaletteItems', () => {
     expect(ids).toContain('new_customer')
     expect(ids).toContain('create_support_ticket')
     expect(ids).toContain('overdue_support_tickets')
+    expect(ids).toContain('go_proposal_engine')
   })
 
   it('shows admin-only users and audit', () => {

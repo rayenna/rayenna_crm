@@ -65,6 +65,8 @@ Same access as **Finance** — you can run exports for troubleshooting; Finance 
 
 You may use any dashboard view; Zenith loads the **management-style** executive layout for Admin (same endpoint as Management). Use this for company-wide checks without impersonating another user.
 
+**Proposal Engine:** **More → Proposal Engine** opens the PE list with no project selected. On Project detail, **Proposals** is on **Proposal** / **Confirmed** and on later stages when a proposal is already stored. [Projects → Proposal Engine](/help/modules#proposal-engine)
+
 ## Role assignment guide
 
 | Role | Assign when |
@@ -91,7 +93,8 @@ See [Permission matrix](#permission-matrix) before elevating someone to Admin.
 3. Help users with **access denied** issues (wrong role vs wrong assignment).  
 4. Coordinate with Finance on **export** policy.  
 5. Point users to [Getting Started](/help/getting-started) and role guides for self-service.  
-6. **Solar Hub** — map Solis/Deye plants, provision accounts, and (when FAQs in the repo change) **Solar Hub → Help → Reimport**. [Solar Hub plants](/help/modules#solar-hub-plants-and-generation).
+6. **Solar Hub** — map Solis/Deye plants, provision accounts (mobile cards + Start here / Quick views), and (when FAQs in the repo change) **Solar Hub → Help → Reimport**. [Solar Hub staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation).  
+7. **Lost Deals** — review uncategorized losses and reason mix. [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Shortcuts
 

@@ -56,6 +56,10 @@ Open project → **Edit** → **Project lifecycle / execution**:
 
 Save after each batch of updates so audit history stays clear.
 
+### Proposal Engine
+
+On projects you can open, the yellow **Proposals** button appears when a proposal is already stored (typical for **Confirmed**, **Under Installation**, **Completed**, and **Completed - Subsidy Credited**). Closed stages show a short notice before PE opens. **More → Proposal Engine** opens the PE list with no project selected (review in read-only mode). [Projects → Proposal Engine](/help/modules#proposal-engine)
+
 ### Sales & commercial (on your projects)
 
 On the same edit form you may update **lead source** (and required detail fields), **financing / loan** fields, and related commercial data when Operations needs to correct handoff information. Sales still owns early pipeline; you own delivery.

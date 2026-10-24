@@ -163,6 +163,22 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 - Some fields are role-specific
 - Project ID cannot be changed
 
+### Opening Proposal Engine
+
+**Who can open**: Sales, Operations, Management, Finance, and Admin
+
+**For a project**
+1. Open **Project detail**.
+2. Click the yellow **Proposals** button when it is shown (always on **Proposal** and **Confirmed**; on later stages when a proposal is already stored).
+3. On **Under Installation**, **Completed**, or **Completed - Subsidy Credited**, confirm the closed-project notice, then continue.
+
+**For the PE list (no project selected)**
+1. Open **More** (desktop) or the hamburger menu.
+2. Choose **Proposal Engine**, listed **above Dashboard (Old)**.
+3. Proposal Engine opens on **Customers / Projects** with your CRM login and nothing pre-selected.
+
+You can also run **Go to Proposal Engine** from the command palette (**Ctrl+K** / **⌘K**). Guide: [Projects → Proposal Engine](/help/modules#proposal-engine).
+
 ### Editing Support Tickets
 
 **Who can edit**: Sales users, Operations users, and Administrators
@@ -456,7 +472,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 - **CRM keyboard shortcuts** (when not typing in a field): see [Keyboard shortcuts](#keyboard-shortcuts) in Getting Started.
 - **Forms**: Tab to move between fields, Enter to submit where shown
 - **Bookmark common pages**: Save frequently accessed pages
-- **Use Help (?)**: Quick access to context-sensitive help
+- **Use Help (?)**: Quick access to context-sensitive help (Help menu in the top bar, or **?**)
 - **Learn your role's features**: Focus on tools available to you
 
 ## Troubleshooting Common Issues

@@ -9,6 +9,7 @@ export type CommandPaletteRun =
   | { type: 'my_day' }
   | { type: 'my_day_journal' }
   | { type: 'show_tip' }
+  | { type: 'open_proposal_engine' }
 
 export type CommandPaletteItem = {
   id: string
@@ -20,7 +21,7 @@ export type CommandPaletteItem = {
   /** Static destination, or builder when the palette query should be passed through. */
   href?: string | ((query: string) => string)
   /** Special run when not a plain href navigate. */
-  run?: 'my_day' | 'my_day_journal' | 'show_tip'
+  run?: 'my_day' | 'my_day_journal' | 'show_tip' | 'open_proposal_engine'
   /** Shown only when the user has typed a search query. */
   dynamic?: boolean
 }
@@ -258,6 +259,14 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
     href: '/support-tickets',
   },
   {
+    id: 'go_proposal_engine',
+    label: 'Go to Proposal Engine',
+    keywords: ['proposal engine', 'pe', 'costing', 'bom', 'roi', 'customers'],
+    group: 'Go to',
+    roles: DASHBOARD,
+    run: 'open_proposal_engine',
+  },
+  {
     id: 'go_dashboard',
     label: 'Go to Dashboard (Old)',
     keywords: ['dashboard', 'classic'],
@@ -377,6 +386,7 @@ export function resolveCommandRun(item: CommandPaletteItem, query: string): Comm
   if (item.run === 'my_day') return { type: 'my_day' }
   if (item.run === 'my_day_journal') return { type: 'my_day_journal' }
   if (item.run === 'show_tip') return { type: 'show_tip' }
+  if (item.run === 'open_proposal_engine') return { type: 'open_proposal_engine' }
   const href =
     typeof item.href === 'function' ? item.href(query) : item.href || '/'
   return { type: 'href', href }
