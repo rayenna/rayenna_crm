@@ -6,6 +6,7 @@ import {
   createCustomer,
   deleteCustomer,
   switchActiveCustomer,
+  clearActiveCustomer,
   getActiveCustomerId,
   getHiddenProjectIds,
   clearHiddenProjectIds,
@@ -429,6 +430,19 @@ export default function Customers() {
       await loadProjects();
     }
   }, [loadProjects]);
+
+  // CRM More-menu / palette landing: list with no project pre-selected.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('clearSelection') !== '1' || params.get('openProjectId')) return;
+    clearActiveCustomer();
+    params.delete('clearSelection');
+    const next = params.toString();
+    navigate(
+      { pathname: location.pathname, search: next ? `?${next}` : '' },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate]);
 
   // Deep link support: /customers?openProjectId=<CRM_PROJECT_ID>
   // Runs only when the query string changes; merges using fresh loadCustomers() so we do not re-run on every customer edit (P1).

@@ -15,6 +15,20 @@ const AboutPage = lazy(() => import('./pages/AboutPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 import { getToken, getApiBaseUrl, setToken, setUserId, setUserRole, setUserName } from './lib/apiClient';
+import { clearActiveCustomer } from './lib/customerStore';
+
+function stripLandingFlags(params: URLSearchParams): URLSearchParams {
+  const keep = new URLSearchParams();
+  const openProjectId = params.get('openProjectId');
+  if (openProjectId) {
+    keep.set('openProjectId', openProjectId);
+    return keep;
+  }
+  if (params.get('clearSelection') === '1') {
+    clearActiveCustomer();
+  }
+  return keep;
+}
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const location = useLocation();
@@ -43,6 +57,13 @@ function useSsoTicketExchange() {
     const params = new URLSearchParams(window.location.search);
     const ticket = params.get('ticket');
     if (!ticket) {
+      const next = stripLandingFlags(params);
+      const newSearch = next.toString();
+      const currentSearch = params.toString();
+      if (newSearch !== currentSearch) {
+        const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+        window.history.replaceState(null, '', newUrl);
+      }
       setStatus('done');
       return;
     }
@@ -69,9 +90,7 @@ function useSsoTicketExchange() {
           if (data.user.role) setUserRole(data.user.role);
           if (data.user.name) setUserName(data.user.name);
         }
-        const keep = new URLSearchParams();
-        const openProjectId = params.get('openProjectId');
-        if (openProjectId) keep.set('openProjectId', openProjectId);
+        const keep = stripLandingFlags(params);
         const newSearch = keep.toString();
         const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
         window.history.replaceState(null, '', newUrl);
@@ -80,8 +99,7 @@ function useSsoTicketExchange() {
         if (import.meta.env.DEV) {
           console.warn('[SSO] Ticket exchange failed:', err?.message ?? err);
         }
-        const keep = new URLSearchParams();
-        params.forEach((v, k) => { if (k !== 'ticket') keep.set(k, v); });
+        const keep = stripLandingFlags(params);
         const newSearch = keep.toString();
         const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
         window.history.replaceState(null, '', newUrl);
