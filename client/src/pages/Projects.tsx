@@ -1288,7 +1288,14 @@ const Projects = () => {
         pipelineLabel: pipelineFilterLabel,
         onPatchFilters: (patch) => {
           setPage(1)
-          setFilters((prev) => ({ ...prev, ...patch }))
+          setFilters((prev) => ({
+            ...prev,
+            ...patch,
+            systemType:
+              patch.systemType !== undefined
+                ? normalizeSystemTypeFilter(patch.systemType)
+                : prev.systemType,
+          }))
         },
         onClearSearch: () => setSearchInput(''),
         onSetSelectedFYs: (fys) => {
