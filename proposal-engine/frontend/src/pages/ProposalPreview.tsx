@@ -3,11 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { btnPrimary, btnSecondary, pageBanner, pageShell } from '../components/ui/chrome';
 import {
   getActiveCustomer,
+  getCustomer,
+  upsertCustomer,
   saveAllArtifacts,
   formatEmailForDisplay,
   clearProposalArtifact,
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
+import { fetchProjectWithArtifacts } from '../lib/api/projectDetail';
 import { hydrateProposalIfNeeded } from '../lib/hydrateWorkArtifacts';
 import type {
   CostingArtifact,
@@ -41,6 +44,7 @@ import {
 } from '../proposal/proposalAssembly';
 import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, CLIENT_SCOPE, TERMS_AND_CONDITIONS, SERVICE_DETAILS, PAYMENT_TERMS, WARRANTY_TERMS, DELIVERY_TERMS } from '../proposal/proposalCopy';
 import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types';
+import { proposalForHeading } from '../proposal/systemTypeLabel';
 import {
   ProposalTextOverridesContext,
   Divider,
@@ -98,6 +102,10 @@ type RegeneratePreserve = {
 export default function ProposalPreview() {
   const navigate = useNavigate();
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
+  /** Live CRM system type for the envelope heading. Undefined until the open project is known. */
+  const [crmSystemType, setCrmSystemType]     = useState<string | null | undefined>(
+    () => getActiveCustomer()?.master.systemType,
+  );
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
   const [bomComments, setBomComments]         = useState<Record<string, string>>({});
@@ -207,11 +215,15 @@ export default function ProposalPreview() {
         return;
       }
 
+      const latest = getActiveCustomer() ?? ac;
       const fromView = parseStoredProposalView(saved.proposalView);
       if (fromView) {
-        setProposal(fromView);
+        setProposal({
+          ...fromView,
+          systemType: latest.master.systemType ?? fromView.systemType ?? null,
+        });
       } else {
-        const asm = collectProposalAssembly(ac);
+        const asm = collectProposalAssembly(latest);
         if (!asm) {
           clearProposalUi();
           return;
@@ -235,6 +247,43 @@ export default function ProposalPreview() {
       setIsEditing(false);
       setIncludeRoofLayout(!!saved.includeRoofLayout);
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCustomerId]);
+
+  // Envelope heading uses the live CRM Project system type (Sales & Commercial),
+  // including proposals generated before that field was stored on the snapshot.
+  useEffect(() => {
+    const ac = getActiveCustomer();
+    const projectId = ac?.master.crmProjectId?.trim();
+    if (!ac || !projectId) {
+      setCrmSystemType(ac?.master.systemType ?? null);
+      return;
+    }
+    setCrmSystemType(ac.master.systemType ?? null);
+    let cancelled = false;
+    void fetchProjectWithArtifacts(projectId)
+      .then((detail) => {
+        if (cancelled) return;
+        const raw = detail.project.systemType;
+        const systemType = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+        setCrmSystemType(systemType);
+        const current = getCustomer(ac.id);
+        if (!current || current.master.crmProjectId?.trim() !== projectId) return;
+        if ((current.master.systemType ?? null) !== systemType) {
+          upsertCustomer({
+            ...current,
+            master: { ...current.master, systemType: systemType ?? undefined },
+          });
+        }
+        setProposal((prev) =>
+          prev && (prev.systemType ?? null) !== systemType ? { ...prev, systemType } : prev,
+        );
+      })
+      .catch(() => {
+        /* Keep the system type already on the open customer record. */
+      });
     return () => {
       cancelled = true;
     };
@@ -816,7 +865,10 @@ export default function ProposalPreview() {
         : savedOverrides;
       // DOCX export always uses the full BOM; collapse state affects only the on-screen HTML/PDF/Share view.
       await exportToDocx(
-        proposal,
+        {
+          ...proposal,
+          systemType: crmSystemType !== undefined ? crmSystemType : proposal.systemType,
+        },
         bomComments,
         textOverrides,
         printRef.current ?? undefined,
@@ -1348,7 +1400,10 @@ export default function ProposalPreview() {
                 <div className="mt-5 pt-5 border-t border-white/20">
                   <p className="text-xs text-white/60 uppercase tracking-widest mb-1">Proposal For</p>
                   <h2 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
-                    {proposal.systemSizeKw > 0 ? `${proposal.systemSizeKw} kW ` : ''}On-Grid Solar Power Plant
+                    {proposalForHeading(
+                      proposal.systemSizeKw,
+                      crmSystemType !== undefined ? crmSystemType : proposal.systemType,
+                    )}
                   </h2>
                   {proposal.customer.location && (
                     <p className="text-white/80 mt-1 text-sm">{proposal.customer.location}</p>

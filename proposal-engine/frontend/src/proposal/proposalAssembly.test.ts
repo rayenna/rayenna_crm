@@ -93,6 +93,13 @@ describe('buildProposal system capacity', () => {
   });
 });
 
+describe('buildProposal system type', () => {
+  it('copies the CRM system type onto the proposal', () => {
+    const p = buildProposal(customer, null, [], null, null, { systemType: 'HYBRID' });
+    expect(p.systemType).toBe('HYBRID');
+  });
+});
+
 describe('rehydrateProposalData system capacity', () => {
   it('prefers CRM over autofill decimals', () => {
     const p = rehydrateProposalData(

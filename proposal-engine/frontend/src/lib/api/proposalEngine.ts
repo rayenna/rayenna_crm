@@ -52,6 +52,8 @@ export interface ProposalEngineProjectFromApi {
   peSelectedById?: string | null;
   updatedAt?: string | null;
   systemCapacity?: number | null;
+  /** CRM Sales & Commercial system type: ON_GRID | OFF_GRID | HYBRID */
+  systemType?: string | null;
   siteAddress?: string | null;
   type?: string | null;
   panelType?: string | null;

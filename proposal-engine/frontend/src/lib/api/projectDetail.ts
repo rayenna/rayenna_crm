@@ -238,6 +238,12 @@ export function applyProposalEngineProjectDetail(
     crmCustomerId: cust.id || existing.master.crmCustomerId,
     crmProjectId: p.id || existing.master.crmProjectId,
     systemSizeKw: typeof p.systemCapacity === 'number' ? p.systemCapacity : existing.master.systemSizeKw,
+    systemType:
+      typeof p.systemType === 'string' && p.systemType.trim()
+        ? p.systemType.trim()
+        : p.systemType === null
+          ? undefined
+          : existing.master.systemType,
     customerNumber: (cust.customerId ?? '').trim() || existing.master.customerNumber,
     projectNumber: typeof p.slNo === 'number' ? p.slNo : existing.master.projectNumber,
     consumerNumber: (cust.consumerNumber ?? '').trim() || existing.master.consumerNumber,

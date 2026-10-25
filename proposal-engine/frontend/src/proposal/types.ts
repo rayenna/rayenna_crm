@@ -58,6 +58,8 @@ export interface ProposalData {
   roiAutofill: RoiAutofill | null;
   customerNumber?: string | null;
   projectNumber?: number | null;
+  /** CRM Project system type (ON_GRID, OFF_GRID, HYBRID) for the envelope heading. */
+  systemType?: string | null;
 }
 
 export interface ProposalMeta {
@@ -65,6 +67,8 @@ export interface ProposalMeta {
   projectNumber?: number | null;
   /** CRM project system capacity (kW) — preferred for proposal headline when no override. */
   crmSystemSizeKw?: number | null;
+  /** CRM Project system type (ON_GRID, OFF_GRID, HYBRID). */
+  systemType?: string | null;
 }
 
 /** Text overrides extracted from the live DOM before DOCX export. */

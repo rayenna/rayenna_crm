@@ -28,6 +28,8 @@ export interface ProjectOption {
   projectStage: string;
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   systemSizeKw?: number;
+  /** CRM Sales & Commercial system type: ON_GRID | OFF_GRID | HYBRID */
+  systemType?: string;
   customerName: string;
   city: string;
   contactPerson: string;

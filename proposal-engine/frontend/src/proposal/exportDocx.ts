@@ -22,6 +22,7 @@ import {
   savingsText,
   scopeText,
 } from './proposalCopy';
+import { proposalForHeading } from './systemTypeLabel';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
 
 export function buildDocx(
@@ -172,7 +173,7 @@ export function buildDocx(
     ...(p.customer.email        ? [new Paragraph({ children: [new TextRun({ text: `Email: ${formatEmailForDisplay(p.customer.email)}`, size: 22, color: '374151' })], spacing: { after: 200 } })] : []),
     new Paragraph({
       children: [
-        new TextRun({ text: `Proposal For: ${p.systemSizeKw > 0 ? `${p.systemSizeKw} kW ` : ''}On-Grid Solar Power Plant`, bold: true, size: 28, color: navy }),
+        new TextRun({ text: `Proposal For: ${proposalForHeading(p.systemSizeKw, p.systemType)}`, bold: true, size: 28, color: navy }),
       ],
       spacing: { after: 400 },
     }),

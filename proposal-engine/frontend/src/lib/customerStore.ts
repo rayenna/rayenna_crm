@@ -116,6 +116,12 @@ export interface CustomerMaster {
   /** System capacity in kW — auto-populated from CRM Project when available */
   systemSizeKw?:  number;
 
+  /**
+   * CRM Project system type from Sales & Commercial (ON_GRID, OFF_GRID, HYBRID).
+   * Used for the proposal envelope heading.
+   */
+  systemType?:    string;
+
   /** Electricity tariff (₹/kWh) — auto-populated from CRM Project when available */
   tariff?:        number;
 

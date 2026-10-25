@@ -97,6 +97,7 @@ export function collectProposalAssembly(activeCustomer: CustomerRecord | null): 
       typeof activeCustomer.master.systemSizeKw === 'number' && activeCustomer.master.systemSizeKw > 0
         ? activeCustomer.master.systemSizeKw
         : null,
+    systemType: activeCustomer.master.systemType ?? null,
   };
 
   const customer: CustomerDetails = {
@@ -146,6 +147,7 @@ export function buildProposal(
     roiAutofill,
     customerNumber: meta?.customerNumber ?? null,
     projectNumber:  meta?.projectNumber ?? null,
+    systemType:     meta?.systemType ?? null,
   };
 }
 
@@ -175,6 +177,7 @@ export function rehydrateProposalData(
     roiAutofill,
     customerNumber: meta?.customerNumber ?? null,
     projectNumber:  meta?.projectNumber ?? null,
+    systemType:     meta?.systemType ?? null,
   };
 }
 
