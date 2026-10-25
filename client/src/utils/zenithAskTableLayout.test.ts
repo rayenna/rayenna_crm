@@ -21,6 +21,17 @@ describe('zenithAskTableLayout', () => {
     expect(pickAskTableEmphasisColumn(pipelineCols, 'customer')?.key).toBe('orderValue')
   })
 
+  it('uses customer name as the card title for system-type customer lists', () => {
+    expect(
+      pickAskTableTitleColumn([
+        { key: 'name', label: 'Name' },
+        { key: 'project', label: 'Project' },
+        { key: 'status', label: 'Status' },
+        { key: 'customerId', label: 'ID' },
+      ])?.key,
+    ).toBe('name')
+  })
+
   it('falls back when columns are anonymous', () => {
     const cols = [
       { key: 'a', label: 'A' },

@@ -96,6 +96,14 @@ describe('dimensionFilters', () => {
     expect(anyStage.city).toBeUndefined();
   });
 
+  it('does not treat active pipeline as a city or salesperson', () => {
+    const dims = extractZenithDimensions('list all hybrid customers in active pipeline');
+    expect(dims.city).toBeUndefined();
+    expect(dims.salespersonName).toBeUndefined();
+    expect(dims.systemType).toBe('HYBRID');
+    expect(dims.projectStatus).toBe('NOT_LOST');
+  });
+
   it('maps PE Ready and active proposals to the Ready bucket for any system type', () => {
     const hybrid = extractZenithDimensions(
       'list all my hybrid customers who have active proposals',

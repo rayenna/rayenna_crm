@@ -388,14 +388,18 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
     q.match(
       /\b(?:for|by|of)\s+sales(?:person|man)?\s+([A-Za-z][A-Za-z.\s]{1,40}?)(?:\?|$|,|\.|pipeline|projects|revenue|and\b)/i,
     ) ||
-    q.match(/\b([A-Za-z][A-Za-z.\s]{1,30}?)(?:'s)?\s+pipeline\b/i) ||
+    q.match(/\b([A-Za-z][A-Za-z]{1,28})(?:'s)\s+pipeline\b/i) ||
     // “Ravi's under-installation unpaid” / “Anoop's confirmed projects”
     q.match(
       /\b([A-Za-z][A-Za-z]{1,28})(?:'s)\s+(?:under[\s-]?installation|confirmed|proposal|projects?|unpaid|payment|feasibility|timeline|outstanding)/i,
     );
   if (salesMatch?.[1]) {
     const name = salesMatch[1].trim().replace(/\s+/g, ' ');
-    if (name.length >= 2 && !/^(my|the|our|all|this|last)$/i.test(name)) {
+    if (
+      name.length >= 2 &&
+      !/^(my|the|our|all|this|last|active|open)$/i.test(name) &&
+      !/\b(customers?|hybrid|projects?|deals?|pipeline)\b/i.test(name)
+    ) {
       out.salespersonName = name;
     }
   }
@@ -454,14 +458,14 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   const cityCandidate = cityMatch?.[1]?.trim();
   const cityIsJunk =
     cityCandidate &&
-    (/^(customer\s+master|master|crm|pipeline|progress|subsidy|loan|revenue|projects?|customers?|proposal\s+engine|any\s+stage)$/i.test(
+    (/^(customer\s+master|master|crm|pipeline|active\s+pipeline|open\s+pipeline|progress|subsidy|loan|revenue|projects?|customers?|proposal\s+engine|any\s+stage)$/i.test(
       cityCandidate,
     ) ||
-      /\b(proposal|engine|stage|ready|draft)\b/i.test(cityCandidate));
+      /\b(proposal|engine|stage|ready|draft|pipeline|hybrid|active|open)\b/i.test(cityCandidate));
   if (
     cityCandidate &&
     !cityIsJunk &&
-    !/\b(pipeline|progress|subsidy|loan|revenue|proposal|engine)\b/i.test(cityCandidate)
+    !/\b(pipeline|progress|subsidy|loan|revenue|proposal|engine|hybrid|active)\b/i.test(cityCandidate)
   ) {
     // only if phrased as "projects in Kochi" / "customers in Kochi"
     if (/\b(?:projects?|customers?|deals?)\s+in\s+/i.test(q)) {
@@ -680,6 +684,12 @@ export function extractCrmStatusFilters(lower: string): Pick<
       !/\blead\s+source\b/.test(lower)
     ) {
       out.projectStatus = ProjectStatus.LEAD;
+    } else if (
+      /\b(active|open)\s+pipelines?\b/.test(lower) ||
+      (/\bin\s+(the\s+)?pipeline\b/.test(lower) && !/\blost\b/.test(lower))
+    ) {
+      // Same as Projects default: every stage except Lost.
+      out.projectStatus = 'NOT_LOST';
     } else if (
       /\blost\b/.test(lower) &&
       (/\bprojects?\b/.test(lower) || /\bdeals?\b/.test(lower)) &&
@@ -1035,7 +1045,7 @@ export function salvageMetricFromDimensions(
         const next = pick(intent, 'projects_list_slice', 'table');
         if (
           next.filters?.projectStatus &&
-          !/\b(confirmed|under\s+installation|lead|completed|lost|site\s+survey|project\s+status|submitted\s+for\s+subsidy)\b/.test(
+          !/\b(confirmed|under\s+installation|lead|completed|lost|site\s+survey|project\s+status|submitted\s+for\s+subsidy|pipeline)\b/.test(
             q,
           ) &&
           !(

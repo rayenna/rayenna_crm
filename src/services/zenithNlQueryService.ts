@@ -1203,7 +1203,10 @@ function applyStatusPaymentLeadSearchFilters(
 ): Prisma.ProjectWhereInput {
   const w: Prisma.ProjectWhereInput = { ...where };
   const st = intent.filters?.projectStatus?.trim();
-  if (st && (Object.values(ProjectStatus) as string[]).includes(st)) {
+  const stUpper = st?.toUpperCase();
+  if (stUpper === 'NOT_LOST' || stUpper === 'OPEN_PIPELINE' || stUpper === 'ACTIVE_PIPELINE') {
+    w.projectStatus = { not: ProjectStatus.LOST };
+  } else if (st && (Object.values(ProjectStatus) as string[]).includes(st)) {
     w.projectStatus = st as ProjectStatus;
   }
   const ps = intent.filters?.paymentStatus?.trim();

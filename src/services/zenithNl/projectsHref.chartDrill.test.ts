@@ -165,4 +165,14 @@ describe('Ask Open in Projects pins deal lists', () => {
     expect(href).toContain('id=cmu27mizh002wm7uu413s4nj9');
     expect(href).not.toContain('status=');
   });
+
+  it('opens Hybrid customer lists in Projects, not Customer Master', () => {
+    expect(
+      projectsHrefForIntent(
+        'customers_list_slice',
+        { metric: 'customers_list_slice', filters: { systemType: 'HYBRID' } },
+        emptyDates,
+      ),
+    ).toBe('/projects?systemType=HYBRID');
+  });
 });

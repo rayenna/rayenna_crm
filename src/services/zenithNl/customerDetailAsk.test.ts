@@ -7,6 +7,7 @@ import {
   matchCustomerDetailLookupIntent,
   matchCustomersListIntent,
 } from './customerDetailAsk';
+import { extractZenithDimensions, mergeDimensionsIntoIntent } from './dimensionFilters';
 
 describe('matchCustomerDetailLookupIntent', () => {
   it('matches customer details phrases', () => {
@@ -72,6 +73,25 @@ describe('matchCustomersListIntent', () => {
         UserRole.ADMIN,
       )?.filters?.systemType,
     ).toBe('HYBRID');
+    expect(
+      matchCustomersListIntent('List all the Hybrid customers', UserRole.ADMIN)?.filters?.systemType,
+    ).toBe('HYBRID');
+  });
+
+  it('treats active pipeline as not-lost Hybrid projects, not a city', () => {
+    const q = 'list all hybrid customers in active pipeline';
+    const intent = matchCustomersListIntent(q, UserRole.ADMIN);
+    expect(intent?.metric).toBe('customers_list_slice');
+    expect(intent?.filters?.systemType).toBe('HYBRID');
+    expect(intent?.filters?.projectStatus).toBe('NOT_LOST');
+    expect(intent?.filters?.city).toBeUndefined();
+    expect(intent?.filters?.salespersonName).toBeUndefined();
+
+    const merged = mergeDimensionsIntoIntent(intent!, extractZenithDimensions(q));
+    expect(merged.filters?.city).toBeUndefined();
+    expect(merged.filters?.salespersonName).toBeUndefined();
+    expect(merged.filters?.projectStatus).toBe('NOT_LOST');
+    expect(merged.filters?.systemType).toBe('HYBRID');
   });
 
   it('groups customers by system type when no type is named', () => {

@@ -1,7 +1,14 @@
 /**
  * Ask Zenith — customer record lookup + customer list slices.
  */
-import { CustomerType, SystemType, type Customer, type Prisma, UserRole } from '@prisma/client';
+import {
+  CustomerType,
+  ProjectStatus,
+  SystemType,
+  type Customer,
+  type Prisma,
+  UserRole,
+} from '@prisma/client';
 import prisma from '../../prisma';
 import {
   allEmailsFromCustomer,
@@ -12,6 +19,7 @@ import { formatContactPersonName, parseContactsPayload } from '../../utils/custo
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 import { mentionsProposalEngineAsk, systemTypeLabel } from './dimensionFilters';
+import { formatProjectStatusLifecycleLabel } from './lifecycleInstallationStatus';
 
 const TABLE_CAP = 25;
 
@@ -163,9 +171,40 @@ export function matchCustomerDetailLookupIntent(
 /** Phrases that look like “in X” but are not city names (e.g. “in customer master”). */
 function isNonCityPlacePhrase(raw: string): boolean {
   const t = raw.trim().toLowerCase().replace(/\s+/g, ' ');
-  return /^(customer\s+master|the\s+customer\s+master|master|crm|the\s+crm|database|system|rayenna|customers?|accounts?|the\s+system)$/.test(
+  if (
+    /^(customer\s+master|the\s+customer\s+master|master|crm|the\s+crm|database|system|rayenna|customers?|accounts?|the\s+system)$/.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  return /\b(pipeline|progress|proposal|engine|hybrids?|on[-\s]?grids?|off[-\s]?grids?|system\s+types?|any\s+stage|active|open|lost)\b/.test(
     t,
   );
+}
+
+/** Projects list default: every stage except Lost. */
+function parseAskedPipeline(q: string): 'NOT_LOST' | 'LOST' | undefined {
+  if (/\bnot\s+lost\b/.test(q) || /\bexcept\s+lost\b/.test(q)) return 'NOT_LOST';
+  if (/\b(active|open)\s+pipelines?\b/.test(q) || /\bin\s+(the\s+)?pipeline\b/.test(q)) {
+    return 'NOT_LOST';
+  }
+  if (/\blost\b/.test(q) && (/\bcustomers?\b/.test(q) || /\bprojects?\b/.test(q) || /\bdeals?\b/.test(q))) {
+    return 'LOST';
+  }
+  return undefined;
+}
+
+function projectStatusClause(
+  raw?: string | null,
+): Prisma.EnumProjectStatusFilter | ProjectStatus | undefined {
+  const st = raw?.trim().toUpperCase();
+  if (!st) return undefined;
+  if (st === 'NOT_LOST' || st === 'OPEN_PIPELINE' || st === 'ACTIVE_PIPELINE') {
+    return { not: ProjectStatus.LOST };
+  }
+  if ((Object.values(ProjectStatus) as string[]).includes(st)) return st as ProjectStatus;
+  return undefined;
 }
 
 function parseCustomerListType(q: string): 'RESIDENTIAL' | 'APARTMENT' | 'COMMERCIAL' | undefined {
@@ -219,14 +258,17 @@ export function matchCustomersListIntent(
   if (customerType) filters.customerType = customerType;
   if (systemType) filters.systemType = systemType;
   else if (groupBySystemType) filters.groupBy = 'systemType';
+  const pipeline = parseAskedPipeline(q);
+  if (pipeline) filters.projectStatus = pipeline;
 
-  // Prefer “in Kochi” / “city Kochi”; ignore “in customer master”.
+  // Prefer “in Kochi” / “city Kochi”; ignore “in customer master” / “in active pipeline”.
   const cityMatch =
     q.match(/\bcity\s+([a-z][a-z\s-]{1,30})$/) ||
     q.match(/\b(?:in|from|at)\s+([a-z][a-z\s-]{1,40})$/);
   const cityRaw = cityMatch?.[1]?.trim();
   if (
     cityRaw &&
+    !pipeline &&
     !isNonCityPlacePhrase(cityRaw) &&
     !/\b(hybrids?|on[-\s]?grids?|off[-\s]?grids?|system\s+types?)\b/.test(cityRaw)
   ) {
@@ -536,15 +578,10 @@ async function execCustomersBySystemType(
   };
 }
 
-export async function execCustomersListSlice(
+function customersListWhere(
   intent: ZenithNlIntent,
   opts?: { salespersonId?: string },
-): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
-  const systemType = askedSystemType(intent.filters?.systemType);
-  if (intent.filters?.groupBy === 'systemType' && !systemType) {
-    return execCustomersBySystemType(opts?.salespersonId);
-  }
-
+): Prisma.CustomerWhereInput {
   const where: Prisma.CustomerWhereInput = {};
   const city = intent.filters?.city?.trim();
   if (city) where.city = { contains: city, mode: 'insensitive' };
@@ -556,7 +593,165 @@ export async function execCustomersListSlice(
     where.OR = [{ customerType: CustomerType.RESIDENTIAL }, { customerType: null }];
   }
   if (opts?.salespersonId) where.salespersonId = opts.salespersonId;
-  if (systemType) where.projects = { some: { systemType } };
+  return where;
+}
+
+function customersListTypeLabel(intent: ZenithNlIntent): string | null {
+  const ct = intent.filters?.customerType?.trim().toUpperCase();
+  if (ct === 'APARTMENT') return 'apartment';
+  if (ct === 'COMMERCIAL') return 'commercial';
+  if (ct === 'RESIDENTIAL') return 'residential';
+  return null;
+}
+
+function customersListScopeBits(intent: ZenithNlIntent): string {
+  const city = intent.filters?.city?.trim();
+  const status = projectStatusClause(intent.filters?.projectStatus);
+  const pipelineBit =
+    status && typeof status === 'object' && 'not' in status && status.not === ProjectStatus.LOST
+      ? 'in the active pipeline'
+      : status === ProjectStatus.LOST
+        ? 'that are lost'
+        : typeof status === 'string'
+          ? `in ${formatProjectStatusLifecycleLabel(status)}`
+          : null;
+  return [
+    pipelineBit,
+    city ? `in ${city}` : null,
+    intent.filters?.salespersonName ? `for ${intent.filters.salespersonName}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** One row per matching project so click opens Projects, not Customer Master. */
+async function execSystemTypeCustomerProjects(
+  intent: ZenithNlIntent,
+  systemType: SystemType,
+  customerWhere: Prisma.CustomerWhereInput,
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+  const systemLabel = systemTypeLabel(systemType);
+  const statusClause = projectStatusClause(intent.filters?.projectStatus);
+  const projectWhere: Prisma.ProjectWhereInput = {
+    systemType,
+    ...(statusClause ? { projectStatus: statusClause } : {}),
+    ...(Object.keys(customerWhere).length > 0 ? { customer: customerWhere } : {}),
+  };
+  const matchingProject = {
+    systemType,
+    ...(statusClause ? { projectStatus: statusClause } : {}),
+  };
+  const typeLabel = customersListTypeLabel(intent);
+  const scopeBits = customersListScopeBits(intent);
+
+  const [projects, totalProjects, totalCustomers] = await Promise.all([
+    prisma.project.findMany({
+      where: projectWhere,
+      select: {
+        id: true,
+        slNo: true,
+        projectStatus: true,
+        customer: {
+          select: {
+            id: true,
+            customerId: true,
+            customerName: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            prefix: true,
+            companyName: true,
+            customerType: true,
+            city: true,
+            phone: true,
+            contactNumbers: true,
+            contacts: true,
+            salesperson: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: TABLE_CAP,
+    }),
+    prisma.project.count({ where: projectWhere }),
+    prisma.customer.count({
+      where: { ...customerWhere, projects: { some: matchingProject } },
+    }),
+  ]);
+
+  const noun = typeLabel
+    ? `${typeLabel} customer${totalCustomers === 1 ? '' : 's'} with a ${systemLabel} system`
+    : `customer${totalCustomers === 1 ? '' : 's'} with a ${systemLabel} system`;
+  const projectBit =
+    totalProjects !== totalCustomers ? ` · ${totalProjects} project${totalProjects === 1 ? '' : 's'}` : '';
+  const shownBit =
+    projects.length < totalProjects
+      ? ` · showing ${projects.length} of ${totalProjects} projects (up to ${TABLE_CAP})`
+      : ' · all shown';
+
+  return {
+    insight: projects.length
+      ? `${totalCustomers} ${noun}${scopeBits ? ` ${scopeBits}` : ''}${projectBit}${shownBit}. Click a row to open the project.`
+      : scopeBits
+        ? `No ${systemLabel.toLowerCase()} customers ${scopeBits}.`
+        : `No customers have a ${systemLabel} system on a project.`,
+    viz: {
+      kind: 'table',
+      title:
+        statusClause &&
+        typeof statusClause === 'object' &&
+        'not' in statusClause &&
+        statusClause.not === ProjectStatus.LOST
+          ? `${systemLabel} customers · active pipeline`
+          : `${systemLabel} customers`,
+      columns: [
+        { key: 'name', label: 'Name' },
+        { key: 'project', label: 'Project' },
+        { key: 'status', label: 'Status' },
+        { key: 'customerId', label: 'ID' },
+        { key: 'type', label: 'Type' },
+        { key: 'system', label: 'System' },
+        { key: 'city', label: 'City' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'sales', label: 'Salesperson' },
+      ],
+      rows: projects.map((p) => {
+        const c = p.customer;
+        return {
+          customerId: c?.customerId || '—',
+          project: `#${p.slNo}`,
+          name: c ? displayName(c) : '—',
+          type: getCustomerTypeChartLabel(c?.customerType ?? CustomerType.RESIDENTIAL),
+          system: systemLabel,
+          status: formatProjectStatusLifecycleLabel(p.projectStatus),
+          city: c?.city || '—',
+          phone: c ? formatCustomerPhones(c) : '—',
+          sales: c?.salesperson?.name || '—',
+          href: `/projects/${p.id}`,
+          projectId: p.id,
+          slNo: p.slNo,
+        };
+      }),
+    },
+    projectsHref: `/projects?systemType=${systemType}`,
+  };
+}
+
+export async function execCustomersListSlice(
+  intent: ZenithNlIntent,
+  opts?: { salespersonId?: string },
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+  const systemType = askedSystemType(intent.filters?.systemType);
+  if (intent.filters?.groupBy === 'systemType' && !systemType) {
+    return execCustomersBySystemType(opts?.salespersonId);
+  }
+
+  const where = customersListWhere(intent, opts);
+  const city = intent.filters?.city?.trim();
+  const ct = intent.filters?.customerType?.trim().toUpperCase();
+  if (systemType) {
+    return execSystemTypeCustomerProjects(intent, systemType, where);
+  }
 
   const customers = await prisma.customer.findMany({
     where,
@@ -575,71 +770,44 @@ export async function execCustomersListSlice(
       contactNumbers: true,
       contacts: true,
       salesperson: { select: { name: true } },
-      projects: systemType
-        ? { where: { systemType }, select: { systemType: true } }
-        : false,
       _count: { select: { projects: true } },
     },
     orderBy: { updatedAt: 'desc' },
     take: TABLE_CAP,
   });
 
-  const typeLabel =
-    ct === 'APARTMENT'
-      ? 'apartment'
-      : ct === 'COMMERCIAL'
-        ? 'commercial'
-        : ct === 'RESIDENTIAL'
-          ? 'residential'
-          : null;
-  const systemLabel = systemType ? systemTypeLabel(systemType) : null;
-
+  const typeLabel = customersListTypeLabel(intent);
   const totalMatching = await prisma.customer.count({ where });
-
-  const customersHref = (() => {
-    if (systemType) return `/projects?systemType=${systemType}`;
-    const params = new URLSearchParams();
-    // Customer Master list reads `type` from the URL.
-    if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
-      params.set('type', ct);
-    }
-    if (city) params.set('q', city);
-    const qs = params.toString();
-    return qs ? `/customers?${qs}` : '/customers';
-  })();
-
-  const noun = systemLabel
-    ? `customer${totalMatching === 1 ? '' : 's'} with a ${systemLabel} system`
-    : typeLabel
-      ? `${typeLabel} customer${totalMatching === 1 ? '' : 's'}`
-      : `customer${totalMatching === 1 ? '' : 's'}`;
-  const scopeBits = [city ? `in ${city}` : null, intent.filters?.salespersonName ? `for ${intent.filters.salespersonName}` : null]
-    .filter(Boolean)
-    .join(' · ');
-  const place = systemLabel ? '' : ' in Customer Master';
+  const params = new URLSearchParams();
+  // Customer Master list reads `type` from the URL.
+  if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
+    params.set('type', ct);
+  }
+  if (city) params.set('q', city);
+  const qs = params.toString();
+  const customersHref = qs ? `/customers?${qs}` : '/customers';
+  const noun = typeLabel
+    ? `${typeLabel} customer${totalMatching === 1 ? '' : 's'}`
+    : `customer${totalMatching === 1 ? '' : 's'}`;
+  const scopeBits = customersListScopeBits(intent);
 
   return {
     insight: customers.length
-      ? `${totalMatching} ${noun}${scopeBits ? ` ${scopeBits}` : ''}${place}${
+      ? `${totalMatching} ${noun}${scopeBits ? ` ${scopeBits}` : ''} in Customer Master${
           customers.length < totalMatching
             ? ` · showing ${customers.length} (up to ${TABLE_CAP})`
             : ` · all shown`
         }. Click a row to open the record.`
-      : systemLabel
-        ? `No customers${scopeBits ? ` ${scopeBits}` : ''} have a ${systemLabel} system on a project.`
-        : `No ${typeLabel ? `${typeLabel} customers` : 'customers'}${scopeBits ? ` ${scopeBits}` : ''} match in Customer Master.`,
+      : `No ${typeLabel ? `${typeLabel} customers` : 'customers'}${scopeBits ? ` ${scopeBits}` : ''} match in Customer Master.`,
     viz: {
       kind: 'table',
-      title: systemLabel
-        ? `${systemLabel} customers`
-        : typeLabel
-          ? `${typeLabel.charAt(0).toUpperCase()}${typeLabel.slice(1)} customers`
-          : 'Customers',
+      title: typeLabel
+        ? `${typeLabel.charAt(0).toUpperCase()}${typeLabel.slice(1)} customers`
+        : 'Customers',
       columns: [
         { key: 'customerId', label: 'ID' },
         { key: 'name', label: 'Name' },
         { key: 'type', label: 'Type' },
-        ...(systemLabel ? [{ key: 'system', label: 'System' }] : []),
         { key: 'city', label: 'City' },
         { key: 'phone', label: 'Phone' },
         { key: 'sales', label: 'Salesperson' },
@@ -649,12 +817,7 @@ export async function execCustomersListSlice(
         customerId: c.customerId,
         name: displayName(c),
         type: getCustomerTypeChartLabel(c.customerType ?? CustomerType.RESIDENTIAL),
-        ...(systemLabel
-          ? {
-              system: systemLabel,
-              projects: 'projects' in c && Array.isArray(c.projects) ? c.projects.length : c._count.projects,
-            }
-          : { projects: c._count.projects }),
+        projects: c._count.projects,
         city: c.city || '—',
         phone: formatCustomerPhones(c),
         sales: c.salesperson?.name || '—',
