@@ -15,6 +15,7 @@ import {
 import { matchPipelineHealthIntent } from './pipelineHealthAsk';
 import { matchWhoToCallIntent } from './whoToCallAsk';
 import { matchProjectsListFilterIntent } from './listFilterAsk';
+import { matchHelpLookupIntent } from './helpLookupAsk';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -100,6 +101,21 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     filters: { detailSlice: 'analysis' },
     insightHints: 'pipeline analysis',
+  },
+  [norm('Where do I add the Panel and Inverter brand in CRM?')]: {
+    metric: 'help_lookup',
+    viz: 'table',
+    insightHints: 'crm help',
+  },
+  [norm('How do I change my password?')]: {
+    metric: 'help_lookup',
+    viz: 'table',
+    insightHints: 'crm help',
+  },
+  [norm('What is Ask Zenith?')]: {
+    metric: 'help_lookup',
+    viz: 'table',
+    insightHints: 'crm help',
   },
   [norm('Show all apartments in customer master')]: {
     metric: 'customers_list_slice',
@@ -697,6 +713,7 @@ export function matchSupportTicketIntent(
 ): ZenithNlIntent | null {
   if (!metricAllowedForRole('support_tickets_summary', role)) return null;
   const q = norm(question);
+  if (/^(how|what|where|why|when|can\s+i)\b/.test(q)) return null;
   // Create/raise → Ask action (navigation), not analytics summary.
   if (/\b(create|raise|add)\b/.test(q) && /\b(support\s+)?tickets?\b/.test(q)) {
     return null;
@@ -1474,6 +1491,7 @@ export function matchExactChipIntent(
       matchProjectsListFilterIntent(question, role) ||
       matchSupportTicketIntent(question, role) ||
       matchEquipmentMixIntent(question, role) ||
+      matchHelpLookupIntent(question, role) ||
       matchPhraseChipIntent(question, role)
     );
   }

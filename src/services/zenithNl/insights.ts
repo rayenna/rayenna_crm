@@ -64,7 +64,8 @@ export function enrichInsight(
     metric === 'pipeline_health' ||
     metric === 'who_to_call' ||
     metric === 'customer_detail_lookup' ||
-    metric === 'customers_list_slice'
+    metric === 'customers_list_slice' ||
+    metric === 'help_lookup'
   ) {
     return fallback;
   }

@@ -62,9 +62,31 @@ describe('parseProjectsListFilters', () => {
     expect(filters.pendingSubsidyActive).toBe(true);
     expect(parseProjectsListFilters({}).pendingSubsidyActive).toBe(false);
   });
+
+  it('parses Ask Open in Projects id params', () => {
+    const filters = parseProjectsListFilters({
+      id: ['cmkxknrqr0004xc1bzozlo19j', 'cmu27mizh002wm7uu413s4nj9'],
+    });
+    expect(filters.idArray).toEqual([
+      'cmkxknrqr0004xc1bzozlo19j',
+      'cmu27mizh002wm7uu413s4nj9',
+    ]);
+    expect(parseProjectsListFilters({}).idArray).toEqual([]);
+  });
 });
 
 describe('buildProjectsWhere', () => {
+  it('pins the list to Ask project ids', () => {
+    const filters = parseProjectsListFilters({
+      id: ['cmkxknrqr0004xc1bzozlo19j', 'cmu27mizh002wm7uu413s4nj9'],
+    });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(JSON.stringify(built.where)).toContain('cmkxknrqr0004xc1bzozlo19j');
+    expect(JSON.stringify(built.where)).toContain('cmu27mizh002wm7uu413s4nj9');
+  });
+
   it('applies pendingSubsidy as Subsidy segment + Completed status', () => {
     const filters = parseProjectsListFilters({ pendingSubsidy: 'true' });
     const built = buildProjectsWhere(filters, adminUser);

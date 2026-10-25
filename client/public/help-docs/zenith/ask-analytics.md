@@ -1,9 +1,10 @@
 # Ask Zenith (natural language)
 
-**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for two kinds of requests. On **desktop**, Ask sits in the **command bar**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button on Today).
+**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for three kinds of requests. On **desktop**, Ask sits in the **command bar**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button on Today).
 
 1. **Analytics** — maps the question to a known metric, computes numbers from the same CRM data as the rest of Zenith, and shows **one insight** plus **one chart or table**.
-2. **Tasks** — phrases like **New Customer**, **Open My Day**, **Open Pending Subsidy Projects**, or **find customer Ramesh** navigate to the matching CRM screen. **List pending subsidy projects** stays in Ask as a table. The same task set is in the global **command palette** (**Ctrl+K** / **⌘K**) from any page — see [Command palette](/help/getting-started#command-palette-anywhere).
+2. **Help** — how-to questions (**Where do I add the Panel and Inverter brand in CRM?**, **How do I change my password?**) search the same Help articles as this site and answer from those pages. **Open in Help →** opens the matching section. Data questions (**how many**, **list**, **revenue**) still use analytics, not Help.
+3. **Tasks** — phrases like **New Customer**, **Open My Day**, **Open Pending Subsidy Projects**, or **find customer Ramesh** navigate to the matching CRM screen. **List pending subsidy projects** stays in Ask as a table. The same task set is in the global **command palette** (**Ctrl+K** / **⌘K**) from any page — see [Command palette](/help/getting-started#command-palette-anywhere). **Open Help** still jumps to Help without answering.
 
 ## How to use Ask
 
@@ -12,7 +13,7 @@
 3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
 5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. Close the answer with **×**; history stays for your next ask.
-6. When available, use **Open in Projects →** or **Open Support Tickets →** for the matching cohort.
+6. When available, use **Open in Projects →** or **Open Support Tickets →** for the **same deals as the answer** (not the full Projects list). Stalled pipeline opens those stalled deals; a lead-source chart opens that source; **Open Support Tickets →** opens the matching ticket queue. Help answers use **Open in Help →**.
 
 Ask is **disabled while Offline** (typed questions, Dictate, and example chips). Saved Zenith dashboard charts may still show from cache — wait for **Live** in the command bar before asking. Free-text analytics also needs **Anthropic** credentials on the server: `ANTHROPIC_API_KEY`, and often `ANTHROPIC_WORKSPACE_ID` when the key is not scoped to one workspace. Exact example chips and some entity matches can still run when Claude is unavailable.
 
@@ -23,7 +24,7 @@ Role packs differ — example chips under the Ask box show questions allowed for
 ### Who to call and stalled deals
 
 - **Who should I call today?** — Hit List (overdue / stalled / going cold) plus outstanding payment chase, with a reason for each name
-- **Why is my pipeline stalling?** — Deal Health list of quiet / over-SLA deals
+- **Why is my pipeline stalling?** — Deal Health list of quiet / over-SLA deals. **Open in Projects →** opens only those stalled deals.
 
 ### Pipeline, revenue, and equipment
 
@@ -87,6 +88,13 @@ Role packs differ — example chips under the Ask box show questions allowed for
 - **Create a ticket for SL 141 inverter fault** — opens the ticket form with that project and title filled in.
 - Totals pie: **Show me the total support tickets raised**. *(Sales own book; Ops / Management / Admin company-wide — **not Finance**)*
 - Support tickets by salesperson · Ticket resolution time (avg / median days to close)
+
+### Ask from Help
+
+- **Where do I add the Panel and Inverter brand in CRM?** — **Project Lifecycle** on **Edit Project** (not the create form)
+- **How do I change my password?** · **What is Ask Zenith?** · **Where is the command palette?**
+- Any **FAQ** wording works the same way (**How do I create a customer?**, **What is Needs review?**, **Who can use the Proposal Engine?**). Ask names the Help section and lists matching topics. It does **not** invent screens that are not in Help.
+- **Open Help** still jumps to Help. **How many / list / revenue** questions still use live CRM numbers.
 
 ### Act on an answer
 

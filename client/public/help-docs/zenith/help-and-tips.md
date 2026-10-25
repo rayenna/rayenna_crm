@@ -4,7 +4,7 @@ This block covers **in-app Help**, **Tip of the Day**, and how **Zenith** fits i
 
 ## Help Centre (all pages)
 
-- Press **?** when you are **not** typing in a field (same rule as shortcuts), or choose **Help (?)** from the **Help** menu in the top bar (not your name). You land on the **Help** page; when you came from another screen, a **Help for:** banner shows that context. **Ctrl+K** / **⌘K** opens the **command palette** from any page ([details](/help/getting-started#command-palette-anywhere)); on Zenith, **Ask Zenith** covers analytics plus the same task jumps ([Ask Zenith](#ask-zenith-natural-language)).
+- Press **?** when you are **not** typing in a field (same rule as shortcuts), or choose **Help (?)** from the **Help** menu in the top bar (not your name). You land on the **Help** page; when you came from another screen, a **Help for:** banner shows that context. **Ctrl+K** / **⌘K** opens the **command palette** from any page ([details](/help/getting-started#command-palette-anywhere)); on Zenith, **Ask Zenith** covers analytics, how-to answers from this Help, plus the same task jumps ([Ask Zenith](#ask-zenith-natural-language)).
 - **Search help…** in the Help sidebar searches across all sections; click a result to open that section. Use the section list for **Getting Started**, **Roles**, **Modules**, **Dashboard**, **Zenith**, **Security**, **FAQ**, and **Training**.
 - On a **Help** page, **Esc** returns you to the **Dashboard**. Deep links such as `/help/zenith#zenith-command-center` scroll to the matching heading after load.
 - Optional short **Help** tooltips (`zenith.*` and other keys in code) support specific controls; the full narrative is in Help markdown, especially under **Zenith**, **Dashboard**, and **Modules**.

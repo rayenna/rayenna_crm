@@ -55,6 +55,7 @@ import {
 import {
   attachAskDrillHrefs,
   projectsHrefForIntent,
+  resolveAskProjectsHref,
   type ZenithNlDateFilter,
 } from './zenithNl/projectsHref';
 import { supportTicketCreatedAtWhere } from './zenithNl/ticketDateFilter';
@@ -105,6 +106,7 @@ import {
   execCustomersListSlice,
 } from './zenithNl/customerDetailAsk';
 import { execPipelineHealth } from './zenithNl/pipelineHealthAsk';
+import { execHelpLookup, matchHelpLookupIntent } from './zenithNl/helpLookupAsk';
 import { matchAskEditActionIntent } from './zenithNl/askEditActions';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
@@ -596,6 +598,7 @@ ${priorBlock}
 
 Rules:
 - Prefer the closest metric. If unclear or outside catalog, use metric "clarify".
+- How-to / where-do-I / which screen, menu, or field in CRM / what does a Help topic mean → metric "help_lookup". Never map those to cohort_summary, panel_brand_mix, or inverter_brand_mix. Data questions (how many, list, revenue, mix sold) stay on analytics metrics.
 - viz must be "chart" or "table". For chart, chartType is "bar" or "pie".
 - Optional filters (use whenever the user names them):
   - projectStatus = CRM Project Status / stage only (LEAD|SITE_SURVEY|PROPOSAL|CONFIRMED|UNDER_INSTALLATION|SUBMITTED_FOR_SUBSIDY|COMPLETED|COMPLETED_SUBSIDY_CREDITED|LOST). "Under installation" → UNDER_INSTALLATION. Never use this for payment or Installation Status.
@@ -626,6 +629,7 @@ Rules:
   - "payment timeline", "feasibility pending", "missing documents", "PE missing BOM", "hub station IDs", "550W panels", "lost deal details" → projects_ops_detail with filters.detailSlice
   - "stalled pipeline", "ageing/aging/aeging pipeline", "pipeline analysis", "pipeline health" → pipeline_health with filters.detailSlice stalled|ageing|analysis
   - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
+  - "Where do I add the Panel and Inverter brand in CRM?" / "How do I change my password?" / "What is Ask Zenith?" → help_lookup
   - Pair detail lists with "for salesperson X" / "for ops Y" via filters.salespersonName / opsName
 - Date phrases like "last FY" / "this quarter" / "next quarter" / "this half year" (H1=Q1+Q2, H2=Q3+Q4) and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter or half year, prefer metric "profit_summary".
 - insightHints: short phrase describing what the user cares about (no numbers).
@@ -2361,6 +2365,7 @@ async function executeMetric(
     userId: string;
     role: UserRole;
     dateFilter: ZenithNlDateFilter;
+    question: string;
     compareWhere?: Prisma.ProjectWhereInput;
     compareMeta?: ZenithNlQueryInput['compareMeta'];
   },
@@ -2493,6 +2498,8 @@ async function executeMetric(
       return execCustomerDetailLookup(intent, {
         salespersonId: ctx.role === UserRole.SALES ? ctx.userId : undefined,
       });
+    case 'help_lookup':
+      return execHelpLookup(ctx.question);
     case 'customers_list_slice': {
       let salespersonId: string | undefined;
       if (ctx.role === UserRole.SALES) salespersonId = ctx.userId;
@@ -2590,10 +2597,14 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   const started = Date.now();
   const live = await loadLiveAskBook(input.userId, input.role);
 
+  // Help how-tos before navigation actions so “How do I create a ticket?” answers instead of jumping.
+  const helpIntentEarly = matchHelpLookupIntent(question, input.role);
+
   // Navigation / create / edit actions — before analytics so "create support ticket" is not a ticket count.
-  const actionMatch =
-    matchAskActionIntent(question, input.role) ||
-    (await matchAskEditActionIntent(question, input.role));
+  const actionMatch = helpIntentEarly
+    ? null
+    : matchAskActionIntent(question, input.role) ||
+      (await matchAskEditActionIntent(question, input.role));
   if (actionMatch) {
     console.info('[zenith-nl-query]', {
       role: input.role,
@@ -2623,7 +2634,10 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   let chipMatch = false;
   let intent: ZenithNlIntent | null = null;
   const periodCmp = parsePeriodCompare(question);
-  if (periodCmp && metricAllowedForRole('period_compare', input.role)) {
+  if (helpIntentEarly) {
+    intent = normalizeIntent(helpIntentEarly, input.role);
+    chipMatch = true;
+  } else if (periodCmp && metricAllowedForRole('period_compare', input.role)) {
     intent = normalizeIntent(periodCompareIntent(periodCmp), input.role);
     chipMatch = true;
   } else {
@@ -2763,6 +2777,14 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     }
   }
 
+  // How-to questions read Help even if Claude guessed an analytics metric.
+  if (!chipMatch) {
+    const helpIntent = matchHelpLookupIntent(question, input.role);
+    if (helpIntent) {
+      intent = normalizeIntent(helpIntent, input.role);
+    }
+  }
+
   // Cohort revenue hint when chip says revenue of Deye…
   const execEntities: ExtractedZenithEntities = {
     ...entities,
@@ -2818,6 +2840,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       userId: input.userId,
       role: input.role,
       dateFilter: input.dateFilter,
+      question,
       compareWhere: compareScoped,
       compareMeta: input.compareMeta,
     });
@@ -2849,9 +2872,12 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     viz = maybeForceChart(viz, intent);
     viz = attachAskDrillHrefs(intent.metric, viz, intent, input.dateFilter);
     const insight = enrichInsight(intent.metric, viz, executed.insight);
-    const projectsHref =
-      executed.projectsHref ||
-      projectsHrefForIntent(intent.metric, intent, input.dateFilter);
+    const projectsHref = resolveAskProjectsHref({
+      metric: intent.metric,
+      viz,
+      executedHref: executed.projectsHref,
+      fallbackHref: projectsHrefForIntent(intent.metric, intent, input.dateFilter),
+    });
     const followUps = followUpsForMetric(intent.metric, input.role);
 
     console.info('[zenith-nl-query]', {

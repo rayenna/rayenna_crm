@@ -53,6 +53,7 @@ export function buildZenithNlProjectsHref(
     city?: string;
     installationStatus?: string;
     paymentMode?: string;
+    ids?: string[];
   },
   dateFilter: ZenithNlDateFilter,
 ): string {
@@ -102,11 +103,87 @@ export function buildZenithNlProjectsHref(
   if (params.paymentMode?.trim()) search.append('paymentMode', params.paymentMode.trim());
   const q = params.search != null ? String(params.search).trim() : '';
   if (q !== '') search.append('search', q);
+  const ids = [...new Set((params.ids ?? []).map((id) => id.trim()).filter(Boolean))].slice(0, 200);
+  ids.forEach((id) => search.append('id', id));
   dateFilter.selectedFYs.forEach((fy) => search.append('fy', fy));
   dateFilter.selectedQuarters.forEach((qq) => search.append('quarter', qq));
   dateFilter.selectedMonths.forEach((m) => search.append('month', m));
   const qs = search.toString();
   return qs ? `/projects?${qs}` : '/projects';
+}
+
+const ASK_PROJECT_ID_HREF_MAX = 200;
+
+const EMPTY_DATES: ZenithNlDateFilter = {
+  selectedFYs: [],
+  selectedQuarters: [],
+  selectedMonths: [],
+};
+
+/** Deep-link that opens exactly the projects in an Ask deal list. */
+export function projectsHrefForAskProjectIds(ids: string[]): string | null {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))].slice(
+    0,
+    ASK_PROJECT_ID_HREF_MAX,
+  );
+  if (unique.length === 0) return null;
+  return buildZenithNlProjectsHref({ ids: unique }, EMPTY_DATES);
+}
+
+export function projectIdsFromAskViz(viz: ZenithNlViz): string[] {
+  if (viz.kind !== 'table') return [];
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const row of viz.rows) {
+    const rec = row as Record<string, unknown>;
+    let id = typeof rec.projectId === 'string' ? rec.projectId.trim() : '';
+    if (!id && typeof rec.href === 'string') {
+      const m = rec.href.match(/^\/projects\/([a-z0-9_-]{16,40})\/?$/i);
+      if (m?.[1]) id = m[1];
+    }
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+const PIN_ASK_HREF_TO_ROW_IDS = new Set<ZenithNlMetric>(['pipeline_health', 'who_to_call']);
+
+function isBroadProjectsHref(href: string | null | undefined): boolean {
+  if (href == null || href === '' || href === '/projects') return true;
+  if (!href.startsWith('/projects')) return false;
+  try {
+    const u = new URL(href, 'http://local.invalid');
+    const keys = [...u.searchParams.keys()];
+    if (keys.includes('id')) return false;
+    const onlyDates = keys.every((k) => k === 'fy' || k === 'quarter' || k === 'month');
+    if (onlyDates) return true;
+    return u.searchParams.getAll('status').some((s) => s.includes(','));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Prefer the deals in the Ask table over a wide Projects filter
+ * (e.g. stalled pipeline must not open every open-stage project).
+ */
+export function resolveAskProjectsHref(args: {
+  metric: ZenithNlMetric;
+  viz: ZenithNlViz;
+  executedHref?: string;
+  fallbackHref: string | null;
+}): string | null {
+  const executed = args.executedHref?.trim() || '';
+  if (executed.includes('id=')) return executed;
+  const ids = projectIdsFromAskViz(args.viz);
+  const candidate = executed || args.fallbackHref;
+  const shouldPin =
+    ids.length > 0 &&
+    (PIN_ASK_HREF_TO_ROW_IDS.has(args.metric) || isBroadProjectsHref(candidate));
+  if (shouldPin) return projectsHrefForAskProjectIds(ids) || candidate;
+  return candidate || null;
 }
 
 function entityHrefParams(intent: ZenithNlIntent): {
@@ -284,17 +361,7 @@ export function projectsHrefForIntent(
       );
     }
     case 'pipeline_health':
-      return buildZenithNlProjectsHref(
-        {
-          status: [
-            ...PIPELINE_STATUSES,
-            'UNDER_INSTALLATION',
-            'SUBMITTED_FOR_SUBSIDY',
-          ],
-          zenithSlice: 'pipeline',
-        },
-        dateFilter,
-      );
+      return null;
     case 'payment_status_breakdown': {
       const ps = intent.filters?.paymentStatus?.trim();
       if (ps) {
@@ -390,12 +457,7 @@ export function projectsHrefForIntent(
     case 'pending_subsidy':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
     case 'who_to_call':
-      return buildZenithNlProjectsHref(
-        {
-          status: ['LEAD', 'SITE_SURVEY', 'PROPOSAL', 'CONFIRMED', 'UNDER_INSTALLATION'],
-        },
-        dateFilter,
-      );
+      return null;
     case 'customer_detail_lookup': {
       const search = intent.filters?.search?.trim() || intent.filters?.city?.trim();
       return search ? `/customers?q=${encodeURIComponent(search)}` : '/customers';
@@ -941,6 +1003,7 @@ export function attachAskDrillHrefs(
   intent: ZenithNlIntent,
   dateFilter: ZenithNlDateFilter,
 ): ZenithNlViz {
+  if (metric === 'help_lookup') return viz;
   const entity = entityHrefParams(intent);
   const cohortHref = projectsHrefForIntent(metric, intent, dateFilter);
 

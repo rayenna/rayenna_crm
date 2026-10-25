@@ -145,6 +145,7 @@ export type BuildProjectFilterChipsInput = {
     search?: string
     sortBy?: string
     sortOrder?: string
+    ids?: string[]
   }
   searchInput: string
   selectedFYs: string[]
@@ -373,6 +374,14 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'pe-bucket',
       label: PE_BUCKET_LABELS[filters.peBucket],
       onRemove: () => onPatchFilters({ peBucket: null }),
+    })
+  }
+
+  if (filters.ids && filters.ids.length > 0) {
+    chips.push({
+      id: 'ask-ids',
+      label: `Ask list · ${filters.ids.length} project${filters.ids.length === 1 ? '' : 's'}`,
+      onRemove: () => onPatchFilters({ ids: [] }),
     })
   }
 

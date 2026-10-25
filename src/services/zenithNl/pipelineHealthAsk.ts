@@ -8,6 +8,7 @@ import { dealExpectedValue } from '../../utils/salesProbability';
 import type { ZenithNlIntent, ZenithNlTableRow, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 import { primaryPhoneFromCustomer } from '../../utils/consumerCustomerProfile';
+import { projectsHrefForAskProjectIds } from './projectsHref';
 
 const TABLE_CAP = 20;
 const SCAN_CAP = 400;
@@ -332,7 +333,7 @@ export async function execPipelineHealth(
 ): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
   const mode = (intent.filters?.detailSlice || 'analysis') as PipelineHealthMode;
   const deals = await loadScoredPipeline(where);
-  const projectsHref = '/projects?status=LEAD,SITE_SURVEY,PROPOSAL,CONFIRMED,UNDER_INSTALLATION';
+  const hrefFor = (rows: ScoredDeal[]) => projectsHrefForAskProjectIds(rows.map((d) => d.id)) || undefined;
 
   if (deals.length === 0) {
     return {
@@ -343,7 +344,7 @@ export async function execPipelineHealth(
         columns: DEAL_COLUMNS,
         rows: [],
       },
-      projectsHref,
+      projectsHref: hrefFor(deals),
     };
   }
 
@@ -364,7 +365,7 @@ export async function execPipelineHealth(
         columns: DEAL_COLUMNS,
         rows: dealRows(stalled),
       },
-      projectsHref,
+      projectsHref: hrefFor(stalled) || hrefFor(deals),
     };
   }
 
@@ -408,7 +409,7 @@ export async function execPipelineHealth(
         columns: DEAL_COLUMNS,
         rows: dealRows(aged),
       },
-      projectsHref,
+      projectsHref: hrefFor(overSla.length ? overSla : aged),
     };
   }
 
@@ -466,6 +467,6 @@ export async function execPipelineHealth(
       columns: DEAL_COLUMNS,
       rows: dealRows(worst),
     },
-    projectsHref,
+    projectsHref: hrefFor(stalled.length ? stalled : worst),
   };
 }

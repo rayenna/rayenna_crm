@@ -50,6 +50,8 @@ export type ProjectsListFiltersState = {
   search?: string
   sortBy?: string
   sortOrder?: string
+  /** Zenith Ask “Open in Projects” — exact IDs from the answer. */
+  ids?: string[]
 }
 
 export type ProjectsListQueryInput = {
@@ -121,6 +123,8 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   }
   if (filters.paymentMode?.trim()) params.append('paymentMode', filters.paymentMode.trim())
   if (filters.notAvailingLoan) params.append('notAvailingLoan', 'true')
+  const ids = [...new Set((filters.ids ?? []).map((id) => id.trim()).filter(Boolean))].slice(0, 200)
+  ids.forEach((id) => params.append('id', id))
   if (filters.sortBy) {
     params.append('sortBy', filters.sortBy)
     params.append('sortOrder', filters.sortOrder || 'desc')
@@ -130,6 +134,25 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (input.limit != null) params.append('limit', String(input.limit))
 
   return params
+}
+
+const PROJECT_ID_RE = /^[a-z0-9_-]{16,40}$/i
+
+/** Parse `id` query values from a Projects URL (Ask Open in Projects). */
+export function parseProjectIdsFromSearchParams(p: URLSearchParams): string[] {
+  const parts = [...p.getAll('id'), ...(p.get('ids') ? [p.get('ids') as string] : [])].flatMap((v) =>
+    v.split(','),
+  )
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const part of parts) {
+    const id = part.trim()
+    if (!PROJECT_ID_RE.test(id) || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+    if (ids.length >= 200) break
+  }
+  return ids
 }
 
 export function buildProjectExportQueryParams(

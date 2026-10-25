@@ -13,7 +13,7 @@ The **classic Dashboard** is your in-menu analytics home: FY filters, role-speci
 **Zenith ✦** is the full-screen **command center** (Dashboard menu → **Zenith ✦**). Same **FY / Quarter / Month** rules as the Dashboard, plus **Ask Zenith**, Hit List, AI Insights, **Quick Actions** drawers, and optional offline PWA. Overview: [Zenith command center](/help/zenith#zenith-command-center).
 
 ### What is Ask Zenith?
-On Zenith (under Solar News), **Ask** answers **analytics** questions with an insight plus a chart or table, and can also run **tasks** (New Customer, My Day, pending subsidy, search, etc.). Tasks match the **Ctrl+K** / **⌘K** palette. Guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
+On Zenith (under Solar News), **Ask** answers **analytics** questions with an insight plus a chart or table, **how-to** questions from this Help (for example **Where do I add the Panel and Inverter brand in CRM?**), and **tasks** (New Customer, My Day, pending subsidy, search, etc.). Tasks match the **Ctrl+K** / **⌘K** palette. Guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
 
 ### What are the Dashboard filters (FY, Quarter, Month)?
 **Financial Year** is always available; **Quarter** and **Month** unlock when **exactly one** FY is selected. Tiles and most charts respect these filters. Details: [Dashboard → Filters](/help/dashboard#dashboard-filters) · [Year-on-Year KPIs](/help/dashboard#year-on-year-kpis).

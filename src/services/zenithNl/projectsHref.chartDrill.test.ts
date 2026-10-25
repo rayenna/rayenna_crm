@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { attachAskDrillHrefs, type ZenithNlDateFilter } from './projectsHref';
+import {
+  attachAskDrillHrefs,
+  projectsHrefForAskProjectIds,
+  projectsHrefForIntent,
+  resolveAskProjectsHref,
+  type ZenithNlDateFilter,
+} from './projectsHref';
 import type { ZenithNlIntent, ZenithNlMetric, ZenithNlViz } from './catalog';
 
 const emptyDates: ZenithNlDateFilter = {
@@ -116,5 +122,47 @@ describe('Ask chart slice → Projects href', () => {
       if (out.kind !== 'chart') throw new Error('expected chart');
       expect(out.series[0]?.href, metric).toBeTruthy();
     }
+  });
+});
+
+describe('Ask Open in Projects pins deal lists', () => {
+  it('builds repeated id query params', () => {
+    const href = projectsHrefForAskProjectIds([
+      'cmkxknrqr0004xc1bzozlo19j',
+      'cmu27mizh002wm7uu413s4nj9',
+    ]);
+    expect(href).toContain('id=cmkxknrqr0004xc1bzozlo19j');
+    expect(href).toContain('id=cmu27mizh002wm7uu413s4nj9');
+    expect(href).not.toContain('status=');
+  });
+
+  it('does not fall back stalled pipeline to every open stage', () => {
+    expect(
+      projectsHrefForIntent(
+        'pipeline_health',
+        { metric: 'pipeline_health', filters: { detailSlice: 'stalled' } },
+        emptyDates,
+      ),
+    ).toBeNull();
+  });
+
+  it('pins Open in Projects to stalled row ids instead of the full pipeline', () => {
+    const href = resolveAskProjectsHref({
+      metric: 'pipeline_health',
+      viz: {
+        kind: 'table',
+        title: 'Stalled pipeline',
+        columns: [{ key: 'sl', label: 'SL' }],
+        rows: [
+          { sl: 129, projectId: 'cmkxknrqr0004xc1bzozlo19j', href: '/projects/cmkxknrqr0004xc1bzozlo19j' },
+          { sl: 74, projectId: 'cmu27mizh002wm7uu413s4nj9', href: '/projects/cmu27mizh002wm7uu413s4nj9' },
+        ],
+      },
+      executedHref: '/projects?status=LEAD,SITE_SURVEY,PROPOSAL,CONFIRMED,UNDER_INSTALLATION',
+      fallbackHref: '/projects?status=LEAD&status=SITE_SURVEY',
+    });
+    expect(href).toContain('id=cmkxknrqr0004xc1bzozlo19j');
+    expect(href).toContain('id=cmu27mizh002wm7uu413s4nj9');
+    expect(href).not.toContain('status=');
   });
 });

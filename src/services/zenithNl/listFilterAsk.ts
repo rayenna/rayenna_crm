@@ -20,6 +20,7 @@ export function matchProjectsListFilterIntent(
 ): ZenithNlIntent | null {
   if (!metricAllowedForRole('projects_list_slice', role)) return null;
   const q = norm(question);
+  if (/^(how|what|where|why|when|can\s+i)\b/.test(q)) return null;
   if (!/\b(list|show|all|find|which)\b/.test(q)) return null;
   // Plural “projects” only — “show project SL:…” stays project_detail_lookup.
   if (!/\bprojects\b/.test(q)) return null;

@@ -76,6 +76,8 @@ export type ProjectsListFilterInput = {
   paymentMode: PaymentMode | null;
   /** Explicit cash / non-loan cohort (Ask loan-vs-cash). */
   notAvailingLoan: boolean;
+  /** Zenith Ask “Open in Projects” — exact project IDs from the answer. */
+  idArray: string[];
 };
 
 export type ProjectsListUser = { id: string; role: UserRole } | undefined;
@@ -96,6 +98,25 @@ const VALID_CUSTOMER_TYPES = ['RESIDENTIAL', 'APARTMENT', 'COMMERCIAL'];
 function toStringArray(value: unknown): string[] {
   if (value == null || value === '') return [];
   return (Array.isArray(value) ? value : [value]).map((v) => String(v));
+}
+
+export const PROJECT_ID_QUERY_MAX = 200;
+const PROJECT_ID_RE = /^[a-z0-9_-]{16,40}$/i;
+
+/** Parse `id` / comma-separated `id` query values (Ask Open in Projects). */
+export function parseProjectIdsFromQuery(value: unknown): string[] {
+  if (value == null || value === '') return [];
+  const parts = (Array.isArray(value) ? value : [value]).flatMap((v) => String(v).split(','));
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const id = part.trim();
+    if (!PROJECT_ID_RE.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= PROJECT_ID_QUERY_MAX) break;
+  }
+  return ids;
 }
 
 function pushOntoWhereAnd(where: Record<string, unknown>, clause: object): void {
@@ -196,6 +217,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     installationStatus,
     paymentMode,
     notAvailingLoan,
+    id,
   } = query;
 
   const fyArray = toStringArray(fy);
@@ -289,6 +311,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
         ? (paymentMode as PaymentMode)
         : null,
     notAvailingLoan: String(notAvailingLoan) === 'true',
+    idArray: parseProjectIdsFromQuery(id),
   };
 }
 
@@ -331,6 +354,10 @@ export function buildProjectsWhere(
     }
   } else if (filters.statusArray.length > 0) {
     where.projectStatus = { in: filters.statusArray };
+  }
+
+  if (filters.idArray.length > 0) {
+    pushOntoWhereAnd(where, { id: { in: filters.idArray } });
   }
 
   if (filters.typeArray.length > 0) where.type = { in: filters.typeArray };
@@ -829,4 +856,8 @@ export const projectsListQueryValidators = [
   query('paymentMode').optional().isIn(Object.values(PaymentMode)),
   query('notAvailingLoan').optional().isIn(['true']),
   query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest', 'active']),
+  query('id').optional().custom((value) => {
+    if (!value) return true;
+    return parseProjectIdsFromQuery(value).length > 0;
+  }).withMessage('Invalid id value'),
 ];

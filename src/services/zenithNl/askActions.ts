@@ -1,4 +1,5 @@
 import { UserRole } from '@prisma/client';
+import { looksLikeHelpQuestion } from './helpLookupAsk';
 
 /** Navigation / create / list actions from the Ask box (not analytics metrics). */
 export const ZENITH_ASK_ACTIONS = [
@@ -346,6 +347,10 @@ export function matchAskActionIntent(
 ): ZenithAskActionMatch | null {
   const key = norm(question);
   if (!key) return null;
+  // How-to / FAQ wording belongs to Help answers, not a silent jump.
+  if (looksLikeHelpQuestion(question)) {
+    return null;
+  }
 
   const exactHit = EXACT[key];
   if (exactHit) return exactHit(role);
@@ -551,7 +556,10 @@ export function matchAskActionIntent(
       'Opening confirmed projects…',
     );
   }
-  if (/\b(needs?\s+review|data\s*sense)\b/.test(key)) {
+  if (
+    /\b(needs?\s+review|data\s*sense)\b/.test(key) &&
+    !/^(how|what|where|why|when|does|can)\b/.test(key)
+  ) {
     if (!actionAllowedForRole('data_sense_review', role)) return null;
     return build(
       'data_sense_review',
@@ -588,8 +596,11 @@ export function matchAskActionIntent(
     );
   }
 
-  // Go to modules
-  if (/^(go\s+to\s+)?zenith\b/.test(key) && !/\bask\b/.test(key)) {
+  // Go to modules — command-like phrases only, not “Zenith shows Offline…”
+  if (
+    (/^(go\s+to\s+)?zenith$/.test(key) || /^open\s+zenith$/.test(key)) &&
+    !/\bask\b/.test(key)
+  ) {
     if (!actionAllowedForRole('go_zenith', role)) return null;
     return build('go_zenith', '/zenith', 'Zenith', 'Opening Zenith…');
   }
@@ -601,7 +612,10 @@ export function matchAskActionIntent(
     if (!actionAllowedForRole('go_users', role)) return null;
     return build('go_users', '/users', 'Users', 'Opening Users…');
   }
-  if (/\baudit\b/.test(key) || /\bsecurity\b/.test(key)) {
+  if (
+    /^(go\s+to\s+)?audit(\s*(&|and)\s*security)?$/.test(key) ||
+    /^open\s+audit(\s*(&|and)\s*security)?$/.test(key)
+  ) {
     if (!actionAllowedForRole('go_audit', role)) return null;
     return build('go_audit', '/audit-security', 'Audit & Security', 'Opening Audit & Security…');
   }
@@ -653,15 +667,22 @@ export function matchAskActionIntent(
     if (!actionAllowedForRole('go_solar_hub', role)) return null;
     return build('go_solar_hub', '/solar-hub', 'Solar Hub', 'Opening Solar Hub…');
   }
-  if (/^(go\s+to\s+)?(old\s+)?dashboard\b/.test(key)) {
+  if (
+    /^(go\s+to\s+)?(old\s+)?dashboard$/.test(key) ||
+    /^open\s+(the\s+)?(old\s+)?dashboard$/.test(key)
+  ) {
     if (!actionAllowedForRole('go_dashboard', role)) return null;
     return build('go_dashboard', '/dashboard', 'Dashboard', 'Opening Dashboard…');
   }
-  if (/^(open\s+)?help\b/.test(key) || /^go\s+to\s+help\b/.test(key)) {
+  if (/^(open\s+)?help$/.test(key) || /^go\s+to\s+help$/.test(key)) {
     if (!actionAllowedForRole('go_help', role)) return null;
     return build('go_help', '/help', 'Help', 'Opening Help…');
   }
-  if (/\btip\s+of\s+the\s+day\b/.test(key) || /^show\s+tip\b/.test(key)) {
+  if (
+    /^(show\s+)?tip\s+of\s+the\s+day$/.test(key) ||
+    /^open\s+tip(\s+of\s+the\s+day)?$/.test(key) ||
+    /^show\s+tip$/.test(key)
+  ) {
     if (!actionAllowedForRole('show_tip', role)) return null;
     return build('show_tip', '/zenith?showTip=1', 'Tip of the Day', 'Opening Tip of the Day…');
   }

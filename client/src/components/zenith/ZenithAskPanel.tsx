@@ -142,7 +142,11 @@ function AskTableCards({
                 ))}
               </dl>
             ) : null}
-            {clickable ? <span className="zenith-ask-table-cards__cta">Open record →</span> : null}
+            {clickable ? (
+              <span className="zenith-ask-table-cards__cta">
+                {href.startsWith('/help') ? 'Open in Help →' : 'Open record →'}
+              </span>
+            ) : null}
           </>
         )
         const canAct = Boolean(askRowProjectId(row))
@@ -577,7 +581,9 @@ export default function ZenithAskPanel({
                   ? 'Open Support Tickets →'
                   : result.projectsHref.startsWith('/customers')
                     ? 'Open Customer Master →'
-                    : 'Open in Projects →'}
+                    : result.projectsHref.startsWith('/help')
+                      ? 'Open in Help →'
+                      : 'Open in Projects →'}
               </Link>
             ) : null}
           </>

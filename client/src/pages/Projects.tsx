@@ -29,6 +29,7 @@ import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 import {
   buildProjectExportQueryParams,
   buildProjectListQueryParams,
+  parseProjectIdsFromSearchParams,
   type PeBucketParam,
 } from '../utils/projectListQuery'
 import {
@@ -137,6 +138,7 @@ function getInitialFiltersFromUrl(): {
   customerType: string[]
   hasDocuments: boolean
   askDrill: ReturnType<typeof parseAskProjectsDrillParams>
+  ids: string[]
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -171,6 +173,7 @@ function getInitialFiltersFromUrl(): {
   const dataSenseNeedsReview = p.get('dataSenseNeedsReview') === 'true'
   const dataSenseRule = parseDataSenseRule(p.get('dataSenseRule'))
   const askDrill = parseAskProjectsDrillParams(p)
+  const ids = parseProjectIdsFromSearchParams(p)
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -199,7 +202,8 @@ function getInitialFiltersFromUrl(): {
     dataSenseRule != null ||
     hasDocuments ||
     customerType.length > 0 ||
-    askProjectsDrillHasAny(askDrill)
+    askProjectsDrillHasAny(askDrill) ||
+    ids.length > 0
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -239,6 +243,7 @@ function getInitialFiltersFromUrl(): {
     dataSenseNeedsReview: dataSenseNeedsReview || dataSenseRule != null,
     dataSenseRule,
     askDrill,
+    ids,
   }
 }
 
@@ -666,6 +671,7 @@ const Projects = () => {
     dataSenseRule: urlInit?.dataSenseRule ?? null,
     ...emptyAskProjectsDrillParams(),
     ...(urlInit?.askDrill ? askProjectsDrillFilterPatch(urlInit.askDrill) : {}),
+    ids: (urlInit?.ids ?? []) as string[],
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -706,6 +712,7 @@ const Projects = () => {
     const dataSenseNeedsReviewFromUrl = searchParams.get('dataSenseNeedsReview') === 'true'
     const dataSenseRuleFromUrl = parseDataSenseRule(searchParams.get('dataSenseRule'))
     const askDrillFromUrl = parseAskProjectsDrillParams(searchParams)
+    const idsFromUrl = parseProjectIdsFromSearchParams(searchParams)
     const lifecycleSpecsActiveFromUrl =
       !lifecycleSpecsIncompleteFromUrl &&
       (lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== '')
@@ -745,7 +752,8 @@ const Projects = () => {
       dataSenseRuleFromUrl != null ||
       complianceGapFromUrl != null ||
       hasDocumentsFromUrl ||
-      hasAskDrillParams
+      hasAskDrillParams ||
+      idsFromUrl.length > 0
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -762,7 +770,8 @@ const Projects = () => {
         complianceGapFromUrl != null ||
         hasDateParams ||
         hasExtendedTileParams ||
-        hasSearchParam)
+        hasSearchParam ||
+        idsFromUrl.length > 0)
     ) {
       appliedFromUrlRef.current = true
       setFilters((prev) => ({
@@ -770,7 +779,10 @@ const Projects = () => {
         peBucket: peBucketValid,
         ...(validStatus.length > 0
           ? { status: validStatus }
-          : peBucketValid != null || complianceGapFromUrl != null || hasAskDrillParams
+          : peBucketValid != null ||
+              complianceGapFromUrl != null ||
+              hasAskDrillParams ||
+              idsFromUrl.length > 0
             ? { status: [] as string[] }
             : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
@@ -809,6 +821,7 @@ const Projects = () => {
         dataSenseRule: dataSenseRuleFromUrl,
         ...emptyAskProjectsDrillParams(),
         ...askProjectsDrillFilterPatch(askDrillFromUrl),
+        ...(idsFromUrl.length > 0 ? { ids: idsFromUrl } : {}),
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -855,6 +868,7 @@ const Projects = () => {
   useEffect(() => {
     if (appliedFromUrlRef.current) return
     if (filters.peBucket) return
+    if (filters.ids && filters.ids.length > 0) return
     if (defaultStatusValues.length > 0 && filters.status.length === 0) {
       setFilters(prev => {
         if (prev.status.length === 0) {
@@ -981,6 +995,7 @@ const Projects = () => {
       dataSenseNeedsReview: false,
       dataSenseRule: null,
       ...emptyAskProjectsDrillParams(),
+      ids: [],
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -1136,7 +1151,8 @@ const Projects = () => {
     Boolean(parseDataSenseRule(searchParams.get('dataSenseRule'))) ||
     Boolean(parseComplianceGap(searchParams.get('complianceGap'))) ||
     searchParams.get('hasDocuments') === 'true' ||
-    askProjectsDrillHasAny(parseAskProjectsDrillParams(searchParams))
+    askProjectsDrillHasAny(parseAskProjectsDrillParams(searchParams)) ||
+    parseProjectIdsFromSearchParams(searchParams).length > 0
 
   const listQueryInput = {
     filters,

@@ -6,6 +6,7 @@ import prisma from '../../prisma';
 import type { ZenithNlIntent, ZenithNlTableRow, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 import { primaryPhoneFromCustomer } from '../../utils/consumerCustomerProfile';
+import { projectsHrefForAskProjectIds } from './projectsHref';
 
 const SCAN_CAP = 80;
 const RESULT_CAP = 5;
@@ -315,5 +316,6 @@ export async function execWhoToCall(
       ],
       rows,
     },
+    projectsHref: projectsHrefForAskProjectIds(top.map((r) => r.projectId)) || undefined,
   };
 }

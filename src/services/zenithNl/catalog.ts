@@ -51,6 +51,7 @@ export const ZENITH_NL_METRICS = [
   'projects_ops_detail',
   'customer_detail_lookup',
   'customers_list_slice',
+  'help_lookup',
   'clarify',
 ] as const;
 
@@ -639,6 +640,13 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: ALL_ASK,
   },
   {
+    metric: 'help_lookup',
+    description:
+      'Answer how-to questions from bundled CRM Help (where to add a field, what a screen does)',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
     metric: 'clarify',
     description: 'Use when the question is ambiguous or outside the catalog',
     defaultViz: 'table',
@@ -702,34 +710,34 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
 
 export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
+    'Where do I add the Panel and Inverter brand in CRM?',
     'Show my ageing pipeline',
     'Show my pipeline by stage',
     'List lost deals with active PE proposals',
-    'List deals with PE Ready or Draft proposals',
   ],
   MANAGEMENT: [
+    'Where do I add the Panel and Inverter brand in CRM?',
     'DCR vs Non-DCR profitability',
     'List lost deals with active PE proposals',
     'List deals with PE Ready or Draft proposals',
-    "What's my weighted pipeline?",
   ],
   ADMIN: [
+    'Where do I add the Panel and Inverter brand in CRM?',
     'List lost deals with active PE proposals',
     'List deals with PE Ready or Draft proposals',
     'PE missing BOM',
-    "What's my weighted pipeline?",
   ],
   OPERATIONS: [
+    'Where do I add the Panel and Inverter brand in CRM?',
     'Projects with feasibility pending',
     'Payment timeline',
     'Hub station IDs',
-    'PE missing BOM',
   ],
   FINANCE: [
+    'Where do I add the Panel and Inverter brand in CRM?',
     'Payment timeline',
     'Availing loan',
     'Incentive eligible projects',
-    "What's my weighted pipeline?",
   ],
 };
 
@@ -784,6 +792,7 @@ const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
   projects_ops_detail: 'Projects missing documents',
   customer_detail_lookup: 'Customer details for {customer}',
   customers_list_slice: 'List customers in Kochi',
+  help_lookup: 'Where do I add the Panel and Inverter brand in CRM?',
 };
 
 export function fillAskPlaceholders(
@@ -1117,6 +1126,11 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Who should I call today?',
       'Revenue by city',
       'List residential customers',
+    ],
+    help_lookup: [
+      'Where do I add the Panel and Inverter brand in CRM?',
+      'How do I change my password?',
+      'What is Ask Zenith?',
     ],
     hub_plant_link_summary: [
       'AMCs expiring',

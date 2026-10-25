@@ -26,6 +26,7 @@ export const PROJECTS_DEEP_LINK_CHIP_IDS = new Set([
   'ask-installation-status',
   'ask-payment-mode',
   'ask-not-loan',
+  'ask-ids',
 ])
 
 export function isProjectsDeepLinkChipId(id: string): boolean {
@@ -62,6 +63,7 @@ export type ProjectsDeepLinkFilterClearPatch = {
   installationStatus: ''
   paymentMode: ''
   notAvailingLoan: false
+  ids: []
 }
 
 export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
@@ -93,6 +95,7 @@ export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
     installationStatus: '',
     paymentMode: '',
     notAvailingLoan: false,
+    ids: [],
   }
 }
 
@@ -124,6 +127,7 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
   installationStatus?: string
   paymentMode?: string
   notAvailingLoan?: boolean
+  ids?: string[]
 }): boolean {
   return Boolean(
     filters.peBucket ||
@@ -152,6 +156,7 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
       filters.city ||
       filters.installationStatus ||
       filters.paymentMode ||
-      filters.notAvailingLoan,
+      filters.notAvailingLoan ||
+      (filters.ids && filters.ids.length > 0),
   )
 }

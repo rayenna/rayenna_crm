@@ -63,6 +63,7 @@ export async function matchAskEditActionIntent(
 ): Promise<ZenithAskActionMatch | null> {
   const q = norm(question);
   if (!q || q.length < 6) return null;
+  if (/^(how|what|where|who|why|when|can\s+i)\b/.test(q)) return null;
 
   // Open / draft proposal for SL or named customer → Proposal Engine (does not leave Ask as a project search).
   if (
