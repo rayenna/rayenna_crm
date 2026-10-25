@@ -1335,6 +1335,7 @@ const Projects = () => {
       filters.leadSource.length > 0 ||
       Boolean(filters.sortBy)
     ) {
+      setShowMoreFilters(true)
       setShowAdvancedFilters(true)
     }
   }, [

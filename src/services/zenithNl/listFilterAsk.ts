@@ -5,6 +5,7 @@
 import { UserRole } from '@prisma/client';
 import type { ZenithNlIntent } from './catalog';
 import { metricAllowedForRole } from './catalog';
+import { mentionsProposalEngineAsk } from './dimensionFilters';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -22,8 +23,13 @@ export function matchProjectsListFilterIntent(
   const q = norm(question);
   if (/^(how|what|where|why|when|can\s+i)\b/.test(q)) return null;
   if (!/\b(list|show|all|find|which)\b/.test(q)) return null;
-  // Plural “projects” only — “show project SL:…” stays project_detail_lookup.
-  if (!/\bprojects\b/.test(q)) return null;
+  const projectNoun = /\bprojects\b/.test(q) || /\bdeals\b/.test(q);
+  const peCohort =
+    mentionsProposalEngineAsk(q) &&
+    (/\bcustomers?\b/.test(q) || /\b(hybrids?|on[-\s]?grids?|off[-\s]?grids?)\b/.test(q));
+  // Plural “projects/deals” only — “show project SL:…” stays project_detail_lookup.
+  // PE + hybrid/customers is still a project list even if they said “customers”.
+  if (!projectNoun && !peCohort) return null;
   if (
     /\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|workload|analys[ei]s|customer\s+details?|project\s+details?)\b/.test(
       q,

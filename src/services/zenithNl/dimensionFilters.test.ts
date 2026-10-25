@@ -82,17 +82,31 @@ describe('dimensionFilters', () => {
     expect(extractZenithDimensions('projects in Kochi').city?.toLowerCase()).toContain('kochi');
   });
 
-  it('extracts Lost deals and active PE Ready/Draft', () => {
+  it('extracts Lost deals and PE Ready vs Ready/Draft', () => {
     const lost = extractZenithDimensions(
       'List the Lost Deals that have Active Proposals in Proposal Engine',
     );
     expect(lost.projectStatus).toBe('LOST');
-    expect(lost.peBucket).toBe('active');
+    expect(lost.peBucket).toBe('proposal-ready');
     const anyStage = extractZenithDimensions(
       'List the Deals in (any stage) that have Active (PE Ready / Draft) proposals in Proposal engine',
     );
     expect(anyStage.projectStatus).toBeUndefined();
     expect(anyStage.peBucket).toBe('active');
     expect(anyStage.city).toBeUndefined();
+  });
+
+  it('maps PE Ready and active proposals to the Ready bucket for any system type', () => {
+    const hybrid = extractZenithDimensions(
+      'list all my hybrid customers who have active proposals',
+    );
+    expect(hybrid.systemType).toBe('HYBRID');
+    expect(hybrid.peBucket).toBe('proposal-ready');
+    const onGrid = extractZenithDimensions('Show PE Ready on-grid projects');
+    expect(onGrid.systemType).toBe('ON_GRID');
+    expect(onGrid.peBucket).toBe('proposal-ready');
+    const offGrid = extractZenithDimensions('List off-grid deals with PE Ready proposals');
+    expect(offGrid.systemType).toBe('OFF_GRID');
+    expect(offGrid.peBucket).toBe('proposal-ready');
   });
 });

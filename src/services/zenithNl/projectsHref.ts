@@ -105,9 +105,10 @@ export function buildZenithNlProjectsHref(
   if (q !== '') search.append('search', q);
   const ids = [...new Set((params.ids ?? []).map((id) => id.trim()).filter(Boolean))].slice(0, 200);
   ids.forEach((id) => search.append('id', id));
-  dateFilter.selectedFYs.forEach((fy) => search.append('fy', fy));
-  dateFilter.selectedQuarters.forEach((qq) => search.append('quarter', qq));
-  dateFilter.selectedMonths.forEach((m) => search.append('month', m));
+  const dates = dateFilter ?? EMPTY_DATES;
+  (dates.selectedFYs ?? []).forEach((fy) => search.append('fy', fy));
+  (dates.selectedQuarters ?? []).forEach((qq) => search.append('quarter', qq));
+  (dates.selectedMonths ?? []).forEach((m) => search.append('month', m));
   const qs = search.toString();
   return qs ? `/projects?${qs}` : '/projects';
 }

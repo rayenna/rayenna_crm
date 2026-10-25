@@ -6,6 +6,7 @@ import {
   matchPhraseChipIntent,
   matchSupportTicketIntent,
 } from './chipIntents';
+import { extractZenithDimensions, mergeDimensionsIntoIntent } from './dimensionFilters';
 
 describe('matchExactChipIntent', () => {
   it('matches Management panel mix chip without Claude', () => {
@@ -279,13 +280,15 @@ describe('matchPhraseChipIntent', () => {
     );
     expect(exact?.metric).toBe('projects_list_slice');
     expect(exact?.filters).toEqual({ projectStatus: 'LOST', peBucket: 'active' });
-    const paraphrased = matchExactChipIntent(
-      'Show lost deals with active PE proposals',
-      UserRole.SALES,
-    );
+    const paraphrasedQ = 'Show lost deals with active PE proposals';
+    const paraphrased = matchExactChipIntent(paraphrasedQ, UserRole.SALES);
     expect(paraphrased?.metric).toBe('projects_list_slice');
-    expect(paraphrased?.filters?.projectStatus).toBe('LOST');
-    expect(paraphrased?.filters?.peBucket).toBe('active');
+    const merged = mergeDimensionsIntoIntent(
+      paraphrased!,
+      extractZenithDimensions(paraphrasedQ),
+    );
+    expect(merged.filters?.projectStatus).toBe('LOST');
+    expect(merged.filters?.peBucket).toBe('active');
   });
 
   it('lists any-stage deals with PE Ready or Draft', () => {

@@ -65,6 +65,7 @@ import {
   CAPACITY_BANDS,
   customerTypeLabel,
   extractZenithDimensions,
+  mentionsProposalEngineAsk,
   mergeDimensionsIntoIntent,
   parseCustomerType,
   parsePanelType,
@@ -604,7 +605,7 @@ Rules:
   - projectStatus = CRM Project Status / stage only (LEAD|SITE_SURVEY|PROPOSAL|CONFIRMED|UNDER_INSTALLATION|SUBMITTED_FOR_SUBSIDY|COMPLETED|COMPLETED_SUBSIDY_CREDITED|LOST). "Under installation" → UNDER_INSTALLATION. Never use this for payment or Installation Status.
   - paymentStatus = Payment Status only (PENDING|PARTIAL|FULLY_PAID|NOT_FULLY_PAID). "Payment pending" / "fully paid" / "not fully paid" → here. Never map payment language to projectStatus.
   - installationStatus = Installation Status on Installation records only (PENDING|IN_PROGRESS|COMPLETED). "Installation pending" / "installation in progress" / "installation completed" → here. Distinct from projectStatus UNDER_INSTALLATION.
-  - peBucket (proposal-ready|draft|not-started|rest|active). "active PE" / "PE Ready or Draft" / "active proposals in Proposal Engine" → active (union of Ready + Draft). "list lost deals with active PE" → projects_list_slice, filters.projectStatus=LOST, peBucket=active. "list deals in any stage with PE Ready or Draft" → projects_list_slice, peBucket=active (no projectStatus).
+  - peBucket (proposal-ready|draft|not-started|rest|active). "PE Ready" / "active proposals" (without Draft) → proposal-ready. "active PE" / "PE Ready or Draft" / "Active (PE Ready / Draft)" → active (union of Ready + Draft). "list lost deals with active PE" → projects_list_slice, filters.projectStatus=LOST, peBucket=active. "list hybrid/on-grid/off-grid customers or projects who have PE Ready / active proposals" → projects_list_slice with filters.systemType and peBucket=proposal-ready (not a customer master list).
   - leadSource (label or enum)
   - search (customer name ONLY — never put panel/inverter/bank names here)
   - panelBrand (e.g. "Adani Solar", "Waaree", "Vikram Solar" — from "Adani panels", "Adani Solar modules")
@@ -1318,6 +1319,7 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
   if (intent.filters?.hasDocuments) bits.push('with documents');
   if (intent.filters?.missingDocuments) bits.push('missing documents');
   if (intent.filters?.peBucket === 'active') bits.push('PE Ready or Draft');
+  else if (intent.filters?.peBucket === 'proposal-ready') bits.push('PE Ready');
   else if (intent.filters?.peBucket) bits.push(`PE ${intent.filters.peBucket}`);
   if (intent.filters?.leadSource) bits.push(`lead ${intent.filters.leadSource}`);
   if (intent.filters?.incentiveEligible) bits.push('incentive eligible');
@@ -1330,13 +1332,15 @@ function describeEntitySlice(intent: ZenithNlIntent): string {
 }
 
 function peListTitle(intent: ZenithNlIntent): string {
+  const sys = parseSystemType(intent.filters?.systemType);
+  const sysBit = sys ? `${systemTypeLabel(sys)} ` : '';
   if (intent.filters?.projectStatus === 'LOST' && intent.filters?.peBucket === 'active') {
-    return 'Lost deals with active PE';
+    return `${sysBit}Lost deals with active PE`.trim();
   }
-  if (intent.filters?.peBucket === 'active') return 'Deals with PE Ready or Draft';
-  if (intent.filters?.peBucket === 'proposal-ready') return 'PE Ready projects';
-  if (intent.filters?.peBucket === 'draft') return 'PE Draft projects';
-  return 'Projects';
+  if (intent.filters?.peBucket === 'active') return `${sysBit}Deals with PE Ready or Draft`.trim();
+  if (intent.filters?.peBucket === 'proposal-ready') return `${sysBit}PE Ready projects`.trim();
+  if (intent.filters?.peBucket === 'draft') return `${sysBit}PE Draft projects`.trim();
+  return sysBit ? `${sysBit}projects`.trim() : 'Projects';
 }
 
 async function execProjectsListSlice(
@@ -2708,7 +2712,10 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   {
     const listProjects =
       /\b(list|show|all|which|find)\b/.test(qLower) &&
-      /\b(projects?|deals?)\b/.test(qLower) &&
+      (/\b(projects?|deals?)\b/.test(qLower) ||
+        (mentionsProposalEngineAsk(qLower) &&
+          (/\bcustomers?\b/.test(qLower) ||
+            /\b(hybrids?|on[-\s]?grids?|off[-\s]?grids?)\b/.test(qLower)))) &&
       !/\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|workload|analys[ei]s)\b/.test(
         qLower,
       );

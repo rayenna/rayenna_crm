@@ -270,6 +270,49 @@ export function parseStatusIndicator(raw?: string | null): string | undefined {
   return undefined;
 }
 
+/** True when the question is about Proposal Engine Ready/Draft/active proposals. */
+export function mentionsProposalEngineAsk(q: string): boolean {
+  const s = q.toLowerCase();
+  return (
+    /\bproposal\s+engine\b/.test(s) ||
+    /\bpe\s+ready\b/.test(s) ||
+    /\bpe\s+draft\b/.test(s) ||
+    /\bproposal[\s-]?ready\b/.test(s) ||
+    /\bactive\s+proposals?\b/.test(s) ||
+    /\bpe\s+proposals?\b/.test(s) ||
+    /\b(ready|draft)\s+proposals?\b/.test(s)
+  );
+}
+
+function extractPeBucket(
+  lower: string,
+): Pick<ExtractedDimensions, 'peBucket'> {
+  const ready = /\b(pe\s+ready|proposal[\s-]?ready|pe\s+proposal[\s-]?ready)\b/.test(lower);
+  const draft =
+    /\bpe\s+draft\b/.test(lower) ||
+    /\bproposal\s+engine\s+draft\b/.test(lower) ||
+    /\bdraft\s+proposals?\b/.test(lower);
+  const activeReadyDraft =
+    (ready && draft) ||
+    (/\bactive\s+\(?\s*pe\s+ready/.test(lower) && draft) ||
+    /\bactive\s+\(?\s*pe\s+ready\s*\/\s*draft/.test(lower);
+  if (activeReadyDraft) return { peBucket: 'active' };
+  if (ready || (/\bactive\s+proposals?\b/.test(lower) && !draft)) {
+    return { peBucket: 'proposal-ready' };
+  }
+  if (
+    /\bactive\s+(pe\b|proposal\s+engine)\b/.test(lower) ||
+    /\bactive\s+\(?\s*pe\s+ready/.test(lower)
+  ) {
+    return { peBucket: 'active' };
+  }
+  if (draft) return { peBucket: 'draft' };
+  if (/\bpe\s+not[\s-]?started\b/.test(lower) || /\bproposal\s+engine\s+not[\s-]?started\b/.test(lower)) {
+    return { peBucket: 'not-started' };
+  }
+  return {};
+}
+
 /**
  * Deterministic extraction of CRM dimensions from Ask free text.
  */
@@ -524,19 +567,7 @@ export function extractZenithDimensions(question: string): ExtractedDimensions {
   //   Project Status (stage) · Installation Status (install record) · Payment Status (cash)
   Object.assign(out, extractCrmStatusFilters(lower));
 
-  if (
-    /\bactive\s+(pe\s+)?(proposals?|proposal\s+engine)\b/.test(lower) ||
-    (/\b(pe\s+ready|proposal[- ]ready)\b/.test(lower) && /\b(pe\s+)?draft\b/.test(lower)) ||
-    /\bactive\s+\(?\s*pe\s+ready/.test(lower)
-  ) {
-    out.peBucket = 'active';
-  } else if (/\bproposal[\s-]?ready\b/.test(lower) || /\bpe\s+proposal[\s-]?ready\b/.test(lower)) {
-    out.peBucket = 'proposal-ready';
-  } else if (/\bpe\s+draft\b|\bproposal\s+engine\s+draft\b/.test(lower)) {
-    out.peBucket = 'draft';
-  } else if (/\bpe\s+not[\s-]?started\b|\bproposal\s+engine\s+not[\s-]?started\b/.test(lower)) {
-    out.peBucket = 'not-started';
-  }
+  Object.assign(out, extractPeBucket(lower));
 
   const leadMatch = lower.match(
     /\blead\s+source\s+(website|referral|google|channel\s+partner|digital\s+marketing|sales|management\s+connect|other)\b/,
@@ -901,7 +932,9 @@ export function salvageMetricFromDimensions(
   const listLike =
     Boolean(q) &&
     /\b(list|show|all|which|find)\b/.test(q) &&
-    /\b(projects?|deals?)\b/.test(q) &&
+    (/\b(projects?|deals?)\b/.test(q) ||
+      (mentionsProposalEngineAsk(q) &&
+        (/\bcustomers?\b/.test(q) || /\b(hybrids?|on[-\s]?grids?|off[-\s]?grids?)\b/.test(q)))) &&
     !/\b(vs|versus|mix|breakdown|share|how\s+many|revenue)\b/.test(q);
 
   return (

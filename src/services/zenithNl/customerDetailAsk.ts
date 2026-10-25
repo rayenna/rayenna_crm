@@ -11,7 +11,7 @@ import { getCustomerTypeChartLabel } from '../../utils/customerTypeCharts';
 import { formatContactPersonName, parseContactsPayload } from '../../utils/customerContacts';
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
-import { systemTypeLabel } from './dimensionFilters';
+import { mentionsProposalEngineAsk, systemTypeLabel } from './dimensionFilters';
 
 const TABLE_CAP = 25;
 
@@ -200,8 +200,9 @@ export function matchCustomersListIntent(
   if (!metricAllowedForRole('customers_list_slice', role)) return null;
   const q = norm(question);
   if (!/\b(list|show|all|which|find)\b/.test(q)) return null;
-  // Avoid stealing project lists and customer detail.
+  // Avoid stealing project lists, PE/proposal lists, and customer detail.
   if (/\bprojects?\b/.test(q) && !/\bcustomers?\b/.test(q)) return null;
+  if (mentionsProposalEngineAsk(q)) return null;
   if (/\b(customer\s+details?|customer\s+record|open\s+customer)\b/.test(q)) return null;
 
   const customerType = parseCustomerListType(q);

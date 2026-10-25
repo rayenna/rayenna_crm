@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { UserRole } from '@prisma/client';
 import { matchExactChipIntent } from './chipIntents';
-import { extractZenithDimensions, salvageMetricFromDimensions } from './dimensionFilters';
+import { matchCustomersListIntent } from './customerDetailAsk';
+import {
+  extractZenithDimensions,
+  mergeDimensionsIntoIntent,
+  salvageMetricFromDimensions,
+} from './dimensionFilters';
 import { matchProjectsListFilterIntent } from './listFilterAsk';
 
 describe('matchProjectsListFilterIntent', () => {
@@ -72,5 +77,33 @@ describe('chip wiring for customer master types', () => {
     );
     expect(intent?.metric).toBe('customers_list_slice');
     expect(intent?.filters?.customerType).toBe('APARTMENT');
+  });
+});
+
+describe('system type + PE Ready is a project list, not Customer Master', () => {
+  it('does not steal hybrid PE Ready questions into the customer list', () => {
+    expect(
+      matchCustomersListIntent(
+        'list all my hybrid customers who have active proposals',
+        UserRole.ADMIN,
+      ),
+    ).toBeNull();
+  });
+
+  it('routes hybrid/on-grid/off-grid + PE Ready to projects_list_slice', () => {
+    const q = 'list all my hybrid customers who have active proposals';
+    expect(matchProjectsListFilterIntent(q, UserRole.ADMIN)?.metric).toBe('projects_list_slice');
+    expect(matchExactChipIntent(q, UserRole.ADMIN)?.metric).toBe('projects_list_slice');
+
+    const dims = extractZenithDimensions(q);
+    const merged = mergeDimensionsIntoIntent(matchExactChipIntent(q, UserRole.ADMIN)!, dims);
+    expect(merged.filters?.systemType).toBe('HYBRID');
+    expect(merged.filters?.peBucket).toBe('proposal-ready');
+
+    const onGrid = matchExactChipIntent('Show PE Ready on-grid projects', UserRole.ADMIN);
+    expect(onGrid?.metric).toBe('projects_list_slice');
+    expect(extractZenithDimensions('Show PE Ready on-grid projects').peBucket).toBe(
+      'proposal-ready',
+    );
   });
 });
