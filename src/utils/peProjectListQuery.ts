@@ -211,6 +211,7 @@ export const PE_LIST_PROJECT_SELECT = {
   projectStatus: true,
   projectStage: true,
   systemCapacity: true,
+  systemType: true,
   siteAddress: true,
   type: true,
   panelCapacityW: true,

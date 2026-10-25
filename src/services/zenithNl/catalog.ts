@@ -96,6 +96,8 @@ export type ZenithNlIntent = {
     panelType?: string;
     /** SystemType: ON_GRID | OFF_GRID | HYBRID */
     systemType?: string;
+    /** Group a customer list by project system type instead of listing every customer. */
+    groupBy?: 'systemType';
     /** Roof type label (e.g. Metal, Concrete-Flat) */
     roofType?: string;
     /** System capacity kW inclusive bounds */
@@ -635,7 +637,7 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'customers_list_slice',
-    description: 'List customers filtered by city, type, or salesperson',
+    description: 'List customers filtered by city, customer type, salesperson, or project system type',
     defaultViz: 'table',
     roles: ALL_ASK,
   },

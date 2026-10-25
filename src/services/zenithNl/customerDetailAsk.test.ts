@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { UserRole } from '@prisma/client';
+import { matchExactChipIntent } from './chipIntents';
 import {
   formatCustomerEmails,
   formatCustomerPhones,
@@ -54,6 +55,37 @@ describe('matchCustomersListIntent', () => {
     expect(
       matchCustomersListIntent('List all subsidy projects', UserRole.ADMIN),
     ).toBeNull();
+  });
+
+  it('lists customers of a named system type', () => {
+    const intent = matchCustomersListIntent(
+      'show me the list of all customers of Hybrid system type',
+      UserRole.ADMIN,
+    );
+    expect(intent?.metric).toBe('customers_list_slice');
+    expect(intent?.filters?.systemType).toBe('HYBRID');
+    expect(intent?.filters?.city).toBeUndefined();
+    expect(intent?.filters?.groupBy).toBeUndefined();
+    expect(
+      matchExactChipIntent(
+        'show me the list of all customers of Hybrid system type',
+        UserRole.ADMIN,
+      )?.filters?.systemType,
+    ).toBe('HYBRID');
+  });
+
+  it('groups customers by system type when no type is named', () => {
+    const intent = matchCustomersListIntent(
+      'show me the list of customers by system type',
+      UserRole.ADMIN,
+    );
+    expect(intent?.metric).toBe('customers_list_slice');
+    expect(intent?.filters?.groupBy).toBe('systemType');
+    expect(intent?.filters?.systemType).toBeUndefined();
+    expect(
+      matchExactChipIntent('show me the list of customers by system type', UserRole.ADMIN)
+        ?.filters?.groupBy,
+    ).toBe('systemType');
   });
 });
 

@@ -32,9 +32,9 @@ export type ProjectsListFiltersState = {
   lifecycleSpecsIncomplete: boolean
   dataSenseNeedsReview: boolean
   dataSenseRule: DataSenseRuleId | null
-  /** Ask chart deep-link filters (no panel controls). */
+  /** Ask chart deep-link filters (no panel controls), except systemType which is an Advanced Filter. */
   panelType?: string
-  systemType?: string
+  systemType?: string[]
   roofType?: string
   statusIndicator?: string
   projectStage?: string
@@ -52,6 +52,22 @@ export type ProjectsListFiltersState = {
   sortOrder?: string
   /** Zenith Ask “Open in Projects” — exact IDs from the answer. */
   ids?: string[]
+}
+
+const SYSTEM_TYPE_VALUES = new Set(['ON_GRID', 'OFF_GRID', 'HYBRID'])
+
+/** Coerce a saved/URL system-type value to unique ON_GRID | OFF_GRID | HYBRID. */
+export function normalizeSystemTypeFilter(raw: unknown): string[] {
+  const parts = Array.isArray(raw) ? raw : raw != null && raw !== '' ? [raw] : []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const part of parts) {
+    const v = String(part).trim().toUpperCase()
+    if (!SYSTEM_TYPE_VALUES.has(v) || seen.has(v)) continue
+    seen.add(v)
+    out.push(v)
+  }
+  return out
 }
 
 export type ProjectsListQueryInput = {
@@ -99,7 +115,7 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
   if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
   if (filters.panelType?.trim()) params.append('panelType', filters.panelType.trim())
-  if (filters.systemType?.trim()) params.append('systemType', filters.systemType.trim())
+  normalizeSystemTypeFilter(filters.systemType).forEach((v) => params.append('systemType', v))
   if (filters.roofType?.trim()) params.append('roofType', filters.roofType.trim())
   if (filters.statusIndicator?.trim()) {
     params.append('statusIndicator', filters.statusIndicator.trim().toUpperCase())

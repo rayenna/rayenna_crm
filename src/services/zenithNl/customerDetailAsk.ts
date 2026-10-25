@@ -1,7 +1,7 @@
 /**
  * Ask Zenith — customer record lookup + customer list slices.
  */
-import { CustomerType, type Customer, type Prisma, UserRole } from '@prisma/client';
+import { CustomerType, SystemType, type Customer, type Prisma, UserRole } from '@prisma/client';
 import prisma from '../../prisma';
 import {
   allEmailsFromCustomer,
@@ -11,6 +11,7 @@ import { getCustomerTypeChartLabel } from '../../utils/customerTypeCharts';
 import { formatContactPersonName, parseContactsPayload } from '../../utils/customerContacts';
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
+import { systemTypeLabel } from './dimensionFilters';
 
 const TABLE_CAP = 25;
 
@@ -174,6 +175,23 @@ function parseCustomerListType(q: string): 'RESIDENTIAL' | 'APARTMENT' | 'COMMER
   return undefined;
 }
 
+/** Project.systemType named in a customer-list question. */
+function parseAskedSystemType(q: string): SystemType | undefined {
+  if (/\bhybrids?\b/.test(q)) return SystemType.HYBRID;
+  if (/\boff[-\s]?grids?\b/.test(q)) return SystemType.OFF_GRID;
+  if (/\bon[-\s]?grids?\b/.test(q)) return SystemType.ON_GRID;
+  return undefined;
+}
+
+/** “customers by system type” with no On-grid / Off-grid / Hybrid named. */
+function wantsCustomersGroupedBySystemType(q: string): boolean {
+  return (
+    /\bsystem\s+types?\b/.test(q) &&
+    /\b(by|group(?:ed)?|breakdown|mix|split)\b/.test(q) &&
+    !parseAskedSystemType(q)
+  );
+}
+
 /** List customers by city / type / salesperson / Customer Master. */
 export function matchCustomersListIntent(
   question: string,
@@ -187,20 +205,30 @@ export function matchCustomersListIntent(
   if (/\b(customer\s+details?|customer\s+record|open\s+customer)\b/.test(q)) return null;
 
   const customerType = parseCustomerListType(q);
+  const systemType = parseAskedSystemType(q);
+  const groupBySystemType = wantsCustomersGroupedBySystemType(q);
   const mentionsCustomers = /\bcustomers?\b/.test(q);
   const mentionsCustomerMaster = /\bcustomer\s+master\b/.test(q);
   // “show all apartments” / “list commercial in customer master” need a customer-list signal.
-  if (!customerType && !mentionsCustomers && !mentionsCustomerMaster) return null;
+  if (!customerType && !systemType && !groupBySystemType && !mentionsCustomers && !mentionsCustomerMaster) {
+    return null;
+  }
 
   const filters: ZenithNlIntent['filters'] = {};
   if (customerType) filters.customerType = customerType;
+  if (systemType) filters.systemType = systemType;
+  else if (groupBySystemType) filters.groupBy = 'systemType';
 
   // Prefer “in Kochi” / “city Kochi”; ignore “in customer master”.
   const cityMatch =
     q.match(/\bcity\s+([a-z][a-z\s-]{1,30})$/) ||
     q.match(/\b(?:in|from|at)\s+([a-z][a-z\s-]{1,40})$/);
   const cityRaw = cityMatch?.[1]?.trim();
-  if (cityRaw && !isNonCityPlacePhrase(cityRaw)) {
+  if (
+    cityRaw &&
+    !isNonCityPlacePhrase(cityRaw) &&
+    !/\b(hybrids?|on[-\s]?grids?|off[-\s]?grids?|system\s+types?)\b/.test(cityRaw)
+  ) {
     filters.city = cityRaw;
   }
 
@@ -209,14 +237,17 @@ export function matchCustomersListIntent(
   );
   if (sales?.[1]) filters.salespersonName = sales[1].trim();
 
-  const hints =
-    customerType === 'APARTMENT'
-      ? 'apartment customers'
-      : customerType === 'COMMERCIAL'
-        ? 'commercial customers'
-        : customerType === 'RESIDENTIAL'
-          ? 'residential customers'
-          : 'customers list';
+  const hints = systemType
+    ? `${systemTypeLabel(systemType).toLowerCase()} system customers`
+    : groupBySystemType
+      ? 'customers by system type'
+      : customerType === 'APARTMENT'
+        ? 'apartment customers'
+        : customerType === 'COMMERCIAL'
+          ? 'commercial customers'
+          : customerType === 'RESIDENTIAL'
+            ? 'residential customers'
+            : 'customers list';
 
   return {
     metric: 'customers_list_slice',
@@ -429,10 +460,90 @@ export async function execCustomerDetailLookup(
   };
 }
 
+const SYSTEM_TYPES = [SystemType.ON_GRID, SystemType.OFF_GRID, SystemType.HYBRID] as const;
+
+function askedSystemType(raw?: string | null): SystemType | undefined {
+  const st = raw?.trim().toUpperCase();
+  if (st === SystemType.ON_GRID || st === SystemType.OFF_GRID || st === SystemType.HYBRID) return st;
+  return undefined;
+}
+
+async function execCustomersBySystemType(
+  salespersonId?: string,
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+  const scope: Prisma.CustomerWhereInput = salespersonId ? { salespersonId } : {};
+  const rows = await Promise.all(
+    SYSTEM_TYPES.map(async (systemType) => {
+      const [customers, projects] = await Promise.all([
+        prisma.customer.count({
+          where: { ...scope, projects: { some: { systemType } } },
+        }),
+        prisma.project.count({
+          where: {
+            systemType,
+            ...(salespersonId ? { customer: { salespersonId } } : {}),
+          },
+        }),
+      ]);
+      return {
+        system: systemTypeLabel(systemType),
+        customers,
+        projects,
+        href: `/projects?systemType=${systemType}`,
+      };
+    }),
+  );
+  const [unset, unsetProjects] = await Promise.all([
+    prisma.customer.count({
+      where: {
+        ...scope,
+        NOT: { projects: { some: { systemType: { not: null } } } },
+      },
+    }),
+    prisma.project.count({
+      where: {
+        systemType: null,
+        ...(salespersonId ? { customer: { salespersonId } } : {}),
+      },
+    }),
+  ]);
+  rows.push({
+    system: 'No system type',
+    customers: unset,
+    projects: unsetProjects,
+    href: '/customers',
+  });
+
+  const named = rows
+    .filter((r) => r.system !== 'No system type')
+    .map((r) => `${r.system} ${r.customers}`)
+    .join(' · ');
+
+  return {
+    insight: `Customers by system type · ${named}. ${unset} customer${unset === 1 ? '' : 's'} have no system type on a project. A customer with more than one type is counted in each. Click a row to open those projects.`,
+    viz: {
+      kind: 'table',
+      title: 'Customers by system type',
+      columns: [
+        { key: 'system', label: 'System type' },
+        { key: 'customers', label: 'Customers' },
+        { key: 'projects', label: 'Projects' },
+      ],
+      rows,
+    },
+    projectsHref: '/projects',
+  };
+}
+
 export async function execCustomersListSlice(
   intent: ZenithNlIntent,
   opts?: { salespersonId?: string },
 ): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
+  const systemType = askedSystemType(intent.filters?.systemType);
+  if (intent.filters?.groupBy === 'systemType' && !systemType) {
+    return execCustomersBySystemType(opts?.salespersonId);
+  }
+
   const where: Prisma.CustomerWhereInput = {};
   const city = intent.filters?.city?.trim();
   if (city) where.city = { contains: city, mode: 'insensitive' };
@@ -444,6 +555,7 @@ export async function execCustomersListSlice(
     where.OR = [{ customerType: CustomerType.RESIDENTIAL }, { customerType: null }];
   }
   if (opts?.salespersonId) where.salespersonId = opts.salespersonId;
+  if (systemType) where.projects = { some: { systemType } };
 
   const customers = await prisma.customer.findMany({
     where,
@@ -462,6 +574,9 @@ export async function execCustomersListSlice(
       contactNumbers: true,
       contacts: true,
       salesperson: { select: { name: true } },
+      projects: systemType
+        ? { where: { systemType }, select: { systemType: true } }
+        : false,
       _count: { select: { projects: true } },
     },
     orderBy: { updatedAt: 'desc' },
@@ -476,10 +591,12 @@ export async function execCustomersListSlice(
         : ct === 'RESIDENTIAL'
           ? 'residential'
           : null;
+  const systemLabel = systemType ? systemTypeLabel(systemType) : null;
 
   const totalMatching = await prisma.customer.count({ where });
 
   const customersHref = (() => {
+    if (systemType) return `/projects?systemType=${systemType}`;
     const params = new URLSearchParams();
     // Customer Master list reads `type` from the URL.
     if (ct === 'RESIDENTIAL' || ct === 'APARTMENT' || ct === 'COMMERCIAL') {
@@ -490,30 +607,38 @@ export async function execCustomersListSlice(
     return qs ? `/customers?${qs}` : '/customers';
   })();
 
-  const noun = typeLabel
-    ? `${typeLabel} customer${totalMatching === 1 ? '' : 's'}`
-    : `customer${totalMatching === 1 ? '' : 's'}`;
+  const noun = systemLabel
+    ? `customer${totalMatching === 1 ? '' : 's'} with a ${systemLabel} system`
+    : typeLabel
+      ? `${typeLabel} customer${totalMatching === 1 ? '' : 's'}`
+      : `customer${totalMatching === 1 ? '' : 's'}`;
   const scopeBits = [city ? `in ${city}` : null, intent.filters?.salespersonName ? `for ${intent.filters.salespersonName}` : null]
     .filter(Boolean)
     .join(' · ');
+  const place = systemLabel ? '' : ' in Customer Master';
 
   return {
     insight: customers.length
-      ? `${totalMatching} ${noun}${scopeBits ? ` ${scopeBits}` : ''} in Customer Master${
+      ? `${totalMatching} ${noun}${scopeBits ? ` ${scopeBits}` : ''}${place}${
           customers.length < totalMatching
             ? ` · showing ${customers.length} (up to ${TABLE_CAP})`
             : ` · all shown`
         }. Click a row to open the record.`
-      : `No ${typeLabel ? `${typeLabel} customers` : 'customers'}${scopeBits ? ` ${scopeBits}` : ''} match in Customer Master.`,
+      : systemLabel
+        ? `No customers${scopeBits ? ` ${scopeBits}` : ''} have a ${systemLabel} system on a project.`
+        : `No ${typeLabel ? `${typeLabel} customers` : 'customers'}${scopeBits ? ` ${scopeBits}` : ''} match in Customer Master.`,
     viz: {
       kind: 'table',
-      title: typeLabel
-        ? `${typeLabel.charAt(0).toUpperCase()}${typeLabel.slice(1)} customers`
-        : 'Customers',
+      title: systemLabel
+        ? `${systemLabel} customers`
+        : typeLabel
+          ? `${typeLabel.charAt(0).toUpperCase()}${typeLabel.slice(1)} customers`
+          : 'Customers',
       columns: [
         { key: 'customerId', label: 'ID' },
         { key: 'name', label: 'Name' },
         { key: 'type', label: 'Type' },
+        ...(systemLabel ? [{ key: 'system', label: 'System' }] : []),
         { key: 'city', label: 'City' },
         { key: 'phone', label: 'Phone' },
         { key: 'sales', label: 'Salesperson' },
@@ -523,10 +648,15 @@ export async function execCustomersListSlice(
         customerId: c.customerId,
         name: displayName(c),
         type: getCustomerTypeChartLabel(c.customerType ?? CustomerType.RESIDENTIAL),
+        ...(systemLabel
+          ? {
+              system: systemLabel,
+              projects: 'projects' in c && Array.isArray(c.projects) ? c.projects.length : c._count.projects,
+            }
+          : { projects: c._count.projects }),
         city: c.city || '—',
         phone: formatCustomerPhones(c),
         sales: c.salesperson?.name || '—',
-        projects: c._count.projects,
         href: `/customers/${c.id}`,
       })),
     },

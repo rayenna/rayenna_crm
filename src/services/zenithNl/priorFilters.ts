@@ -75,6 +75,7 @@ export function parseZenithNlPriorFilters(raw: unknown): PriorFilters | undefine
   if (panelType) out.panelType = panelType;
   const systemType = asTrimmedString(f.systemType);
   if (systemType) out.systemType = systemType;
+  if (f.groupBy === 'systemType') out.groupBy = 'systemType';
   const roofType = asTrimmedString(f.roofType);
   if (roofType) out.roofType = roofType;
   const capacityMin = asFiniteNumber(f.capacityMin);

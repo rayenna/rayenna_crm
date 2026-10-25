@@ -62,7 +62,7 @@ export type ProjectsListFilterInput = {
   complianceGap: ComplianceGapId | null;
   /** Ask chart drills — optional CRM dimension filters. */
   panelType: string | null;
-  systemType: SystemType | null;
+  systemTypeArray: SystemType[];
   roofType: string | null;
   statusIndicator: string | null;
   projectStage: ProjectStage | null;
@@ -268,11 +268,9 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     complianceGap: parseComplianceGap(complianceGap),
     panelType:
       typeof panelType === 'string' && panelType.trim() !== '' ? panelType.trim() : null,
-    systemType:
-      typeof systemType === 'string' &&
-      (Object.values(SystemType) as string[]).includes(systemType)
-        ? (systemType as SystemType)
-        : null,
+    systemTypeArray: toStringArray(systemType).filter((v) =>
+      (Object.values(SystemType) as string[]).includes(v),
+    ) as SystemType[],
     roofType: typeof roofType === 'string' && roofType.trim() !== '' ? roofType.trim() : null,
     statusIndicator:
       typeof statusIndicator === 'string' &&
@@ -586,7 +584,11 @@ export function buildProjectsWhere(
       panelType: { equals: filters.panelType, mode: 'insensitive' },
     });
   }
-  if (filters.systemType) pushOntoWhereAnd(where, { systemType: filters.systemType });
+  if (filters.systemTypeArray.length === 1) {
+    pushOntoWhereAnd(where, { systemType: filters.systemTypeArray[0] });
+  } else if (filters.systemTypeArray.length > 1) {
+    pushOntoWhereAnd(where, { systemType: { in: filters.systemTypeArray } });
+  }
   if (filters.roofType) {
     pushOntoWhereAnd(where, {
       roofType: { equals: filters.roofType, mode: 'insensitive' },
@@ -842,7 +844,11 @@ export const projectsListQueryValidators = [
   query('dataSenseRule').optional().isIn([...DATA_SENSE_RULE_IDS]),
   query('complianceGap').optional().isIn([...COMPLIANCE_GAP_IDS]),
   query('panelType').optional().isString(),
-  query('systemType').optional().isIn(Object.values(SystemType)),
+  query('systemType').optional().custom((value) => {
+    if (!value) return true;
+    const values = Array.isArray(value) ? value : [value];
+    return values.every((v) => (Object.values(SystemType) as string[]).includes(String(v)));
+  }).withMessage('Invalid systemType value'),
   query('roofType').optional().isString(),
   query('statusIndicator').optional().isIn(['GREEN', 'AMBER', 'RED']),
   query('projectStage').optional().isIn(Object.values(ProjectStage)),

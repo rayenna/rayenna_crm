@@ -17,7 +17,7 @@ const PAYMENT_MODES = new Set(['UPI', 'BANK', 'CHEQUE'])
 
 export type AskProjectsDrillParams = {
   panelType: string
-  systemType: string
+  systemType: string[]
   roofType: string
   statusIndicator: string
   projectStage: string
@@ -34,9 +34,8 @@ export type AskProjectsDrillParams = {
   projectServiceType: string[]
 }
 
-const EMPTY: Omit<AskProjectsDrillParams, 'projectServiceType'> = {
+const EMPTY: Omit<AskProjectsDrillParams, 'projectServiceType' | 'systemType'> = {
   panelType: '',
-  systemType: '',
   roofType: '',
   statusIndicator: '',
   projectStage: '',
@@ -60,7 +59,14 @@ function parseNum(raw: string | null): number | null {
 export function parseAskProjectsDrillParams(
   p: URLSearchParams,
 ): AskProjectsDrillParams {
-  const systemTypeRaw = (p.get('systemType') || '').trim().toUpperCase()
+  const systemType = [
+    ...new Set(
+      p
+        .getAll('systemType')
+        .map((s) => s.trim().toUpperCase())
+        .filter((s) => SYSTEM_TYPES.has(s)),
+    ),
+  ]
   const statusIndicatorRaw = (p.get('statusIndicator') || '').trim().toUpperCase()
   const projectStageRaw = (p.get('projectStage') || '').trim().toUpperCase()
   const installationStatusRaw = (p.get('installationStatus') || '').trim().toUpperCase()
@@ -70,7 +76,7 @@ export function parseAskProjectsDrillParams(
 
   return {
     panelType: p.get('panelType')?.trim() ?? '',
-    systemType: SYSTEM_TYPES.has(systemTypeRaw) ? systemTypeRaw : '',
+    systemType,
     roofType: p.get('roofType')?.trim() ?? '',
     statusIndicator: STATUS_INDICATORS.has(statusIndicatorRaw) ? statusIndicatorRaw : '',
     projectStage: PROJECT_STAGES.has(projectStageRaw) ? projectStageRaw : '',
@@ -92,7 +98,7 @@ export function parseAskProjectsDrillParams(
 export function askProjectsDrillHasAny(d: AskProjectsDrillParams): boolean {
   return (
     d.panelType !== '' ||
-    d.systemType !== '' ||
+    d.systemType.length > 0 ||
     d.roofType !== '' ||
     d.statusIndicator !== '' ||
     d.projectStage !== '' ||
@@ -109,8 +115,11 @@ export function askProjectsDrillHasAny(d: AskProjectsDrillParams): boolean {
   )
 }
 
-/** Deep-link-only fields (excludes projectServiceType which is a panel filter). */
-export function emptyAskProjectsDrillParams(): Omit<AskProjectsDrillParams, 'projectServiceType'> {
+/** Deep-link-only fields (excludes panel filters: projectServiceType, systemType). */
+export function emptyAskProjectsDrillParams(): Omit<
+  AskProjectsDrillParams,
+  'projectServiceType' | 'systemType'
+> {
   return { ...EMPTY }
 }
 
@@ -120,7 +129,6 @@ export function askProjectsDrillFilterPatch(
   return {
     ...EMPTY,
     panelType: d.panelType,
-    systemType: d.systemType,
     roofType: d.roofType,
     statusIndicator: d.statusIndicator,
     projectStage: d.projectStage,
@@ -133,6 +141,7 @@ export function askProjectsDrillFilterPatch(
     installationStatus: d.installationStatus,
     paymentMode: d.paymentMode,
     notAvailingLoan: d.notAvailingLoan,
+    ...(d.systemType.length > 0 ? { systemType: d.systemType } : {}),
     ...(d.projectServiceType.length > 0 ? { projectServiceType: d.projectServiceType } : {}),
   }
 }

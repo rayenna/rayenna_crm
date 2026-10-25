@@ -4,7 +4,7 @@ import {
   parseComplianceGap,
   type ComplianceGapId,
 } from './complianceGaps'
-import type { PeBucketParam } from './projectListQuery'
+import { normalizeSystemTypeFilter, type PeBucketParam } from './projectListQuery'
 import { DATA_SENSE_RULE_SHORT_LABEL, type DataSenseRuleId } from './dataSense'
 import { getProjectSegmentLabel } from './projectSegment'
 import { getCustomerTypeLegendLabel } from './customerTypeStyles'
@@ -23,6 +23,12 @@ const MONTH_LABELS: Record<string, string> = {
   '10': 'October',
   '11': 'November',
   '12': 'December',
+}
+
+const SYSTEM_TYPE_CHIP_LABELS: Record<string, string> = {
+  ON_GRID: 'On-grid',
+  OFF_GRID: 'Off-grid',
+  HYBRID: 'Hybrid',
 }
 
 const QUARTER_LABELS: Record<string, string> = {
@@ -129,7 +135,7 @@ export type BuildProjectFilterChipsInput = {
     dataSenseNeedsReview: boolean
     dataSenseRule: DataSenseRuleId | null
     panelType?: string
-    systemType?: string
+    systemType?: string[] | string
     roofType?: string
     statusIndicator?: string
     projectStage?: string
@@ -464,13 +470,17 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       onRemove: () => onPatchFilters({ panelType: '' }),
     })
   }
-  if (filters.systemType) {
+  const systemTypes = normalizeSystemTypeFilter(filters.systemType)
+  systemTypes.forEach((st) => {
     chips.push({
-      id: 'ask-system-type',
-      label: `System: ${filters.systemType.replace(/_/g, ' ')}`,
-      onRemove: () => onPatchFilters({ systemType: '' }),
+      id: `systemType-${st}`,
+      label: `System: ${SYSTEM_TYPE_CHIP_LABELS[st] ?? st.replace(/_/g, ' ')}`,
+      onRemove: () =>
+        onPatchFilters({
+          systemType: systemTypes.filter((x) => x !== st),
+        }),
     })
-  }
+  })
   if (filters.roofType) {
     chips.push({
       id: 'ask-roof-type',

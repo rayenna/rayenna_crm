@@ -129,6 +129,28 @@ describe('buildProjectsWhere', () => {
     expect(built.where.projectStatus).toEqual({ in: [ProjectStatus.CONFIRMED] });
   });
 
+  it('filters by one or more system types', () => {
+    const one = parseProjectsListFilters({ systemType: 'HYBRID' });
+    const oneBuilt = buildProjectsWhere(one, adminUser);
+    expect(one.systemTypeArray).toEqual(['HYBRID']);
+    expect(oneBuilt.ok).toBe(true);
+    if (oneBuilt.ok) {
+      expect(oneBuilt.where).toMatchObject({
+        AND: expect.arrayContaining([{ systemType: 'HYBRID' }]),
+      });
+    }
+
+    const many = parseProjectsListFilters({ systemType: ['HYBRID', 'ON_GRID', 'bogus'] });
+    const manyBuilt = buildProjectsWhere(many, adminUser);
+    expect(many.systemTypeArray).toEqual(['HYBRID', 'ON_GRID']);
+    expect(manyBuilt.ok).toBe(true);
+    if (manyBuilt.ok) {
+      expect(manyBuilt.where).toMatchObject({
+        AND: expect.arrayContaining([{ systemType: { in: ['HYBRID', 'ON_GRID'] } }]),
+      });
+    }
+  });
+
   it('applies customerType on nested customer relation', () => {
     const filters = parseProjectsListFilters({ customerType: 'COMMERCIAL' });
     const built = buildProjectsWhere(filters, adminUser);

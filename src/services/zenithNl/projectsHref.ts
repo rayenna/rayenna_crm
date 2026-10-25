@@ -463,6 +463,13 @@ export function projectsHrefForIntent(
       return search ? `/customers?q=${encodeURIComponent(search)}` : '/customers';
     }
     case 'customers_list_slice': {
+      if (intent.filters?.groupBy === 'systemType' && !intent.filters?.systemType?.trim()) {
+        return '/projects';
+      }
+      const systemType = intent.filters?.systemType?.trim().toUpperCase();
+      if (systemType === 'ON_GRID' || systemType === 'OFF_GRID' || systemType === 'HYBRID') {
+        return `/projects?systemType=${systemType}`;
+      }
       const params = new URLSearchParams();
       const ct = intent.filters?.customerType?.trim().toUpperCase();
       // Customer Master URL uses `type` (see applyCustomerListStateToSearchParams).

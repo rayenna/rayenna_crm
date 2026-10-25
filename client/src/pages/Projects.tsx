@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, LeadSource } from '../types'
+import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, LeadSource, SystemType } from '../types'
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
@@ -29,6 +29,7 @@ import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 import {
   buildProjectExportQueryParams,
   buildProjectListQueryParams,
+  normalizeSystemTypeFilter,
   parseProjectIdsFromSearchParams,
   type PeBucketParam,
 } from '../utils/projectListQuery'
@@ -647,6 +648,7 @@ const Projects = () => {
     type: (urlInit?.type ?? []) as string[],
     customerType: (urlInit?.customerType ?? []) as string[],
     projectServiceType: [] as string[],
+    systemType: normalizeSystemTypeFilter(urlInit?.askDrill?.systemType) as string[],
     salespersonId: (urlInit?.salespersonId ?? []) as string[],
     leadSource: (urlInit?.leadSource ?? []) as string[],
     supportTicketStatus: [] as string[],
@@ -845,7 +847,16 @@ const Projects = () => {
         selectedQuarters?: string[]
         selectedMonths?: string[]
       }
-      if (saved.filters) setFilters((prev) => ({ ...prev, ...saved.filters, leadSource: (saved.filters as any)?.leadSource ?? [] }))
+      if (saved.filters) {
+        setFilters((prev) => ({
+          ...prev,
+          ...saved.filters,
+          leadSource: (saved.filters as { leadSource?: string[] })?.leadSource ?? [],
+          systemType: normalizeSystemTypeFilter(
+            (saved.filters as { systemType?: unknown })?.systemType,
+          ),
+        }))
+      }
       if (saved.page != null && saved.page >= 1) setPage(saved.page)
       if (saved.searchInput != null) setSearchInput(saved.searchInput)
       if (saved.selectedFYs) setSelectedFYs(saved.selectedFYs)
@@ -921,6 +932,7 @@ const Projects = () => {
     filters.type,
     filters.customerType,
     filters.projectServiceType,
+    filters.systemType,
     filters.salespersonId,
     filters.leadSource,
     filters.supportTicketStatus,
@@ -972,6 +984,7 @@ const Projects = () => {
       type: [],
       customerType: [],
       projectServiceType: [],
+      systemType: [] as string[],
       salespersonId: [],
       leadSource: [],
       supportTicketStatus: [],
@@ -1054,6 +1067,7 @@ const Projects = () => {
       (filters.type.length > 0 ? 1 : 0) +
       (filters.customerType.length > 0 ? 1 : 0) +
       (filters.projectServiceType.length > 0 ? 1 : 0) +
+      (filters.systemType.length > 0 ? 1 : 0) +
       (filters.supportTicketStatus.length > 0 ? 1 : 0) +
       (filters.paymentStatus.length > 0 ? 1 : 0) +
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
@@ -1081,6 +1095,7 @@ const Projects = () => {
     filters.type,
     filters.customerType,
     filters.projectServiceType,
+    filters.systemType,
     filters.supportTicketStatus,
     filters.paymentStatus,
     filters.salespersonId,
@@ -1225,6 +1240,15 @@ const Projects = () => {
     [],
   )
 
+  const systemTypeFilterOptions = useMemo(
+    () => [
+      { value: SystemType.ON_GRID, label: 'On-grid' },
+      { value: SystemType.OFF_GRID, label: 'Off-grid' },
+      { value: SystemType.HYBRID, label: 'Hybrid' },
+    ],
+    [],
+  )
+
   const projectServiceTypeOptions = Object.values(ProjectServiceType).map(serviceType => ({
     value: serviceType,
     label: (() => {
@@ -1299,6 +1323,7 @@ const Projects = () => {
     if (
       filters.customerType.length > 0 ||
       filters.projectServiceType.length > 0 ||
+      filters.systemType.length > 0 ||
       filters.supportTicketStatus.length > 0 ||
       filters.leadSource.length > 0 ||
       Boolean(filters.sortBy)
@@ -1308,6 +1333,7 @@ const Projects = () => {
   }, [
     filters.customerType.length,
     filters.projectServiceType.length,
+    filters.systemType.length,
     filters.supportTicketStatus.length,
     filters.leadSource.length,
     filters.sortBy,
@@ -1893,6 +1919,16 @@ const Projects = () => {
                       onChange={(values) => setFilters({ ...filters, customerType: values })}
                       placeholder="Customer type"
                       multiSelectedLabel="Types"
+                      compact
+                      variant="zenith"
+                    />
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={systemTypeFilterOptions}
+                      selectedValues={filters.systemType}
+                      onChange={(values) => setFilters({ ...filters, systemType: values })}
+                      placeholder="System type"
+                      multiSelectedLabel="System types"
                       compact
                       variant="zenith"
                     />

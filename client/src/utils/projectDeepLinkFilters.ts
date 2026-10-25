@@ -14,7 +14,6 @@ export const PROJECTS_DEEP_LINK_CHIP_IDS = new Set([
   'lead-null',
   'compliance-gap',
   'ask-panel-type',
-  'ask-system-type',
   'ask-roof-type',
   'ask-status-indicator',
   'ask-project-stage',
@@ -50,7 +49,6 @@ export type ProjectsDeepLinkFilterClearPatch = {
   leadSourceIsNull: false
   complianceGap: null
   panelType: ''
-  systemType: ''
   roofType: ''
   statusIndicator: ''
   projectStage: ''
@@ -82,7 +80,6 @@ export function projectsDeepLinkClearPatch(): ProjectsDeepLinkFilterClearPatch {
     leadSourceIsNull: false,
     complianceGap: null,
     panelType: '',
-    systemType: '',
     roofType: '',
     statusIndicator: '',
     projectStage: '',
@@ -114,7 +111,6 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
   leadSourceIsNull: boolean
   complianceGap?: unknown
   panelType?: string
-  systemType?: string
   roofType?: string
   statusIndicator?: string
   projectStage?: string
@@ -144,7 +140,6 @@ export function filtersHaveDeepLinkOnlyFields(filters: {
       filters.leadSourceIsNull ||
       filters.complianceGap ||
       filters.panelType ||
-      filters.systemType ||
       filters.roofType ||
       filters.statusIndicator ||
       filters.projectStage ||

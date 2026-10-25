@@ -14,6 +14,8 @@ describe('projectDeepLinkFilters', () => {
     expect(isProjectsDeepLinkChipId('pending-subsidy')).toBe(false)
     expect(isProjectsDeepLinkChipId('availing-loan')).toBe(false)
     expect(isProjectsDeepLinkChipId('status-LEAD')).toBe(false)
+    expect(isProjectsDeepLinkChipId('ask-system-type')).toBe(false)
+    expect(isProjectsDeepLinkChipId('systemType-HYBRID')).toBe(false)
   })
 
   it('clear patch resets deep-link fields only', () => {
