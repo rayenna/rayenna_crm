@@ -8,7 +8,7 @@ You track **money in**: payments received, outstanding balances, and handoff to 
 | :-- | :-- |
 | View **all projects** and payment status | Create projects or customers |
 | **Edit payment amounts and dates** on non-Lost projects | Edit sales, lifecycle, or commercial fields |
-| **Finance** dashboard and **Zenith** (finance layout) | **Support tickets** module |
+| **Finance** dashboard, **Zenith**, and **Reports → Collections & Cash** | **Support tickets** module |
 | **Tally export** (with Admin) | **Users**, **Audit & Security**, or project/customer bulk export |
 | Filter projects by **payment status** | Delete records |
 

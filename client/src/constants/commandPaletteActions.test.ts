@@ -6,6 +6,10 @@ describe('filterCommandPaletteItems', () => {
   it('hides create ticket for Finance', () => {
     const ids = filterCommandPaletteItems(UserRole.FINANCE, '').map((i) => i.id)
     expect(ids).not.toContain('create_support_ticket')
+    expect(ids).toContain('go_reports')
+    expect(ids).toContain('go_collections_cash')
+    expect(ids).not.toContain('go_sales_review')
+    expect(ids).not.toContain('go_delivery_control')
     expect(ids).toContain('go_customers')
     expect(ids).toContain('go_tally_export')
     expect(ids).toContain('open_my_day')
@@ -17,6 +21,18 @@ describe('filterCommandPaletteItems', () => {
     expect(ids).toContain('create_support_ticket')
     expect(ids).toContain('overdue_support_tickets')
     expect(ids).toContain('go_proposal_engine')
+    expect(ids).toContain('go_reports')
+    expect(ids).toContain('go_sales_review')
+    expect(ids).toContain('go_delivery_control')
+    expect(ids).toContain('go_collections_cash')
+  })
+
+  it('gives Operations Reports and Delivery Control but not Sales Review', () => {
+    const ids = filterCommandPaletteItems(UserRole.OPERATIONS, '').map((i) => i.id)
+    expect(ids).toContain('go_reports')
+    expect(ids).toContain('go_delivery_control')
+    expect(ids).not.toContain('go_sales_review')
+    expect(ids).not.toContain('go_collections_cash')
   })
 
   it('shows admin-only users and audit', () => {

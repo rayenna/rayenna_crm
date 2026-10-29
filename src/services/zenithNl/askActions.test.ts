@@ -101,6 +101,16 @@ describe('matchAskActionIntent', () => {
 
   it('still opens Lost Deals and PE Drafts as shortcuts', () => {
     expect(matchAskActionIntent('Lost Deals', UserRole.ADMIN)?.href).toBe('/lost-deals');
+    expect(matchAskActionIntent('Sales Review', UserRole.SALES)?.href).toBe('/reports/sales-review');
+    expect(matchAskActionIntent('Open Reports', UserRole.MANAGEMENT)?.href).toBe('/reports');
+    expect(matchAskActionIntent('Delivery Control', UserRole.OPERATIONS)?.href).toBe(
+      '/reports/delivery-control',
+    );
+    expect(matchAskActionIntent('Sales Review', UserRole.OPERATIONS)).toBeNull();
+    expect(matchAskActionIntent('Collections & Cash', UserRole.FINANCE)?.href).toBe(
+      '/reports/collections-cash',
+    );
+    expect(matchAskActionIntent('Delivery Control', UserRole.FINANCE)).toBeNull();
     expect(matchAskActionIntent('Proposal Engine drafts', UserRole.ADMIN)?.href).toBe(
       '/projects?peBucket=draft',
     );

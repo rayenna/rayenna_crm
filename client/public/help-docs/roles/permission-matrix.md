@@ -23,6 +23,10 @@ Roles: **ADMIN** · **SALES** · **OPS** (Operations) · **FINANCE** · **MGMT**
 | **Customers** | ✓ | ◐ | 👁 | 👁 | ◐ |
 | **Projects** | ✓ | ◐ | ◐ | ◐ | 👁 |
 | **Lost Deals** (analytics) | ✓ | — | — | — | ✓ |
+| **Reports** (hub) | ✓ | ◐ own | ✓ | ✓ | ✓ |
+| **Sales Review** | ✓ | ◐ own | — | — | ✓ |
+| **Delivery Control** | ✓ | ◐ own | ✓ | — | ✓ |
+| **Collections & Cash** | ✓ | ◐ own | — | ✓ | ✓ |
 | **Support tickets** | ✓ | ✓ | ✓ | — | ✓ |
 | **Tally export** | ✓ | — | — | ✓ | — |
 | **Solar Hub** (Users / Maintenance / Provisioning / Help) | ✓ | — | ✓ | — | — |
@@ -83,7 +87,7 @@ Who can **see** a project in the list and open its detail page (edit rules are s
 | Completed — subsidy credited | ✓ | ◐ own | ✓ | ✓ | ✓ |
 | Lost | ✓ | ◐ own | — | ✓ | ✓ |
 
-**Sales “own”:** only rows where you are the assigned salesperson.
+**Sales “own”:** only rows where you are the assigned salesperson. **Reports → Sales Review**, **Delivery Control**, and **Collections & Cash** use the same scope. **Operations** sees company-wide in-delivery jobs on Delivery Control. **Finance** sees company-wide Collections & Cash.
 
 **Operations:** early-stage and **Lost** projects are excluded from the default list; opening a disallowed project returns access denied.
 

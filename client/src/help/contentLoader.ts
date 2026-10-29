@@ -26,6 +26,7 @@ const MODULES_PART_FILES = [
   'tally-export.md',
   'solar-hub.md',
   'lost-deals.md',
+  'reports.md',
 ] as const
 
 /** Classic Dashboard hub + sub-pages (order = sidebar scroll order). */

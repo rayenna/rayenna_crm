@@ -27,6 +27,7 @@ Menu items are displayed based on your user role:
 - **Proposal Engine**: under **More**, above **Dashboard (Old)** — opens Proposal Engine Customers/Projects with your CRM login and no project pre-selected
 - **Customers**: Customer database and management
 - **Projects**: Project management and tracking
+- **Reports**: Sales Review, Delivery Control, and Collections & Cash (role-filtered packs)
 - **Lost Deals**: Lost analytics (Admin and Management)
 - **Support Tickets**: Customer service ticket management (Sales, Operations, Admin only)
 - **Tally Export**: Financial data export (Finance and Admin only)

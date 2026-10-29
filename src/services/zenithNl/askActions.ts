@@ -33,6 +33,10 @@ export const ZENITH_ASK_ACTIONS = [
   'go_solar_hub_unlinked',
   'go_solar_hub_maintenance',
   'go_lost_deals',
+  'go_reports',
+  'go_sales_review',
+  'go_delivery_control',
+  'go_collections_cash',
   'go_tally_export',
   'go_users',
   'go_audit',
@@ -118,6 +122,10 @@ const ACTION_ROLES: Record<ZenithAskActionId, UserRole[]> = {
   go_solar_hub_unlinked: SOLAR_HUB_ROLES,
   go_solar_hub_maintenance: SOLAR_HUB_ROLES,
   go_lost_deals: [UserRole.ADMIN, UserRole.MANAGEMENT],
+  go_reports: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE],
+  go_sales_review: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  go_delivery_control: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS],
+  go_collections_cash: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES],
   go_tally_export: [UserRole.ADMIN, UserRole.FINANCE],
   go_users: [UserRole.ADMIN],
   go_audit: [UserRole.ADMIN],
@@ -635,6 +643,35 @@ export function matchAskActionIntent(
   ) {
     if (!actionAllowedForRole('go_lost_deals', role)) return null;
     return build('go_lost_deals', '/lost-deals', 'Lost Deals', 'Opening Lost Deals…');
+  }
+  if (/\bsales\s+review\b/.test(key)) {
+    if (!actionAllowedForRole('go_sales_review', role)) return null;
+    return build('go_sales_review', '/reports/sales-review', 'Sales Review', 'Opening Sales Review…');
+  }
+  if (/\bdelivery\s+control\b/.test(key) || /\bops\s+(standup|board|pack)\b/.test(key)) {
+    if (!actionAllowedForRole('go_delivery_control', role)) return null;
+    return build(
+      'go_delivery_control',
+      '/reports/delivery-control',
+      'Delivery Control',
+      'Opening Delivery Control…',
+    );
+  }
+  if (
+    /\bcollections(\s*(&|and)\s*cash)?\b/.test(key) ||
+    /\bcash\s+(report|pack|collections)\b/.test(key)
+  ) {
+    if (!actionAllowedForRole('go_collections_cash', role)) return null;
+    return build(
+      'go_collections_cash',
+      '/reports/collections-cash',
+      'Collections & Cash',
+      'Opening Collections & Cash…',
+    );
+  }
+  if (/^reports$/.test(key) || /\bopen\s+reports\b/.test(key) || /\bgo\s+to\s+reports\b/.test(key)) {
+    if (!actionAllowedForRole('go_reports', role)) return null;
+    return build('go_reports', '/reports', 'Reports', 'Opening Reports…');
   }
   if (/solar\s*hub\s+provision/.test(key) || /\bprovisioning\b/.test(key)) {
     if (!actionAllowedForRole('go_solar_hub_provisioning', role)) return null;

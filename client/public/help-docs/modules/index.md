@@ -16,6 +16,7 @@ The **data modules** in Rayenna CRM are where you create and maintain business r
 | **Tally Export** | Accounting handoff (Finance / Admin) | [Tally Export](#tally-export-module) |
 | **Solar Hub** | Install the homeowner PWA; staff lists (Users / Maintenance / Provisioning); map Solis/Deye plants for live kWh | [Handover](#solar-hub-handover) · [Staff lists](#solar-hub-staff-lists) · [Plants](#solar-hub-plants-and-generation) |
 | **Lost Deals** | Lost count / ₹, win rates, reason charts, and a mobile-first lost list (**Admin / Management**) | [Lost Deals](#lost-deals-analytics) |
+| **Reports** | Weekly-call packs: **Sales Review**, **Delivery Control**, **Collections & Cash** (role-filtered) | [Reports](#reports) |
 
 ## Related areas (not in this section)
 

@@ -40,6 +40,10 @@ const SolarHubHelpArticleEdit = lazy(() => import('./pages/SolarHubHelpArticleEd
 const SolarHubHelpFaqEdit = lazy(() => import('./pages/SolarHubHelpFaqEdit'))
 const SolarHubUserDetail = lazy(() => import('./pages/SolarHubUserDetail'))
 const Help = lazy(() => import('./pages/Help'))
+const Reports = lazy(() => import('./pages/Reports'))
+const SalesReview = lazy(() => import('./pages/SalesReview'))
+const DeliveryControl = lazy(() => import('./pages/DeliveryControl'))
+const CollectionsCash = lazy(() => import('./pages/CollectionsCash'))
 
 function App() {
   useEffect(() => {
@@ -241,6 +245,46 @@ function App() {
                 <PrivateRoute roles={ROUTE_ROLES.lostDeals}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><LostDeals /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.reports}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Reports /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/sales-review"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.salesReview}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><SalesReview /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/delivery-control"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.deliveryControl}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><DeliveryControl /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/collections-cash"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.collectionsCash}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><CollectionsCash /></Suspense>
                 </ErrorBoundary>
                 </PrivateRoute>
               }

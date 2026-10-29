@@ -69,6 +69,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Customers', path: '/customers', roles: [...ROUTE_ROLES.allStaff] },
     { name: 'Projects', path: '/projects', roles: [...ROUTE_ROLES.allStaff] },
+    { name: 'Reports', path: '/reports', roles: [...ROUTE_ROLES.reports] },
     { name: 'Support Tickets', path: '/support-tickets', roles: [...ROUTE_ROLES.supportTickets] },
     { name: 'Dashboard (Old)', path: '/dashboard', roles: dashboardNavRoles },
     { name: 'Solar Hub', path: '/solar-hub', roles: [...ROUTE_ROLES.solarHub] },
@@ -81,7 +82,7 @@ const Layout = () => {
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
 
   // Keep the header clean: show the 3 most-used links inline; push admin/secondary to "More".
-  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets'] as const
+  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/reports', '/support-tickets'] as const
   const primaryNav = PRIMARY_NAV_ORDER
     .map((p) => filteredNav.find((n) => n.path === p))
     .filter(Boolean) as typeof filteredNav
