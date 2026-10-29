@@ -102,6 +102,13 @@ describe('matchAskActionIntent', () => {
   it('still opens Lost Deals and PE Drafts as shortcuts', () => {
     expect(matchAskActionIntent('Lost Deals', UserRole.ADMIN)?.href).toBe('/lost-deals');
     expect(matchAskActionIntent('Sales Review', UserRole.SALES)?.href).toBe('/reports/sales-review');
+    expect(matchAskActionIntent('Funnel Velocity', UserRole.SALES)?.href).toBe(
+      '/reports/funnel-velocity',
+    );
+    expect(matchAskActionIntent('Funnel Velocity', UserRole.FINANCE)).toBeNull();
+    expect(matchAskActionIntent('Margin & Mix', UserRole.FINANCE)?.href).toBe('/reports/margin-mix');
+    expect(matchAskActionIntent('Margin Mix', UserRole.ADMIN)?.href).toBe('/reports/margin-mix');
+    expect(matchAskActionIntent('Margin & Mix', UserRole.SALES)).toBeNull();
     expect(matchAskActionIntent('Open Reports', UserRole.MANAGEMENT)?.href).toBe('/reports');
     expect(matchAskActionIntent('Delivery Control', UserRole.OPERATIONS)?.href).toBe(
       '/reports/delivery-control',

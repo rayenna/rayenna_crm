@@ -44,6 +44,8 @@ const Reports = lazy(() => import('./pages/Reports'))
 const SalesReview = lazy(() => import('./pages/SalesReview'))
 const DeliveryControl = lazy(() => import('./pages/DeliveryControl'))
 const CollectionsCash = lazy(() => import('./pages/CollectionsCash'))
+const FunnelVelocity = lazy(() => import('./pages/FunnelVelocity'))
+const MarginMix = lazy(() => import('./pages/MarginMix'))
 
 function App() {
   useEffect(() => {
@@ -285,6 +287,26 @@ function App() {
                 <PrivateRoute roles={ROUTE_ROLES.collectionsCash}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><CollectionsCash /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/funnel-velocity"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.funnelVelocity}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><FunnelVelocity /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/margin-mix"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.marginMix}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><MarginMix /></Suspense>
                 </ErrorBoundary>
                 </PrivateRoute>
               }

@@ -33,6 +33,29 @@ import {
   buildCollectionsCashPptxBuffer,
   collectionsCashExportBasename,
 } from '../utils/collectionsCashExport'
+import {
+  buildFunnelVelocity,
+  type FunnelVelocityPayload,
+  type FunnelVelocityProjectInput,
+} from '../utils/funnelVelocity'
+import {
+  buildFunnelVelocityExcelBuffer,
+  buildFunnelVelocityPdfBuffer,
+  buildFunnelVelocityPptxBuffer,
+  funnelVelocityExportBasename,
+} from '../utils/funnelVelocityExport'
+import {
+  buildMarginMix,
+  MARGIN_MIX_STATUSES,
+  type MarginMixPayload,
+  type MarginMixProjectInput,
+} from '../utils/marginMix'
+import {
+  buildMarginMixExcelBuffer,
+  buildMarginMixPdfBuffer,
+  buildMarginMixPptxBuffer,
+  marginMixExportBasename,
+} from '../utils/marginMixExport'
 
 const router = express.Router()
 
@@ -56,6 +79,8 @@ export const COLLECTIONS_CASH_ROLES: UserRole[] = [
   UserRole.FINANCE,
   UserRole.SALES,
 ]
+export const FUNNEL_VELOCITY_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]
+export const MARGIN_MIX_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE]
 
 const DELIVERY_STATUSES = DELIVERY_CONTROL_STATUSES as unknown as ProjectStatus[]
 
@@ -475,6 +500,257 @@ router.get(
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to export Collections & Cash'
       console.error('Collections & Cash export failed:', error)
+      res.status(500).json({ error: message })
+    }
+  },
+)
+
+async function loadFunnelVelocity(req: Request): Promise<{
+  payload: FunnelVelocityPayload
+  sellerLabel: string
+  exportedBy: string
+}> {
+  const role = req.user!.role as UserRole
+  const userId = req.user!.id
+  const requestedSalesperson =
+    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
+
+  const where: Prisma.ProjectWhereInput = {}
+  if (role === UserRole.SALES) {
+    where.salespersonId = userId
+  } else if (requestedSalesperson) {
+    where.salespersonId = requestedSalesperson
+  }
+
+  const rows = await prisma.project.findMany({
+    where,
+    select: {
+      id: true,
+      slNo: true,
+      projectStatus: true,
+      year: true,
+      projectCost: true,
+      salesProbability: true,
+      systemCapacity: true,
+      systemType: true,
+      type: true,
+      confirmationDate: true,
+      expectedCommissioningDate: true,
+      stageEnteredAt: true,
+      createdAt: true,
+      lostDate: true,
+      salespersonId: true,
+      salesperson: { select: { name: true } },
+      customer: { select: { customerName: true, customerType: true } },
+    },
+  })
+
+  const projects: FunnelVelocityProjectInput[] = rows.map((r) => ({
+    id: r.id,
+    slNo: r.slNo,
+    projectStatus: r.projectStatus,
+    year: r.year,
+    projectCost: r.projectCost,
+    salesProbability: r.salesProbability,
+    systemCapacity: r.systemCapacity,
+    systemType: r.systemType,
+    type: r.type,
+    confirmationDate: r.confirmationDate,
+    expectedCommissioningDate: r.expectedCommissioningDate,
+    stageEnteredAt: r.stageEnteredAt,
+    createdAt: r.createdAt,
+    lostDate: r.lostDate,
+    salespersonId: r.salespersonId,
+    salespersonName: r.salesperson?.name ?? null,
+    customerName: r.customer?.customerName ?? null,
+    customerType: r.customer?.customerType ?? null,
+  }))
+
+  const payload = buildFunnelVelocity(projects)
+  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
+
+  let sellerLabel = 'All sellers'
+  if (payload.salespersonId) {
+    const seller = await prisma.user.findUnique({
+      where: { id: payload.salespersonId },
+      select: { name: true, email: true },
+    })
+    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
+  }
+
+  return { payload, sellerLabel, exportedBy: req.user!.email }
+}
+
+router.get(
+  '/funnel-velocity',
+  authenticate,
+  authorize(...FUNNEL_VELOCITY_ROLES),
+  async (req: Request, res: Response) => {
+    try {
+      const { payload } = await loadFunnelVelocity(req)
+      res.json(payload)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load Funnel Velocity'
+      res.status(500).json({ error: message })
+    }
+  },
+)
+
+router.get(
+  '/funnel-velocity/export/:format',
+  authenticate,
+  authorize(...FUNNEL_VELOCITY_ROLES),
+  async (req: Request, res: Response) => {
+    const format = String(req.params.format || '').toLowerCase()
+    if (format !== 'xlsx' && format !== 'pdf' && format !== 'pptx') {
+      return res.status(400).json({ error: 'Format must be xlsx, pdf, or pptx' })
+    }
+    try {
+      const { payload, sellerLabel, exportedBy } = await loadFunnelVelocity(req)
+      const meta = { sellerLabel, exportedBy }
+      const basename = funnelVelocityExportBasename(payload, sellerLabel)
+      let buffer: Buffer
+      if (format === 'xlsx') buffer = buildFunnelVelocityExcelBuffer(payload, meta)
+      else if (format === 'pdf') buffer = await buildFunnelVelocityPdfBuffer(payload, meta)
+      else buffer = await buildFunnelVelocityPptxBuffer(payload, meta)
+
+      res.setHeader('Content-Type', EXPORT_MIME[format])
+      res.setHeader('Content-Disposition', `attachment; filename="${basename}.${format}"`)
+      res.send(buffer)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to export Funnel Velocity'
+      console.error('Funnel Velocity export failed:', error)
+      res.status(500).json({ error: message })
+    }
+  },
+)
+
+async function loadMarginMix(req: Request): Promise<{
+  payload: MarginMixPayload
+  sellerLabel: string
+  exportedBy: string
+}> {
+  const role = req.user!.role as UserRole
+  const userId = req.user!.id
+  const requestedSalesperson =
+    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
+
+  const where: Prisma.ProjectWhereInput = {
+    projectStatus: { in: MARGIN_MIX_STATUSES as unknown as ProjectStatus[] },
+  }
+  if (role === UserRole.SALES) {
+    where.salespersonId = userId
+  } else if (requestedSalesperson) {
+    where.salespersonId = requestedSalesperson
+  }
+
+  const rows = await prisma.project.findMany({
+    where,
+    select: {
+      id: true,
+      slNo: true,
+      projectStatus: true,
+      year: true,
+      projectCost: true,
+      totalProjectCost: true,
+      grossProfit: true,
+      expectedProfit: true,
+      profitability: true,
+      systemCapacity: true,
+      systemType: true,
+      type: true,
+      confirmationDate: true,
+      salespersonId: true,
+      salesperson: { select: { name: true } },
+      customer: { select: { customerName: true, customerType: true } },
+      peCostingSheets: {
+        orderBy: { savedAt: 'desc' },
+        take: 1,
+        select: { grandTotal: true },
+      },
+    },
+  })
+
+  const projects: MarginMixProjectInput[] = rows.map((r) => ({
+    id: r.id,
+    slNo: r.slNo,
+    projectStatus: r.projectStatus,
+    year: r.year,
+    projectCost: r.projectCost,
+    totalProjectCost: r.totalProjectCost,
+    grossProfit: r.grossProfit,
+    expectedProfit: r.expectedProfit,
+    profitability: r.profitability,
+    systemCapacity: r.systemCapacity,
+    systemType: r.systemType,
+    type: r.type,
+    confirmationDate: r.confirmationDate,
+    peCostingTotal: r.peCostingSheets[0]?.grandTotal ?? null,
+    salespersonId: r.salespersonId,
+    salespersonName: r.salesperson?.name ?? null,
+    customerName: r.customer?.customerName ?? null,
+    customerType: r.customer?.customerType ?? null,
+  }))
+
+  const requestedFy = typeof req.query.fy === 'string' ? req.query.fy.trim() : ''
+  const requestedQuarter = typeof req.query.quarter === 'string' ? req.query.quarter.trim() : ''
+  const payload = buildMarginMix(projects, new Date(), {
+    fy: requestedFy || null,
+    quarter: requestedQuarter || null,
+  })
+  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
+
+  let sellerLabel = 'All sellers'
+  if (payload.salespersonId) {
+    const seller = await prisma.user.findUnique({
+      where: { id: payload.salespersonId },
+      select: { name: true, email: true },
+    })
+    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
+  }
+
+  return { payload, sellerLabel, exportedBy: req.user!.email }
+}
+
+router.get(
+  '/margin-mix',
+  authenticate,
+  authorize(...MARGIN_MIX_ROLES),
+  async (req: Request, res: Response) => {
+    try {
+      const { payload } = await loadMarginMix(req)
+      res.json(payload)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load Margin & Mix'
+      res.status(500).json({ error: message })
+    }
+  },
+)
+
+router.get(
+  '/margin-mix/export/:format',
+  authenticate,
+  authorize(...MARGIN_MIX_ROLES),
+  async (req: Request, res: Response) => {
+    const format = String(req.params.format || '').toLowerCase()
+    if (format !== 'xlsx' && format !== 'pdf' && format !== 'pptx') {
+      return res.status(400).json({ error: 'Format must be xlsx, pdf, or pptx' })
+    }
+    try {
+      const { payload, sellerLabel, exportedBy } = await loadMarginMix(req)
+      const meta = { sellerLabel, exportedBy }
+      const basename = marginMixExportBasename(payload, sellerLabel)
+      let buffer: Buffer
+      if (format === 'xlsx') buffer = buildMarginMixExcelBuffer(payload, meta)
+      else if (format === 'pdf') buffer = await buildMarginMixPdfBuffer(payload, meta)
+      else buffer = await buildMarginMixPptxBuffer(payload, meta)
+
+      res.setHeader('Content-Type', EXPORT_MIME[format])
+      res.setHeader('Content-Disposition', `attachment; filename="${basename}.${format}"`)
+      res.send(buffer)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to export Margin & Mix'
+      console.error('Margin & Mix export failed:', error)
       res.status(500).json({ error: message })
     }
   },

@@ -37,6 +37,8 @@ export const ZENITH_ASK_ACTIONS = [
   'go_sales_review',
   'go_delivery_control',
   'go_collections_cash',
+  'go_funnel_velocity',
+  'go_margin_mix',
   'go_tally_export',
   'go_users',
   'go_audit',
@@ -126,6 +128,8 @@ const ACTION_ROLES: Record<ZenithAskActionId, UserRole[]> = {
   go_sales_review: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
   go_delivery_control: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS],
   go_collections_cash: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES],
+  go_funnel_velocity: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  go_margin_mix: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE],
   go_tally_export: [UserRole.ADMIN, UserRole.FINANCE],
   go_users: [UserRole.ADMIN],
   go_audit: [UserRole.ADMIN],
@@ -668,6 +672,28 @@ export function matchAskActionIntent(
       'Collections & Cash',
       'Opening Collections & Cash…',
     );
+  }
+  if (
+    /\bfunnel\s+velocity\b/.test(key) ||
+    /\bstuck\s+deals?\b/.test(key) ||
+    /\bstage\s+aging\b/.test(key) ||
+    /\bpipeline\s+hygiene\b/.test(key)
+  ) {
+    if (!actionAllowedForRole('go_funnel_velocity', role)) return null;
+    return build(
+      'go_funnel_velocity',
+      '/reports/funnel-velocity',
+      'Funnel Velocity',
+      'Opening Funnel Velocity…',
+    );
+  }
+  if (
+    /\bmargin\s*(&|and)?\s*mix\b/.test(key) ||
+    /\bgross\s+profit\s+(report|pack|mix)\b/.test(key) ||
+    /\bmargin\s+(report|pack)\b/.test(key)
+  ) {
+    if (!actionAllowedForRole('go_margin_mix', role)) return null;
+    return build('go_margin_mix', '/reports/margin-mix', 'Margin & Mix', 'Opening Margin & Mix…');
   }
   if (/^reports$/.test(key) || /\bopen\s+reports\b/.test(key) || /\bgo\s+to\s+reports\b/.test(key)) {
     if (!actionAllowedForRole('go_reports', role)) return null;

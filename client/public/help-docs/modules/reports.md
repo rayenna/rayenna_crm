@@ -1,12 +1,14 @@
 # Reports
 
-**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Delivery Control**, and **Collections & Cash**.
+**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, and **Margin & Mix**.
 
 | Report | Who | Use it for |
 | :-- | :-- | :-- |
 | **Sales Review** | Admin, Management, Sales (own book) | Weekly seller call — achievement, forecast, open deals |
+| **Funnel Velocity** | Admin, Management, Sales (own book) | Pipeline hygiene — days in stage, SLA colour, FY conversion |
 | **Delivery Control** | Admin, Management, Operations, Sales (own book) | Weekly ops standup — commissioning, blockers, subsidy clock |
 | **Collections & Cash** | Admin, Management, Finance, Sales (own book) | Confirmed orders only — staged collections, aging, loan-stuck, subsidy in flight |
+| **Margin & Mix** | Admin, Management, Finance | Won-book GP, missing cost, PE vs CRM, mix by seller / segment / system / kW |
 
 ## Sales Review
 
@@ -50,7 +52,37 @@ On **laptop / full screen**, click a column heading to **filter** (multi-select 
 
 ### What this report does not include (yet)
 
-Targets / quota, activity-since-last-call, and next follow-up. Those can be added as later Reports.
+Targets / quota, activity-since-last-call, and next follow-up. Stage aging and stuck deals live on **Funnel Velocity**.
+
+## Funnel Velocity
+
+Open **Reports → Funnel Velocity** (`/reports/funnel-velocity`) before the weekly seller hygiene call. Pick a salesperson at the top (Admin / Management). Sales users always see their own accounts.
+
+### Open funnel
+
+**Lead**, **Site survey**, and **Proposal** only. Confirmed-and-beyond jobs are on Delivery Control, not this board.
+
+Days in stage uses **stage entered**. If that date is missing, the report uses **created date** and flags the row **Stage date estimated**. Future dates clamp to 0 days.
+
+| KPI | Meaning |
+| :-- | :-- |
+| **Open pipeline** | Sum of order value on open funnel deals |
+| **Median days** | Median days in the current stage (all open deals) |
+| **SLA red / amber** | Deals at ≥90% / 70–90% of stage SLA |
+| **Win rate** | Confirmed YTD ÷ (confirmed YTD + lost YTD) for the current Indian FY |
+| **Days to confirm / lose** | Median created date → confirmation or lost date for YTD outcomes |
+
+### SLA
+
+Same thresholds as Data Sense: **Lead 7 days**, **Site survey 14**, **Proposal 21**. Under 70% of SLA is on track, 70–90% amber, 90%+ red.
+
+Aging buckets are **0–7 / 8–14 / 15–21 / 22–30 / 30+ / Undated**.
+
+### Conversion
+
+Win rate and days-to-confirm/lose are **FY outcomes**, not a full stage-history funnel. There is no stored history of every stage a deal passed through.
+
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
 
 ## Delivery Control
 
@@ -141,5 +173,30 @@ Buckets **0–30 / 31–60 / 61–90 / 90+ / Undated**. **Advance due** clocks f
 Jobs, outstanding, 90+, loan outstanding, and advance-due count by salesperson.
 
 On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
+
+## Margin & Mix
+
+Open **Reports → Margin & Mix** (`/reports/margin-mix`) for the weekly finance / management commercial review. Pick a salesperson, **FY**, and **quarter** at the top. Sales and Operations do not see this pack.
+
+### Won book
+
+Confirmed-and-beyond for the selected Indian FY (confirmation date, or project FY if that date is missing): Confirmed, Installation, Submitted for subsidy, Completed, Completed — subsidy credited. **Quarter** (Q1 Apr–Jun … Q4 Jan–Mar) uses confirmation date; jobs with no confirmation date appear only in **All quarters**. Lead / Survey / Proposal / Lost stay off this pack. **Submitted for subsidy** is included here even though Sales Review achievement excludes it.
+
+### Gross profit
+
+| KPI | Meaning |
+| :-- | :-- |
+| **Revenue** | Sum of order value on the won book |
+| **Gross profit** | CRM GP, then expected profit (flagged estimated), then order value minus total project cost |
+| **GP %** | Profit ÷ order value, **weighted** in mix tables (not an average of percents) |
+| **Missing cost** | Jobs with no CRM total project cost |
+| **Thin / loss** | GP under 10% / below zero |
+| **Revenue YoY** | Vs the same period last FY (full year, or the same quarter) |
+
+Bands: **Loss** · **Under 10%** · **10–20%** · **20%+** · **Unknown**. kW bands are 0–3 / 3–5 / 5–10 / 10–20 / 20+ (typical Kerala residential).
+
+**PE vs CRM** flags a latest Proposal Engine costing sheet 10%+ away from CRM cost, or PE cost with no CRM cost yet.
+
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson, FY, and quarter pickers; list filters stay in the browser.
 
 → [Projects](#projects-module) · [Permission matrix](/help/roles#permission-matrix)

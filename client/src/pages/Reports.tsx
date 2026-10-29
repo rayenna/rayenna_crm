@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Banknote, BarChart3, ChevronRight, ClipboardList, Wrench } from 'lucide-react'
+import { Banknote, BarChart3, ChevronRight, ClipboardList, Percent, Timer, Wrench } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { ROUTE_ROLES } from '../constants/routeRoles'
 
@@ -9,6 +9,8 @@ export default function Reports() {
   const canSalesReview = hasRole([...ROUTE_ROLES.salesReview])
   const canDelivery = hasRole([...ROUTE_ROLES.deliveryControl])
   const canCollections = hasRole([...ROUTE_ROLES.collectionsCash])
+  const canFunnel = hasRole([...ROUTE_ROLES.funnelVelocity])
+  const canMarginMix = hasRole([...ROUTE_ROLES.marginMix])
 
   return (
     <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))]">
@@ -62,6 +64,35 @@ export default function Reports() {
               </Link>
             ) : null}
 
+            {canFunnel ? (
+              <Link
+                to="/reports/funnel-velocity"
+                className="group flex min-h-[44px] items-start justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors hover:border-[color:var(--accent-gold-border)] sm:p-5"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)]">
+                    <Timer className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="zenith-display text-base font-bold text-[color:var(--text-primary)] sm:text-lg">
+                      Funnel Velocity
+                    </h2>
+                    <p className="mt-1 text-sm leading-snug text-[color:var(--text-secondary)]">
+                      Lead → Survey → Proposal: days in stage, SLA colour, stuck list, and FY win
+                      rate — the hygiene companion to Sales Review.
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
+                      Admin · Management · Sales (own book)
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight
+                  className="mt-1 h-5 w-5 shrink-0 text-[color:var(--text-muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[color:var(--accent-gold)]"
+                  aria-hidden
+                />
+              </Link>
+            ) : null}
+
             {canDelivery ? (
               <Link
                 to="/reports/delivery-control"
@@ -81,6 +112,35 @@ export default function Reports() {
                     </p>
                     <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                       Admin · Management · Operations · Sales (own book)
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight
+                  className="mt-1 h-5 w-5 shrink-0 text-[color:var(--text-muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[color:var(--accent-gold)]"
+                  aria-hidden
+                />
+              </Link>
+            ) : null}
+
+            {canMarginMix ? (
+              <Link
+                to="/reports/margin-mix"
+                className="group flex min-h-[44px] items-start justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors hover:border-[color:var(--accent-gold-border)] sm:p-5"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)]">
+                    <Percent className="h-5 w-5 text-[color:var(--accent-teal)]" strokeWidth={2} aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="zenith-display text-base font-bold text-[color:var(--text-primary)] sm:text-lg">
+                      Margin & Mix
+                    </h2>
+                    <p className="mt-1 text-sm leading-snug text-[color:var(--text-secondary)]">
+                      Won-book gross profit, missing cost, PE vs CRM, and mix by seller, segment,
+                      system, and kW — for finance and management.
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
+                      Admin · Management · Finance
                     </p>
                   </div>
                 </div>

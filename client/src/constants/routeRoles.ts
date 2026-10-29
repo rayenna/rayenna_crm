@@ -16,6 +16,8 @@ export const ROUTE_ROLES = {
   salesReview: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
   deliveryControl: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS],
   collectionsCash: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES],
+  funnelVelocity: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  marginMix: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE],
   users: [UserRole.ADMIN],
   auditSecurity: [UserRole.ADMIN],
 } as const

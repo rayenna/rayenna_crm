@@ -8,7 +8,7 @@ You track **money in**: payments received, outstanding balances, and handoff to 
 | :-- | :-- |
 | View **all projects** and payment status | Create projects or customers |
 | **Edit payment amounts and dates** on non-Lost projects | Edit sales, lifecycle, or commercial fields |
-| **Finance** dashboard, **Zenith**, and **Reports → Collections & Cash** | **Support tickets** module |
+| **Finance** dashboard, **Zenith**, and **Reports → Collections & Cash** / **Margin & Mix** | **Support tickets** module |
 | **Tally export** (with Admin) | **Users**, **Audit & Security**, or project/customer bulk export |
 | Filter projects by **payment status** | Delete records |
 
@@ -73,10 +73,11 @@ No menu entry — operational issues stay with **Sales**, **Operations**, or **M
 ## Daily rhythm
 
 1. Open **dashboard** / **Zenith** for outstanding and recent receipts.  
-2. Update **payments** the same day money hits the bank.  
-3. Reconcile **partial** vs **fully paid** before month-end.  
-4. Run **Tally export** on your schedule.  
-5. Flag data issues to **Admin** (wrong order value) or **Sales** (wrong assignment).
+2. Check **Reports → Margin & Mix** for missing cost and thin-margin jobs.  
+3. Update **payments** the same day money hits the bank.  
+4. Reconcile **partial** vs **fully paid** before month-end.  
+5. Run **Tally export** on your schedule.  
+6. Flag data issues to **Admin** (wrong order value) or **Sales** (wrong assignment).
 
 ## Shortcuts
 

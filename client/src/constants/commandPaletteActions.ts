@@ -253,7 +253,7 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
   {
     id: 'go_reports',
     label: 'Go to Reports',
-    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'weekly'],
+    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'funnel velocity', 'margin mix', 'weekly'],
     group: 'Go to',
     roles: ROUTE_ROLES.reports,
     href: '/reports',
@@ -281,6 +281,22 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
     group: 'Go to',
     roles: ROUTE_ROLES.collectionsCash,
     href: '/reports/collections-cash',
+  },
+  {
+    id: 'go_funnel_velocity',
+    label: 'Go to Funnel Velocity',
+    keywords: ['funnel velocity', 'stuck', 'sla', 'stage aging', 'pipeline hygiene', 'days in stage'],
+    group: 'Go to',
+    roles: ROUTE_ROLES.funnelVelocity,
+    href: '/reports/funnel-velocity',
+  },
+  {
+    id: 'go_margin_mix',
+    label: 'Go to Margin & Mix',
+    keywords: ['margin mix', 'gross profit', 'gp', 'costing', 'finance report', 'mix'],
+    group: 'Go to',
+    roles: ROUTE_ROLES.marginMix,
+    href: '/reports/margin-mix',
   },
   {
     id: 'go_support_tickets',

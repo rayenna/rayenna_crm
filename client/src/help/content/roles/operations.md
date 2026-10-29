@@ -10,7 +10,7 @@ You drive **execution** after the sale is confirmed: installations, compliance d
 | Update **installation**, **DISCOM**, **subsidy**, and related dates | Create new projects |
 | Edit **Sales & Commercial** and **financing** on allowed projects | Record **payments** (Finance / Admin) |
 | **Support tickets** on any project you can open | **Tally export**, **Users**, or **Audit & Security** |
-| **Operations** dashboard, **Zenith**, and **Reports → Delivery Control** | **Sales Review** (sales pack) |
+| **Operations** dashboard, **Zenith**, and **Reports → Delivery Control** | **Sales Review** / **Funnel Velocity** / **Margin & Mix** |
 
 → [Permission matrix](#permission-matrix) · [Modules → Projects](/help/modules#projects-module)
 

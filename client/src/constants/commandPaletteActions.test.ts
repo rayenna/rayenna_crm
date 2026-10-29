@@ -8,7 +8,9 @@ describe('filterCommandPaletteItems', () => {
     expect(ids).not.toContain('create_support_ticket')
     expect(ids).toContain('go_reports')
     expect(ids).toContain('go_collections_cash')
+    expect(ids).toContain('go_margin_mix')
     expect(ids).not.toContain('go_sales_review')
+    expect(ids).not.toContain('go_funnel_velocity')
     expect(ids).not.toContain('go_delivery_control')
     expect(ids).toContain('go_customers')
     expect(ids).toContain('go_tally_export')
@@ -23,8 +25,10 @@ describe('filterCommandPaletteItems', () => {
     expect(ids).toContain('go_proposal_engine')
     expect(ids).toContain('go_reports')
     expect(ids).toContain('go_sales_review')
+    expect(ids).toContain('go_funnel_velocity')
     expect(ids).toContain('go_delivery_control')
     expect(ids).toContain('go_collections_cash')
+    expect(ids).not.toContain('go_margin_mix')
   })
 
   it('gives Operations Reports and Delivery Control but not Sales Review', () => {
@@ -32,7 +36,9 @@ describe('filterCommandPaletteItems', () => {
     expect(ids).toContain('go_reports')
     expect(ids).toContain('go_delivery_control')
     expect(ids).not.toContain('go_sales_review')
+    expect(ids).not.toContain('go_funnel_velocity')
     expect(ids).not.toContain('go_collections_cash')
+    expect(ids).not.toContain('go_margin_mix')
   })
 
   it('shows admin-only users and audit', () => {

@@ -279,6 +279,8 @@ const routeToContextLabel: Record<string, string> = {
   '/reports/sales-review': 'Sales Review',
   '/reports/delivery-control': 'Delivery Control',
   '/reports/collections-cash': 'Collections & Cash',
+  '/reports/funnel-velocity': 'Funnel Velocity',
+  '/reports/margin-mix': 'Margin & Mix',
   '/solar-hub': 'Solar Hub',
   '/users': 'Users',
   '/change-password': 'Change Password',
