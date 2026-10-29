@@ -38,6 +38,7 @@ import {
   formatInrCompact,
   formatKw,
 } from '../utils/salesReviewFormat'
+import { REPORT_FILTERS_KEYS, usePersistedReportPrefs } from '../utils/reportListPrefs'
 
 const ACCESS_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS]
 const NARROW_MQ = '(max-width: 743px)'
@@ -157,20 +158,44 @@ export default function DeliveryControl() {
   const canAccess = hasRole(ACCESS_ROLES)
   const isSales = user?.role === UserRole.SALES
   const colors = useChartColors()
-  const [opsPersonId, setOpsPersonId] = useState('')
+  const [prefs, setPrefs] = usePersistedReportPrefs(REPORT_FILTERS_KEYS.deliveryControl, {
+    opsPersonId: '',
+    search: '',
+    stage: [] as string[],
+    opsFilter: [] as string[],
+    segment: [] as string[],
+    blocker: [] as string[],
+    sortKey: 'daysLate',
+    sortOrder: 'desc' as 'asc' | 'desc',
+    clockSearch: '',
+    clockStep: [] as string[],
+    clockFlag: [] as string[],
+    clockSortKey: 'days',
+    clockSortOrder: 'desc' as 'asc' | 'desc',
+  })
+  const opsPersonId = prefs.opsPersonId
+  const search = prefs.search
+  const stage = prefs.stage
+  const opsFilter = prefs.opsFilter
+  const segment = prefs.segment
+  const blocker = prefs.blocker
+  const sortKey = prefs.sortKey as JobSortKey
+  const sortOrder = prefs.sortOrder
+  const clockSearch = prefs.clockSearch
+  const clockStep = prefs.clockStep
+  const clockFlag = prefs.clockFlag
+  const clockSortKey = prefs.clockSortKey as ClockSortKey
+  const clockSortOrder = prefs.clockSortOrder
+  const setOpsPersonId = (value: string) => setPrefs({ opsPersonId: value })
+  const setSearch = (value: string) => setPrefs({ search: value })
+  const setStage = (value: string[]) => setPrefs({ stage: value })
+  const setOpsFilter = (value: string[]) => setPrefs({ opsFilter: value })
+  const setSegment = (value: string[]) => setPrefs({ segment: value })
+  const setBlocker = (value: string[]) => setPrefs({ blocker: value })
+  const setClockSearch = (value: string) => setPrefs({ clockSearch: value })
+  const setClockStep = (value: string[]) => setPrefs({ clockStep: value })
+  const setClockFlag = (value: string[]) => setPrefs({ clockFlag: value })
   const [expandMonths, setExpandMonths] = useState(false)
-  const [search, setSearch] = useState('')
-  const [stage, setStage] = useState<string[]>([])
-  const [opsFilter, setOpsFilter] = useState<string[]>([])
-  const [segment, setSegment] = useState<string[]>([])
-  const [blocker, setBlocker] = useState<string[]>([])
-  const [sortKey, setSortKey] = useState<JobSortKey>('daysLate')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [clockSearch, setClockSearch] = useState('')
-  const [clockStep, setClockStep] = useState<string[]>([])
-  const [clockFlag, setClockFlag] = useState<string[]>([])
-  const [clockSortKey, setClockSortKey] = useState<ClockSortKey>('days')
-  const [clockSortOrder, setClockSortOrder] = useState<'asc' | 'desc'>('desc')
   const [narrow, setNarrow] = useState(isNarrowViewport)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [pendingExport, setPendingExport] = useState<ExportFormat | null>(null)
@@ -272,8 +297,7 @@ export default function DeliveryControl() {
   }
 
   const onJobSort = (key: string, order: 'asc' | 'desc') => {
-    setSortKey(key as JobSortKey)
-    setSortOrder(order)
+    setPrefs({ sortKey: key, sortOrder: order })
   }
 
   const monthCols = useMemo(() => {
@@ -331,17 +355,12 @@ export default function DeliveryControl() {
     return clockSortOrder === 'asc' ? 'ascending' : 'descending'
   }
   const onClockSort = (key: string, order: 'asc' | 'desc') => {
-    setClockSortKey(key as ClockSortKey)
-    setClockSortOrder(order)
+    setPrefs({ clockSortKey: key, clockSortOrder: order })
   }
 
   const filterActive = Boolean(search || stage.length || opsFilter.length || segment.length || blocker.length)
   const clearFilters = () => {
-    setSearch('')
-    setStage([])
-    setOpsFilter([])
-    setSegment([])
-    setBlocker([])
+    setPrefs({ search: '', stage: [], opsFilter: [], segment: [], blocker: [] })
   }
 
   const requestExport = (format: ExportFormat) => {
@@ -687,9 +706,7 @@ export default function DeliveryControl() {
               total={clockJobs.length}
               filterActive={clockFilterActive}
               onClear={() => {
-                setClockSearch('')
-                setClockStep([])
-                setClockFlag([])
+                setPrefs({ clockSearch: '', clockStep: [], clockFlag: [] })
               }}
               sortKey={clockSortKey}
               sortOrder={clockSortOrder}

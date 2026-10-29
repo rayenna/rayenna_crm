@@ -44,6 +44,7 @@ import {
   formatPct,
   yoyToneClass,
 } from '../utils/salesReviewFormat'
+import { REPORT_FILTERS_KEYS, usePersistedReportPrefs } from '../utils/reportListPrefs'
 
 const REPORTS_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]
 const NARROW_MQ = '(max-width: 743px)'
@@ -147,18 +148,40 @@ export default function SalesReview() {
   const canAccess = hasRole(REPORTS_ROLES)
   const isSales = user?.role === UserRole.SALES
   const colors = useChartColors()
-  const [salespersonId, setSalespersonId] = useState('')
+  const [prefs, setPrefs] = usePersistedReportPrefs(REPORT_FILTERS_KEYS.salesReview, {
+    salespersonId: '',
+    search: '',
+    stage: [] as string[],
+    customerType: [] as string[],
+    systemType: [] as string[],
+    segment: [] as string[],
+    fy: [] as string[],
+    quarter: [] as string[],
+    loan: [] as string[],
+    sortKey: 'closeDate',
+    sortOrder: 'asc' as 'asc' | 'desc',
+  })
+  const salespersonId = prefs.salespersonId
+  const search = prefs.search
+  const stage = prefs.stage
+  const customerType = prefs.customerType
+  const systemType = prefs.systemType
+  const segment = prefs.segment
+  const fy = prefs.fy
+  const quarter = prefs.quarter
+  const loan = prefs.loan
+  const sortKey = prefs.sortKey as DealSortKey
+  const sortOrder = prefs.sortOrder
+  const setSalespersonId = (value: string) => setPrefs({ salespersonId: value })
+  const setSearch = (value: string) => setPrefs({ search: value })
+  const setStage = (value: string[]) => setPrefs({ stage: value })
+  const setCustomerType = (value: string[]) => setPrefs({ customerType: value })
+  const setSystemType = (value: string[]) => setPrefs({ systemType: value })
+  const setSegment = (value: string[]) => setPrefs({ segment: value })
+  const setFy = (value: string[]) => setPrefs({ fy: value })
+  const setQuarter = (value: string[]) => setPrefs({ quarter: value })
+  const setLoan = (value: string[]) => setPrefs({ loan: value })
   const [expandQuarters, setExpandQuarters] = useState(false)
-  const [search, setSearch] = useState('')
-  const [stage, setStage] = useState<string[]>([])
-  const [customerType, setCustomerType] = useState<string[]>([])
-  const [systemType, setSystemType] = useState<string[]>([])
-  const [segment, setSegment] = useState<string[]>([])
-  const [fy, setFy] = useState<string[]>([])
-  const [quarter, setQuarter] = useState<string[]>([])
-  const [loan, setLoan] = useState<string[]>([])
-  const [sortKey, setSortKey] = useState<DealSortKey>('closeDate')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [narrow, setNarrow] = useState(isNarrowViewport)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [pendingExport, setPendingExport] = useState<SalesReviewExportFormat | null>(null)
@@ -265,8 +288,7 @@ export default function SalesReview() {
   }
 
   const onDealSort = (key: string, order: 'asc' | 'desc') => {
-    setSortKey(key as DealSortKey)
-    setSortOrder(order)
+    setPrefs({ sortKey: key, sortOrder: order })
   }
 
   const monthCols = useMemo(() => {
@@ -317,14 +339,16 @@ export default function SalesReview() {
     )
 
   const clearFilters = () => {
-    setSearch('')
-    setStage([])
-    setCustomerType([])
-    setSystemType([])
-    setSegment([])
-    setFy([])
-    setQuarter([])
-    setLoan([])
+    setPrefs({
+      search: '',
+      stage: [],
+      customerType: [],
+      systemType: [],
+      segment: [],
+      fy: [],
+      quarter: [],
+      loan: [],
+    })
   }
 
   const requestExport = (format: SalesReviewExportFormat) => {

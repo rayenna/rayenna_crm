@@ -71,7 +71,8 @@ export default function SalesReviewHowToRead() {
           </p>
           <p>
             Deal list is open pipeline only (not Lost / Completed). On laptop, click a column heading
-            to filter and sort. Tap a row to open the project. Export downloads Excel, PDF, or
+            to filter and sort. Tap a row to open the project; coming back keeps the seller picker
+            and list filters until you click Clear filters. Export downloads Excel, PDF, or
             PowerPoint of the current seller pack.
           </p>
         </div>

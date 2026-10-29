@@ -77,7 +77,8 @@ export default function DeliveryControlHowToRead() {
             (Lead / Survey / Proposal) is not collectible subsidy work.
           </p>
           <p>
-            On laptop, click a column heading to filter and sort. Tap a row to open the project.
+            On laptop, click a column heading to filter and sort. Tap a row to open the project;
+            coming back keeps the ops picker and list filters until you click Clear filters.
             Export downloads Excel, PDF, or PowerPoint of the current ops pack (on-screen job-list
             filters stay in the browser).
           </p>

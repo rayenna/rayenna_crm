@@ -46,7 +46,7 @@ Open pipeline (Lead through Submitted for Subsidy) bucketed by **expected commis
 
 Open pipeline only. Columns: customer, stage, probability, customer type, system type, subsidy segment, close date, quarter, FY, bank loan, order value.
 
-On **laptop / full screen**, click a column heading to **filter** (multi-select where it applies) and **sort** ascending or descending. On **phones** the list is **cards** with the same filters above the list. **Tap a row** to open the project.
+On **laptop / full screen**, click a column heading to **filter** (multi-select where it applies) and **sort** ascending or descending. On **phones** the list is **cards** with the same filters above the list. **Tap a row** to open the project. Coming back keeps the seller picker and list filters until you click **Clear filters**.
 
 **Print** hides chrome and keeps the tables for a call handout. **Export** downloads the same pack as **Excel**, **PDF**, or **PowerPoint** (respects the salesperson picker; deal-list on-screen filters stay in the browser).
 
@@ -82,7 +82,7 @@ Aging buckets are **0–7 / 8–14 / 15–21 / 22–30 / 30+ / Undated**.
 
 Win rate and days-to-confirm/lose are **FY outcomes**, not a full stage-history funnel. There is no stored history of every stage a deal passed through.
 
-On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. Coming back keeps the seller picker and list filters until you click **Clear filters**. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
 
 ## Delivery Control
 
@@ -117,7 +117,7 @@ Blockers are exceptions, not a second status:
 - Subsidy: no KSEB feasibility, or feasibility done with registration still pending
 - After install starts: MNRE portal pending, completion report pending, missing KSEB / MNRE documents
 
-On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** (Excel / PDF / PowerPoint) follow the ops picker; job-list on-screen filters stay in the browser.
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. Coming back keeps the ops picker and list filters until you click **Clear filters**. **Print** and **Export** (Excel / PDF / PowerPoint) follow the ops picker; job-list on-screen filters stay in the browser.
 
 ### Subsidy clock
 
@@ -172,7 +172,7 @@ Buckets **0–30 / 31–60 / 61–90 / 90+ / Undated**. **Advance due** clocks f
 
 Jobs, outstanding, 90+, loan outstanding, and advance-due count by salesperson.
 
-On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. Coming back keeps the seller picker and list filters until you click **Clear filters**. **Print** and **Export** follow the salesperson picker; list filters stay in the browser.
 
 ## Margin & Mix
 
@@ -197,6 +197,6 @@ Bands: **Loss** · **Under 10%** · **10–20%** · **20%+** · **Unknown**. kW 
 
 **PE vs CRM** flags a latest Proposal Engine costing sheet 10%+ away from CRM cost, or PE cost with no CRM cost yet.
 
-On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. **Print** and **Export** follow the salesperson, FY, and quarter pickers; list filters stay in the browser.
+On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. Coming back keeps the seller, FY, quarter, and list filters until you click **Clear filters**. **Print** and **Export** follow the salesperson, FY, and quarter pickers; list filters stay in the browser.
 
 → [Projects](#projects-module) · [Permission matrix](/help/roles#permission-matrix)

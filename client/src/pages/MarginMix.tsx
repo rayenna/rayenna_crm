@@ -33,6 +33,7 @@ import { DealListColHead } from '../components/reports/DealListColHead'
 import MarginMixHowToRead from '../components/reports/MarginMixHowToRead'
 import type { MarginJob, MarginMixPayload, MixRow } from '../types/marginMix'
 import { formatInr, formatInrCompact, formatPct } from '../utils/salesReviewFormat'
+import { REPORT_FILTERS_KEYS, usePersistedReportPrefs } from '../utils/reportListPrefs'
 
 const ACCESS_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE]
 const NARROW_MQ = '(max-width: 743px)'
@@ -129,16 +130,36 @@ export default function MarginMix() {
   const navigate = useNavigate()
   const canAccess = hasRole(ACCESS_ROLES)
   const colors = useChartColors()
-  const [salespersonId, setSalespersonId] = useState('')
-  const [fy, setFy] = useState('')
-  const [quarter, setQuarter] = useState('')
-  const [search, setSearch] = useState('')
-  const [stage, setStage] = useState<string[]>([])
-  const [band, setBand] = useState<string[]>([])
-  const [segment, setSegment] = useState<string[]>([])
-  const [flag, setFlag] = useState<string[]>([])
-  const [sortKey, setSortKey] = useState<RowSortKey>('pct')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [prefs, setPrefs] = usePersistedReportPrefs(REPORT_FILTERS_KEYS.marginMix, {
+    salespersonId: '',
+    fy: '',
+    quarter: '',
+    search: '',
+    stage: [] as string[],
+    band: [] as string[],
+    segment: [] as string[],
+    flag: [] as string[],
+    sortKey: 'pct',
+    sortOrder: 'asc' as 'asc' | 'desc',
+  })
+  const salespersonId = prefs.salespersonId
+  const fy = prefs.fy
+  const quarter = prefs.quarter
+  const search = prefs.search
+  const stage = prefs.stage
+  const band = prefs.band
+  const segment = prefs.segment
+  const flag = prefs.flag
+  const sortKey = prefs.sortKey as RowSortKey
+  const sortOrder = prefs.sortOrder
+  const setSalespersonId = (value: string) => setPrefs({ salespersonId: value })
+  const setFy = (value: string) => setPrefs({ fy: value })
+  const setQuarter = (value: string) => setPrefs({ quarter: value })
+  const setSearch = (value: string) => setPrefs({ search: value })
+  const setStage = (value: string[]) => setPrefs({ stage: value })
+  const setBand = (value: string[]) => setPrefs({ band: value })
+  const setSegment = (value: string[]) => setPrefs({ segment: value })
+  const setFlag = (value: string[]) => setPrefs({ flag: value })
   const [narrow, setNarrow] = useState(isNarrowViewport)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [pendingExport, setPendingExport] = useState<ExportFormat | null>(null)
@@ -236,8 +257,7 @@ export default function MarginMix() {
   }
 
   const onSort = (key: string, order: 'asc' | 'desc') => {
-    setSortKey(key as RowSortKey)
-    setSortOrder(order)
+    setPrefs({ sortKey: key, sortOrder: order })
   }
 
   const chartData = useMemo(() => {
@@ -247,11 +267,7 @@ export default function MarginMix() {
 
   const filterActive = Boolean(search || stage.length || band.length || segment.length || flag.length)
   const clearFilters = () => {
-    setSearch('')
-    setStage([])
-    setBand([])
-    setSegment([])
-    setFlag([])
+    setPrefs({ search: '', stage: [], band: [], segment: [], flag: [] })
   }
 
   const confirmExport = async () => {

@@ -70,7 +70,8 @@ export default function FunnelVelocityHowToRead() {
             funnel.
           </p>
           <p>
-            On laptop, click a column heading to filter and sort. Tap a row to open the project.
+            On laptop, click a column heading to filter and sort. Tap a row to open the project;
+            coming back keeps the seller picker and list filters until you click Clear filters.
             Export downloads Excel, PDF, or PowerPoint of the current seller pack (on-screen list
             filters stay in the browser).
           </p>

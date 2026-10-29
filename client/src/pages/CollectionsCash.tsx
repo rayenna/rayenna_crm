@@ -33,6 +33,7 @@ import { DealListColHead } from '../components/reports/DealListColHead'
 import CollectionsCashHowToRead from '../components/reports/CollectionsCashHowToRead'
 import type { CollectionsCashPayload, CollectionsRow } from '../types/collectionsCash'
 import { formatCloseDate, formatInr, formatInrCompact } from '../utils/salesReviewFormat'
+import { REPORT_FILTERS_KEYS, usePersistedReportPrefs } from '../utils/reportListPrefs'
 
 const ACCESS_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES]
 const NARROW_MQ = '(max-width: 743px)'
@@ -121,14 +122,30 @@ export default function CollectionsCash() {
   const canAccess = hasRole(ACCESS_ROLES)
   const isSales = user?.role === UserRole.SALES
   const colors = useChartColors()
-  const [salespersonId, setSalespersonId] = useState('')
-  const [search, setSearch] = useState('')
-  const [stage, setStage] = useState<string[]>([])
-  const [payment, setPayment] = useState<string[]>([])
-  const [aging, setAging] = useState<string[]>([])
-  const [flag, setFlag] = useState<string[]>([])
-  const [sortKey, setSortKey] = useState<RowSortKey>('balance')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [prefs, setPrefs] = usePersistedReportPrefs(REPORT_FILTERS_KEYS.collectionsCash, {
+    salespersonId: '',
+    search: '',
+    stage: [] as string[],
+    payment: [] as string[],
+    aging: [] as string[],
+    flag: [] as string[],
+    sortKey: 'balance',
+    sortOrder: 'desc' as 'asc' | 'desc',
+  })
+  const salespersonId = prefs.salespersonId
+  const search = prefs.search
+  const stage = prefs.stage
+  const payment = prefs.payment
+  const aging = prefs.aging
+  const flag = prefs.flag
+  const sortKey = prefs.sortKey as RowSortKey
+  const sortOrder = prefs.sortOrder
+  const setSalespersonId = (value: string) => setPrefs({ salespersonId: value })
+  const setSearch = (value: string) => setPrefs({ search: value })
+  const setStage = (value: string[]) => setPrefs({ stage: value })
+  const setPayment = (value: string[]) => setPrefs({ payment: value })
+  const setAging = (value: string[]) => setPrefs({ aging: value })
+  const setFlag = (value: string[]) => setPrefs({ flag: value })
   const [narrow, setNarrow] = useState(isNarrowViewport)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [pendingExport, setPendingExport] = useState<ExportFormat | null>(null)
@@ -221,8 +238,7 @@ export default function CollectionsCash() {
   }
 
   const onSort = (key: string, order: 'asc' | 'desc') => {
-    setSortKey(key as RowSortKey)
-    setSortOrder(order)
+    setPrefs({ sortKey: key, sortOrder: order })
   }
 
   const chartData = useMemo(() => {
@@ -236,11 +252,7 @@ export default function CollectionsCash() {
 
   const filterActive = Boolean(search || stage.length || payment.length || aging.length || flag.length)
   const clearFilters = () => {
-    setSearch('')
-    setStage([])
-    setPayment([])
-    setAging([])
-    setFlag([])
+    setPrefs({ search: '', stage: [], payment: [], aging: [], flag: [] })
   }
 
   const confirmExport = async () => {

@@ -70,8 +70,9 @@ export default function MarginMixHowToRead() {
             sheet that is 10%+ away from CRM cost, or PE cost with no CRM cost yet.
           </p>
           <p>
-            On laptop, click a column heading to filter and sort. Tap a row to open the project.
-            Export downloads Excel, PDF, or PowerPoint of the current seller and period pack
+            On laptop, click a column heading to filter and sort. Tap a row to open the project;
+            coming back keeps the seller, FY, quarter, and list filters until you click Clear
+            filters. Export downloads Excel, PDF, or PowerPoint of the current seller and period pack
             (on-screen list filters stay in the browser). YoY is versus the same FY or quarter last
             year.
           </p>
