@@ -152,6 +152,12 @@ function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Open / go to a named screen — not “Sales Review achievement” (that is analytics). */
+function isNavigateToNamedScreen(key: string, screen: RegExp): boolean {
+  const stripped = key.replace(/^(please\s+)?(go\s+to|open|show(\s+me)?(\s+the)?)\s+/, '').trim();
+  return screen.test(stripped);
+}
+
 /** Ask analytics list of PE Ready/Draft deals — do not navigate to Lost Deals or a single PE bucket. */
 export function wantsPeDealList(key: string): boolean {
   const q = key.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -648,11 +654,11 @@ export function matchAskActionIntent(
     if (!actionAllowedForRole('go_lost_deals', role)) return null;
     return build('go_lost_deals', '/lost-deals', 'Lost Deals', 'Opening Lost Deals…');
   }
-  if (/\bsales\s+review\b/.test(key)) {
+  if (isNavigateToNamedScreen(key, /^(sales\s+review)$/)) {
     if (!actionAllowedForRole('go_sales_review', role)) return null;
     return build('go_sales_review', '/reports/sales-review', 'Sales Review', 'Opening Sales Review…');
   }
-  if (/\bdelivery\s+control\b/.test(key) || /\bops\s+(standup|board|pack)\b/.test(key)) {
+  if (isNavigateToNamedScreen(key, /^(delivery\s+control)$/)) {
     if (!actionAllowedForRole('go_delivery_control', role)) return null;
     return build(
       'go_delivery_control',
@@ -661,10 +667,7 @@ export function matchAskActionIntent(
       'Opening Delivery Control…',
     );
   }
-  if (
-    /\bcollections(\s*(&|and)\s*cash)?\b/.test(key) ||
-    /\bcash\s+(report|pack|collections)\b/.test(key)
-  ) {
+  if (isNavigateToNamedScreen(key, /^(collections(\s*(&|and)\s*cash)?)$/)) {
     if (!actionAllowedForRole('go_collections_cash', role)) return null;
     return build(
       'go_collections_cash',
@@ -673,12 +676,7 @@ export function matchAskActionIntent(
       'Opening Collections & Cash…',
     );
   }
-  if (
-    /\bfunnel\s+velocity\b/.test(key) ||
-    /\bstuck\s+deals?\b/.test(key) ||
-    /\bstage\s+aging\b/.test(key) ||
-    /\bpipeline\s+hygiene\b/.test(key)
-  ) {
+  if (isNavigateToNamedScreen(key, /^(funnel\s+velocity)$/)) {
     if (!actionAllowedForRole('go_funnel_velocity', role)) return null;
     return build(
       'go_funnel_velocity',
@@ -687,11 +685,7 @@ export function matchAskActionIntent(
       'Opening Funnel Velocity…',
     );
   }
-  if (
-    /\bmargin\s*(&|and)?\s*mix\b/.test(key) ||
-    /\bgross\s+profit\s+(report|pack|mix)\b/.test(key) ||
-    /\bmargin\s+(report|pack)\b/.test(key)
-  ) {
+  if (isNavigateToNamedScreen(key, /^(margin\s*(&|and)?\s*mix)$/)) {
     if (!actionAllowedForRole('go_margin_mix', role)) return null;
     return build('go_margin_mix', '/reports/margin-mix', 'Margin & Mix', 'Opening Margin & Mix…');
   }

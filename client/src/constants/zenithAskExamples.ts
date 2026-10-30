@@ -40,33 +40,33 @@ export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
 export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Funnel Velocity SLA red',
     'Show my ageing pipeline',
-    'Show my pipeline by stage',
-    'List lost deals with active PE proposals',
   ],
   MANAGEMENT: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Margin & Mix summary',
     'DCR vs Non-DCR profitability',
-    'List lost deals with active PE proposals',
-    'List deals with PE Ready or Draft proposals',
   ],
   ADMIN: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Delivery Control blockers',
     'List lost deals with active PE proposals',
-    'List deals with PE Ready or Draft proposals',
-    'PE missing BOM',
   ],
   OPERATIONS: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Delivery Control blockers',
+    'Subsidy clock',
     'Projects with feasibility pending',
-    'Payment timeline',
-    'Hub station IDs',
   ],
   FINANCE: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Collections outstanding',
+    'Thin margin jobs',
     'Payment timeline',
-    'Availing loan',
-    'Incentive eligible projects',
   ],
 }
 

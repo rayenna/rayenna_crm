@@ -1,8 +1,14 @@
 import express, { Request, Response } from 'express'
-import { UserRole, Prisma, ProjectStatus, ProjectType } from '@prisma/client'
-import prisma from '../prisma'
+import { UserRole } from '@prisma/client'
 import { authenticate, authorize } from '../middleware/auth'
-import { buildSalesReview, type SalesReviewPayload, type SalesReviewProjectInput } from '../utils/salesReview'
+import {
+  loadCollectionsCashPack,
+  loadDeliveryControlPack,
+  loadFunnelVelocityPack,
+  loadMarginMixPack,
+  loadSalesReviewPack,
+  type ReportPackScope,
+} from '../utils/reportPackLoad'
 import {
   buildSalesReviewExcelBuffer,
   buildSalesReviewPdfBuffer,
@@ -10,23 +16,11 @@ import {
   salesReviewExportBasename,
 } from '../utils/salesReviewExport'
 import {
-  buildDeliveryControl,
-  DELIVERY_CONTROL_STATUSES,
-  type DeliveryControlPayload,
-  type DeliveryControlProjectInput,
-} from '../utils/deliveryControl'
-import {
   buildDeliveryControlExcelBuffer,
   buildDeliveryControlPdfBuffer,
   buildDeliveryControlPptxBuffer,
   deliveryControlExportBasename,
 } from '../utils/deliveryControlExport'
-import {
-  buildCollectionsCash,
-  COLLECTIONS_STATUSES,
-  type CollectionsCashPayload,
-  type CollectionsProjectInput,
-} from '../utils/collectionsCash'
 import {
   buildCollectionsCashExcelBuffer,
   buildCollectionsCashPdfBuffer,
@@ -34,22 +28,11 @@ import {
   collectionsCashExportBasename,
 } from '../utils/collectionsCashExport'
 import {
-  buildFunnelVelocity,
-  type FunnelVelocityPayload,
-  type FunnelVelocityProjectInput,
-} from '../utils/funnelVelocity'
-import {
   buildFunnelVelocityExcelBuffer,
   buildFunnelVelocityPdfBuffer,
   buildFunnelVelocityPptxBuffer,
   funnelVelocityExportBasename,
 } from '../utils/funnelVelocityExport'
-import {
-  buildMarginMix,
-  MARGIN_MIX_STATUSES,
-  type MarginMixPayload,
-  type MarginMixProjectInput,
-} from '../utils/marginMix'
 import {
   buildMarginMixExcelBuffer,
   buildMarginMixPdfBuffer,
@@ -82,90 +65,27 @@ export const COLLECTIONS_CASH_ROLES: UserRole[] = [
 export const FUNNEL_VELOCITY_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]
 export const MARGIN_MIX_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE]
 
-const DELIVERY_STATUSES = DELIVERY_CONTROL_STATUSES as unknown as ProjectStatus[]
-
 const EXPORT_MIME: Record<string, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   pdf: 'application/pdf',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 }
 
-async function loadSalesReview(req: Request): Promise<{
-  payload: SalesReviewPayload
-  sellerLabel: string
-  exportedBy: string
-}> {
-  const role = req.user!.role as UserRole
-  const userId = req.user!.id
-  const requestedSalesperson =
-    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
-
-  const where: Prisma.ProjectWhereInput = {}
-  if (role === UserRole.SALES) {
-    where.salespersonId = userId
-  } else if (requestedSalesperson) {
-    where.salespersonId = requestedSalesperson
+function packScope(req: Request): ReportPackScope {
+  const q = (key: string) => (typeof req.query[key] === 'string' ? String(req.query[key]).trim() : '')
+  return {
+    role: req.user!.role as UserRole,
+    userId: req.user!.id,
+    salespersonId: q('salespersonId'),
+    opsPersonId: q('opsPersonId'),
+    fy: q('fy'),
+    quarter: q('quarter'),
+    exportedBy: req.user!.email,
   }
+}
 
-  const rows = await prisma.project.findMany({
-    where,
-    select: {
-      id: true,
-      slNo: true,
-      projectStatus: true,
-      year: true,
-      projectCost: true,
-      grossProfit: true,
-      expectedProfit: true,
-      profitability: true,
-      salesProbability: true,
-      systemCapacity: true,
-      systemType: true,
-      type: true,
-      confirmationDate: true,
-      expectedCommissioningDate: true,
-      availingLoan: true,
-      salespersonId: true,
-      salesperson: { select: { name: true } },
-      customer: { select: { customerName: true, customerType: true } },
-    },
-  })
-
-  const projects: SalesReviewProjectInput[] = rows.map((r) => ({
-    id: r.id,
-    slNo: r.slNo,
-    projectStatus: r.projectStatus,
-    year: r.year,
-    projectCost: r.projectCost,
-    grossProfit: r.grossProfit,
-    expectedProfit: r.expectedProfit,
-    profitability: r.profitability,
-    salesProbability: r.salesProbability,
-    systemCapacity: r.systemCapacity,
-    systemType: r.systemType,
-    type: r.type,
-    confirmationDate: r.confirmationDate,
-    expectedCommissioningDate: r.expectedCommissioningDate,
-    availingLoan: r.availingLoan,
-    salespersonId: r.salespersonId,
-    salespersonName: r.salesperson?.name ?? null,
-    customerName: r.customer?.customerName ?? null,
-    customerType: r.customer?.customerType ?? null,
-  }))
-
-  const payload = buildSalesReview(projects)
-  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
-
-  let sellerLabel = 'All sellers'
-  if (payload.salespersonId) {
-    const seller = await prisma.user.findUnique({
-      where: { id: payload.salespersonId },
-      select: { name: true, email: true },
-    })
-    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
-  }
-
-  return { payload, sellerLabel, exportedBy: req.user!.email }
+function loadSalesReview(req: Request) {
+  return loadSalesReviewPack(packScope(req))
 }
 
 router.get(
@@ -212,115 +132,8 @@ router.get(
   },
 )
 
-async function loadDeliveryControl(req: Request): Promise<{
-  payload: DeliveryControlPayload
-  opsLabel: string
-  exportedBy: string
-}> {
-  const role = req.user!.role as UserRole
-  const userId = req.user!.id
-  const requestedOps = typeof req.query.opsPersonId === 'string' ? req.query.opsPersonId.trim() : ''
-
-  const scope: Prisma.ProjectWhereInput = {}
-  if (role === UserRole.SALES) {
-    scope.salespersonId = userId
-  } else if (requestedOps === 'unassigned') {
-    scope.assignedOpsId = null
-  } else if (requestedOps) {
-    scope.assignedOpsId = requestedOps
-  }
-
-  const where: Prisma.ProjectWhereInput = {
-    AND: [
-      {
-        OR: [
-          { projectStatus: { in: DELIVERY_STATUSES } },
-          {
-            projectStatus: ProjectStatus.COMPLETED,
-            type: ProjectType.SUBSIDY,
-            subsidyCreditedDate: null,
-          },
-        ],
-      },
-      scope,
-    ],
-  }
-
-  const rows = await prisma.project.findMany({
-    where,
-    select: {
-      id: true,
-      slNo: true,
-      projectStatus: true,
-      year: true,
-      projectCost: true,
-      systemCapacity: true,
-      systemType: true,
-      type: true,
-      confirmationDate: true,
-      expectedCommissioningDate: true,
-      stageEnteredAt: true,
-      feasibilityDate: true,
-      registrationDate: true,
-      mnrePortalRegistrationDate: true,
-      installationCompletionDate: true,
-      completionReportSubmissionDate: true,
-      subsidyRequestDate: true,
-      subsidyCreditedDate: true,
-      incentiveEligible: true,
-      assignedOpsId: true,
-      salespersonId: true,
-      salesperson: { select: { name: true } },
-      opsPerson: { select: { name: true } },
-      customer: { select: { customerName: true, customerType: true } },
-      documents: { select: { category: true } },
-    },
-  })
-
-  const projects: DeliveryControlProjectInput[] = rows.map((r) => ({
-    id: r.id,
-    slNo: r.slNo,
-    projectStatus: r.projectStatus,
-    year: r.year,
-    projectCost: r.projectCost,
-    systemCapacity: r.systemCapacity,
-    systemType: r.systemType,
-    type: r.type,
-    confirmationDate: r.confirmationDate,
-    expectedCommissioningDate: r.expectedCommissioningDate,
-    stageEnteredAt: r.stageEnteredAt,
-    feasibilityDate: r.feasibilityDate,
-    registrationDate: r.registrationDate,
-    mnrePortalRegistrationDate: r.mnrePortalRegistrationDate,
-    installationCompletionDate: r.installationCompletionDate,
-    completionReportSubmissionDate: r.completionReportSubmissionDate,
-    subsidyRequestDate: r.subsidyRequestDate,
-    subsidyCreditedDate: r.subsidyCreditedDate,
-    incentiveEligible: r.incentiveEligible,
-    assignedOpsId: r.assignedOpsId,
-    opsPersonName: r.opsPerson?.name ?? null,
-    salespersonId: r.salespersonId,
-    salespersonName: r.salesperson?.name ?? null,
-    customerName: r.customer?.customerName ?? null,
-    customerType: r.customer?.customerType ?? null,
-    documentCategories: r.documents.map((d) => d.category),
-  }))
-
-  const payload = buildDeliveryControl(projects)
-  payload.opsPersonId = role === UserRole.SALES ? null : requestedOps || null
-
-  let opsLabel = 'All ops'
-  if (payload.opsPersonId === 'unassigned') opsLabel = 'Unassigned'
-  else if (payload.opsPersonId) {
-    const ops = await prisma.user.findUnique({
-      where: { id: payload.opsPersonId },
-      select: { name: true, email: true },
-    })
-    opsLabel = ops?.name?.trim() || ops?.email || 'Ops'
-  }
-  if (role === UserRole.SALES) opsLabel = 'My jobs'
-
-  return { payload, opsLabel, exportedBy: req.user!.email }
+function loadDeliveryControl(req: Request) {
+  return loadDeliveryControlPack(packScope(req))
 }
 
 router.get(
@@ -367,98 +180,8 @@ router.get(
   },
 )
 
-async function loadCollectionsCash(req: Request): Promise<{
-  payload: CollectionsCashPayload
-  sellerLabel: string
-  exportedBy: string
-}> {
-  const role = req.user!.role as UserRole
-  const userId = req.user!.id
-  const requestedSalesperson =
-    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
-
-  const where: Prisma.ProjectWhereInput = {
-    projectStatus: { in: COLLECTIONS_STATUSES as unknown as ProjectStatus[] },
-    OR: [
-      { balanceAmount: { gt: 0 } },
-      {
-        type: ProjectType.SUBSIDY,
-        subsidyCreditedDate: null,
-        projectStatus: { not: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
-        OR: [
-          { subsidyRequestDate: { not: null } },
-          { projectStatus: { in: [ProjectStatus.SUBMITTED_FOR_SUBSIDY, ProjectStatus.COMPLETED] } },
-        ],
-      },
-    ],
-  }
-  if (role === UserRole.SALES) {
-    where.salespersonId = userId
-  } else if (requestedSalesperson) {
-    where.salespersonId = requestedSalesperson
-  }
-
-  const rows = await prisma.project.findMany({
-    where,
-    select: {
-      id: true,
-      slNo: true,
-      projectStatus: true,
-      year: true,
-      type: true,
-      projectCost: true,
-      balanceAmount: true,
-      totalAmountReceived: true,
-      paymentStatus: true,
-      confirmationDate: true,
-      lastPaymentDate: true,
-      availingLoan: true,
-      financingBank: true,
-      financingBankOther: true,
-      subsidyRequestDate: true,
-      subsidyCreditedDate: true,
-      salespersonId: true,
-      salesperson: { select: { name: true } },
-      customer: { select: { customerName: true, customerType: true } },
-    },
-  })
-
-  const projects: CollectionsProjectInput[] = rows.map((r) => ({
-    id: r.id,
-    slNo: r.slNo,
-    projectStatus: r.projectStatus,
-    year: r.year,
-    type: r.type,
-    projectCost: r.projectCost,
-    balanceAmount: r.balanceAmount,
-    totalAmountReceived: r.totalAmountReceived,
-    paymentStatus: r.paymentStatus,
-    confirmationDate: r.confirmationDate,
-    lastPaymentDate: r.lastPaymentDate,
-    availingLoan: r.availingLoan,
-    financingBank: r.financingBank,
-    financingBankOther: r.financingBankOther,
-    subsidyRequestDate: r.subsidyRequestDate,
-    subsidyCreditedDate: r.subsidyCreditedDate,
-    salespersonId: r.salespersonId,
-    salespersonName: r.salesperson?.name ?? null,
-    customerName: r.customer?.customerName ?? null,
-    customerType: r.customer?.customerType ?? null,
-  }))
-
-  const payload = buildCollectionsCash(projects)
-  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
-
-  let sellerLabel = 'All sellers'
-  if (payload.salespersonId) {
-    const seller = await prisma.user.findUnique({
-      where: { id: payload.salespersonId },
-      select: { name: true, email: true },
-    })
-    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
-  }
-
-  return { payload, sellerLabel, exportedBy: req.user!.email }
+function loadCollectionsCash(req: Request) {
+  return loadCollectionsCashPack(packScope(req))
 }
 
 router.get(
@@ -505,80 +228,8 @@ router.get(
   },
 )
 
-async function loadFunnelVelocity(req: Request): Promise<{
-  payload: FunnelVelocityPayload
-  sellerLabel: string
-  exportedBy: string
-}> {
-  const role = req.user!.role as UserRole
-  const userId = req.user!.id
-  const requestedSalesperson =
-    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
-
-  const where: Prisma.ProjectWhereInput = {}
-  if (role === UserRole.SALES) {
-    where.salespersonId = userId
-  } else if (requestedSalesperson) {
-    where.salespersonId = requestedSalesperson
-  }
-
-  const rows = await prisma.project.findMany({
-    where,
-    select: {
-      id: true,
-      slNo: true,
-      projectStatus: true,
-      year: true,
-      projectCost: true,
-      salesProbability: true,
-      systemCapacity: true,
-      systemType: true,
-      type: true,
-      confirmationDate: true,
-      expectedCommissioningDate: true,
-      stageEnteredAt: true,
-      createdAt: true,
-      lostDate: true,
-      salespersonId: true,
-      salesperson: { select: { name: true } },
-      customer: { select: { customerName: true, customerType: true } },
-    },
-  })
-
-  const projects: FunnelVelocityProjectInput[] = rows.map((r) => ({
-    id: r.id,
-    slNo: r.slNo,
-    projectStatus: r.projectStatus,
-    year: r.year,
-    projectCost: r.projectCost,
-    salesProbability: r.salesProbability,
-    systemCapacity: r.systemCapacity,
-    systemType: r.systemType,
-    type: r.type,
-    confirmationDate: r.confirmationDate,
-    expectedCommissioningDate: r.expectedCommissioningDate,
-    stageEnteredAt: r.stageEnteredAt,
-    createdAt: r.createdAt,
-    lostDate: r.lostDate,
-    salespersonId: r.salespersonId,
-    salespersonName: r.salesperson?.name ?? null,
-    customerName: r.customer?.customerName ?? null,
-    customerType: r.customer?.customerType ?? null,
-  }))
-
-  const payload = buildFunnelVelocity(projects)
-  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
-
-  let sellerLabel = 'All sellers'
-  if (payload.salespersonId) {
-    const seller = await prisma.user.findUnique({
-      where: { id: payload.salespersonId },
-      select: { name: true, email: true },
-    })
-    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
-  }
-
-  return { payload, sellerLabel, exportedBy: req.user!.email }
+function loadFunnelVelocity(req: Request) {
+  return loadFunnelVelocityPack(packScope(req))
 }
 
 router.get(
@@ -625,91 +276,8 @@ router.get(
   },
 )
 
-async function loadMarginMix(req: Request): Promise<{
-  payload: MarginMixPayload
-  sellerLabel: string
-  exportedBy: string
-}> {
-  const role = req.user!.role as UserRole
-  const userId = req.user!.id
-  const requestedSalesperson =
-    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : ''
-
-  const where: Prisma.ProjectWhereInput = {
-    projectStatus: { in: MARGIN_MIX_STATUSES as unknown as ProjectStatus[] },
-  }
-  if (role === UserRole.SALES) {
-    where.salespersonId = userId
-  } else if (requestedSalesperson) {
-    where.salespersonId = requestedSalesperson
-  }
-
-  const rows = await prisma.project.findMany({
-    where,
-    select: {
-      id: true,
-      slNo: true,
-      projectStatus: true,
-      year: true,
-      projectCost: true,
-      totalProjectCost: true,
-      grossProfit: true,
-      expectedProfit: true,
-      profitability: true,
-      systemCapacity: true,
-      systemType: true,
-      type: true,
-      confirmationDate: true,
-      salespersonId: true,
-      salesperson: { select: { name: true } },
-      customer: { select: { customerName: true, customerType: true } },
-      peCostingSheets: {
-        orderBy: { savedAt: 'desc' },
-        take: 1,
-        select: { grandTotal: true },
-      },
-    },
-  })
-
-  const projects: MarginMixProjectInput[] = rows.map((r) => ({
-    id: r.id,
-    slNo: r.slNo,
-    projectStatus: r.projectStatus,
-    year: r.year,
-    projectCost: r.projectCost,
-    totalProjectCost: r.totalProjectCost,
-    grossProfit: r.grossProfit,
-    expectedProfit: r.expectedProfit,
-    profitability: r.profitability,
-    systemCapacity: r.systemCapacity,
-    systemType: r.systemType,
-    type: r.type,
-    confirmationDate: r.confirmationDate,
-    peCostingTotal: r.peCostingSheets[0]?.grandTotal ?? null,
-    salespersonId: r.salespersonId,
-    salespersonName: r.salesperson?.name ?? null,
-    customerName: r.customer?.customerName ?? null,
-    customerType: r.customer?.customerType ?? null,
-  }))
-
-  const requestedFy = typeof req.query.fy === 'string' ? req.query.fy.trim() : ''
-  const requestedQuarter = typeof req.query.quarter === 'string' ? req.query.quarter.trim() : ''
-  const payload = buildMarginMix(projects, new Date(), {
-    fy: requestedFy || null,
-    quarter: requestedQuarter || null,
-  })
-  payload.salespersonId = role === UserRole.SALES ? userId : requestedSalesperson || null
-
-  let sellerLabel = 'All sellers'
-  if (payload.salespersonId) {
-    const seller = await prisma.user.findUnique({
-      where: { id: payload.salespersonId },
-      select: { name: true, email: true },
-    })
-    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller'
-  }
-
-  return { payload, sellerLabel, exportedBy: req.user!.email }
+function loadMarginMix(req: Request) {
+  return loadMarginMixPack(packScope(req))
 }
 
 router.get(

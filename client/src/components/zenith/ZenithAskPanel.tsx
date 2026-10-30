@@ -583,7 +583,9 @@ export default function ZenithAskPanel({
                     ? 'Open Customer Master →'
                     : result.projectsHref.startsWith('/help')
                       ? 'Open in Help →'
-                      : 'Open in Projects →'}
+                      : result.projectsHref.startsWith('/reports')
+                        ? 'Open in Reports →'
+                        : 'Open in Projects →'}
               </Link>
             ) : null}
           </>

@@ -52,6 +52,11 @@ export const ZENITH_NL_METRICS = [
   'customer_detail_lookup',
   'customers_list_slice',
   'help_lookup',
+  'sales_review',
+  'funnel_velocity',
+  'delivery_control',
+  'collections_cash',
+  'margin_mix',
   'clarify',
 ] as const;
 
@@ -649,6 +654,41 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: ALL_ASK,
   },
   {
+    metric: 'sales_review',
+    description:
+      'Weekly Sales Review pack: achievement (closed YTD), forecast (CQ–NQ+2), and open deal list — same numbers as Reports → Sales Review',
+    defaultViz: 'table',
+    roles: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  },
+  {
+    metric: 'funnel_velocity',
+    description:
+      'Funnel Velocity pack: Lead/Survey/Proposal days in stage, SLA red/amber (7/14/21), median days, FY win rate — same as Reports → Funnel Velocity',
+    defaultViz: 'table',
+    roles: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES],
+  },
+  {
+    metric: 'delivery_control',
+    description:
+      'Delivery Control pack: in-delivery jobs, commissioning board, blockers, subsidy clock — same as Reports → Delivery Control',
+    defaultViz: 'table',
+    roles: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS],
+  },
+  {
+    metric: 'collections_cash',
+    description:
+      'Collections & Cash pack: confirmed-order outstanding, aging, loan-stuck, subsidy in flight — same as Reports → Collections & Cash (not pipeline)',
+    defaultViz: 'table',
+    roles: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE, UserRole.SALES],
+  },
+  {
+    metric: 'margin_mix',
+    description:
+      'Margin & Mix pack: won-book GP, missing cost, thin margin, PE vs CRM, mix by seller/segment — same as Reports → Margin & Mix',
+    defaultViz: 'table',
+    roles: [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.FINANCE],
+  },
+  {
     metric: 'clarify',
     description: 'Use when the question is ambiguous or outside the catalog',
     defaultViz: 'table',
@@ -713,33 +753,33 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
 export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Funnel Velocity SLA red',
     'Show my ageing pipeline',
-    'Show my pipeline by stage',
-    'List lost deals with active PE proposals',
   ],
   MANAGEMENT: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Margin & Mix summary',
     'DCR vs Non-DCR profitability',
-    'List lost deals with active PE proposals',
-    'List deals with PE Ready or Draft proposals',
   ],
   ADMIN: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Sales Review achievement',
+    'Delivery Control blockers',
     'List lost deals with active PE proposals',
-    'List deals with PE Ready or Draft proposals',
-    'PE missing BOM',
   ],
   OPERATIONS: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Delivery Control blockers',
+    'Subsidy clock',
     'Projects with feasibility pending',
-    'Payment timeline',
-    'Hub station IDs',
   ],
   FINANCE: [
     'Where do I add the Panel and Inverter brand in CRM?',
+    'Collections outstanding',
+    'Thin margin jobs',
     'Payment timeline',
-    'Availing loan',
-    'Incentive eligible projects',
   ],
 };
 
@@ -795,6 +835,11 @@ const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
   customer_detail_lookup: 'Customer details for {customer}',
   customers_list_slice: 'List customers in Kochi',
   help_lookup: 'Where do I add the Panel and Inverter brand in CRM?',
+  sales_review: 'Sales Review achievement',
+  funnel_velocity: 'Funnel Velocity SLA red',
+  delivery_control: 'Delivery Control blockers',
+  collections_cash: 'Collections outstanding',
+  margin_mix: 'Thin margin jobs',
 };
 
 export function fillAskPlaceholders(
@@ -1133,6 +1178,31 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Where do I add the Panel and Inverter brand in CRM?',
       'How do I change my password?',
       'What is Ask Zenith?',
+    ],
+    sales_review: [
+      'Sales Review forecast',
+      'Funnel Velocity SLA red',
+      'Who should I call today?',
+    ],
+    funnel_velocity: [
+      'Sales Review achievement',
+      'Funnel Velocity win rate',
+      'Why is my pipeline stalling?',
+    ],
+    delivery_control: [
+      'Subsidy clock',
+      'Delivery Control blockers',
+      'List pending subsidy projects',
+    ],
+    collections_cash: [
+      'Collections aging',
+      'Loan-stuck collections',
+      'Payment status breakdown',
+    ],
+    margin_mix: [
+      'Missing cost jobs',
+      'Thin margin jobs',
+      'Profit summary this quarter',
     ],
     hub_plant_link_summary: [
       'AMCs expiring',

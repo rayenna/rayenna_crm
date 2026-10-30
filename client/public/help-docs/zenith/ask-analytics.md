@@ -13,7 +13,7 @@
 3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
 5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. Close the answer with **×**; history stays for your next ask.
-6. When available, use **Open in Projects →** or **Open Support Tickets →** for the **same deals as the answer** (not the full Projects list). Stalled pipeline opens those stalled deals; a lead-source chart opens that source; **Open Support Tickets →** opens the matching ticket queue. Help answers use **Open in Help →**.
+6. When available, use **Open in Projects →**, **Open in Reports →**, or **Open Support Tickets →** for the **same deals as the answer** (not the full Projects list). Stalled pipeline opens those stalled deals; a lead-source chart opens that source; **Open Support Tickets →** opens the matching ticket queue. Help answers use **Open in Help →**. Report KPI answers open the matching **Reports** pack.
 
 Ask is **disabled while Offline** (typed questions, Dictate, and example chips). Saved Zenith dashboard charts may still show from cache — wait for **Live** in the command bar before asking. Free-text analytics also needs **Anthropic** credentials on the server: `ANTHROPIC_API_KEY`, and often `ANTHROPIC_WORKSPACE_ID` when the key is not scoped to one workspace. Exact example chips and some entity matches can still run when Claude is unavailable.
 
@@ -72,6 +72,18 @@ Role packs differ — example chips under the Ask box show questions allowed for
 - Subsidy funnel · Installation status / installation records · AMCs expiring
 - Hub plant link status (Solis / Deye / Sunways station ids)
 - Projects pending subsidy credit
+
+### Weekly Reports packs (same numbers as **Reports**)
+
+Ask computes from the same builders as the Reports screens (role-filtered; Sales = own book). KPI answers use **Open in Reports →**; deal lists still open Projects.
+
+- **Sales Review achievement / forecast** — closed YTD, CQ–NQ+2 forecast *(Admin / Management / Sales)*
+- **Funnel Velocity SLA red / median days / win rate** — Lead 7 / Survey 14 / Proposal 21 *(Admin / Management / Sales)*
+- **Delivery Control blockers / subsidy clock** — in-delivery jobs and subsidy steps *(+ Operations)*
+- **Collections outstanding / aging / loan-stuck** — confirmed orders only, not pipeline *(+ Finance)*
+- **Thin margin jobs / missing cost / Margin & Mix** — won-book GP *(Admin / Management / Finance)*
+
+**Open Sales Review** still jumps to the pack. **What is Sales Review?** stays a Help answer.
 
 ### Finance and collections
 

@@ -16,6 +16,7 @@ import { matchPipelineHealthIntent } from './pipelineHealthAsk';
 import { matchWhoToCallIntent } from './whoToCallAsk';
 import { matchProjectsListFilterIntent } from './listFilterAsk';
 import { matchHelpLookupIntent } from './helpLookupAsk';
+import { matchReportAskIntent } from './reportPackAsk';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -116,6 +117,78 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     metric: 'help_lookup',
     viz: 'table',
     insightHints: 'crm help',
+  },
+  [norm('Sales Review achievement')]: {
+    metric: 'sales_review',
+    viz: 'table',
+    filters: { detailSlice: 'achievement' },
+    insightHints: 'sales review achievement',
+  },
+  [norm('Sales Review forecast')]: {
+    metric: 'sales_review',
+    viz: 'table',
+    filters: { detailSlice: 'forecast' },
+    insightHints: 'sales review forecast',
+  },
+  [norm('Margin & Mix summary')]: {
+    metric: 'margin_mix',
+    viz: 'table',
+    filters: { detailSlice: 'summary' },
+    insightHints: 'margin mix',
+  },
+  [norm('Funnel Velocity SLA red')]: {
+    metric: 'funnel_velocity',
+    viz: 'table',
+    filters: { detailSlice: 'sla_red' },
+    insightHints: 'funnel sla red',
+  },
+  [norm('Funnel Velocity win rate')]: {
+    metric: 'funnel_velocity',
+    viz: 'table',
+    filters: { detailSlice: 'conversion' },
+    insightHints: 'funnel conversion',
+  },
+  [norm('Delivery Control blockers')]: {
+    metric: 'delivery_control',
+    viz: 'table',
+    filters: { detailSlice: 'blockers' },
+    insightHints: 'delivery blockers',
+  },
+  [norm('Subsidy clock')]: {
+    metric: 'delivery_control',
+    viz: 'table',
+    filters: { detailSlice: 'subsidy_clock' },
+    insightHints: 'subsidy clock',
+  },
+  [norm('Collections outstanding')]: {
+    metric: 'collections_cash',
+    viz: 'table',
+    filters: { detailSlice: 'outstanding' },
+    insightHints: 'collections outstanding',
+  },
+  [norm('Collections aging')]: {
+    metric: 'collections_cash',
+    viz: 'table',
+    filters: { detailSlice: 'aging' },
+    insightHints: 'collections aging',
+  },
+  [norm('Loan-stuck collections')]: {
+    metric: 'collections_cash',
+    viz: 'table',
+    filters: { detailSlice: 'loan' },
+    insightHints: 'collections loan',
+  },
+  [norm('Thin margin jobs')]: {
+    metric: 'margin_mix',
+    viz: 'table',
+    filters: { detailSlice: 'thin' },
+    insightHints: 'thin margin',
+  },
+  [norm('Missing cost jobs')]: {
+    metric: 'margin_mix',
+    viz: 'table',
+    filters: { detailSlice: 'missing_cost' },
+    insightHints: 'missing cost',
   },
   [norm('Show all apartments in customer master')]: {
     metric: 'customers_list_slice',
@@ -1483,6 +1556,7 @@ export function matchExactChipIntent(
     }
     return (
       matchWhoToCallIntent(question, role) ||
+      matchReportAskIntent(question, role) ||
       matchPipelineHealthIntent(question, role) ||
       matchCustomerDetailLookupIntent(question, role) ||
       matchCustomersListIntent(question, role) ||

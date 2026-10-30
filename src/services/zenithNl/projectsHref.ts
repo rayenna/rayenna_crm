@@ -1011,7 +1011,16 @@ export function attachAskDrillHrefs(
   intent: ZenithNlIntent,
   dateFilter: ZenithNlDateFilter,
 ): ZenithNlViz {
-  if (metric === 'help_lookup') return viz;
+  if (
+    metric === 'help_lookup' ||
+    metric === 'sales_review' ||
+    metric === 'funnel_velocity' ||
+    metric === 'delivery_control' ||
+    metric === 'collections_cash' ||
+    metric === 'margin_mix'
+  ) {
+    return viz;
+  }
   const entity = entityHrefParams(intent);
   const cohortHref = projectsHrefForIntent(metric, intent, dateFilter);
 

@@ -108,6 +108,11 @@ import {
 } from './zenithNl/customerDetailAsk';
 import { execPipelineHealth } from './zenithNl/pipelineHealthAsk';
 import { execHelpLookup, matchHelpLookupIntent } from './zenithNl/helpLookupAsk';
+import {
+  execReportPack,
+  isReportNavigateCommand,
+  matchReportAskIntent,
+} from './zenithNl/reportPackAsk';
 import { matchAskEditActionIntent } from './zenithNl/askEditActions';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
@@ -123,6 +128,13 @@ function createAnthropicClient(): Anthropic {
 }
 
 const TABLE_ROW_CAP = 25;
+
+/** Margin & Mix pack expects 1–4; Zenith date bar uses Q1–Q4. */
+function packQuarterFromAsk(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const m = String(raw).match(/[1-4]/);
+  return m?.[0];
+}
 
 const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -631,6 +643,7 @@ Rules:
   - "stalled pipeline", "ageing/aging/aeging pipeline", "pipeline analysis", "pipeline health" → pipeline_health with filters.detailSlice stalled|ageing|analysis
   - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
   - "Where do I add the Panel and Inverter brand in CRM?" / "How do I change my password?" / "What is Ask Zenith?" → help_lookup
+  - Weekly Reports packs (same numbers as Reports): "Sales Review achievement/forecast" → sales_review; "Funnel Velocity SLA / median days / win rate" → funnel_velocity; "Delivery Control blockers / subsidy clock" → delivery_control; "Collections outstanding / aging / loan-stuck" → collections_cash; "thin margin / missing cost / Margin & Mix" → margin_mix. Use filters.detailSlice = summary|achievement|forecast|deals|sla|sla_red|sla_amber|conversion|blockers|subsidy_clock|outstanding|aging|loan|thin|missing_cost|mix. Do not use help_lookup for live report numbers.
   - Pair detail lists with "for salesperson X" / "for ops Y" via filters.salespersonName / opsName
 - Date phrases like "last FY" / "this quarter" / "next quarter" / "this half year" (H1=Q1+Q2, H2=Q3+Q4) and YoY/QoQ compares are handled outside this JSON — do not invent date fields. For single-period revenue/profitability with a named quarter or half year, prefer metric "profit_summary".
 - insightHints: short phrase describing what the user cares about (no numbers).
@@ -2507,6 +2520,29 @@ async function executeMetric(
       });
     case 'help_lookup':
       return execHelpLookup(ctx.question);
+    case 'sales_review':
+    case 'funnel_velocity':
+    case 'delivery_control':
+    case 'collections_cash':
+    case 'margin_mix': {
+      let salespersonId: string | undefined;
+      let opsId: string | undefined;
+      if (ctx.role === UserRole.SALES) salespersonId = ctx.userId;
+      else if (intent.filters?.salespersonName?.trim()) {
+        salespersonId = await resolveSalespersonIdByName(intent.filters.salespersonName);
+      }
+      if (intent.filters?.opsName?.trim()) {
+        opsId = await resolveOpsIdByName(intent.filters.opsName);
+      }
+      return execReportPack(intent, {
+        userId: ctx.userId,
+        role: ctx.role,
+        salespersonId,
+        opsId,
+        fy: ctx.dateFilter.selectedFYs[0],
+        quarter: packQuarterFromAsk(ctx.dateFilter.selectedQuarters[0]),
+      });
+    }
     case 'customers_list_slice': {
       let salespersonId: string | undefined;
       if (ctx.role === UserRole.SALES) salespersonId = ctx.userId;
@@ -2604,8 +2640,15 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   const started = Date.now();
   const live = await loadLiveAskBook(input.userId, input.role);
 
+  // Reports pack numbers before Help/navigation so “Sales Review achievement” answers instead of opening the page.
+  const reportIntentEarly = matchReportAskIntent(question, input.role);
+
   // Help how-tos before navigation actions so “How do I create a ticket?” answers instead of jumping.
-  const helpIntentEarly = matchHelpLookupIntent(question, input.role);
+  // Bare pack names (“Sales Review”) stay Go-to, not Help — Help still answers “What is Sales Review?”.
+  const helpIntentEarly =
+    reportIntentEarly || isReportNavigateCommand(question)
+      ? null
+      : matchHelpLookupIntent(question, input.role);
 
   // Navigation / create / edit actions — before analytics so "create support ticket" is not a ticket count.
   const actionMatch = helpIntentEarly
@@ -2641,7 +2684,10 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   let chipMatch = false;
   let intent: ZenithNlIntent | null = null;
   const periodCmp = parsePeriodCompare(question);
-  if (helpIntentEarly) {
+  if (reportIntentEarly) {
+    intent = normalizeIntent(reportIntentEarly, input.role);
+    chipMatch = true;
+  } else if (helpIntentEarly) {
     intent = normalizeIntent(helpIntentEarly, input.role);
     chipMatch = true;
   } else if (periodCmp && metricAllowedForRole('period_compare', input.role)) {

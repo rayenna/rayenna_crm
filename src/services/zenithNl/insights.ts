@@ -65,7 +65,12 @@ export function enrichInsight(
     metric === 'who_to_call' ||
     metric === 'customer_detail_lookup' ||
     metric === 'customers_list_slice' ||
-    metric === 'help_lookup'
+    metric === 'help_lookup' ||
+    metric === 'sales_review' ||
+    metric === 'funnel_velocity' ||
+    metric === 'delivery_control' ||
+    metric === 'collections_cash' ||
+    metric === 'margin_mix'
   ) {
     return fallback;
   }

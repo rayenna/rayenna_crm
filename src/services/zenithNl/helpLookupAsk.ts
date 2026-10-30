@@ -46,7 +46,7 @@ export function looksLikeHelpQuestion(question: string): boolean {
 }
 
 function isAnalyticsQuestion(q: string): boolean {
-  return /\b(how\s+many|how\s+much|who\s+should\s+i\s+call|pipeline\s+stall|weighted\s+pipeline|revenue\s+by|profit\s+summary|unpaid\s+invoices|capacity\s+sold|list\s+(the\s+)?(lost\s+)?(deals?|projects?)|show\s+(me\s+)?(my\s+)?(open|ageing|aging|pipeline|stalled)|which\s+(lead\s+sources|panel\s+brands?|inverter\s+brands?|banks)\s+(sold|drove|are|financing))\b/.test(
+  return /\b(how\s+many|how\s+much|who\s+should\s+i\s+call|pipeline\s+stall|weighted\s+pipeline|revenue\s+by|profit\s+summary|unpaid\s+invoices|capacity\s+sold|list\s+(the\s+)?(lost\s+)?(deals?|projects?)|show\s+(me\s+)?(my\s+)?(open|ageing|aging|pipeline|stalled)|which\s+(lead\s+sources|panel\s+brands?|inverter\s+brands?|banks)\s+(sold|drove|are|financing)|sales\s+review\s+(achievement|forecast|kpis?)|funnel\s+velocity\s+(sla|win|median)|delivery\s+control\s+(blocker|kpi)|collections\s+outstanding|thin\s+margin|missing\s+cost|sla\s+red)\b/.test(
     q,
   );
 }
