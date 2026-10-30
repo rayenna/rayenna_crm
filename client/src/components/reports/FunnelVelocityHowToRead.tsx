@@ -3,26 +3,15 @@ import { useState } from 'react'
 const HOWTO_STORAGE_KEY = 'rayenna_funnel_velocity_howto_closed'
 
 export default function FunnelVelocityHowToRead() {
-  const [open, setOpen] = useState(() => {
-    try {
-      return sessionStorage.getItem(HOWTO_STORAGE_KEY) !== '1'
-    } catch {
-      return false
-    }
-  })
+  const [open, setOpen] = useState(false)
 
   const toggle = () => {
-    setOpen((v) => {
-      const next = !v
-      if (!next) {
-        try {
-          sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
-        } catch {
-          // ignore
-        }
-      }
-      return next
-    })
+    setOpen((v) => !v)
+    try {
+      sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
+    } catch {
+      // ignore
+    }
   }
 
   return (

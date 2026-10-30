@@ -3,26 +3,15 @@ import { useState } from 'react'
 const HOWTO_STORAGE_KEY = 'rayenna_sales_review_howto_closed'
 
 export default function SalesReviewHowToRead() {
-  const [open, setOpen] = useState(() => {
-    try {
-      return sessionStorage.getItem(HOWTO_STORAGE_KEY) !== '1'
-    } catch {
-      return false
-    }
-  })
+  const [open, setOpen] = useState(false)
 
   const toggle = () => {
-    setOpen((v) => {
-      const next = !v
-      if (!next) {
-        try {
-          sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
-        } catch {
-          // ignore
-        }
-      }
-      return next
-    })
+    setOpen((v) => !v)
+    try {
+      sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -70,10 +59,12 @@ export default function SalesReviewHowToRead() {
             YoY on forecast is (closed in period + remaining weighted) vs that actual.
           </p>
           <p>
-            Deal list is open pipeline only (not Lost / Completed). On laptop, click a column heading
-            to filter and sort. Tap a row to open the project; coming back keeps the seller picker
-            and list filters until you click Clear filters. Export downloads Excel, PDF, or
-            PowerPoint of the current seller pack.
+            Deal list is open pipeline only (not Lost / Completed). Quick view{' '}
+            <strong>Open</strong> is Lead, Site Survey, and Proposal.{' '}
+            <strong>Closed</strong> is Confirmed Order and Under Installation. Submitted for Subsidy
+            stays in the full list. On laptop, click a column heading to filter and sort. Tap a row
+            to open the project; coming back keeps the seller picker and list filters until you click
+            Clear filters. Export downloads Excel, PDF, or PowerPoint of the current seller pack.
           </p>
         </div>
       ) : null}

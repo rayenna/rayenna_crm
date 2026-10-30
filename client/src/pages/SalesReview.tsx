@@ -30,6 +30,7 @@ import { useChartColors } from '../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../components/dashboard/zenithRechartsTooltipStyles'
 import MultiSelect from '../components/MultiSelect'
 import { DealListColHead } from '../components/reports/DealListColHead'
+import DealListQuickView from '../components/reports/DealListQuickView'
 import SalesReviewHowToRead from '../components/reports/SalesReviewHowToRead'
 import type {
   SalesReviewDeal,
@@ -45,6 +46,11 @@ import {
   yoyToneClass,
 } from '../utils/salesReviewFormat'
 import { REPORT_FILTERS_KEYS, usePersistedReportPrefs } from '../utils/reportListPrefs'
+import {
+  countDealQuickViews,
+  dealMatchesQuickView,
+  parseSalesReviewDealView,
+} from '../utils/salesReviewDealView'
 
 const REPORTS_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]
 const NARROW_MQ = '(max-width: 743px)'
@@ -158,6 +164,7 @@ export default function SalesReview() {
     fy: [] as string[],
     quarter: [] as string[],
     loan: [] as string[],
+    dealView: '' as string,
     sortKey: 'closeDate',
     sortOrder: 'asc' as 'asc' | 'desc',
   })
@@ -170,6 +177,7 @@ export default function SalesReview() {
   const fy = prefs.fy
   const quarter = prefs.quarter
   const loan = prefs.loan
+  const dealView = parseSalesReviewDealView(prefs.dealView)
   const sortKey = prefs.sortKey as DealSortKey
   const sortOrder = prefs.sortOrder
   const setSalespersonId = (value: string) => setPrefs({ salespersonId: value })
@@ -181,6 +189,7 @@ export default function SalesReview() {
   const setFy = (value: string[]) => setPrefs({ fy: value })
   const setQuarter = (value: string[]) => setPrefs({ quarter: value })
   const setLoan = (value: string[]) => setPrefs({ loan: value })
+  const setDealView = (value: string) => setPrefs({ dealView: value })
   const [expandQuarters, setExpandQuarters] = useState(false)
   const [narrow, setNarrow] = useState(isNarrowViewport)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
@@ -252,9 +261,12 @@ export default function SalesReview() {
     [deals],
   )
 
+  const dealViewCounts = useMemo(() => countDealQuickViews(deals), [deals])
+
   const filteredDeals = useMemo(() => {
     const q = search.trim().toLowerCase()
     return deals.filter((d) => {
+      if (!dealMatchesQuickView(d.stageStatus, dealView)) return false
       if (stage.length && !stage.includes(d.stage)) return false
       if (customerType.length && !customerType.includes(d.customerTypeLabel)) return false
       if (systemType.length && !systemType.includes(d.systemTypeLabel)) return false
@@ -274,7 +286,7 @@ export default function SalesReview() {
       }
       return true
     })
-  }, [deals, stage, customerType, systemType, segment, fy, quarter, loan, search])
+  }, [deals, dealView, stage, customerType, systemType, segment, fy, quarter, loan, search])
 
   const visibleDeals = useMemo(() => {
     const rows = [...filteredDeals]
@@ -329,6 +341,7 @@ export default function SalesReview() {
   const filterActive =
     Boolean(
       search ||
+        dealView ||
         stage.length ||
         customerType.length ||
         systemType.length ||
@@ -341,6 +354,7 @@ export default function SalesReview() {
   const clearFilters = () => {
     setPrefs({
       search: '',
+      dealView: '',
       stage: [],
       customerType: [],
       systemType: [],
@@ -633,23 +647,48 @@ export default function SalesReview() {
           </ChartPanel>
 
           <section className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="zenith-display text-base font-bold text-[color:var(--text-primary)]">Deal list</h2>
-                <p className="text-xs text-[color:var(--text-muted)]">
-                  Showing {filteredDeals.length} of {deals.length} open deals
-                </p>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="zenith-display text-base font-bold text-[color:var(--text-primary)]">Deal list</h2>
+                  <p className="text-xs text-[color:var(--text-muted)]">
+                    Showing {filteredDeals.length} of {deals.length} open deals
+                    {dealView === 'open'
+                      ? ' · Open'
+                      : dealView === 'closed'
+                        ? ' · Closed'
+                        : ''}
+                  </p>
+                </div>
+                {filterActive ? (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="inline-flex min-h-[40px] shrink-0 items-center gap-1 text-xs font-semibold text-[color:var(--accent-gold)] sm:hidden print:hidden"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Clear filters
+                  </button>
+                ) : null}
               </div>
-              {filterActive ? (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--accent-gold)] print:hidden"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Clear filters
-                </button>
-              ) : null}
+              <div className="flex items-center gap-2 print:hidden">
+                <DealListQuickView
+                  value={dealView}
+                  openCount={dealViewCounts.open}
+                  closedCount={dealViewCounts.closed}
+                  onChange={setDealView}
+                />
+                {filterActive ? (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="hidden min-h-[32px] shrink-0 items-center gap-1 text-xs font-semibold text-[color:var(--accent-gold)] sm:inline-flex"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Clear filters
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             <div className="relative z-10 mb-3 print:hidden">

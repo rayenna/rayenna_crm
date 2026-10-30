@@ -46,6 +46,8 @@ Open pipeline (Lead through Submitted for Subsidy) bucketed by **expected commis
 
 Open pipeline only. Columns: customer, stage, probability, customer type, system type, subsidy segment, close date, quarter, FY, bank loan, order value.
 
+**Quick view:** **Open** = Lead, Site Survey, Proposal. **Closed** = Confirmed Order, Under Installation. Submitted for Subsidy stays in the full list. Tap the active view again (or **Clear filters**) to show every open deal.
+
 On **laptop / full screen**, click a column heading to **filter** (multi-select where it applies) and **sort** ascending or descending. On **phones** the list is **cards** with the same filters above the list. **Tap a row** to open the project. Coming back keeps the seller picker and list filters until you click **Clear filters**.
 
 **Print** hides chrome and keeps the tables for a call handout. **Export** downloads the same pack as **Excel**, **PDF**, or **PowerPoint** (respects the salesperson picker; deal-list on-screen filters stay in the browser).
