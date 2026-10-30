@@ -44,5 +44,6 @@ Finance Zenith does **not** show the Sales **lifecycle briefing** line for missi
 - [ ] Latest receipts spot-checked
 - [ ] Loan concentration KPI understood for the period
 - [ ] Drawer filters match the question you asked (FY / month)
+- [ ] Weekly collections / margin: **Reports → Collections & Cash** and **Margin & Mix** ([Reports](/help/modules#reports))
 
-**Related:** [Finance role guide](/help/roles#finance-role-guide) · [Quick Actions drawer](#quick-actions-drawer-zenith)
+**Related:** [Finance role guide](/help/roles#finance-role-guide) · [Reports](/help/modules#reports) · [Quick Actions drawer](#quick-actions-drawer-zenith)

@@ -170,13 +170,14 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
+- Shown for **Sales**, **Management**, **Admin**, and **Finance** — **not** on **Operations** Zenith (Ops uses Installation pulse / execution KPIs instead).
 - **Not** cash; each open deal is **order value × Sales Probability** (stage default unless overridden on the project).
 - Compare **Raw** and **Win rate**; **Weights** shows current stage defaults and the previous stage table.
 - **All / Early / Committed** plus **When** (Month / Quarter / Rest of FY) — commissioning date required for When.
-- **Top 3 = X%** concentration; role accent (source risk / open balance / Confirmed+ kW).
+- **Top 3 = X%** concentration; role accent (source risk / open balance).
 - **Tabs** split the same total; **click a row** or **+N more** category → that slice’s deals.
 
-**Exercise (5 min):** Toggle **Month** vs **Rest of FY**; note **Top 3 %**; open a Source row.
+**Exercise (5 min):** Toggle **Month** vs **Rest of FY**; note **Top 3 %**; open a Source row. (Skip for Operations breakout — demo Installation pulse instead.)
 
 ---
 

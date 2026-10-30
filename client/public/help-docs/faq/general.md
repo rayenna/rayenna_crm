@@ -16,7 +16,7 @@ User menu → **Logout**. Always log out on shared or public computers.
 The session ends after **inactivity** for security. Log in again; change your password if you suspect unauthorised access. [Security → Privacy and account](/help/security#privacy-and-account).
 
 ### How do I get help in the app?
-Press **?** when you are not typing in a field, or **Help (?)** in the **Help** menu (top bar — not your name). Sections: Getting Started, Roles, Modules (including **Proposal Engine**), Dashboard, Zenith, Security, FAQ, Training. **Search help…** searches all sections. **Esc** on a Help page returns to the Dashboard.
+Press **?** when you are not typing in a field, or **Help (?)** in the **Help** menu (top bar — not your name). Sections: Getting Started, Roles, Modules (including **Proposal Engine** and **Reports**), Dashboard, Zenith, Security, FAQ, Training. **Search help…** searches all sections. **Esc** on a Help page returns to the Dashboard.
 
 - Dashboard: [Dashboard help](/help/dashboard)
 - Zenith: [Zenith command center](/help/zenith#zenith-command-center)

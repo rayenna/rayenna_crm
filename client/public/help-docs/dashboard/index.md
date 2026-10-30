@@ -28,6 +28,7 @@ Deep dive: [Zenith command center](/help/zenith#zenith-command-center)
 | **Metric tiles, Payment, Proposal Engine** | [Quick Access](#quick-access-tiles) |
 | **Tile layout by role** | [Layout by role](#layout-by-role) |
 | **Charts & click-through** | [Charts and visualizations](#charts-and-visualizations) |
+| **Weekly Reports packs** | [Modules → Reports](/help/modules#reports) |
 
 ## Scrolling announcements (Dashboard)
 

@@ -1,8 +1,8 @@
 # Modules
 
-The **data modules** in Rayenna CRM are where you create and maintain business records: **customers**, **projects**, **support tickets**, and **finance exports**. Daily work flows through these screens; dashboards and Zenith sit on top of the same data.
+The **data modules** in Rayenna CRM are where you create and maintain business records: **customers**, **projects**, **support tickets**, **finance exports**, and **weekly Reports**. Daily work flows through these screens; dashboards and Zenith sit on top of the same data.
 
-> **Tip:** Press **?** on **Customers**, **Projects**, **Support Tickets**, or **Tally Export** to open this section scrolled to the right module.
+> **Tip:** Press **?** on **Customers**, **Projects**, **Support Tickets**, **Tally Export**, **Lost Deals**, or **Reports** to open this section scrolled to the right module (or pack).
 
 ## Choose a module
 
@@ -39,7 +39,8 @@ Many dashboard tiles and Zenith charts **open Projects** with filters already ap
 3. Update **status**, **lifecycle**, and **payments** as the job progresses  
 4. **Key Artifacts** — site photos, agreements, sheets  
 5. **Support Tickets** — track service issues  
-6. **Tally Export** — Finance exports for accounting (when ready)
+6. **Tally Export** — Finance exports for accounting (when ready)  
+7. **Reports** — weekly seller, ops, collections, and margin packs (role-filtered)
 
 > **Note:** A **lead** is not a separate module — it is a project in **Lead** status. See [Projects](#projects-module).
 
@@ -47,11 +48,11 @@ Many dashboard tiles and Zenith charts **open Projects** with filters already ap
 
 | Role | Start with |
 | :-- | :-- |
-| **Sales** | [Projects](#projects-module) · [Customer Master](#customer-master-module) |
-| **Operations** | [Projects](#projects-module) (Confirmed → Subsidy Credited) |
-| **Finance** | [Projects](#projects-module) (payments) · [Tally Export](#tally-export-module) |
-| **Management** | [Projects](#projects-module) (view) · [Lost Deals](#lost-deals-analytics) · [Customer Master](#customer-master-module) |
-| **Admin** | All modules · [Lost Deals](#lost-deals-analytics) · [Security](/help/security) |
+| **Sales** | [Projects](#projects-module) · [Customer Master](#customer-master-module) · [Reports](#reports) (Sales Review, Funnel Velocity, Delivery Control, Collections — own book) |
+| **Operations** | [Projects](#projects-module) (Confirmed → Subsidy Credited) · [Reports → Delivery Control](#delivery-control) |
+| **Finance** | [Projects](#projects-module) (payments) · [Tally Export](#tally-export-module) · [Reports → Collections](#collections-cash) / [Margin & Mix](#margin-mix) |
+| **Management** | [Projects](#projects-module) (view) · [Lost Deals](#lost-deals-analytics) · [Reports](#reports) · [Customer Master](#customer-master-module) |
+| **Admin** | All modules · [Lost Deals](#lost-deals-analytics) · [Reports](#reports) · [Security](/help/security) |
 
 Full access tables: [Roles → Permission matrix](/help/roles#permission-matrix).
 

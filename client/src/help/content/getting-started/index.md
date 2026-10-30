@@ -43,12 +43,13 @@ Use this section when you are **new to the system** or onboarding a colleague. P
 - **Command palette** — **Ctrl+K** / **⌘K** from any page for create, queues, and Go to. [Command palette](#command-palette-anywhere)
 - **My Day** — personal tasks pinned from the dashboard or Zenith (**Ctrl+Shift+M** / **⌘⇧M**, **☀** in the nav, or palette **Open My Day**). [My Day drawer](/help/zenith#my-day-personal-productivity-drawer)
 - **Proposal Engine** — **More → Proposal Engine** opens the PE Customers/Projects list (your CRM login; no project pre-selected). From a project: **Proposals** on **Proposal** or **Confirmed**, and on later stages (including **Lost**) when a proposal is already stored. [Modules](/help/modules)
+- **Reports** — weekly-call packs (Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix). Role-filtered. [Reports](/help/modules#reports)
 - **Help search** — use **Search help…** on the Help page to find topics across all sections.
 
 ## What's next
 
 - [User roles & permissions](/help/roles)
-- [Modules](/help/modules) — Customers, Projects, Support Tickets, Tally Export
+- [Modules](/help/modules) — Customers, Projects, Reports, Support Tickets, Tally Export
 - [Dashboard](/help/dashboard) — filters, Quick Access, charts
 - [Zenith](/help/zenith#zenith-command-center) — command center (optional depth)
 - [Training guide](/help/training) — facilitator-style session outline

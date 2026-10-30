@@ -50,5 +50,6 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 - [ ] Logged activity on deals you contacted
 - [ ] PE / proposal stages reviewed
 - [ ] Filters left sensible for next visit (or **Reset** for company-wide view)
+- [ ] Weekly seller call: **Reports → Sales Review** and **Funnel Velocity** ([Reports](/help/modules#reports))
 
-**Next:** [Projects module](/help/modules#projects-module) · [Needs review](/help/modules#needs-review-data-sense) · [Today’s plan on Zenith](/help/dashboard#todays-plan-dashboard)
+**Next:** [Projects module](/help/modules#projects-module) · [Needs review](/help/modules#needs-review-data-sense) · [Reports](/help/modules#reports) · [Today’s plan on Zenith](/help/dashboard#todays-plan-dashboard)

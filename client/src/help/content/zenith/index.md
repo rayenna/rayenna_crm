@@ -38,6 +38,7 @@ From **Zenith**, press **?** (when not typing in a field) to open **Help** here.
 | **Personal tasks (☀)** | [My Day](#my-day-personal-productivity-drawer) |
 | **Help (?), Tip of the Day** | [Help and tips](#help-and-tips) |
 | **Role summary** | [Zenith by role](#zenith-by-role) |
+| **Weekly Reports packs** | [Modules → Reports](/help/modules#reports) |
 
 ## Role playbooks (step-by-step)
 

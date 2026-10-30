@@ -130,7 +130,7 @@ Say the action in plain language; Ask navigates when your role allows. Full pale
 | **Create** | New Customer · New Project · Create Support Ticket · New User |
 | **Personal** | Open My Day · Open My Day Journal · Show Tip of the Day |
 | **Lists / queues** | Overdue / open / Hub support tickets · Proposal / Confirmed / Under Installation · Under installation not fully paid (pending + partial) · Pending Subsidy · Availing Loan · Projects Needing Review · PE Not Started / Draft / Ready |
-| **Go to** | Zenith · Customers · Projects · Support Tickets · Dashboard · Solar Hub (+ provisioning / unlinked / maintenance) · Lost Deals · Tally Export · Users · Audit · Change Password · Help |
+| **Go to** | Zenith · Customers · Projects · Reports · Sales Review · Funnel Velocity · Delivery Control · Collections & Cash · Margin & Mix · Support Tickets · Dashboard · Solar Hub (+ provisioning / unlinked / maintenance) · Lost Deals · Tally Export · Users · Audit · Change Password · Help |
 | **Search** | Customer Search · find customer *name* · Project Search · find project *text* |
 
 ## Trust and scope

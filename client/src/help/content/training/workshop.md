@@ -15,7 +15,7 @@
 | 60:00 | Explore: Projects by stage + FY revenue vs profit |
 | 75:00 | Quick Actions permissions (switch user or explain) |
 | 80:00 | **Hands-on lab** (see checklist) |
-| 105:00 | FAQ, keyboard shortcuts, Help → Dashboard / Zenith |
+| 105:00 | FAQ, keyboard shortcuts, Help → Dashboard / Zenith / [Reports](/help/modules#reports) |
 | 110:00 | Close |
 
 ---

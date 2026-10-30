@@ -38,6 +38,7 @@ From **Zenith**, press **?** (when not typing in a field) to open **Help** here.
 | **Personal tasks (☀)** | [My Day](#my-day-personal-productivity-drawer) |
 | **Help (?), Tip of the Day** | [Help and tips](#help-and-tips) |
 | **Role summary** | [Zenith by role](#zenith-by-role) |
+| **Weekly Reports packs** | [Modules → Reports](/help/modules#reports) |
 
 ## Role playbooks (step-by-step)
 
@@ -55,7 +56,7 @@ Walkthroughs for a typical session in Zenith — start with yours, then skim [Ze
 | Role | Your Zenith highlights |
 | :-- | :-- |
 | **Sales** | **Today** tab: Hit List + KPIs; **Your Focus** pipeline & PE; **The Board**; funnel → Quick Actions |
-| **Operations** | **KPIs** / **Ops** tabs; **Installation pulse**; panel/inverter charts; lifecycle briefing line |
+| **Operations** | **KPIs** / **Ops** tabs; **Installation pulse**; no Weighted open pipeline / Pipeline ageing; panel/inverter charts; lifecycle briefing line |
 | **Finance** | **Payments** tab; **Payment radar**; **Availing Loan** KPI; revenue charts |
 | **Management** | Executive Hit List, YoY KPIs, **Revenue forecast**, Board, landscape charts — **no** lifecycle briefing line |
 | **Admin** | Management-style layout **plus** lifecycle briefing (like Sales/Ops) |

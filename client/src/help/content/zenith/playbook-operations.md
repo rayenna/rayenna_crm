@@ -49,5 +49,6 @@ Use **Deal Health** badges in tables to prioritise at-risk installs ([Deal Healt
 - [ ] Lifecycle briefing count trending down
 - [ ] Brand gaps closed on active sites
 - [ ] Activity logged for customer-visible delays
+- [ ] Weekly ops standup: **Reports → Delivery Control** ([Delivery Control](/help/modules#delivery-control))
 
-**Related:** [Operations role guide](/help/roles#operations-role-guide) · [Key Artifacts](/help/modules#key-artifacts-module)
+**Related:** [Operations role guide](/help/roles#operations-role-guide) · [Reports → Delivery Control](/help/modules#delivery-control) · [Key Artifacts](/help/modules#key-artifacts-module)

@@ -43,6 +43,11 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Solar Hub plants', hash: 'solar-hub-plants-and-generation' },
     { label: 'Lost Deals', hash: 'lost-deals-analytics' },
     { label: 'Reports', hash: 'reports' },
+    { label: 'Sales Review', hash: 'sales-review' },
+    { label: 'Funnel Velocity', hash: 'funnel-velocity' },
+    { label: 'Delivery Control', hash: 'delivery-control' },
+    { label: 'Collections & Cash', hash: 'collections-cash' },
+    { label: 'Margin & Mix', hash: 'margin-mix' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
@@ -124,9 +129,13 @@ export function getHelpHashForRoute(currentPath: string): string | null {
   if (currentPath === '/lost-deals' || currentPath.startsWith('/lost-deals/')) {
     return 'lost-deals-analytics'
   }
-  if (currentPath === '/reports' || currentPath.startsWith('/reports/')) {
-    return 'reports'
-  }
+  if (currentPath === '/reports') return 'reports'
+  if (currentPath.startsWith('/reports/sales-review')) return 'sales-review'
+  if (currentPath.startsWith('/reports/funnel-velocity')) return 'funnel-velocity'
+  if (currentPath.startsWith('/reports/delivery-control')) return 'delivery-control'
+  if (currentPath.startsWith('/reports/collections-cash')) return 'collections-cash'
+  if (currentPath.startsWith('/reports/margin-mix')) return 'margin-mix'
+  if (currentPath.startsWith('/reports/')) return 'reports'
   if (currentPath === '/users' || currentPath.startsWith('/users/')) return 'users'
   if (currentPath === '/audit-security' || currentPath.startsWith('/audit-security/')) {
     return 'audit-and-security'
@@ -313,5 +322,6 @@ export function getHelpContextLabel(currentPath: string): string | null {
   if (currentPath.startsWith('/support-tickets/')) return 'Ticket details'
   if (currentPath.startsWith('/solar-hub')) return 'Solar Hub'
   if (currentPath.startsWith('/lost-deals')) return 'Lost Deals'
+  if (currentPath.startsWith('/reports')) return 'Reports'
   return null
 }

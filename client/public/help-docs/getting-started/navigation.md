@@ -47,7 +47,7 @@ The **Help** control is in the top navigation bar (next to Ask / My Day — **no
 - **Help (?)**: Opens context-sensitive help documentation
   - Automatically shows relevant help based on your current page
   - Press **?** from any page (when you are not typing in a field) for the same Help
-  - Help topics include Getting Started, Roles, Modules (including **Proposal Engine**), Dashboard, Zenith, Security, FAQ, and Training
+  - Help topics include Getting Started, Roles, Modules (including **Proposal Engine** and **Reports**), Dashboard, Zenith, Security, FAQ, and Training
 - **About**: System information and version details
 - **Tip of the Day**: Reopens the rotating hint on your **current** page
 

@@ -179,6 +179,16 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 You can also run **Go to Proposal Engine** from the command palette (**Ctrl+K** / **⌘K**). Guide: [Projects → Proposal Engine](/help/modules#proposal-engine).
 
+### Opening weekly Reports
+
+**Who can open**: Admin, Management, Operations, Finance, and Sales — **which pack** you see depends on role (Sales sees their own book).
+
+1. Top menu → **Reports**, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack).
+2. Open **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, or **Margin & Mix**.
+3. **How to read this report** starts collapsed. Table filters stay if you open a project and come back, until **Clear filters**.
+
+Guide: [Reports](/help/modules#reports).
+
 ### Editing Support Tickets
 
 **Who can edit**: Sales users, Operations users, and Administrators

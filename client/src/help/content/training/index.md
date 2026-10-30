@@ -26,6 +26,7 @@
 | Zenith command center, playbooks | [Zenith](/help/zenith#zenith-command-center) |
 | Classic Dashboard, filters, charts | [Dashboard](/help/dashboard) |
 | Customers, projects, tickets, PE button | [Modules](/help/modules) |
+| Weekly Reports packs | [Reports](/help/modules#reports) |
 | Permissions | [Roles → Permission matrix](/help/roles#permission-matrix) |
 | Passwords, users, audit | [Security](/help/security) |
 | Short Q&A | [FAQ](/help/faq) |

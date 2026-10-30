@@ -11,6 +11,7 @@ Menus are **role-based**. Examples:
 | **Users**, **Audit & Security** | Admin only |
 | **Tally Export** | Finance and Admin |
 | **Lost Deals** | Admin and Management |
+| **Reports** | Admin, Management, Operations, Finance, Sales — **which pack** depends on role (Sales = own book; **Margin & Mix** is Admin / Management / Finance) |
 | **Solar Hub** | Operations and Admin |
 | **Support Tickets** | Not Finance |
 | **More → Proposal Engine** | Sales, Operations, Finance, Management, Admin (same as Dashboard / Zenith menu roles) |

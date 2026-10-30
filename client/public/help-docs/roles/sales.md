@@ -10,7 +10,7 @@ You own the **pipeline**: customers, leads, proposals, and projects assigned to 
 | Create **customers** and **projects** | Delete projects or export full project lists |
 | Full **customer** edit when you are the assigned salesperson | Access **Users**, **Audit & Security**, or **Tally export** |
 | **Support tickets** on your projects | Add follow-ups on **closed** tickets (Admin only) |
-| **Sales** dashboard and **Zenith** (sales layout) | Change another user’s salesperson assignment |
+| **Sales** dashboard, **Zenith**, and **Reports → Sales Review** / **Funnel Velocity** / **Delivery Control** / **Collections** (own book) | Change another user’s salesperson assignment · **Margin & Mix** |
 
 → [Permission matrix](#permission-matrix) · [Modules → Projects](/help/modules#projects-module)
 
@@ -78,11 +78,12 @@ You can **view** payment status and balances on your projects. **Entering paymen
 ## Daily rhythm
 
 1. Check **Dashboard** or **Zenith** for pipeline, **Things needing attention**, and at-risk deals.
-2. Update **lead / survey / proposal** stages on active projects; clear **Needs review** flags when the record is wrong.
-3. Create customers and projects for new opportunities.
-4. Log **support tickets** when customers need follow-up.
-5. At handover, open **Project detail** → **Install Hub on this visit** and add Solar Hub to the customer’s home screen. Operations maps the inverter cloud for live Track kWh. [Solar Hub handover](/help/modules#solar-hub-handover)
-6. Use **My Day** (**Ctrl+Shift+M** / **⌘⇧M**) to pin follow-ups from the dashboard or Hit List.
+2. Before the weekly seller call, open **Reports → Sales Review** (achievement / forecast / deal list) and **Funnel Velocity** (stuck / SLA). Guide: [Reports](/help/modules#reports).
+3. Update **lead / survey / proposal** stages on active projects; clear **Needs review** flags when the record is wrong.
+4. Create customers and projects for new opportunities.
+5. Log **support tickets** when customers need follow-up.
+6. At handover, open **Project detail** → **Install Hub on this visit** and add Solar Hub to the customer’s home screen. Operations maps the inverter cloud for live Track kWh. [Solar Hub handover](/help/modules#solar-hub-handover)
+7. Use **My Day** (**Ctrl+Shift+M** / **⌘⇧M**) to pin follow-ups from the dashboard or Hit List.
 
 ## Shortcuts
 
@@ -97,5 +98,6 @@ You can **view** payment status and balances on your projects. **Entering paymen
 ## Getting help
 
 - [Common actions](/help/getting-started#common-actions-guide) — step-by-step create/edit flows
+- [Reports](/help/modules#reports) — weekly Sales Review, Funnel Velocity, Delivery Control, and Collections (own book)
 - [Training guide](/help/training) — Sales-first session outline
 - Contact your **administrator** for access issues or reassignment

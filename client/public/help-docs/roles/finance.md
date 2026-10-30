@@ -73,7 +73,7 @@ No menu entry — operational issues stay with **Sales**, **Operations**, or **M
 ## Daily rhythm
 
 1. Open **dashboard** / **Zenith** for outstanding and recent receipts.  
-2. Check **Reports → Margin & Mix** for missing cost and thin-margin jobs.  
+2. Check **Reports → Collections & Cash** (confirmed outstanding, aging, loan-stuck) and **Margin & Mix** (missing cost, thin margin). [Reports](/help/modules#reports).  
 3. Update **payments** the same day money hits the bank.  
 4. Reconcile **partial** vs **fully paid** before month-end.  
 5. Run **Tally export** on your schedule.  
@@ -92,5 +92,6 @@ No menu entry — operational issues stay with **Sales**, **Operations**, or **M
 ## Getting help
 
 - [Dashboard help](/help/dashboard) — payment status card and filters  
+- [Reports → Collections & Cash](/help/modules#collections-cash) · [Margin & Mix](/help/modules#margin-mix)  
 - [Modules → Projects](/help/modules#projects-module) — payment fields on the form  
 - [Training guide](/help/training) — Finance segment in facilitator outline

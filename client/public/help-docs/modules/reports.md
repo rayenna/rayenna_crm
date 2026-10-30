@@ -10,6 +10,18 @@
 | **Collections & Cash** | Admin, Management, Finance, Sales (own book) | Confirmed orders only — staged collections, aging, loan-stuck, subsidy in flight |
 | **Margin & Mix** | Admin, Management, Finance | Won-book GP, missing cost, PE vs CRM, mix by seller / segment / system / kW |
 
+Open **Reports** from the top menu, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack). Press **?** on a pack to land on that pack’s section here.
+
+## Using a pack
+
+Every pack shares the same chrome:
+
+- **How to read this report** starts **collapsed** so KPIs and tables stay first. Open it when you need definitions.
+- **Seller / ops / FY / quarter** pickers and **table filters** stay when you open a project and come back, until you click **Clear filters**. Logout clears them.
+- **Sales Review** has **Open** / **Closed** quick views on the deal list (Lead–Proposal vs Confirmed / Under Installation).
+- **Print** hides chrome for a call handout. **Export** (Excel / PDF / PowerPoint) follows the pack picker; on-screen list filters stay in the browser.
+- **Tap a row** to open the project. **Ctrl+K** / **⌘K** → **Go to Reports** or a named pack.
+
 ## Sales Review
 
 Open **Reports → Sales Review** (`/reports/sales-review`) before the weekly seller call. Pick a salesperson at the top (Admin / Management). Sales users always see their own accounts.

@@ -93,11 +93,12 @@ No **Tally export** or **Projects Excel/CSV** — request from **Finance** or **
 ## Daily rhythm
 
 1. Review **dashboard** / **Zenith** for pending installs and subsidy backlog.  
-2. Update **lifecycle dates** as milestones complete.  
-3. Raise **support tickets** for blockers on site.  
-4. Coordinate with **Sales** when commercial fields on confirmed jobs need correction.  
-5. At install/handover, use **Install Hub on this visit** on the project (and **Solar Hub** for accounts). On phones, Users / Provisioning use **cards** and **Quick views**; map **SolisCloud** or **Deye Cloud** (one plant per project) so Hub Track shows live kWh. [Solar Hub handover](/help/modules#solar-hub-handover) · [Staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation)  
-6. Pin follow-ups in **My Day** (**Ctrl+Shift+M** / **⌘⇧M**).
+2. Before the ops standup, open **Reports → Delivery Control** (factory board, blockers, subsidy clock). [Delivery Control](/help/modules#delivery-control).  
+3. Update **lifecycle dates** as milestones complete.  
+4. Raise **support tickets** for blockers on site.  
+5. Coordinate with **Sales** when commercial fields on confirmed jobs need correction.  
+6. At install/handover, use **Install Hub on this visit** on the project (and **Solar Hub** for accounts). On phones, Users / Provisioning use **cards** and **Quick views**; map **SolisCloud** or **Deye Cloud** (one plant per project) so Hub Track shows live kWh. [Solar Hub handover](/help/modules#solar-hub-handover) · [Staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation)  
+7. Pin follow-ups in **My Day** (**Ctrl+Shift+M** / **⌘⇧M**).
 
 ## Shortcuts
 
@@ -111,5 +112,6 @@ No **Tally export** or **Projects Excel/CSV** — request from **Finance** or **
 ## Getting help
 
 - [Modules → Projects](/help/modules#projects-module) — lifecycle fields and documents  
+- [Reports → Delivery Control](/help/modules#delivery-control) — weekly ops standup pack  
 - [Common actions](/help/getting-started#common-actions-guide)  
 - [Training guide](/help/training) — Operations module in facilitator outline

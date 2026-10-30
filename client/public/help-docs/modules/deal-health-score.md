@@ -25,7 +25,7 @@ The total is the **sum** of the parts. Each part has a **maximum**; the overall 
 
 | Factor (label on the card) | Max pts | In plain words |
 | :-- | --: | :-- |
-| **Activity** | 30 | How recently someone updated the project (**softer** curve on Under Installation) |
+| **Activity** | 30 | Latest meaningful touch (remark / My Day / payment / update); softer curve on Under Installation |
 | **Momentum** | 25 | Time in stage vs typical SLA (**Under Installation** ~60 days) |
 | **Deal value** | 20 | Order value band — **highest points** in the **₹2L–₹8L** sweet spot; mild discount above ₹8L |
 | **Commitment** | 15 | Confirmation + advance + **payment/collection** + expected commissioning (overdue penalises) |

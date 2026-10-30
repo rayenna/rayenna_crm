@@ -11,7 +11,7 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 | **Sales** | Today · Pipeline · Charts · More | Own pipeline, activity, **Proposal Engine** | **Today’s Hit List** (≤7 deals), **The Board** | Full **Explore** row; funnel stages |
 | **Management** | Today · Pipeline · Charts · More | Executive pipeline buckets | Hit List, **The Board** | YoY KPIs, **Revenue forecast**, profitability |
 | **Admin** | Today · Pipeline · Charts · More | Same as Management + lifecycle signals | Hit List, Board | Full explore + briefing lifecycle line |
-| **Operations** | KPIs · Ops · Charts | **Installation pulse**, execution tables | Funnel (ops-oriented) | Panel / inverter brand bars |
+| **Operations** | KPIs · Ops · Charts | **Installation pulse**, execution tables (no Weighted open pipeline) | Funnel (ops-oriented) | Pipeline signals without ageing; panel / inverter brand bars |
 | **Finance** | KPIs · Payments · Charts · More | **Payment radar** (overdue, latest received) | Payment pills on funnel | Loan / revenue charts; **Availing Loan** KPI |
 
 ## Sales
@@ -34,8 +34,10 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 ## Operations
 
 - **Installation pulse** and ops tables under **Your Focus**; single-project drawers show execution context and payment snapshot when applicable.
+- **No Weighted open pipeline** tile and **no Pipeline ageing** chart (early open-pipeline views are out of scope).
 - **Panel and inverter brand** charts at the bottom of **Explore** (projects with both brands filled).
 - Lifecycle **briefing reminder** when brands are missing on late-stage jobs (with Sales/Admin).
+- On **Projects**, Quick views omit **Open pipeline** (Lead / Site Survey / Proposal are not in the Ops list).
 - Step-by-step: [Operations playbook](#operations-playbook-installation-pulse) · [Operations role guide](/help/roles#operations-role-guide)
 
 ## Management

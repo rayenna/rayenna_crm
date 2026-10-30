@@ -37,7 +37,7 @@ For **Sales**, expand **Your pipeline today** and **Proposal Engine** under **Yo
 
 ## Payment radar (Finance)
 
-**KPI strip (three tiles)** — **Total outstanding**, **Avg collection days** (average days from **order confirmation** to **last payment** among **settled** projects in scope — balance zero and amount received &gt; 0; helps benchmark how long full collection typically takes), and **Subsidy pending** (count of projects in **Submitted for subsidy**).
+**KPI strip (three tiles)** — **Total outstanding**, **Avg collection days** (average days from **order confirmation** to **last payment** among **settled** projects in scope — balance zero and amount received &gt; 0; helps benchmark how long full collection typically takes), and **Subsidy pending** (count of **Subsidy** segment projects at **Completed** that are not yet **Completed – Subsidy Credited** — same as Projects **Pending subsidy**).
 
 **Payment ageing** — Four buckets (**0–30**, **31–60**, **61–90**, **90+** days overdue) show **project count**, **₹ outstanding** in that band, and a bar proportional to share of total outstanding. **Click a bucket** to filter the **Top overdue** table to rows whose days overdue fall in that band; click again (or **Reset ageing filter**) to clear. Colours escalate from neutral to amber, coral, and red for older debt.
 

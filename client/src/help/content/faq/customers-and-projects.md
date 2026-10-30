@@ -53,8 +53,23 @@ Open the ticket (list or project) → **Ticket Details** drawer → add a follow
 
 ## Data and reports
 
+### Where are the weekly Reports packs?
+Top menu → **Reports** (`/reports`), or **Ctrl+K** / **⌘K** → **Go to Reports**. Packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**. Press **?** on a pack for that pack’s guide. [Reports](/help/modules#reports).
+
+### Who can see which report?
+**Sales Review** and **Funnel Velocity** — Admin, Management, Sales (own book). **Delivery Control** — Admin, Management, Operations, Sales (own book). **Collections & Cash** — Admin, Management, Finance, Sales (own book). **Margin & Mix** — Admin, Management, Finance only. [Permission matrix](/help/roles#permission-matrix).
+
+### Why did my report filters reset when I opened a deal?
+They should not. Seller/ops/FY/Qtr pickers and table filters stay until **Clear filters** (or logout). Tap the active **Open** / **Closed** quick view on Sales Review again to show every open deal.
+
+### What is Open vs Closed on Sales Review?
+**Open** = Lead, Site Survey, Proposal. **Closed** = Confirmed Order and Under Installation. Submitted for Subsidy stays in the full list. [Sales Review](/help/modules#sales-review).
+
+### What does Median Days mean on Funnel Velocity?
+Median **days in the current stage** for open Lead / Survey / Proposal deals (not an average, and not created-date → close). Stage entered is used; if missing, created date is used and the row is flagged. [Funnel Velocity](/help/modules#funnel-velocity).
+
 ### How do I export data?
-Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff. [Permission matrix](/help/roles#permission-matrix).
+Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff; **Reports** packs export Excel / PDF / PowerPoint of the current seller/ops/period pack. [Permission matrix](/help/roles#permission-matrix) · [Reports](/help/modules#reports).
 
 ### Where is Tally Export and who can use it?
 Top menu → **Tally Export** (**Finance** and **Admin**). Export Projects, Invoices, or Payments as Excel, CSV, or Tally XML with optional date filters. Guide: [Tally Export](/help/modules#tally-export-module).
