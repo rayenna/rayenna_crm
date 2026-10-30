@@ -137,6 +137,16 @@ export const btnSecondary =
 export const btnGhost =
   'text-[11px] font-medium text-secondary-500 hover:text-secondary-800 px-2 py-1.5 rounded-lg hover:bg-secondary-50';
 
+/** Compact action chips used on the Proposal page toolbar (top and bottom). */
+export const toolbarBtn =
+  'inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md min-h-[32px] leading-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap';
+
+export const toolbarBtnGhost = `${toolbarBtn} bg-white text-slate-800 border border-slate-200 hover:bg-slate-50`;
+
+export const toolbarBtnPrimary = `${toolbarBtn} bg-[#0A9E87] hover:bg-[#087A6A] text-white border border-transparent`;
+
+export const toolbarBtnNavy = `${toolbarBtn} bg-[#0d1b3a] hover:bg-[#0a1530] text-white border border-transparent`;
+
 export const shortcutLink =
   'text-[11px] font-medium px-3 py-1.5 rounded-lg bg-white text-primary-800 border border-secondary-300 hover:border-primary-400 transition-colors';
 

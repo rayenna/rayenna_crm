@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { btnPrimary, btnSecondary, pageBanner, pageShell } from '../components/ui/chrome';
+import { pageBanner, pageShell } from '../components/ui/chrome';
 import {
   getActiveCustomer,
   getCustomer,
@@ -30,6 +30,8 @@ import { AlertCard } from '../components/AlertCard';
 import { normalizeCustomSectionsBeforeBoq, stripPeManagedSectionsFromDocHtml } from '../lib/proposalCustomSections';
 import { CustomSectionsBeforeBoq } from '../components/CustomSectionsBeforeBoq';
 import { exportToPdf } from '../proposal/exportPdf';
+import { exportToPpt } from '../proposal/exportPpt';
+import { ProposalToolbar, type ProposalExportKind } from '../proposal/ProposalToolbar';
 import {
   mergeProposalEditableInnerHtml,
   extractMergedProposalTextOverrides,
@@ -106,7 +108,7 @@ export default function ProposalPreview() {
   const [crmSystemType, setCrmSystemType]     = useState<string | null | undefined>(
     () => getActiveCustomer()?.master.systemType,
   );
-  const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
+  const [exporting, setExporting]             = useState<ProposalExportKind | null>(null);
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
   const [bomComments, setBomComments]         = useState<Record<string, string>>({});
   const [bomCollapsed, setBomCollapsed]       = useState<Record<string, boolean>>({});
@@ -842,39 +844,59 @@ export default function ProposalPreview() {
     setCustomSectionsBeforeBoq(regeneratePreserveRef.current?.customSections ?? []);
   };
 
+  const proposalForExport = () => {
+    if (!proposal) return null;
+    return {
+      ...proposal,
+      systemType: crmSystemType !== undefined ? crmSystemType : proposal.systemType,
+    };
+  };
+
+  const currentTextOverrides = () => {
+    const liveMerged = extractMergedProposalTextOverrides(
+      docBodyTopRef.current,
+      docBodyBottomRef.current,
+    );
+    const liveOverrides = Object.keys(liveMerged).length > 0 ? liveMerged : undefined;
+    const savedOverrides = getActiveCustomer()?.proposal?.textOverrides;
+    return liveOverrides && Object.keys(liveOverrides).length > 0 ? liveOverrides : savedOverrides;
+  };
+
   const handleExportPdf = () => {
     if (!proposal) return;
     exportToPdf('proposal-print-root');
   };
 
   const handleExportDocx = async () => {
-    if (!proposal) return;
+    const p = proposalForExport();
+    if (!p) return;
     setExporting('docx');
     try {
-      // Prefer live DOM overrides (captures any unsaved edits too);
-      // fall back to last-saved overrides from the customer record.
-      const liveMerged = extractMergedProposalTextOverrides(
-        docBodyTopRef.current,
-        docBodyBottomRef.current,
-      );
-      const liveOverrides =
-        Object.keys(liveMerged).length > 0 ? liveMerged : undefined;
-      const savedOverrides = getActiveCustomer()?.proposal?.textOverrides;
-      const textOverrides = (liveOverrides && Object.keys(liveOverrides).length > 0)
-        ? liveOverrides
-        : savedOverrides;
-      // DOCX export always uses the full BOM; collapse state affects only the on-screen HTML/PDF/Share view.
       await exportToDocx(
-        {
-          ...proposal,
-          systemType: crmSystemType !== undefined ? crmSystemType : proposal.systemType,
-        },
+        p,
         bomComments,
-        textOverrides,
+        currentTextOverrides(),
         printRef.current ?? undefined,
         includeRoofLayout ? roofLayout : null,
         normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
       );
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPpt = async () => {
+    const p = proposalForExport();
+    if (!p) return;
+    setExporting('ppt');
+    try {
+      await exportToPpt(p, {
+        bomComments,
+        textOverrides: currentTextOverrides(),
+        container: printRef.current ?? undefined,
+        roofLayout: includeRoofLayout ? roofLayout : null,
+        customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
+      });
     } finally {
       setExporting(null);
     }
@@ -1186,6 +1208,24 @@ export default function ProposalPreview() {
     }
   };
 
+  const renderToolbar = () => (
+    <ProposalToolbar
+      canWrite={canWrite}
+      isEditing={isEditing}
+      saveStatus={saveStatus}
+      exporting={exporting}
+      onEdit={handleStartEdit}
+      onCancel={handleCancelEdit}
+      onExportPdf={handleExportPdf}
+      onExportDocx={() => void handleExportDocx()}
+      onExportPpt={() => void handleExportPpt()}
+      onShare={handleOpenShareModal}
+      onRegenerate={handleRegenerate}
+      onSave={() => void handleSave()}
+      onSaveAndClose={() => void handleSaveAndClose()}
+    />
+  );
+
   return (
     <div>
       {syncError && (
@@ -1198,109 +1238,18 @@ export default function ProposalPreview() {
       )}
       <div className={`print-hide ${pageShell}`}>
         <div className={pageBanner}>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Proposal</h1>
-              <p className="mt-1 text-sm text-white/85">
-                {proposal ? `Ref: ${proposal.refNumber}` : 'Generate a full proposal from your Costing Sheet, BOM & ROI data'}
-              </p>
-            </div>
-            {proposal && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto flex-shrink-0">
-                {/* Edit toggle (Admin/Sales only) */}
-                {canWrite && !isEditing && (
-                  <button
-                    type="button"
-                    onClick={handleStartEdit}
-                    title="Edit proposal"
-                    className={`w-full sm:w-auto ${btnSecondary}`}
-                  >
-                    Edit
-                  </button>
-                )}
-                {canWrite && isEditing && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    disabled={saveStatus === 'saving'}
-                    title="Leave edit mode without saving"
-                    className={`w-full sm:w-auto ${btnSecondary}`}
-                  >
-                    Cancel
-                  </button>
-                )}
-                {/* Export buttons — full-width row on mobile so they match other buttons */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={handleExportPdf}
-                    disabled={!!exporting}
-                    className={`flex-1 sm:flex-none ${btnSecondary}`}
-                  >
-                    {exporting === 'pdf'
-                      ? <span className="w-3 h-3 border-2 border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
-                      : null}
-                    PDF
-                  </button>
-                  <button
-                    onClick={handleExportDocx}
-                    disabled={!!exporting}
-                    className={`flex-1 sm:flex-none ${btnSecondary}`}
-                  >
-                    {exporting === 'docx'
-                      ? <span className="w-3 h-3 border-2 border-secondary-300 border-t-primary-700 rounded-full animate-spin" />
-                      : null}
-                    DOCX
-                  </button>
-                  {canWrite && (
-                    <button
-                      onClick={handleOpenShareModal}
-                      className={`flex-1 sm:flex-none ${btnSecondary}`}
-                      title="Share as link"
-                    >
-                      Share
-                    </button>
-                  )}
-                </div>
-                {canWrite && (
-                  <button
-                    onClick={handleRegenerate}
-                    className={`w-full sm:w-auto ${btnSecondary}`}
-                    title="Rebuild proposal from Costing, BOM, and ROI (keeps custom sections on this page)"
-                  >
-                    ↻ Regenerate
-                  </button>
-                )}
-                {canWrite && (
-                  <button
-                    onClick={handleSave}
-                    disabled={saveStatus === 'saving' || !!exporting}
-                    className={`w-full sm:w-auto ${
-                      saveStatus === 'saved'
-                        ? 'inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-lg min-h-[36px] bg-emerald-600 text-white'
-                        : saveStatus === 'error'
-                          ? 'inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-lg min-h-[36px] bg-red-600 text-white'
-                        : btnPrimary
-                    }`}
-                  >
-                    {saveStatus === 'saving' && (
-                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    )}
-                    {saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Sync failed' : 'Save'}
-                  </button>
-                )}
-                {canWrite && proposal && (
-                  <button
-                    onClick={handleSaveAndClose}
-                    disabled={saveStatus === 'saving' || !!exporting}
-                    className={`w-full sm:w-auto ${btnSecondary}`}
-                  >
-                    Save &amp; Close
-                  </button>
-                )}
-              </div>
-            )}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Proposal</h1>
+            <p className="mt-1 text-sm text-white/85">
+              {proposal ? `Ref: ${proposal.refNumber}` : 'Generate a full proposal from your Costing Sheet, BOM & ROI data'}
+            </p>
           </div>
         </div>
+        {proposal && (
+          <div className="border-b border-slate-200 bg-white px-4 sm:px-6 md:px-8 py-2.5">
+            {renderToolbar()}
+          </div>
+        )}
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
           {!proposal ? (
@@ -1315,7 +1264,7 @@ export default function ProposalPreview() {
             <div
               ref={printRef}
               id="proposal-print-root"
-              className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
+              className={`bg-white rounded-2xl border shadow-sm overflow-hidden print:overflow-visible transition-all ${
                 isEditing
                   ? 'border-amber-300 ring-2 ring-amber-200'
                   : 'border-primary-100'
@@ -1647,110 +1596,17 @@ export default function ProposalPreview() {
                 </ProposalTextOverridesContext.Provider>
               </div>
 
-              {/* Footer — Save + Export */}
-              <div className="print-hide border-t border-primary-100 bg-gradient-to-br from-primary-50/30 to-transparent px-5 sm:px-8 py-4">
-                {/* Meta line — visible on all screens, smaller on mobile */}
-                <p className="text-[10px] sm:text-xs text-secondary-400 mb-3 sm:mb-0 sm:hidden">
-                  Ref: {proposal.refNumber} · {new Date(proposal.generatedAt).toLocaleDateString('en-IN')}
+              {/* Footer — same toolbar as the header */}
+              <div className="print-hide border-t border-slate-200 bg-white px-4 sm:px-6 md:px-8 py-2.5">
+                <p className="text-[10px] sm:text-xs text-secondary-400 mb-2.5">
+                  Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
+                  {savedToCustomer && saveStatus === 'saved' && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                      Saved to {savedToCustomer}
+                    </span>
+                  )}
                 </p>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  {/* Left: meta — desktop only */}
-                  <p className="text-xs text-secondary-400 hidden sm:block">
-                    Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
-                    {savedToCustomer && saveStatus === 'saved' && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
-                        ✓ Saved to {savedToCustomer}
-                      </span>
-                    )}
-                  </p>
-
-                  {/* Right: actions — stack on mobile, row on sm+ */}
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
-                    {canWrite && isEditing && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        disabled={saveStatus === 'saving'}
-                        className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 bg-white text-primary-800 border border-primary-200 hover:bg-primary-50 disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                    {/* Save button (bottom) */}
-                    {canWrite && (
-                      <button
-                        onClick={handleSave}
-                        disabled={saveStatus === 'saving' || !!exporting}
-                        className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 ${
-                          saveStatus === 'saved'
-                            ? 'bg-emerald-500 text-white border border-emerald-400'
-                            : saveStatus === 'error'
-                              ? 'bg-red-500 text-white border border-red-400'
-                            : 'bg-white text-primary-800 border border-primary-200 hover:bg-primary-50'
-                        }`}
-                      >
-                        {saveStatus === 'saving' && (
-                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        )}
-                        {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'error' ? 'Sync failed' : '💾 Save'}
-                      </button>
-                    )}
-
-                    {/* Save & Close (bottom) */}
-                    {canWrite && proposal && (
-                      <button
-                        onClick={handleSaveAndClose}
-                        disabled={saveStatus === 'saving' || !!exporting}
-                        className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 bg-amber-300 text-slate-900 border border-amber-400 hover:bg-amber-400"
-                      >
-                        Save &amp; Close
-                      </button>
-                    )}
-
-                    {/* Export buttons row */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleExportPdf}
-                        disabled={!!exporting || saveStatus === 'saving'}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                        style={{ background: '#374151' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                      >
-                        {exporting === 'pdf'
-                          ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          : '⬇'}
-                        Export PDF
-                      </button>
-                      <button
-                        onClick={handleExportDocx}
-                        disabled={!!exporting || saveStatus === 'saving'}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                        style={{ background: '#374151' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                      >
-                        {exporting === 'docx'
-                          ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          : '⬇'}
-                        Export DOCX
-                      </button>
-                      {canWrite && (
-                        <button
-                          onClick={handleOpenShareModal}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0"
-                          style={{ background: '#374151' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                          title="Share as link"
-                        >
-                          🔗 Share
-                        </button>
-                      )}
-                    </div>
-
-                  </div>
-                </div>
+                {renderToolbar()}
               </div>
             </div>
           )}

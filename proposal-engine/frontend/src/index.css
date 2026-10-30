@@ -14,7 +14,11 @@
     print-color-adjust: exact !important;
   }
 
-  table,
+  /* Rows may stay together; the table itself must split or Chromium inserts a blank page. */
+  table {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
   tr {
     break-inside: avoid;
     page-break-inside: avoid;

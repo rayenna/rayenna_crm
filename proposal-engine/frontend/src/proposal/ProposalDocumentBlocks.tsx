@@ -1048,7 +1048,7 @@ export function BOMGroupedTable({
       </div>
 
       {/* Column header + table */}
-      <div className="overflow-x-auto rounded-xl border border-secondary-200 shadow-sm">
+      <div className="overflow-x-auto print:overflow-visible rounded-xl border border-secondary-200 shadow-sm">
         <table className="w-full text-sm border-collapse min-w-[560px]">
           <caption
             className="bom-boq-caption text-left px-3 pt-3 pb-1"
