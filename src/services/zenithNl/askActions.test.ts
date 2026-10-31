@@ -100,7 +100,7 @@ describe('matchAskActionIntent', () => {
   });
 
   it('still opens Lost Deals and PE Drafts as shortcuts', () => {
-    expect(matchAskActionIntent('Lost Deals', UserRole.ADMIN)?.href).toBe('/lost-deals');
+    expect(matchAskActionIntent('Lost Deals', UserRole.ADMIN)?.href).toBe('/reports/lost-deals');
     expect(matchAskActionIntent('Sales Review', UserRole.SALES)?.href).toBe('/reports/sales-review');
     expect(matchAskActionIntent('Funnel Velocity', UserRole.SALES)?.href).toBe(
       '/reports/funnel-velocity',

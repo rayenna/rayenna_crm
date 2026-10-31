@@ -1,6 +1,6 @@
 # Reports
 
-**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, and **Margin & Mix**.
+**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, and **Lost Deals**.
 
 | Report | Who | Use it for |
 | :-- | :-- | :-- |
@@ -9,17 +9,19 @@
 | **Delivery Control** | Admin, Management, Operations, Sales (own book) | Weekly ops standup — commissioning, blockers, subsidy clock |
 | **Collections & Cash** | Admin, Management, Finance, Sales (own book) | Confirmed orders only — staged collections, aging, loan-stuck, subsidy in flight |
 | **Margin & Mix** | Admin, Management, Finance | Won-book GP, missing cost, PE vs CRM, mix by seller / segment / system / kW |
+| **Lost Deals** | Admin, Management | Lost count / ₹, win rates, reason mix, All sellers filter, Export |
 
 Open **Reports** from the top menu, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack). Press **?** on a pack to land on that pack’s section here.
 
 ## Using a pack
 
-Every pack shares the same chrome:
+Most packs share the same chrome. **Lost Deals** is the exception noted below.
 
-- **How to read this report** starts **collapsed** so KPIs and tables stay first. Open it when you need definitions.
-- **Seller / ops / FY / quarter** pickers and **table filters** stay when you open a project and come back, until you click **Clear filters**. Logout clears them.
+- **How to read this report** starts **collapsed** on Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, and Margin & Mix. Lost Deals uses **How to read this list** on the lost-projects list.
+- **Seller / ops / FY / quarter** pickers and **table filters** on those five packs stay when you open a project and come back, until you click **Clear filters**. Logout clears them. Lost Deals **All sellers** and FY / Quarter / Month reload the pack; list search and chart chips do not persist across a reload.
 - **Sales Review** has **Open** / **Closed** quick views on the deal list (Lead–Proposal vs Confirmed / Under Installation).
-- **Print** hides chrome for a call handout. **Export** (Excel / PDF / PowerPoint) follows the pack picker; on-screen list filters stay in the browser.
+- **Print** hides chrome for a call handout on the five weekly packs — **Lost Deals has no Print**.
+- **Export** (Excel / PDF / PowerPoint) is on **every** pack, including Lost Deals. It follows the pack picker (seller / ops / period; Lost Deals also follows FY / Quarter / Month). On-screen list filters stay in the browser.
 - **Tap a row** to open the project. **Ctrl+K** / **⌘K** → **Go to Reports** or a named pack.
 
 ## Sales Review
@@ -214,3 +216,9 @@ Bands: **Loss** · **Under 10%** · **10–20%** · **20%+** · **Unknown**. kW 
 On **laptop / full screen**, click a column heading to **filter** and **sort**. On **phones** the list is **cards**. **Tap a row** to open the project. Coming back keeps the seller, FY, quarter, and list filters until you click **Clear filters**. **Print** and **Export** follow the salesperson, FY, and quarter pickers; list filters stay in the browser.
 
 → [Projects](#projects-module) · [Permission matrix](/help/roles#permission-matrix)
+
+## Lost Deals
+
+Open **Reports → Lost Deals** (`/reports/lost-deals`). **Admin** and **Management** only — Sales, Operations, and Finance do not see this pack.
+
+**All sellers** at the top scopes KPIs, charts, list, win rate, and Export. **Export** is Excel / PDF / PowerPoint with the same confirmation as other packs — there is no Print. Full layout and calculation notes: [Lost Deals analytics](#lost-deals-analytics).

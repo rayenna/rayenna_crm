@@ -94,8 +94,7 @@ See [Permission matrix](#permission-matrix) before elevating someone to Admin.
 4. Coordinate with Finance on **export** policy.  
 5. Point users to [Getting Started](/help/getting-started) and role guides for self-service.  
 6. **Solar Hub** — map Solis/Deye plants, provision accounts (mobile cards + Start here / Quick views), and (when FAQs in the repo change) **Solar Hub → Help → Reimport**. [Solar Hub staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation).  
-7. **Lost Deals** — review uncategorized losses and reason mix. [Lost Deals](/help/modules#lost-deals-analytics).  
-8. **Reports** — weekly packs are on the top menu (Sales Review through Margin & Mix). [Reports](/help/modules#reports).
+7. **Reports** — weekly packs are on the top menu (Sales Review through Lost Deals). Review uncategorized losses on **Reports → Lost Deals**. [Reports](/help/modules#reports) · [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Shortcuts
 

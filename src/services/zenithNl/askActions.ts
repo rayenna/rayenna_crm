@@ -652,7 +652,7 @@ export function matchAskActionIntent(
     !wantsPeDealList(key)
   ) {
     if (!actionAllowedForRole('go_lost_deals', role)) return null;
-    return build('go_lost_deals', '/lost-deals', 'Lost Deals', 'Opening Lost Deals…');
+    return build('go_lost_deals', '/reports/lost-deals', 'Lost Deals', 'Opening Lost Deals…');
   }
   if (isNavigateToNamedScreen(key, /^(sales\s+review)$/)) {
     if (!actionAllowedForRole('go_sales_review', role)) return null;

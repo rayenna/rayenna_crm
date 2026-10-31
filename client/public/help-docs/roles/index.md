@@ -27,8 +27,8 @@ Legend: **✓** full · **◐** partial / scoped · **👁** view only · **—*
 | My Day | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Customers | ✓ | ◐ | 👁 | 👁 | ◐ |
 | Projects | ✓ | ◐ own | ◐ gated | ◐ pay | 👁 |
-| Lost Deals | ✓ | — | — | — | ✓ |
 | Reports (role-filtered packs) | ✓ | ◐ own | ✓ | ✓ | ✓ |
+| Lost Deals (Reports pack) | ✓ | — | — | — | ✓ |
 | Support tickets | ✓ | ✓ | ✓ | — | ✓ |
 | Tally export | ✓ | — | — | ✓ | — |
 | Users / Audit & Security | ✓ | — | — | — | — |
@@ -64,7 +64,7 @@ To request a different role, contact your administrator with your current role, 
 ## Related help
 
 - [Getting Started](/help/getting-started) — login, navigation, common actions
-- [Modules](/help/modules) — Customers, Projects, Reports, Support Tickets, Tally Export
+- [Modules](/help/modules) — Customers, Projects, Support Tickets, Reports, Tally Export
 - [Dashboard](/help/dashboard) and [Zenith](/help/zenith#zenith-command-center) — metrics and command center
 - [Security](/help/security) — passwords, audit log, Users (admin)
 - [Training guide](/help/training) — facilitator session outline

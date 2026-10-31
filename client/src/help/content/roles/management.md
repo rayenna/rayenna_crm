@@ -11,7 +11,7 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 | **Create and edit any customer**; **reassign salesperson** | Delete projects or customers |
 | **Support tickets** — create, follow up, close | **Tally export** (Finance / Admin) |
 | **Proposal Engine** visibility on dashboard / Zenith | **Users** or **Audit & Security** (Admin) |
-| **My Day**, full Help, **Lost Deals**, and all **Reports** packs | Bulk Excel/CSV export (Admin) |
+| **My Day**, full Help, and all **Reports** packs (including **Lost Deals**) | Bulk Excel/CSV export (Admin) |
 
 → [Permission matrix](#permission-matrix) · [Zenith](/help/zenith#zenith-command-center) · [Lost Deals](/help/modules#lost-deals-analytics) · [Reports](/help/modules#reports)
 
@@ -35,7 +35,7 @@ Use filters (salesperson, status, PE buckets, **Needs review**) to review team d
 
 ## Lost Deals
 
-Open **Lost Deals** from the menu for lost count / ₹, win rates, reason mix, and a working list of lost projects. A gold **proposal icon** next to a customer means a **PE Ready** proposal is still in Proposal Engine. Tap a chart slice to filter the list; finish tagging **Reason for Loss** on the project when deals are uncategorized. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
+Open **Reports → Lost Deals** for lost count / ₹, win rates, reason mix, and a working list of lost projects. **All sellers** scopes the whole pack; **Export** is Excel / PDF / PowerPoint (no Print). A gold **proposal icon** next to a customer means a **PE Ready** proposal is still in Proposal Engine. Tap a chart slice to filter the list only; finish tagging **Reason for Loss** on the project when deals are uncategorized. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Customers (limited write)
 
@@ -63,7 +63,7 @@ View payment status and financial KPIs on dashboards. **Tally export** remains F
 
 1. Start **Zenith** or **Dashboard** with the right FY/month.  
 2. Drill from charts into **Projects** lists.  
-3. Open **Reports** for the weekly seller, ops, collections, and margin packs. [Reports](/help/modules#reports).  
+3. Open **Reports** for the weekly seller, ops, collections, margin, and Lost Deals packs. [Reports](/help/modules#reports).  
 4. Review **Lost Deals** for reason mix and uncategorized losses.  
 5. Open detail for qualitative context (remarks, documents).  
 6. Assign or correct **customers** when ownership is wrong.  
@@ -73,7 +73,7 @@ View payment status and financial KPIs on dashboards. **Tally export** remains F
 
 1. Scan executive KPIs and **at-risk** / overdue signals.  
 2. Review pipeline by **salesperson** or **lead source**.  
-3. Open **Reports** for the weekly seller, ops, collections, and margin packs. [Reports](/help/modules#reports).  
+3. Open **Reports** for the weekly seller, ops, collections, margin, and Lost Deals packs. [Reports](/help/modules#reports).  
 4. Reassign **customers** when team structure changes.  
 5. Use **My Day** for leadership follow-ups (**Ctrl+Shift+M** / **⌘⇧M**).  
 6. Pair with [Training guide](/help/training) when onboarding regional heads.
@@ -92,6 +92,6 @@ View payment status and financial KPIs on dashboards. **Tally export** remains F
 ## Getting help
 
 - [Dashboard](/help/dashboard) and [Zenith](/help/zenith#zenith-command-center)  
-- [Reports](/help/modules#reports) — weekly seller, ops, collections, and margin packs  
+- [Reports](/help/modules#reports) — weekly seller, ops, collections, margin, and Lost Deals packs  
 - [Modules](/help/modules) — field-level reference  
 - [Security](/help/security) — what Admin owns vs Management view

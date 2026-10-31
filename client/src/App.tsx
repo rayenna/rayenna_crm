@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster, toast } from 'react-hot-toast'
 import {
   RAYENNA_BROWSER_STORAGE_ERROR_EVENT,
@@ -46,6 +46,11 @@ const DeliveryControl = lazy(() => import('./pages/DeliveryControl'))
 const CollectionsCash = lazy(() => import('./pages/CollectionsCash'))
 const FunnelVelocity = lazy(() => import('./pages/FunnelVelocity'))
 const MarginMix = lazy(() => import('./pages/MarginMix'))
+
+function RedirectWithSearch({ to }: { to: string }) {
+  const { search } = useLocation()
+  return <Navigate to={`${to}${search}`} replace />
+}
 
 function App() {
   useEffect(() => {
@@ -245,9 +250,7 @@ function App() {
               path="lost-deals"
               element={
                 <PrivateRoute roles={ROUTE_ROLES.lostDeals}>
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoader />}><LostDeals /></Suspense>
-                </ErrorBoundary>
+                  <RedirectWithSearch to="/reports/lost-deals" />
                 </PrivateRoute>
               }
             />
@@ -257,6 +260,16 @@ function App() {
                 <PrivateRoute roles={ROUTE_ROLES.reports}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><Reports /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/lost-deals"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.lostDeals}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><LostDeals /></Suspense>
                 </ErrorBoundary>
                 </PrivateRoute>
               }

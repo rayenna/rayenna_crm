@@ -69,12 +69,11 @@ const Layout = () => {
   const navigation = [
     { name: 'Customers', path: '/customers', roles: [...ROUTE_ROLES.allStaff] },
     { name: 'Projects', path: '/projects', roles: [...ROUTE_ROLES.allStaff] },
-    { name: 'Reports', path: '/reports', roles: [...ROUTE_ROLES.reports] },
     { name: 'Support Tickets', path: '/support-tickets', roles: [...ROUTE_ROLES.supportTickets] },
+    { name: 'Reports', path: '/reports', roles: [...ROUTE_ROLES.reports] },
     { name: 'Dashboard (Old)', path: '/dashboard', roles: dashboardNavRoles },
     { name: 'Solar Hub', path: '/solar-hub', roles: [...ROUTE_ROLES.solarHub] },
     { name: 'Tally Export', path: '/tally-export', roles: [...ROUTE_ROLES.tallyExport] },
-    { name: 'Lost Deals', path: '/lost-deals', roles: [...ROUTE_ROLES.lostDeals] },
     { name: 'Users', path: '/users', roles: [...ROUTE_ROLES.users] },
     { name: 'Audit & Security', path: '/audit-security', roles: [...ROUTE_ROLES.auditSecurity] },
   ]
@@ -82,7 +81,7 @@ const Layout = () => {
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
 
   // Keep the header clean: show the 3 most-used links inline; push admin/secondary to "More".
-  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/reports', '/support-tickets'] as const
+  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets', '/reports'] as const
   const primaryNav = PRIMARY_NAV_ORDER
     .map((p) => filteredNav.find((n) => n.path === p))
     .filter(Boolean) as typeof filteredNav
@@ -493,7 +492,7 @@ const Layout = () => {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              {/* Ask + My Day — visible at all breakpoints. Name lives in the hamburger below lg. */}
+              {/* Ask Zenith is the gold header CTA on every breakpoint; My Day stays icon-only. */}
               <ZenithAskNavButton />
               <MyDayNavEntry />
 
@@ -715,6 +714,7 @@ const Layout = () => {
           location.pathname.startsWith('/help') ||
           location.pathname.startsWith('/tally-export') ||
           location.pathname.startsWith('/lost-deals') ||
+          location.pathname.startsWith('/reports/lost-deals') ||
           location.pathname.startsWith('/support-tickets') ||
           location.pathname.startsWith('/solar-hub') ||
           location.pathname.startsWith('/change-password') ||

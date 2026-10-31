@@ -189,8 +189,8 @@ You can also run **Go to Proposal Engine** from the command palette (**Ctrl+K** 
 **Who can open**: Admin, Management, Operations, Finance, and Sales — **which pack** you see depends on role (Sales sees their own book).
 
 1. Top menu → **Reports**, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack).
-2. Open **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, or **Margin & Mix**.
-3. **How to read this report** starts collapsed. Table filters stay if you open a project and come back, until **Clear filters**.
+2. Open **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, or **Lost Deals** (Admin / Management).
+3. Weekly packs keep **How to read this report** collapsed. Table filters stay if you open a project and come back, until **Clear filters**. **Lost Deals** has no Print; **All sellers** and FY / Quarter / Month reload the pack. **Export** is on every pack.
 
 Guide: [Reports](/help/modules#reports).
 

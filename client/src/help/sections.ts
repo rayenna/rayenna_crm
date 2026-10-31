@@ -41,13 +41,13 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Solar Hub handover', hash: 'solar-hub-handover' },
     { label: 'Solar Hub staff lists', hash: 'solar-hub-staff-lists' },
     { label: 'Solar Hub plants', hash: 'solar-hub-plants-and-generation' },
-    { label: 'Lost Deals', hash: 'lost-deals-analytics' },
     { label: 'Reports', hash: 'reports' },
     { label: 'Sales Review', hash: 'sales-review' },
     { label: 'Funnel Velocity', hash: 'funnel-velocity' },
     { label: 'Delivery Control', hash: 'delivery-control' },
     { label: 'Collections & Cash', hash: 'collections-cash' },
     { label: 'Margin & Mix', hash: 'margin-mix' },
+    { label: 'Lost Deals', hash: 'lost-deals-analytics' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
@@ -126,7 +126,11 @@ export function getHelpHashForRoute(currentPath: string): string | null {
     return 'tally-export-module'
   }
   if (currentPath.startsWith('/solar-hub')) return 'solar-hub-handover'
-  if (currentPath === '/lost-deals' || currentPath.startsWith('/lost-deals/')) {
+  if (
+    currentPath === '/lost-deals' ||
+    currentPath.startsWith('/lost-deals/') ||
+    currentPath.startsWith('/reports/lost-deals')
+  ) {
     return 'lost-deals-analytics'
   }
   if (currentPath === '/reports') return 'reports'
@@ -290,6 +294,7 @@ const routeToContextLabel: Record<string, string> = {
   '/reports/collections-cash': 'Collections & Cash',
   '/reports/funnel-velocity': 'Funnel Velocity',
   '/reports/margin-mix': 'Margin & Mix',
+  '/reports/lost-deals': 'Lost Deals',
   '/solar-hub': 'Solar Hub',
   '/users': 'Users',
   '/change-password': 'Change Password',
@@ -321,7 +326,9 @@ export function getHelpContextLabel(currentPath: string): string | null {
   }
   if (currentPath.startsWith('/support-tickets/')) return 'Ticket details'
   if (currentPath.startsWith('/solar-hub')) return 'Solar Hub'
-  if (currentPath.startsWith('/lost-deals')) return 'Lost Deals'
+  if (currentPath.startsWith('/lost-deals') || currentPath.startsWith('/reports/lost-deals')) {
+    return 'Lost Deals'
+  }
   if (currentPath.startsWith('/reports')) return 'Reports'
   return null
 }

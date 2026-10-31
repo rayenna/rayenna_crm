@@ -397,7 +397,7 @@ export function projectsHrefForIntent(
       dateFilter.selectedQuarters.forEach((qq) => search.append('quarter', qq));
       dateFilter.selectedMonths.forEach((m) => search.append('month', m));
       const qs = search.toString();
-      return qs ? `/lost-deals?${qs}` : '/lost-deals';
+      return qs ? `/reports/lost-deals?${qs}` : '/reports/lost-deals';
     }
     case 'proposal_engine_buckets': {
       const bucket = intent.filters?.peBucket;
@@ -552,7 +552,7 @@ export function projectsHrefForIntent(
         );
       }
       if (slice === 'lost_detail') {
-        return '/lost-deals';
+        return '/reports/lost-deals';
       }
       if (slice.startsWith('pe_missing_')) {
         return buildZenithNlProjectsHref({ peBucket: 'draft', ...entityHrefParams(intent) }, dateFilter);
@@ -601,7 +601,7 @@ export function projectsHrefForIntent(
         dateFilter,
       );
     case 'lost_competition_breakdown':
-      return '/lost-deals';
+      return '/reports/lost-deals';
     case 'payment_mode_mix':
     case 'unpaid_invoices':
       return buildZenithNlProjectsHref({}, dateFilter);

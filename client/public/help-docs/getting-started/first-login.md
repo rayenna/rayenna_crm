@@ -106,9 +106,8 @@ The top menu shows modules available to your role:
 - **Dashboard**: Your overview page
 - **Customers**: Customer database
 - **Projects**: Project management
-- **Reports**: Weekly packs (Sales Review, Funnel Velocity, Delivery Control, Collections, Margin & Mix — what you see depends on role)
-- **Lost Deals**: Lost analytics (Admin and Management)
 - **Support Tickets**: Customer service (if applicable)
+- **Reports**: Weekly packs (Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix, Lost Deals — what you see depends on role)
 - **Help**: Documentation and support
 
 **Note**: Menu items vary based on your user role. You'll only see features you have permission to access.

@@ -46,7 +46,7 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 - [ ] **Needs review** rollup checked (salesperson counts) and outliers assigned
 - [ ] Board ranking discussed with sales lead
 - [ ] Profitability and FY chart surprises investigated via drawer → Projects
-- [ ] Weekly packs reviewed: **Reports** (Sales Review, Funnel Velocity, Delivery Control, Collections, Margin & Mix) ([Reports](/help/modules#reports))
+- [ ] Weekly packs reviewed: **Reports** (Sales Review, Funnel Velocity, Delivery Control, Collections, Margin & Mix, Lost Deals) ([Reports](/help/modules#reports))
 - [ ] Actions assigned in Projects / remarks, not only in Zenith
 
 **Related:** [Management role guide](/help/roles#management-role-guide) · [Reports](/help/modules#reports) · [Training](/help/training) · [Zenith by role](#zenith-by-role)

@@ -13,8 +13,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, Search, X, XCircle } from 'lucide-react'
-import axiosInstance from '../utils/axios'
+import { AlertTriangle, ChevronDown, Download, Search, X, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
+import { ErrorModal } from '../components/common/ErrorModal'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
@@ -114,6 +116,11 @@ function competitionChartShortLabel(subtype: string): string {
   }
   return short[subtype] || competitionDisplayLabel(subtype)
 }
+
+const EXPORT_CONFIRM =
+  'The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.\n\nBy exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.\n\nDo you want to continue?'
+type LostDealsExportFormat = 'xlsx' | 'pdf' | 'pptx'
+type SalesUser = { id: string; name: string }
 
 function formatShortDate(iso: string | null): string {
   if (!iso) return '—'
@@ -300,6 +307,11 @@ const LostDeals = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
   const [showMethodNote, setShowMethodNote] = useState(false)
+  const [salespersonId, setSalespersonId] = useState('')
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [pendingExport, setPendingExport] = useState<LostDealsExportFormat | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
 
   const selectedFYs = useMemo(() => readListParam(searchParams, 'fy'), [searchParams])
   const selectedQuarters = useMemo(() => readListParam(searchParams, 'quarter'), [searchParams])
@@ -346,6 +358,31 @@ const LostDeals = () => {
 
   const canAccess = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])
 
+  useEffect(() => {
+    if (!exportMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (!exportMenuRef.current?.contains(e.target as Node)) setExportMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [exportMenuOpen])
+
+  const { data: salesUsers } = useQuery({
+    queryKey: ['users', 'role', 'sales'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/api/users/role/sales')
+      return res.data as SalesUser[]
+    },
+    enabled: canAccess,
+  })
+
   const shell = (children: React.ReactNode) => (
     <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
       <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
@@ -372,18 +409,68 @@ const LostDeals = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['dashboard', 'lost-deals', selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: ['dashboard', 'lost-deals', selectedFYs, selectedQuarters, selectedMonths, salespersonId],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((m) => params.append('month', m))
+      if (salespersonId) params.set('salespersonId', salespersonId)
       const qs = params.toString()
       const res = await axiosInstance.get(`/api/dashboard/lost-deals${qs ? `?${qs}` : ''}`)
       return res.data as LostDealsResponse
     },
     enabled: canAccess,
   })
+
+  const lostDealsQueryParams = () => {
+    const params = new URLSearchParams()
+    selectedFYs.forEach((fy) => params.append('fy', fy))
+    selectedQuarters.forEach((q) => params.append('quarter', q))
+    selectedMonths.forEach((m) => params.append('month', m))
+    if (salespersonId) params.set('salespersonId', salespersonId)
+    return params.toString()
+  }
+
+  const requestExport = (format: LostDealsExportFormat) => {
+    setExportMenuOpen(false)
+    setPendingExport(format)
+  }
+
+  const cancelExport = () => {
+    if (exporting) return
+    setPendingExport(null)
+  }
+
+  const confirmExport = async () => {
+    if (!pendingExport || exporting) return
+    setExporting(true)
+    try {
+      const qs = lostDealsQueryParams()
+      const res = await axiosInstance.get(
+        `/api/dashboard/lost-deals/export/${pendingExport}${qs ? `?${qs}` : ''}`,
+        { responseType: 'blob' },
+      )
+      const header = String(res.headers['content-disposition'] || '')
+      const fromHeader = header.match(/filename="?([^"]+)"?/)?.[1]
+      const filename = fromHeader || `lost-deals.${pendingExport}`
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      const label = pendingExport === 'xlsx' ? 'Excel' : pendingExport === 'pdf' ? 'PDF' : 'PowerPoint'
+      toast.success(`Lost Deals exported to ${label}`)
+    } catch (err) {
+      toast.error(getFriendlyApiErrorMessage(err))
+    } finally {
+      setExporting(false)
+      setPendingExport(null)
+    }
+  }
 
   const summary = data?.summary
   const uncategorizedPct =
@@ -546,7 +633,7 @@ const LostDeals = () => {
 
   return shell(
     <div className="space-y-5 pt-4 sm:pt-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
             Lost Deals
@@ -578,6 +665,62 @@ const LostDeals = () => {
               Subsidy Credited vs Lost in the same FY filter scope.
             </p>
           )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+            <span className="sr-only">Salesperson</span>
+            <select
+              value={salespersonId}
+              onChange={(e) => setSalespersonId(e.target.value)}
+              className="min-h-[40px] w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 text-sm text-[color:var(--text-primary)] sm:w-56"
+            >
+              <option value="">All sellers</option>
+              {(salesUsers ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((v) => !v)}
+              disabled={isLoading || !data}
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-3 text-sm font-semibold text-[color:var(--text-primary)] disabled:opacity-50"
+              aria-expanded={exportMenuOpen}
+              aria-haspopup="menu"
+              title="Export this report"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              Export
+              <ChevronDown className="h-3.5 w-3.5 text-[color:var(--text-muted)]" aria-hidden />
+            </button>
+            {exportMenuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 z-50 mt-1.5 w-52 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] p-1.5 shadow-[var(--shadow-dropdown)] ring-1 ring-[color:var(--border-default)]"
+              >
+                {(
+                  [
+                    ['xlsx', 'Excel (.xlsx)'],
+                    ['pdf', 'PDF'],
+                    ['pptx', 'PowerPoint (.pptx)'],
+                  ] as const
+                ).map(([fmt, label]) => (
+                  <button
+                    key={fmt}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => requestExport(fmt)}
+                    className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-table-hover)]"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -1170,6 +1313,17 @@ const LostDeals = () => {
           </LostDealsInsightsSection>
         </>
       )}
+      <ErrorModal
+        open={pendingExport != null}
+        onClose={cancelExport}
+        type="warning"
+        surface="zenith"
+        message={EXPORT_CONFIRM}
+        actions={[
+          { label: 'CANCEL', variant: 'ghost', onClick: cancelExport },
+          { label: exporting ? 'EXPORTING…' : 'YES', variant: 'primary', onClick: confirmExport },
+        ]}
+      />
     </div>,
   )
 }

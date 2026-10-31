@@ -85,7 +85,7 @@ function projectDetailBackPath(
   status: ProjectStatus | string | null | undefined,
   canOpenLostDeals: boolean,
 ): string {
-  if (status === ProjectStatus.LOST && canOpenLostDeals) return '/lost-deals'
+  if (status === ProjectStatus.LOST && canOpenLostDeals) return '/reports/lost-deals'
   return '/projects'
 }
 

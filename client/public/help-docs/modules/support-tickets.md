@@ -31,7 +31,7 @@ Each support ticket is assigned a unique ticket number for easy identification a
 
 ### From Support Tickets
 
-1. Open **Support Tickets** from the main menu (**Ctrl+Shift+K** / **⌘⇧K**)
+1. Open **Support Tickets** from the top bar (between **Projects** and **Reports**) or **Ctrl+Shift+K** / **⌘⇧K**
 2. Click **Create ticket**
 3. Search for the project by **customer name** or **project number**, then select it
 4. Enter a **title**, optional description, and a **next follow-up date** (defaults to 3 days from today)

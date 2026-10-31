@@ -18,7 +18,7 @@ From the palette you can also choose **Ask Zenith…** (opens the floating Ask w
 | :-- | :-- |
 | **Create** | New Customer · New Project · Create Support Ticket · New User |
 | **Lists** | Overdue Support Tickets · Open Support Tickets (queue) · Solar Hub Support Tickets · Proposal-stage / Confirmed / Under Installation projects · Pending Subsidy · Availing Loan · Projects Needing Review · Proposal Engine — Not Started / Drafts / Proposal Ready |
-| **Go to** | Zenith · Customers · Projects · **Reports** · **Sales Review** · **Funnel Velocity** · **Delivery Control** · **Collections & Cash** · **Margin & Mix** · Support Tickets · Proposal Engine · Dashboard (classic) · Solar Hub · Solar Hub Provisioning · Solar Hub — Unlinked Plants · Solar Hub Maintenance · Lost Deals · Tally Export · Users · Audit & Security · Change Password · Open Help · Open My Day · Open My Day Journal · Show Tip of the Day |
+| **Go to** | Zenith · Customers · Projects · **Reports** · **Sales Review** · **Funnel Velocity** · **Delivery Control** · **Collections & Cash** · **Margin & Mix** · **Lost Deals** · Support Tickets · Proposal Engine · Dashboard (classic) · Solar Hub · Solar Hub Provisioning · Solar Hub — Unlinked Plants · Solar Hub Maintenance · Tally Export · Users · Audit & Security · Change Password · Open Help · Open My Day · Open My Day Journal · Show Tip of the Day |
 | **Search** | Type a name or keyword to also get **Search customers for…** / **Search projects for…** |
 
 **Tip:** Palette is fastest for navigation and creates. Use **Ask Zenith** when you want an insight, chart, or table from CRM data.

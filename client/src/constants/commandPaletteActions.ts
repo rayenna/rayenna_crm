@@ -253,7 +253,7 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
   {
     id: 'go_reports',
     label: 'Go to Reports',
-    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'funnel velocity', 'margin mix', 'weekly'],
+    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'funnel velocity', 'margin mix', 'lost deals', 'weekly'],
     group: 'Go to',
     roles: ROUTE_ROLES.reports,
     href: '/reports',
@@ -297,6 +297,14 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
     group: 'Go to',
     roles: ROUTE_ROLES.marginMix,
     href: '/reports/margin-mix',
+  },
+  {
+    id: 'go_lost_deals',
+    label: 'Go to Lost Deals',
+    keywords: ['lost', 'deals', 'win rate', 'reason for loss'],
+    group: 'Go to',
+    roles: ROUTE_ROLES.lostDeals,
+    href: '/reports/lost-deals',
   },
   {
     id: 'go_support_tickets',
@@ -353,14 +361,6 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
     group: 'Go to',
     roles: ROUTE_ROLES.solarHub,
     href: '/solar-hub/maintenance',
-  },
-  {
-    id: 'go_lost_deals',
-    label: 'Go to Lost Deals',
-    keywords: ['lost', 'deals'],
-    group: 'Go to',
-    roles: ROUTE_ROLES.lostDeals,
-    href: '/lost-deals',
   },
   {
     id: 'go_tally_export',

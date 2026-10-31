@@ -76,8 +76,9 @@ export function ZenithAskNavButton() {
         openZenithAskDock({ focus: true })
       }}
     >
-      <ZenithAskIcon className="h-4 w-4" aria-hidden />
-      <span className="hidden lg:inline">Ask Zenith</span>
+      <ZenithAskIcon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
+      <span className="sm:hidden">Ask</span>
+      <span className="hidden sm:inline">Ask Zenith</span>
     </button>
   )
 }

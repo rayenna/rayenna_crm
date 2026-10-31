@@ -39,6 +39,13 @@ import {
   peArtifactFlagsForProject,
   peDocumentStatusFromFlags,
 } from '../utils/peProjectArtifactFlags';
+import {
+  buildLostDealsExcelBuffer,
+  buildLostDealsPdfBuffer,
+  buildLostDealsPptxBuffer,
+  lostDealsExportBasename,
+  type LostDealsExportPayload,
+} from '../utils/lostDealsExport';
 
 const router = express.Router();
 
@@ -2143,131 +2150,172 @@ router.get('/management', authenticate, async (req: Request, res) => {
   }
 });
 
+const LOST_DEALS_EXPORT_MIME: Record<string, string> = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pdf: 'application/pdf',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+};
+
+function queryStringList(value: unknown): string[] {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).map(String);
+}
+
+function lostDealsPeriodLabel(fyFilters: string[], quarterFilters: string[], monthFilters: string[]): string {
+  const parts: string[] = [];
+  if (fyFilters.length) parts.push(fyFilters.map((f) => `FY${f}`).join(', '));
+  else parts.push('All years');
+  if (quarterFilters.length) parts.push(quarterFilters.join(', '));
+  if (monthFilters.length) parts.push(monthFilters.join(', '));
+  return parts.join(' · ');
+}
+
 /**
  * Lost Deals analytics — Admin & Management only.
  * Money uses projectCost on LOST rows; never merges into pipeline/revenue helpers.
  * Win-rate denominator = won (Confirmed / Installation / Completed / Subsidy Credited) + lost in the same FY/date scope.
  */
-router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
-  try {
-    const role = req.user?.role;
-    if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT) {
-      return res.status(403).json({
-        error: 'Access denied. Lost Deals analytics is available only to Admin and Management.',
-      });
+async function loadLostDealsPayload(req: Request): Promise<
+  | { ok: false; status: 403; error: string }
+  | {
+      ok: true;
+      payload: LostDealsExportPayload & {
+        projects: Array<LostDealsExportPayload['projects'][number] & { id: string }>;
+      };
+      sellerLabel: string;
+      exportedBy: string;
+      periodLabel: string;
+    }
+> {
+  const role = req.user?.role;
+  if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'Access denied. Lost Deals analytics is available only to Admin and Management.',
+    };
+  }
+
+  const fyFilters = queryStringList(req.query.fy);
+  const monthFilters = queryStringList(req.query.month);
+  const quarterFilters = queryStringList(req.query.quarter);
+  const salespersonId =
+    typeof req.query.salespersonId === 'string' ? req.query.salespersonId.trim() : '';
+
+  const baseWhere: Record<string, unknown> = {};
+  if (salespersonId) baseWhere.salespersonId = salespersonId;
+  const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+
+  const wonStatuses: ProjectStatus[] = [
+    ProjectStatus.CONFIRMED,
+    ProjectStatus.UNDER_INSTALLATION,
+    ProjectStatus.COMPLETED,
+    ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+  ];
+
+  const [lostProjects, wonAgg] = await Promise.all([
+    prisma.project.findMany({
+      where: { ...where, projectStatus: ProjectStatus.LOST },
+      select: {
+        id: true,
+        slNo: true,
+        year: true,
+        projectCost: true,
+        lostReason: true,
+        lostToCompetitionReason: true,
+        lostOtherReason: true,
+        lostDate: true,
+        confirmationDate: true,
+        salespersonId: true,
+        salesperson: { select: { id: true, name: true } },
+        customer: { select: { customerName: true } },
+      },
+      orderBy: [{ slNo: 'asc' }],
+    }),
+    prisma.project.aggregate({
+      where: { ...where, projectStatus: { in: wonStatuses } },
+      _count: { _all: true },
+      _sum: { projectCost: true },
+    }),
+  ]);
+
+  const lostCount = lostProjects.length;
+  const lostValue = lostProjects.reduce((s, p) => s + (Number(p.projectCost) || 0), 0);
+  const wonCount = wonAgg._count._all;
+  const wonValue = Number(wonAgg._sum.projectCost) || 0;
+  const denomCount = wonCount + lostCount;
+  const denomValue = wonValue + lostValue;
+  const winRateCount = denomCount > 0 ? (wonCount / denomCount) * 100 : null;
+  const winRateValue = denomValue > 0 ? (wonValue / denomValue) * 100 : null;
+  const uncategorizedCount = lostProjects.filter((p) => !p.lostReason).length;
+
+  const reasonMap = new Map<string, { count: number; value: number }>();
+  const competitionMap = new Map<string, { count: number; value: number }>();
+  const salesMap = new Map<
+    string,
+    { id: string | null; name: string; count: number; value: number }
+  >();
+  const fyMap = new Map<string, { count: number; value: number }>();
+
+  for (const p of lostProjects) {
+    const value = Number(p.projectCost) || 0;
+    const reasonKey = p.lostReason ?? 'UNCATEGORIZED';
+    const r = reasonMap.get(reasonKey) ?? { count: 0, value: 0 };
+    r.count += 1;
+    r.value += value;
+    reasonMap.set(reasonKey, r);
+
+    if (p.lostReason === LostReason.LOST_TO_COMPETITION) {
+      const sub = p.lostToCompetitionReason ?? 'UNCATEGORIZED';
+      const c = competitionMap.get(sub) ?? { count: 0, value: 0 };
+      c.count += 1;
+      c.value += value;
+      competitionMap.set(sub, c);
     }
 
-    const fyFilters = req.query.fy
-      ? ((Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[])
-      : [];
-    const monthFilters = req.query.month
-      ? ((Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[])
-      : [];
-    const quarterFilters = req.query.quarter
-      ? ((Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[])
-      : [];
+    const spId = p.salespersonId ?? '';
+    const spName = p.salesperson?.name?.trim() || 'Unassigned';
+    const spKey = spId || '__unassigned__';
+    const s = salesMap.get(spKey) ?? { id: p.salespersonId, name: spName, count: 0, value: 0 };
+    s.count += 1;
+    s.value += value;
+    salesMap.set(spKey, s);
 
-    const where = applyDateFilters({}, fyFilters, monthFilters, quarterFilters);
+    const fy = (p.year && String(p.year).trim()) || 'Unknown';
+    const f = fyMap.get(fy) ?? { count: 0, value: 0 };
+    f.count += 1;
+    f.value += value;
+    fyMap.set(fy, f);
+  }
 
-    const wonStatuses: ProjectStatus[] = [
-      ProjectStatus.CONFIRMED,
-      ProjectStatus.UNDER_INSTALLATION,
-      ProjectStatus.COMPLETED,
-      ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-    ];
+  const byReason = Array.from(reasonMap.entries())
+    .map(([reason, v]) => ({ reason, count: v.count, value: v.value }))
+    .sort((a, b) => b.value - a.value);
 
-    const [lostProjects, wonAgg] = await Promise.all([
-      prisma.project.findMany({
-        where: { ...where, projectStatus: ProjectStatus.LOST },
-        select: {
-          id: true,
-          slNo: true,
-          year: true,
-          projectCost: true,
-          lostReason: true,
-          lostToCompetitionReason: true,
-          lostOtherReason: true,
-          lostDate: true,
-          confirmationDate: true,
-          salespersonId: true,
-          salesperson: { select: { id: true, name: true } },
-          customer: { select: { customerName: true } },
-        },
-        orderBy: [{ slNo: 'asc' }],
-      }),
-      prisma.project.aggregate({
-        where: { ...where, projectStatus: { in: wonStatuses } },
-        _count: { _all: true },
-        _sum: { projectCost: true },
-      }),
-    ]);
+  const byCompetitionSubtype = Array.from(competitionMap.entries())
+    .map(([subtype, v]) => ({ subtype, count: v.count, value: v.value }))
+    .sort((a, b) => b.value - a.value);
 
-    const lostCount = lostProjects.length;
-    const lostValue = lostProjects.reduce((s, p) => s + (Number(p.projectCost) || 0), 0);
-    const wonCount = wonAgg._count._all;
-    const wonValue = Number(wonAgg._sum.projectCost) || 0;
-    const denomCount = wonCount + lostCount;
-    const denomValue = wonValue + lostValue;
-    const winRateCount = denomCount > 0 ? (wonCount / denomCount) * 100 : null;
-    const winRateValue = denomValue > 0 ? (wonValue / denomValue) * 100 : null;
-    const uncategorizedCount = lostProjects.filter((p) => !p.lostReason).length;
+  const bySalesperson = Array.from(salesMap.values()).sort((a, b) => b.value - a.value);
 
-    const reasonMap = new Map<string, { count: number; value: number }>();
-    const competitionMap = new Map<string, { count: number; value: number }>();
-    const salesMap = new Map<
-      string,
-      { id: string | null; name: string; count: number; value: number }
-    >();
-    const fyMap = new Map<string, { count: number; value: number }>();
+  const byFy = Array.from(fyMap.entries())
+    .map(([fy, v]) => ({ fy, count: v.count, value: v.value }))
+    .sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
 
-    for (const p of lostProjects) {
-      const value = Number(p.projectCost) || 0;
-      const reasonKey = p.lostReason ?? 'UNCATEGORIZED';
-      const r = reasonMap.get(reasonKey) ?? { count: 0, value: 0 };
-      r.count += 1;
-      r.value += value;
-      reasonMap.set(reasonKey, r);
+  const peSets = await loadPeArtifactFlagSets(lostProjects.map((p) => p.id));
 
-      if (p.lostReason === LostReason.LOST_TO_COMPETITION) {
-        const sub = p.lostToCompetitionReason ?? 'UNCATEGORIZED';
-        const c = competitionMap.get(sub) ?? { count: 0, value: 0 };
-        c.count += 1;
-        c.value += value;
-        competitionMap.set(sub, c);
-      }
+  let sellerLabel = 'All sellers';
+  if (salespersonId) {
+    const seller = await prisma.user.findUnique({
+      where: { id: salespersonId },
+      select: { name: true, email: true },
+    });
+    sellerLabel = seller?.name?.trim() || seller?.email || 'Seller';
+  }
 
-      const spId = p.salespersonId ?? '';
-      const spName = p.salesperson?.name?.trim() || 'Unassigned';
-      const spKey = spId || '__unassigned__';
-      const s = salesMap.get(spKey) ?? { id: p.salespersonId, name: spName, count: 0, value: 0 };
-      s.count += 1;
-      s.value += value;
-      salesMap.set(spKey, s);
-
-      const fy = (p.year && String(p.year).trim()) || 'Unknown';
-      const f = fyMap.get(fy) ?? { count: 0, value: 0 };
-      f.count += 1;
-      f.value += value;
-      fyMap.set(fy, f);
-    }
-
-    const byReason = Array.from(reasonMap.entries())
-      .map(([reason, v]) => ({ reason, count: v.count, value: v.value }))
-      .sort((a, b) => b.value - a.value);
-
-    const byCompetitionSubtype = Array.from(competitionMap.entries())
-      .map(([subtype, v]) => ({ subtype, count: v.count, value: v.value }))
-      .sort((a, b) => b.value - a.value);
-
-    const bySalesperson = Array.from(salesMap.values()).sort((a, b) => b.value - a.value);
-
-    const byFy = Array.from(fyMap.entries())
-      .map(([fy, v]) => ({ fy, count: v.count, value: v.value }))
-      .sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
-
-    const peSets = await loadPeArtifactFlagSets(lostProjects.map((p) => p.id));
-
-    res.json({
+  return {
+    ok: true,
+    payload: {
       summary: {
         lostCount,
         lostValue,
@@ -2287,7 +2335,7 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
         customerName: p.customer?.customerName ?? null,
         salespersonName: p.salesperson?.name ?? null,
         year: p.year,
-        projectCost: p.projectCost,
+        projectCost: p.projectCost == null ? null : Number(p.projectCost),
         lostReason: p.lostReason,
         lostToCompetitionReason: p.lostToCompetitionReason,
         lostOtherReason: p.lostOtherReason,
@@ -2297,9 +2345,54 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
           peDocumentStatusFromFlags(peArtifactFlagsForProject(p.id, peSets)) ===
           'proposal-ready',
       })),
-    });
+    },
+    sellerLabel,
+    exportedBy: req.user?.email || '',
+    periodLabel: lostDealsPeriodLabel(fyFilters, quarterFilters, monthFilters),
+  };
+}
+
+router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
+  try {
+    const loaded = await loadLostDealsPayload(req);
+    if (!loaded.ok) {
+      return res.status(loaded.status).json({ error: loaded.error });
+    }
+    res.json(loaded.payload);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/lost-deals/export/:format', authenticate, async (req: Request, res: Response) => {
+  const format = String(req.params.format || '').toLowerCase();
+  if (format !== 'xlsx' && format !== 'pdf' && format !== 'pptx') {
+    return res.status(400).json({ error: 'Format must be xlsx, pdf, or pptx' });
+  }
+  try {
+    const loaded = await loadLostDealsPayload(req);
+    if (!loaded.ok) {
+      return res.status(loaded.status).json({ error: loaded.error });
+    }
+    const meta = {
+      sellerLabel: loaded.sellerLabel,
+      exportedBy: loaded.exportedBy,
+      periodLabel: loaded.periodLabel,
+      generatedAt: new Date().toISOString(),
+    };
+    const basename = lostDealsExportBasename(meta);
+    let buffer: Buffer;
+    if (format === 'xlsx') buffer = buildLostDealsExcelBuffer(loaded.payload, meta);
+    else if (format === 'pdf') buffer = await buildLostDealsPdfBuffer(loaded.payload, meta);
+    else buffer = await buildLostDealsPptxBuffer(loaded.payload, meta);
+
+    res.setHeader('Content-Type', LOST_DEALS_EXPORT_MIME[format]);
+    res.setHeader('Content-Disposition', `attachment; filename="${basename}.${format}"`);
+    res.send(buffer);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to export Lost Deals';
+    console.error('Lost Deals export failed:', error);
+    res.status(500).json({ error: message });
   }
 });
 

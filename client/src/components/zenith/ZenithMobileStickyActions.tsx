@@ -28,8 +28,8 @@ export default function ZenithMobileStickyActions({
           title="Ask Zenith"
           className="zenith-mobile-sticky-btn zenith-mobile-sticky-btn--ask touch-manipulation"
         >
-          <ZenithAskIcon className="h-5 w-5" aria-hidden />
-          <span className="sr-only">Ask Zenith</span>
+          <ZenithAskIcon className="h-5 w-5 shrink-0" aria-hidden />
+          <span>Ask</span>
         </button>
       ) : null}
       {showBriefingLauncher && onShowBriefing ? (

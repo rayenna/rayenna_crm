@@ -78,7 +78,7 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 | **PE bucket** | PE Ready, PE Draft, PE Not Yet Created, Rest. |
 | **Explorer batch** | Large cap of project rows loaded for Zenith drill-downs (see **Zenith** help). |
 | **Needs review** | Projects filter + detail banner for dates, payments, or capacity that do not match stage. **Save anyway** only for reversed commissioning vs confirmation, or advance over order value. [Modules](/help/modules#needs-review-data-sense). |
-| **Reports** | Weekly-call packs under **Reports**: Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix. Role-filtered. [Modules → Reports](/help/modules#reports). |
+| **Reports** | Weekly-call packs under **Reports**: Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix, Lost Deals. Role-filtered. [Modules → Reports](/help/modules#reports). |
 | **Median days** (Funnel Velocity) | Median days in the current Lead / Survey / Proposal stage — not average, not created → close. |
 | **Today’s Hit List** | Up to **seven** urgent pipeline deals; **filters + sort** like **Your pipeline today**; **Alert** column; **Open →** = **Quick Actions** (with **Recent remarks** above log activity). |
 | **Won-path** (The Board) | Confirmed → Subsidy Credited stages counted for leaderboard credit rules. |

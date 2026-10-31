@@ -38,7 +38,7 @@ Open **Solar Hub** → **Users**, **Maintenance**, or **Provisioning**. On phone
 **Pending subsidy** means **Segment = Subsidy** and **Status = Completed** (not yet **Completed – Subsidy Credited**). Use the **Quick views** chip or the checkbox under **Show Filters**. Guide: [Projects module](/help/modules#projects-module).
 
 ### What is the Lost Deals page?
-**Lost Deals** (Admin / Management) shows lost count and ₹, win rates, reason / competition charts, and a working list of lost projects. A gold **proposal icon** next to a name means a **PE Ready** proposal is still in Proposal Engine. On phones the list uses **cards** and charts sit in an **Insights** accordion. Tap a chart slice to filter the list. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
+**Lost Deals** (Admin / Management) is a **Reports** pack. Use **All sellers** to scope KPIs, charts, list, and **Export** (Excel / PDF / PowerPoint — no Print). A gold **proposal icon** next to a name means a **PE Ready** proposal is still in Proposal Engine. On phones the list uses **cards** and charts sit in an **Insights** accordion. Search and chart chips filter the list only. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Support Tickets
 
@@ -54,13 +54,13 @@ Closing **requires a resolution note** (saved on the timeline). **Sales** closes
 ## Data and reports
 
 ### Where are the weekly Reports packs?
-Top menu → **Reports** (`/reports`), or **Ctrl+K** / **⌘K** → **Go to Reports**. Packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**. Press **?** on a pack for that pack’s guide. [Reports](/help/modules#reports).
+Top menu → **Reports** (`/reports`), or **Ctrl+K** / **⌘K** → **Go to Reports**. Packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, **Lost Deals**. Press **?** on a pack for that pack’s guide. [Reports](/help/modules#reports).
 
 ### Who can see which report?
-**Sales Review** and **Funnel Velocity** — Admin, Management, Sales (own book). **Delivery Control** — Admin, Management, Operations, Sales (own book). **Collections & Cash** — Admin, Management, Finance, Sales (own book). **Margin & Mix** — Admin, Management, Finance only. [Permission matrix](/help/roles#permission-matrix).
+**Sales Review** and **Funnel Velocity** — Admin, Management, Sales (own book). **Delivery Control** — Admin, Management, Operations, Sales (own book). **Collections & Cash** — Admin, Management, Finance, Sales (own book). **Margin & Mix** — Admin, Management, Finance only. **Lost Deals** — Admin, Management only. [Permission matrix](/help/roles#permission-matrix).
 
 ### Why did my report filters reset when I opened a deal?
-They should not. Seller/ops/FY/Qtr pickers and table filters stay until **Clear filters** (or logout). Tap the active **Open** / **Closed** quick view on Sales Review again to show every open deal.
+They should not on the five weekly packs. Seller/ops/FY/Qtr pickers and table filters stay until **Clear filters** (or logout). **Lost Deals** reloads when you change **All sellers** or FY / Quarter / Month; list search and chart chips do not persist across that reload. Tap the active **Open** / **Closed** quick view on Sales Review again to show every open deal.
 
 ### What is Open vs Closed on Sales Review?
 **Open** = Lead, Site Survey, Proposal. **Closed** = Confirmed Order and Under Installation. Submitted for Subsidy stays in the full list. [Sales Review](/help/modules#sales-review).
@@ -69,7 +69,7 @@ They should not. Seller/ops/FY/Qtr pickers and table filters stay until **Clear 
 Median **days in the current stage** for open Lead / Survey / Proposal deals (not an average, and not created-date → close). Stage entered is used; if missing, created date is used and the row is flagged. [Funnel Velocity](/help/modules#funnel-velocity).
 
 ### How do I export data?
-Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff; **Reports** packs export Excel / PDF / PowerPoint of the current seller/ops/period pack. [Permission matrix](/help/roles#permission-matrix) · [Reports](/help/modules#reports).
+Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff; **Reports** packs (including Lost Deals) export Excel / PDF / PowerPoint of the current seller/ops/period pack. [Permission matrix](/help/roles#permission-matrix) · [Reports](/help/modules#reports).
 
 ### Where is Tally Export and who can use it?
 Top menu → **Tally Export** (**Finance** and **Admin**). Export Projects, Invoices, or Payments as Excel, CSV, or Tally XML with optional date filters. Guide: [Tally Export](/help/modules#tally-export-module).
