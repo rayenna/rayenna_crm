@@ -110,7 +110,7 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Key points:**
 
-- Under the command bar (above Ask / KPIs): **horizontal marquee** of **RSS** headlines (solar / energy sources). Server-backed cache (~**30 minutes**); not the same as your pipeline numbers.
+- Under the command bar (above KPIs): **horizontal marquee** of **RSS** headlines (solar / energy sources). Server-backed cache (~**30 minutes**); not the same as your pipeline numbers.
 - On **phones**, Solar News appears only on the **Today** tab (not Ask / Pipeline / Charts / More).
 - **Click** a headline → **new tab** to the article. **Hover** (desktop) pauses the marquee.
 - **Colour tags** (policy, grid, market, tech, agri) are for scanning only.

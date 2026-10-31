@@ -1,6 +1,6 @@
 # Ask Zenith (natural language)
 
-**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** on Zenith for three kinds of requests. On **desktop**, Ask sits in the **command bar**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button on Today).
+**Sales**, **Management**, **Admin**, **Operations**, and **Finance** can use **Ask Zenith** for three kinds of requests. On **laptop / desktop**, tap **Ask Zenith** in the header (or press **/** or **A** on Zenith) to open a **floating Ask window**. On **phone / narrow** layouts, open the **Ask** tab in the bottom nav (or the floating **Ask** button on Today).
 
 1. **Analytics** — maps the question to a known metric, computes numbers from the same CRM data as the rest of Zenith, and shows **one insight** plus **one chart or table**.
 2. **Help** — how-to questions (**Where do I add the Panel and Inverter brand in CRM?**, **How do I change my password?**) search the same Help articles as this site and answer from those pages. **Open in Help →** opens the matching section. Data questions (**how many**, **list**, **revenue**) still use analytics, not Help.
@@ -9,7 +9,7 @@
 ## How to use Ask
 
 1. Set **FY / Quarter / Month** on the command bar, **or** say a relative period in the question (**last FY**, **this / last / next quarter**, **this / last / next half year** — H1 = Q1+Q2, H2 = Q3+Q4 — **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY)** or **quarter-on-quarter (QoQ)** growth / comparison for **revenue**, **gross profit**, or **average margin** — Ask compares both periods in one table. The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
-2. Focus the Ask box with **/** or **A** (when you are not already typing in a field), or open **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to jump here and run it.
+2. Open Ask with the header **Ask Zenith** button, **/** or **A** on Zenith (when you are not already typing in a field), or **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). On laptop the window floats **over the current page** (Projects, Zenith, etc. stay visible behind it) — **drag the title bar** to move it, **drag the bottom-right corner** to resize, or **double-click the title** to reset. Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to open Ask and run it.
 3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
 5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. Close the answer with **×**; history stays for your next ask.
@@ -114,7 +114,7 @@ Call-list, stalled-deal, PE-missing, and ticket rows can **Call**, **WhatsApp**,
 
 ### Ask everywhere
 
-The header **Ask** button and command palette (**Ask Zenith: “…”**) open the same copilot on Customers, Projects, Support Tickets, and other CRM pages. On Zenith itself, Ask stays in the command bar / Ask tab.
+The header **Ask Zenith** button and command palette (**Ask Zenith: “…”**) open the same floating window on Customers, Projects, Support Tickets, Zenith, and other CRM pages. On **phone**, Zenith still uses the **Ask** tab.
 
 Quota: **60 asks / 10 minutes** per person. The composer shows how many are left.
 
@@ -151,4 +151,4 @@ Say the action in plain language; Ask navigates when your role allows. Full pale
 - **Sales** analytics stay scoped to your own book (same as Zenith Sales KPIs).
 - Other roles see company-wide metrics allowed for their pack under the current filters.
 - Classic **AI Insights** ticker and **Daily briefing** stay rule-based and separate from Ask.
-- Prefer **Ctrl+K** / **⌘K** for jumps and create. For analytics on any CRM page, use header **Ask** or **Ask Zenith: “…”** in the palette.
+- Prefer **Ctrl+K** / **⌘K** for jumps and create. For analytics on any CRM page, use header **Ask Zenith** or **Ask Zenith: “…”** in the palette.

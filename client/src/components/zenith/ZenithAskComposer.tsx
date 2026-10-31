@@ -18,6 +18,8 @@ type Props = {
   mappedLabel?: string | null
   /** Parent already shows the Ask Zenith heading (e.g. the floating dock). */
   hideTitle?: boolean
+  /** Compact single-line field for the floating window. */
+  compact?: boolean
 }
 
 /**
@@ -34,6 +36,7 @@ export default function ZenithAskComposer({
   remainingAsks = null,
   mappedLabel = null,
   hideTitle = false,
+  compact = false,
 }: Props) {
   const askSpeech = useZenithAskSpeech({
     enabled: isOnline && !loading,
@@ -67,7 +70,7 @@ export default function ZenithAskComposer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="zenith-ask-composer w-full"
+      className={`zenith-ask-composer w-full${compact ? ' zenith-ask-composer--compact' : ''}`}
       role="search"
       aria-label="Zenith Ask"
     >
@@ -118,7 +121,7 @@ export default function ZenithAskComposer({
         </label>
         <textarea
           id={inputId}
-          rows={3}
+          rows={compact ? 1 : 3}
           value={value}
           onChange={(e) => {
             askSpeech.markManualEdit()

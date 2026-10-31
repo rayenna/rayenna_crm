@@ -39,7 +39,7 @@ Use this section when you are **new to the system** or onboarding a colleague. P
 ## Power features (when you are ready)
 
 - **Zenith** — immersive analytics, Hit List, deal funnel, chart drill-downs. [Zenith command center](/help/zenith#zenith-command-center)
-- **Ask Zenith** — natural-language analytics and task jumps on Zenith (same tasks as the palette). [Ask Zenith](/help/zenith#ask-zenith-natural-language)
+- **Ask Zenith** — natural-language analytics and task jumps from the header **Ask Zenith** button (same tasks as the palette). [Ask Zenith](/help/zenith#ask-zenith-natural-language)
 - **Command palette** — **Ctrl+K** / **⌘K** from any page for create, queues, and Go to. [Command palette](#command-palette-anywhere)
 - **My Day** — personal tasks pinned from the dashboard or Zenith (**Ctrl+Shift+M** / **⌘⇧M**, **☀** in the nav, or palette **Open My Day**). [My Day drawer](/help/zenith#my-day-personal-productivity-drawer)
 - **Proposal Engine** — **More → Proposal Engine** opens the PE Customers/Projects list (your CRM login; no project pre-selected). From a project: **Proposals** on **Proposal** or **Confirmed**, and on later stages (including **Lost**) when a proposal is already stored. [Modules](/help/modules)

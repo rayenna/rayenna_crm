@@ -150,7 +150,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: Solar News, Ask Zenith, KPI tiles, then AI Insights from your loaded CRM data, then The Board (executive roles; starts collapsed). On phones, Zenith opens on Today and shows Solar News / AI Insights only on that tab. Also: collapsible Your Focus, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar, and Quick Actions lists with Open in Projects →. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: Solar News, KPI tiles, then AI Insights from your loaded CRM data, then The Board (executive roles; starts collapsed). Open Ask Zenith from the header (laptop: floating window; phone: Ask tab). On phones, Zenith opens on Today and shows Solar News / AI Insights only on that tab. Also: collapsible Your Focus, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar, and Quick Actions lists with Open in Projects →. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',

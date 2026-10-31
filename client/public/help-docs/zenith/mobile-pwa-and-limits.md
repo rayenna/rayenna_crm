@@ -46,7 +46,7 @@ Rayenna CRM can be **installed** on a phone or laptop (**Add to Home Screen** / 
 - Open Zenith once on Wi‑Fi with your usual filters before going to a site with weak signal.
 - If numbers look stale, reconnect and pull to refresh or change a filter to refetch.
 - Failed sync items stay in the queue with **Retry** on the status strip.
-- For Ask Zenith offline behaviour and shortcuts (**/** or **A** to focus Ask), see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
+- For Ask Zenith offline behaviour and shortcuts (**/** or **A** to open Ask), see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
 
 ---
 

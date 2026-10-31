@@ -1,6 +1,6 @@
 # Command bar and filters
 
-Open Zenith, set **FY / Quarter / Month**, use **Live/Offline** and the **daily briefing**. Below **Solar News**, **Ask Zenith** lets every Zenith role ask **analytics** questions or run **tasks** (create, search, queues — same set as **Ctrl+K** / **⌘K**). See [Ask Zenith](#ask-zenith-natural-language) and [Command palette](/help/getting-started#command-palette-anywhere). Ask analytics use the same FY / Quarter / Month filters as KPIs. Filter rules match the [classic Dashboard](/help/dashboard#dashboard-filters).
+Open Zenith, set **FY / Quarter / Month**, use **Live/Offline** and the **daily briefing**. **Ask Zenith** (header button, or **/** / **A**) lets every Zenith role ask **analytics** questions or run **tasks** (create, search, queues — same set as **Ctrl+K** / **⌘K**). See [Ask Zenith](#ask-zenith-natural-language) and [Command palette](/help/getting-started#command-palette-anywhere). Ask analytics use the same FY / Quarter / Month filters as KPIs. Filter rules match the [classic Dashboard](/help/dashboard#dashboard-filters).
 
 
 ## Opening Zenith

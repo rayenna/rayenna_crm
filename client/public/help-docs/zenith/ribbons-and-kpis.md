@@ -1,12 +1,12 @@
 # Ribbons and KPIs
 
-Below the sticky command bar on **desktop**: **Solar News**, then **Ask Zenith**, then the **KPI strip**, then **AI Insights**, then **The Board** (Sales / Management / Admin), then the rest of the overview (Things needing attention, Hit List, forecast, etc.).
+Below the sticky command bar on **desktop**: **Solar News**, then the **KPI strip**, then **AI Insights**, then **The Board** (Sales / Management / Admin), then the rest of the overview (Things needing attention, Hit List, forecast, etc.). **Ask Zenith** opens as a **floating window** from the header button (or **/** / **A**).
 
 On **phones / narrow** layouts, **Solar News** and **AI Insights** appear only on the **Today** (or **KPIs**) tab — not on Ask, Pipeline, Charts, or More. See [Mobile navigation](#mobile-navigation-and-layout-zenith).
 
 ## Solar News ticker
 
-**Where** — Full-width strip **below** the command bar and **above** Ask / the KPI tiles. On **mobile**, only while the **Today** (or **KPIs**) tab is selected.
+**Where** — Full-width strip **below** the command bar and **above** the KPI tiles. On **mobile**, only while the **Today** (or **KPIs**) tab is selected.
 
 **What** — Short **headlines** from a fixed set of **solar / energy RSS feeds** (no HTML scraping). The CRM server fetches and normalises feeds on a **~30 minute** cache (`/api/solar-news`); the browser loads the ticker from that API after login.
 

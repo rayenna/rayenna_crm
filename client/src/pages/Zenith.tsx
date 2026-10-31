@@ -8,7 +8,6 @@ import { useZenithMainQuery } from '../hooks/useZenithMainQuery'
 import { useZenithExplorerQuery } from '../hooks/useZenithExplorerQuery'
 import '../styles/zenith.css'
 import CommandBar from '../components/zenith/CommandBar'
-import ZenithFilterSegments from '../components/zenith/ZenithFilterSegments'
 import ZenithAskComposer from '../components/zenith/ZenithAskComposer'
 import ZenithAskPanel from '../components/zenith/ZenithAskPanel'
 import ZenithAskAdoptionStats from '../components/zenith/ZenithAskAdoptionStats'
@@ -77,6 +76,8 @@ import {
 import { trackZenithAskEvent } from '../utils/zenithAskAnalytics'
 import { zenithAskMappedLabel } from '../utils/zenithAskMappedLabel'
 import { handleZenithAskAction } from '../utils/zenithAskActionHref'
+import { openZenithAskDock } from '../utils/zenithAskOpen'
+import { setZenithAskDateFilters } from '../utils/zenithAskDateFilters'
 import type {
   ZenithAskHistoryItem,
   ZenithNlPriorContext,
@@ -205,11 +206,15 @@ const Zenith = () => {
     setMobileTab(tab)
   }, [])
 
-  /** On mobile, Ask lives on its own tab; desktop always shows the composer. */
-  const showAskSurface = Boolean(showZenithAsk && (!narrow || mobileTab === 'ask'))
+  /** Mobile Ask tab only — laptop Ask is the floating window from the header. */
+  const showAskSurface = Boolean(showZenithAsk && narrow && mobileTab === 'ask')
 
   const focusAskInput = useCallback(() => {
-    if (narrow) handleMobileTabChange('ask')
+    if (!narrow) {
+      openZenithAskDock({ focus: true })
+      return
+    }
+    handleMobileTabChange('ask')
     const tryFocus = (attemptsLeft: number) => {
       const input = document.getElementById('zenith-ask-input') as HTMLTextAreaElement | null
       if (input) {
@@ -224,7 +229,7 @@ const Zenith = () => {
     window.requestAnimationFrame(() => tryFocus(10))
   }, [narrow, handleMobileTabChange])
 
-  /** Focus Ask composer — `/` or `A` when not typing in a field. */
+  /** `/` or `A` — floating Ask on laptop, Ask tab on phone. */
   useEffect(() => {
     if (!showZenithAsk) return
     const onKeyDown = (event: KeyboardEvent) => {
@@ -247,6 +252,15 @@ const Zenith = () => {
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [showZenithAsk, focusAskInput])
+
+  useEffect(() => {
+    setZenithAskDateFilters({
+      fy: selectedFYs,
+      quarter: selectedQuarters,
+      month: selectedMonths,
+    })
+    return () => setZenithAskDateFilters(null)
+  }, [selectedFYs, selectedQuarters, selectedMonths])
 
   const pushAskHistory = useCallback(
     (success: ZenithNlQueryMetricSuccess) => {
@@ -376,6 +390,14 @@ const Zenith = () => {
     next.delete('ask')
     next.delete('askRun')
     setSearchParams(next, { replace: true })
+    if (!narrow) {
+      openZenithAskDock({
+        question: askQ || undefined,
+        run: Boolean(askQ && askRun && isOnline),
+        focus: true,
+      })
+      return
+    }
     setAskPanelDismissed(false)
     if (askQ) {
       setAskValue(askQ)
@@ -391,6 +413,7 @@ const Zenith = () => {
     showZenithAsk,
     searchParams,
     isOnline,
+    narrow,
     focusAskInput,
     setSearchParams,
     runZenithAsk,
@@ -716,7 +739,6 @@ const Zenith = () => {
       <div className="zenith-command-offline-stack">
         <CommandBar
           stacked
-          deferDesktopFilters
           availableFYs={availableFYs}
           selectedFYs={selectedFYs}
           selectedQuarters={selectedQuarters}
@@ -734,23 +756,6 @@ const Zenith = () => {
             selectedFYs !== queryFYs ||
             selectedQuarters !== queryQuarters ||
             selectedMonths !== queryMonths
-          }
-          desktopCenterSlot={
-            !narrow && showZenithAsk ? (
-              <div id="zenith-ask-surface" className="zenith-ask-command-wrap">
-                <ZenithAskComposer
-                  value={askValue}
-                  onChange={setAskValue}
-                  onSubmit={(q, source) => {
-                    void runZenithAsk(q, source ?? 'typed')
-                  }}
-                  loading={askLoading}
-                  isOnline={isOnline}
-                  remainingAsks={remainingAsks}
-                  mappedLabel={askLoading ? zenithAskMappedLabel(askValue) : null}
-                />
-              </div>
-            ) : null
           }
         />
 
@@ -775,16 +780,13 @@ const Zenith = () => {
         <SolarNewsTicker deferLoadMs={2000} />
       ) : null}
 
-      {/*
-        Desktop: composer lives in the sticky command bar; chips + answer panel sit below.
-        Mobile: full Ask tab surface (composer + chips + panel).
-      */}
+      {/* Mobile Ask tab: composer + chips + panel. Laptop uses the floating Ask window. */}
       {showAskSurface ? (
         <section
-          id={narrow ? 'zenith-ask-surface' : 'zenith-ask-follow'}
-          className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-2 pb-1${
+          id="zenith-ask-surface"
+          className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-2 pb-1 zenith-ask-page-block--mobile-surface${
             showAskSideSuggestions ? ' zenith-ask-page-block--with-suggestions' : ''
-          }${narrow ? ' zenith-ask-page-block--mobile-surface' : ' zenith-ask-page-block--desktop-follow'}`}
+          }`}
           aria-label="Zenith Ask"
         >
           {narrow ? (
@@ -905,32 +907,9 @@ const Zenith = () => {
         </section>
       ) : null}
 
-      {/* Desktop / laptop: Solar News under Ask, then FY filters, then KPI tiles */}
+      {/* Desktop / laptop: Solar News under the command bar, then KPI tiles */}
       {!narrow && user?.role && showTickers ? (
         <SolarNewsTicker deferLoadMs={2000} />
-      ) : null}
-
-      {!narrow ? (
-        <div
-          className="zenith-exec-main mx-auto w-full max-w-3xl px-3 sm:px-5 pt-2 pb-1"
-          aria-label="Date filters"
-        >
-          <ZenithFilterSegments
-            availableFYs={availableFYs}
-            selectedFYs={selectedFYs}
-            selectedQuarters={selectedQuarters}
-            selectedMonths={selectedMonths}
-            onFYChange={setSelectedFYs}
-            onQuarterChange={setSelectedQuarters}
-            onMonthChange={setSelectedMonths}
-            onResetAll={handleResetFilters}
-          />
-          {filterSummary ? (
-            <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
-              {filterSummary}
-            </p>
-          ) : null}
-        </div>
       ) : null}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
@@ -1080,7 +1059,11 @@ const Zenith = () => {
             myDaySnapshotLoading={myDaySnapQ.isLoading}
             myDaySnapshotError={myDaySnapQ.isError}
             onAskZenith={(q) => {
-              void runZenithAsk(q, 'chip')
+              if (narrow) {
+                void runZenithAsk(q, 'chip')
+                return
+              }
+              openZenithAskDock({ question: q, run: true, focus: true })
             }}
           />
         ) : null}

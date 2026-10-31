@@ -3304,75 +3304,443 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 .zenith-ask-dock-launcher {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   border-radius: 0.75rem;
   border: 1px solid var(--accent-gold-border);
   background: var(--accent-gold-muted);
   color: var(--accent-gold);
   font-size: 0.8rem;
   font-weight: 800;
-  padding: 0.45rem 0.7rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  animation: zenith-ask-launcher-pulse 2.6s ease-in-out infinite;
+}
+
+.zenith-ask-dock-launcher:hover {
+  filter: brightness(1.08);
+}
+
+.zenith-ask-dock-launcher--open {
+  animation: none;
+  box-shadow: 0 0 0 1px var(--accent-gold-border);
+}
+
+@keyframes zenith-ask-launcher-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-gold) 42%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-gold) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-ask-dock-launcher {
+    animation: none;
+  }
+}
+
+.zenith-ask-dock-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5890;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(8vh, 4.5rem) 1rem 1.75rem;
+  pointer-events: none;
 }
 
 .zenith-ask-dock {
-  position: fixed;
-  right: max(0.75rem, env(safe-area-inset-right, 0px));
-  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-  z-index: 70;
-  width: min(28rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
-  max-height: min(36rem, calc(100dvh - 5rem - env(safe-area-inset-top, 0px)));
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  container-type: inline-size;
+  container-name: zenith-ask;
+  width: min(38rem, calc(100vw - 1.5rem));
+  height: auto;
+  max-height: min(78dvh, calc(100dvh - 6rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
   min-height: 0;
-  overflow: auto;
-  border: 1px solid var(--accent-gold-border);
-  border-radius: 1rem;
-  background: var(--bg-page);
-  padding: 0.75rem;
-  box-shadow: 0 18px 48px color-mix(in srgb, #000 35%, transparent);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 28%, var(--border-default));
+  border-radius: 1.15rem;
+  isolation: isolate;
+  background: var(--bg-modal);
+  padding: 0.85rem 0.95rem 0.8rem;
+  box-shadow:
+    0 28px 64px color-mix(in srgb, #000 42%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+  animation: zenith-ask-dock-rise 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Dock is a compact overlay — do not inherit page min-height from .zenith-root */
+.zenith-ask-dock--expanded {
+  width: min(46rem, calc(100vw - 1.5rem));
+}
+
+.zenith-ask-dock--placed {
+  position: fixed;
+  margin: 0;
+  animation: none;
+  transform: none;
+}
+
+.zenith-ask-dock--sized {
+  max-height: none;
+}
+
+.zenith-ask-dock--sized .zenith-ask-dock__body,
+.zenith-ask-dock--expanded.zenith-ask-dock--sized .zenith-ask-dock__body {
+  flex: 1 1 auto;
+}
+
+.zenith-ask-dock--dragging {
+  user-select: none;
+  animation: none;
+  transition: none;
+  cursor: grabbing;
+}
+
+@keyframes zenith-ask-dock-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-ask-dock {
+    animation: none;
+  }
+}
+
+/* Overlay — opaque card; do not inherit page min-height or glass tokens */
 .zenith-root.zenith-ask-dock {
+  --bg-card: var(--bg-modal);
+  --bg-card-hover: var(--bg-surface);
+  --bg-input: var(--bg-surface);
+  --accent-gold-muted: color-mix(in srgb, var(--accent-gold) 18%, var(--bg-modal));
   min-height: 0;
+  background-color: var(--bg-modal);
+  background-image: none;
 }
 
 .zenith-ask-dock__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.4rem;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  margin: 0 0 0.65rem;
+  padding: 0 0.1rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-gold) 14%, var(--border-default));
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.zenith-ask-dock--dragging .zenith-ask-dock__bar {
+  cursor: grabbing;
+}
+
+.zenith-ask-dock__bar .zenith-ask-result__close {
+  cursor: pointer;
+  touch-action: manipulation;
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 55%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-gold) 16%, var(--bg-modal));
+  color: var(--accent-gold);
+}
+
+.zenith-ask-dock__bar .zenith-ask-result__close:hover {
+  background: color-mix(in srgb, var(--accent-gold) 28%, var(--bg-modal));
 }
 
 .zenith-ask-dock__title {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem;
   margin: 0;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-inverse);
-  background: linear-gradient(
-    120deg,
-    var(--accent-gold) 0%,
-    color-mix(in srgb, var(--accent-gold) 70%, #c9a227) 100%
-  );
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-gold) 40%, transparent);
+  font-family: Syne, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.2;
+  color: var(--text-primary);
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .zenith-ask-dock__title .zenith-ask-composer__quota {
-  color: color-mix(in srgb, var(--text-inverse) 82%, #000 18%);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-/* Dock composer has no badge — give that width to the input. Keep the original one-row bar. */
-@media (min-width: 1024px) {
-  .zenith-root.zenith-ask-dock .zenith-ask-composer__input {
-    flex: 1 1 auto;
-    min-width: 0;
-    width: auto;
+.zenith-ask-dock__composer {
+  flex-shrink: 0;
+  margin-bottom: 0.55rem;
+}
+
+.zenith-ask-dock__body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 0.15rem;
+}
+
+.zenith-ask-dock--expanded .zenith-ask-dock__body {
+  flex: 1 1 auto;
+}
+
+.zenith-ask-dock__body .zenith-ask-examples--panel {
+  margin-bottom: 0.55rem;
+}
+
+.zenith-ask-dock__prompts {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  margin: 0 0 0.45rem;
+}
+
+.zenith-ask-dock__prompts .zenith-ask-examples__label {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.zenith-ask-dock__prompts .zenith-ask-examples--panel {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+.zenith-ask-dock__resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.zenith-ask-dock__resize::before {
+  content: '';
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 0.62rem;
+  height: 0.62rem;
+  border-right: 2px solid color-mix(in srgb, var(--accent-gold) 72%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent-gold) 72%, transparent);
+  border-radius: 0 0 3px 0;
+}
+
+.zenith-ask-dock__resize:hover::before,
+.zenith-ask-dock__resize:focus-visible::before {
+  border-color: var(--accent-gold);
+}
+
+/*
+ * Floating window composer — compact search bar at every viewport.
+ * Do not inherit the mobile Ask-tab layout (stacked textarea + 48px CTAs).
+ */
+.zenith-root.zenith-ask-dock .zenith-ask-composer,
+.zenith-root.zenith-ask-dock .zenith-ask-composer__shell {
+  width: 100%;
+  min-width: 0;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__shell {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.4rem;
+  padding: 0.32rem 0.38rem;
+  border-radius: 1.35rem;
+  border-width: 1px;
+  animation: none;
+  background: var(--bg-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 16%, transparent),
+    0 6px 18px color-mix(in srgb, var(--accent-gold) 12%, transparent);
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__header,
+.zenith-root.zenith-ask-dock .zenith-ask-composer__header-meta {
+  display: contents;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__hint {
+  display: none;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__clear {
+  order: 3;
+  gap: 0.3rem;
+  padding: 0 0.7rem;
+  min-height: 2.15rem;
+  min-width: 2.15rem;
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 72%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-gold) 18%, var(--bg-modal));
+  color: var(--accent-gold);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__clear span {
+  display: inline;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__clear:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-gold) 32%, var(--bg-modal));
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__input {
+  display: block;
+  flex: 1 1 12rem;
+  order: 1;
+  min-width: 0;
+  width: auto;
+  min-height: 2.5rem;
+  max-height: 4.5rem;
+  height: 2.6rem;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  border-radius: 1rem;
+  resize: none;
+  overflow-y: auto;
+  background: var(--bg-modal);
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__input::placeholder {
+  font-size: 0.8rem;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__actions {
+  display: flex;
+  flex: 0 0 auto;
+  order: 2;
+  grid-template-columns: none;
+  margin-top: 0;
+  gap: 0.28rem;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__mic,
+.zenith-root.zenith-ask-dock .zenith-ask-composer__submit {
+  min-height: 2.15rem;
+  min-width: 2.15rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  gap: 0.28rem;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__mic-label {
+  display: none;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-composer__status {
+  flex: 1 0 100%;
+  order: 10;
+  margin-top: 0;
+  font-size: 0.65rem;
+  justify-content: flex-start;
+  padding: 0 0.3rem 0.05rem;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-examples--panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  padding: 0;
+  mask-image: none;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-examples__chip,
+.zenith-root.zenith-ask-dock .zenith-ask-history__item {
+  width: auto;
+  max-width: min(16rem, 100%);
+  min-height: 1.9rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-examples__chip {
+  flex: 0 1 auto;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-history__item {
+  flex: 0 0 auto;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-suggestions,
+.zenith-root.zenith-ask-dock .zenith-ask-result,
+.zenith-root.zenith-ask-dock .zenith-ask-more {
+  max-width: 100%;
+  width: 100%;
+  align-self: stretch;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-result--history-only {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.zenith-root.zenith-ask-dock .zenith-ask-table__body {
+  max-height: min(18rem, 42dvh);
+}
+
+@container zenith-ask (max-width: 28rem) {
+  .zenith-ask-dock__prompts {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .zenith-ask-composer__input {
+    flex-basis: 100%;
+  }
+
+  .zenith-ask-examples__chip,
+  .zenith-ask-history__item {
+    max-width: 100%;
   }
 }
 

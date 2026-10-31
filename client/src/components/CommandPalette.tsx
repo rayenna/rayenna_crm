@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { openZenithAskDock } from '../utils/zenithAskOpen'
+import { ZENITH_NARROW_MQ } from '../hooks/useZenithNarrowLayout'
 import { openProposalEngine } from '../lib/openProposalEngine'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDayContext } from '../contexts/MyDayContext'
@@ -169,16 +170,17 @@ export default function CommandPalette({ open, onClose }: Props) {
       void openProposalEngine()
       return
     }
-    if (
-      (item.id === 'ask_zenith' || item.id === 'ask_zenith_query') &&
-      !location.pathname.startsWith('/zenith')
-    ) {
-      openZenithAskDock({
-        question: item.id === 'ask_zenith_query' ? query.trim() : undefined,
-        run: item.id === 'ask_zenith_query' && Boolean(query.trim()),
-        focus: true,
-      })
-      return
+    if (item.id === 'ask_zenith' || item.id === 'ask_zenith_query') {
+      const onZenith = location.pathname.startsWith('/zenith')
+      const narrow = window.matchMedia(ZENITH_NARROW_MQ).matches
+      if (!(onZenith && narrow)) {
+        openZenithAskDock({
+          question: item.id === 'ask_zenith_query' ? query.trim() : undefined,
+          run: item.id === 'ask_zenith_query' && Boolean(query.trim()),
+          focus: true,
+        })
+        return
+      }
     }
     navigate(resolved.href)
   }
