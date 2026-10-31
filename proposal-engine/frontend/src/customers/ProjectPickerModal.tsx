@@ -162,7 +162,7 @@ export function ProjectPickerModal({
           </div>
 
           {/* Sort & Stage / Sales filters row */}
-          <div className="mt-3 rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50/60 via-white to-amber-50/60 px-3 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-[11px] shadow-sm">
+          <div className="mt-3 rounded-xl border border-primary-100 dark:border-white/10 bg-gradient-to-r from-primary-50/60 via-white to-amber-50/60 dark:from-white/5 dark:via-[#14141C] dark:to-amber-500/10 px-3 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-[11px] shadow-sm">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 text-secondary-600 font-semibold uppercase tracking-wide">
                 <span className="text-[13px]">↕</span>

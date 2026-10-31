@@ -69,7 +69,7 @@ export function RoofLayoutStatusStrip({
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5 sm:px-4 sm:py-3"
+      className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5 sm:px-4 sm:py-3 pe-roof-card"
       role="status"
       aria-live="polite"
     >

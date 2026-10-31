@@ -15,7 +15,7 @@ export function RoofLayoutActiveCustomerBanner() {
           )}
         </p>
         <Link
-          to="/"
+          to="/dashboard"
           className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors"
         >
           View Dashboard →

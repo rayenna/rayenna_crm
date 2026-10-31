@@ -16,7 +16,7 @@ export function RoofLayoutPanelActions({
   onRefillAll,
 }: Props) {
   return (
-    <div className="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 space-y-2">
+    <div className="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 space-y-2 pe-roof-card">
       <p className="text-xs font-semibold text-indigo-900">Panel placement</p>
       <p className="text-[11px] text-indigo-800/90 leading-snug">
         Fills the active roof section up to CRM target kW (split across sections when multi-facet), skipping

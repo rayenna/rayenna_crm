@@ -399,19 +399,37 @@ export function costingToBom(items: LineItem[]): BomRowGenerated[] {
   return Array.from(map.values());
 }
 
-export function catAccentColor(catValue: string): string {
-  const map: Record<string, string> = {
-    'pv-modules':         '#0369a1',
-    'inverters':          '#b45309',
-    'mounting-structure': '#475569',
-    'dc-db':              '#c2410c',
-    'ac-db':              '#b91c1c',
-    'dc-cable':           '#d97706',
-    'ac-cable':           '#65a30d',
-    'earthing':           '#059669',
-    'meter':              '#7c3aed',
-    'installation':       '#1d4ed8',
-    'others':             '#6b7280',
-  };
-  return map[catValue] ?? '#6b7280';
+const CAT_ACCENT_LIGHT: Record<string, string> = {
+  'pv-modules':         '#0369a1',
+  'inverters':          '#b45309',
+  'mounting-structure': '#475569',
+  'dc-db':              '#c2410c',
+  'ac-db':              '#b91c1c',
+  'dc-cable':           '#d97706',
+  'ac-cable':           '#65a30d',
+  'earthing':           '#059669',
+  'meter':              '#7c3aed',
+  'installation':       '#1d4ed8',
+  'others':             '#6b7280',
+};
+
+/** Bright accents for dark UI chrome. Not used in Light mode. */
+const CAT_ACCENT_DARK: Record<string, string> = {
+  'pv-modules':         '#7dd3fc',
+  'inverters':          '#fbbf24',
+  'mounting-structure': '#cbd5e1',
+  'dc-db':              '#fb923c',
+  'ac-db':              '#f87171',
+  'dc-cable':           '#fbbf24',
+  'ac-cable':           '#a3e635',
+  'earthing':           '#34d399',
+  'meter':              '#c4b5fd',
+  'electrical-items':   '#fb7185',
+  'installation':       '#60a5fa',
+  'others':             '#d4d4d8',
+};
+
+export function catAccentColor(catValue: string, theme: 'light' | 'dark' = 'light'): string {
+  if (theme === 'dark') return CAT_ACCENT_DARK[catValue] ?? '#d4d4d8';
+  return CAT_ACCENT_LIGHT[catValue] ?? '#6b7280';
 }

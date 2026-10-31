@@ -21,7 +21,7 @@ export function RoofLayoutKeepoutControls({
   onClear,
 }: Props) {
   return (
-    <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-3 space-y-2">
+    <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-3 space-y-2 pe-roof-card">
       <p className="text-xs font-semibold text-orange-900">Roof keepouts</p>
       <p className="text-[11px] text-orange-800/90 leading-snug">
         Mark vents, tanks, or skylights so panels are not placed there. On phone, tap{' '}

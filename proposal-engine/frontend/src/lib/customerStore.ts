@@ -854,9 +854,9 @@ export const STATUS_LABELS: Record<ProposalStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<ProposalStatus, string> = {
-  'not-started':    'bg-slate-100 text-slate-600 border-slate-200',
-  'draft':          'bg-secondary-100 text-secondary-600 border-secondary-300',
-  'proposal-ready': 'bg-blue-50 text-blue-700 border-blue-200',
+  'not-started':    'bg-slate-100 text-slate-600 border-slate-200 pe-badge-not-started',
+  'draft':          'bg-secondary-100 text-secondary-600 border-secondary-300 pe-badge-draft',
+  'proposal-ready': 'bg-blue-50 text-blue-700 border-blue-200 pe-badge-ready',
 };
 
 /** Core PE artifacts shown on customer cards (costing → proposal + roof layout). */

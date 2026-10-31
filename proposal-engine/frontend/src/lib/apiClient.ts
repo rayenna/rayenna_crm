@@ -5,6 +5,7 @@
 export * from './api/core';
 export * from './api/session';
 export * from './api/auth';
+export * from './api/theme';
 export * from './api/roofLayout';
 export * from './api/proposalEngine';
 export * from './api/projectDetail';

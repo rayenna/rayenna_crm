@@ -7,6 +7,7 @@ export interface LoginResponse {
     email: string;
     name: string;
     role: string;
+    themePreference?: 'light' | 'dark' | null;
   };
 }
 

@@ -592,7 +592,7 @@ function RecentCustomerCard({
             </span>
           )}
         </div>
-        {isActive && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-bold flex-shrink-0">Active</span>}
+        {isActive && <span className="pe-badge-active text-[9px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-bold flex-shrink-0">Active</span>}
       </div>
       {record.master.location && (
         <p className="text-xs text-secondary-400 truncate mb-2">{record.master.location}</p>

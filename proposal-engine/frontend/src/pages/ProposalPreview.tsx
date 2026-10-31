@@ -1246,7 +1246,7 @@ export default function ProposalPreview() {
           </div>
         </div>
         {proposal && (
-          <div className="border-b border-slate-200 bg-white px-4 sm:px-6 md:px-8 py-2.5">
+          <div className="border-b border-slate-200 bg-white dark:border-white/10 dark:bg-[#14141C] px-4 sm:px-6 md:px-8 py-2.5">
             {renderToolbar()}
           </div>
         )}
@@ -1595,22 +1595,22 @@ export default function ProposalPreview() {
                 </div>
                 </ProposalTextOverridesContext.Provider>
               </div>
-
-              {/* Footer — same toolbar as the header */}
-              <div className="print-hide border-t border-slate-200 bg-white px-4 sm:px-6 md:px-8 py-2.5">
-                <p className="text-[10px] sm:text-xs text-secondary-400 mb-2.5">
-                  Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
-                  {savedToCustomer && saveStatus === 'saved' && (
-                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
-                      Saved to {savedToCustomer}
-                    </span>
-                  )}
-                </p>
-                {renderToolbar()}
-              </div>
             </div>
           )}
         </div>
+        {proposal && (
+          <div className="print-hide border-t border-slate-200 bg-white dark:border-white/10 dark:bg-[#14141C] px-4 sm:px-6 md:px-8 py-2.5">
+            <p className="text-[10px] sm:text-xs text-secondary-400 mb-2.5">
+              Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
+              {savedToCustomer && saveStatus === 'saved' && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                  Saved to {savedToCustomer}
+                </span>
+              )}
+            </p>
+            {renderToolbar()}
+          </div>
+        )}
       </div>
 
       

@@ -515,7 +515,7 @@ export default function ROICalculator() {
                   <span className="font-semibold">Active customer:</span> {ac.master.name}
                   {ac.roi && <span className="ml-2 text-emerald-600 font-medium">· ROI saved ✓</span>}
                 </p>
-                <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+                <Link to="/dashboard" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
                   View Dashboard →
                 </Link>
               </div>
@@ -562,7 +562,7 @@ export default function ROICalculator() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* ── Inputs ── */}
             <div className="lg:col-span-1">
-              <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6">
+              <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 pe-roi-panel p-6">
                 <h2 className="text-xs font-bold text-secondary-600 mb-5 uppercase tracking-widest">Inputs</h2>
 
                 <div className="space-y-4">
@@ -710,7 +710,7 @@ export default function ROICalculator() {
             {/* ── Results ── */}
             <div className="lg:col-span-2 space-y-6">
               {!result && (
-                <div className="flex items-center justify-center h-64 bg-white/60 border-2 border-dashed border-primary-200 rounded-xl">
+                <div className="flex items-center justify-center h-64 bg-white/60 border-2 border-dashed border-primary-200 rounded-xl pe-roi-empty">
                   <div className="text-center">
                     <p className="text-4xl mb-3">📈</p>
                     <p className="text-secondary-500 text-sm">
@@ -737,7 +737,7 @@ export default function ROICalculator() {
                     <KpiCard label="CO₂ Offset" value={`${fmt(result.co2OffsetTons, 1)} T`} sub="Tonnes over 25 years" color="green" />
                   </div>
 
-                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 pe-roi-panel px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <p className="text-xs text-secondary-500 uppercase tracking-wide font-medium">Levelised Cost of Energy (LCOE)</p>
                       <p className="text-xl font-bold text-primary-700 tabular-nums mt-0.5">₹{fmt(result.lcoe, 4)}/kWh</p>
@@ -755,11 +755,11 @@ export default function ROICalculator() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6">
+                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 pe-roi-panel p-6">
                     <SavingsChart rows={result.yearlyBreakdown} projectCost={result.effectiveProjectCost ?? result.inputs.projectCost} />
                   </div>
 
-                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6">
+                  <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 pe-roi-panel p-6">
                     <YearlyTable rows={result.yearlyBreakdown} />
                   </div>
 

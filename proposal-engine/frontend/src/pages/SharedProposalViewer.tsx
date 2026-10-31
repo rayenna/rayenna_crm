@@ -47,7 +47,7 @@ export default function SharedProposalViewer() {
 
   if (status === 'password') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="pe-force-light min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 max-w-md w-full">
           <h1 className="text-lg font-semibold text-gray-900 mb-2">Password required</h1>
           <p className="text-sm text-gray-600 mb-4">This proposal link is protected. Enter the password to view.</p>
@@ -75,7 +75,7 @@ export default function SharedProposalViewer() {
 
   if (status === 'expired' || status === 'error') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="pe-force-light min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 max-w-md w-full text-center">
           <p className="text-red-600 font-medium">
             {status === 'expired' ? 'This link has expired.' : errorMessage ?? 'This link is invalid or has been removed.'}
@@ -87,7 +87,7 @@ export default function SharedProposalViewer() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="pe-force-light min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -95,7 +95,7 @@ export default function SharedProposalViewer() {
 
   if (status === 'content' && html) {
     return (
-      <div className="min-h-screen bg-gray-100 py-4 px-2 sm:px-4">
+      <div className="pe-force-light min-h-screen bg-gray-100 py-4 px-2 sm:px-4">
         <style>{`
           /* Hide interactive-only elements (buttons, textareas, etc.) */
           .proposal-shared-content .print-hide { display: none !important; }

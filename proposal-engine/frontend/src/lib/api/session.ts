@@ -1,4 +1,5 @@
 import { reportStorageFailure } from '../safeLocalStorage';
+import { clearThemeSession } from '../../theme/theme';
 
 const TOKEN_KEY = 'pe_jwt';
 const USER_ID_KEY = 'pe_user_id';
@@ -150,6 +151,7 @@ export function getCurrentUserId(): string | null {
 
 export function handleUnauthorized(): void {
   clearToken();
+  clearThemeSession();
   if (window.location.pathname !== '/login') {
     window.location.href = '/login';
   }

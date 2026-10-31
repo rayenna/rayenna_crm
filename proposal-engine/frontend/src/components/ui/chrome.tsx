@@ -132,16 +132,16 @@ export const btnPrimary =
   'inline-flex items-center justify-center gap-1.5 bg-[#0A9E87] hover:bg-[#087A6A] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed';
 
 export const btnSecondary =
-  'inline-flex items-center justify-center gap-1.5 bg-white hover:bg-secondary-50 text-primary-800 border border-secondary-300 text-xs font-semibold px-3 py-2 rounded-lg transition-colors min-h-[36px] disabled:opacity-40';
+  'inline-flex items-center justify-center gap-1.5 bg-white hover:bg-secondary-50 text-primary-800 border border-secondary-300 text-xs font-semibold px-3 py-2 rounded-lg transition-colors min-h-[36px] disabled:opacity-40 pe-btn-secondary';
 
 export const btnGhost =
-  'text-[11px] font-medium text-secondary-500 hover:text-secondary-800 px-2 py-1.5 rounded-lg hover:bg-secondary-50';
+  'text-[11px] font-medium text-secondary-500 hover:text-secondary-800 px-2 py-1.5 rounded-lg hover:bg-secondary-50 pe-btn-ghost';
 
 /** Compact action chips used on the Proposal page toolbar (top and bottom). */
 export const toolbarBtn =
   'inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md min-h-[32px] leading-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap';
 
-export const toolbarBtnGhost = `${toolbarBtn} bg-white text-slate-800 border border-slate-200 hover:bg-slate-50`;
+export const toolbarBtnGhost = `${toolbarBtn} bg-white text-slate-800 border border-slate-200 hover:bg-slate-50 dark:bg-white/10 dark:text-white dark:border-white/15 dark:hover:bg-white/15`;
 
 export const toolbarBtnPrimary = `${toolbarBtn} bg-[#0A9E87] hover:bg-[#087A6A] text-white border border-transparent`;
 
@@ -153,7 +153,7 @@ export const toolbarBtnEdit =
 
 /** Proposal page: Cancel edit — soft slate. */
 export const toolbarBtnCancel =
-  `${toolbarBtn} bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300`;
+  `${toolbarBtn} bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/15 dark:text-white dark:border-white/20`;
 
 /** Proposal page: Share — sky. */
 export const toolbarBtnShare =
@@ -163,16 +163,16 @@ export const toolbarBtnShare =
 export const toolbarBtnRegenerate =
   `${toolbarBtn} bg-amber-500 hover:bg-amber-600 text-white border border-amber-600/20 shadow-sm`;
 
-/** Proposal page: PDF / DOCX / PPT cluster chips. */
+/** Proposal page: PDF / DOCX / PPT — same solid chrome as Edit / Share. */
 export const toolbarBtnExportPdf =
-  `${toolbarBtn} bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200`;
+  `${toolbarBtn} bg-rose-600 hover:bg-rose-700 text-white border border-rose-700/20 shadow-sm`;
 export const toolbarBtnExportDocx =
-  `${toolbarBtn} bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200`;
+  `${toolbarBtn} bg-blue-600 hover:bg-blue-700 text-white border border-blue-700/20 shadow-sm`;
 export const toolbarBtnExportPpt =
-  `${toolbarBtn} bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200`;
+  `${toolbarBtn} bg-orange-500 hover:bg-orange-600 text-white border border-orange-600/20 shadow-sm`;
 
 export const shortcutLink =
-  'text-[11px] font-medium px-3 py-1.5 rounded-lg bg-white text-primary-800 border border-secondary-300 hover:border-primary-400 transition-colors';
+  'text-[11px] font-medium px-3 py-1.5 rounded-lg bg-white text-primary-800 border border-secondary-300 hover:border-primary-400 transition-colors pe-shortcut';
 
 export function MetaLine({
   icon,
@@ -184,8 +184,8 @@ export function MetaLine({
   light?: boolean;
 }) {
   return (
-    <p className={`flex items-start gap-1.5 text-xs min-w-0 ${light ? 'text-white/85' : 'text-secondary-500'}`}>
-      <span className={`mt-0.5 shrink-0 ${light ? 'text-white/70' : 'text-secondary-400'}`}>{icon}</span>
+    <p className={`flex items-start gap-1.5 text-xs min-w-0 ${light ? 'text-white/85' : 'text-secondary-500 pe-meta'}`}>
+      <span className={`mt-0.5 shrink-0 ${light ? 'text-white/70' : 'text-secondary-400 pe-meta-icon'}`}>{icon}</span>
       <span className="min-w-0">{children}</span>
     </p>
   );

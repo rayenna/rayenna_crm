@@ -220,7 +220,7 @@ export function RoofLayoutAdjustPanel({
             onRemove={onRemoveKeepout}
             onClear={onClearKeepouts}
           />
-          <RoofLayoutKeyboardHints className="hidden xl:block" />
+          <RoofLayoutKeyboardHints className="hidden xl:block pe-roof-card" />
         </>
       )}
 

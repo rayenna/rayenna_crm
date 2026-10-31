@@ -4,6 +4,7 @@ import { TIPS } from '../data/tipOfTheDay';
 import { getActiveCustomer, getResolvedRoofLayout } from '../lib/customerStore';
 import { nextProposalStep } from '../lib/proposalContinue';
 import { pageBanner } from '../components/ui/chrome';
+import { useThemeContext } from '../theme/ThemeProvider';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 interface AccordionProps {
@@ -34,19 +35,19 @@ function BackToTop() {
 function Section({ id, title, children, defaultOpen = false }: AccordionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div id={id} className="bg-white rounded-xl border border-secondary-200 overflow-hidden scroll-mt-24">
+    <div id={id} className="bg-white rounded-xl border border-secondary-200 overflow-hidden scroll-mt-24 pe-help-card">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left md:cursor-default"
         aria-expanded={open}
       >
-        <span className="flex-1 font-semibold text-primary-800 text-base sm:text-lg">{title}</span>
+        <span className="flex-1 font-semibold text-primary-800 text-base sm:text-lg pe-help-heading">{title}</span>
         <span className={`md:hidden text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           ▾
         </span>
       </button>
       {/* Body — always visible on md+ */}
-      <div className={`${open ? 'block' : 'hidden'} md:block border-t border-gray-100 px-5 pb-5 pt-4`}>
+      <div className={`${open ? 'block' : 'hidden'} md:block border-t border-gray-100 px-5 pb-5 pt-4 pe-help-body`}>
         {children}
         <BackToTop />
       </div>
@@ -71,7 +72,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-900">
+    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-900 pe-help-tip">
       <span>{children}</span>
     </div>
   );
@@ -79,7 +80,7 @@ function Tip({ children }: { children: React.ReactNode }) {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 text-sm text-sky-900">
+    <div className="bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 text-sm text-sky-900 pe-help-note">
       <span>{children}</span>
     </div>
   );
@@ -87,7 +88,7 @@ function Note({ children }: { children: React.ReactNode }) {
 
 function Warn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-900">
+    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-900 pe-help-warn">
       <span>{children}</span>
     </div>
   );
@@ -102,7 +103,7 @@ function QuickStartNow() {
   const customer = getActiveCustomer();
   if (!customer) {
     return (
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 pe-help-tip">
         <p className="font-semibold">No project is open</p>
         <p className="mt-1 leading-relaxed">
           Go to <Link to="/customers" className="underline font-medium">Customers</Link>, click <strong>Open</strong> on a project
@@ -125,34 +126,36 @@ function QuickStartNow() {
   ] as const;
 
   return (
-    <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50/80 px-4 py-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">This project</p>
-      <p className="mt-1 text-base font-semibold text-gray-900">{customer.master.name}</p>
+    <div className="mb-6 rounded-xl p-4 sm:p-5 flex flex-col gap-3 text-white pe-banner pe-help-dash">
+      <p className="text-[11px] font-medium text-white/75">Open project</p>
+      <p className="text-lg sm:text-xl font-semibold tracking-tight text-white">{customer.master.name}</p>
       {customer.master.location ? (
-        <p className="text-xs text-gray-600 mt-0.5">{customer.master.location}</p>
+        <p className="text-xs text-white/85">{customer.master.location}</p>
       ) : null}
-      <p className="text-sm text-gray-700 mt-2 leading-relaxed">{step.detail}</p>
-      <Link
-        to={step.path}
-        className="mt-3 inline-flex items-center text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg"
-      >
-        {step.button}
-      </Link>
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="pt-3 mt-1 border-t border-white/10 flex flex-col sm:flex-row sm:items-center gap-3">
+        <Link
+          to={step.path}
+          className="inline-flex items-center justify-center text-sm font-semibold px-4 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 min-h-[40px] flex-shrink-0 pe-dash-continue"
+        >
+          {step.button}
+        </Link>
+        <p className="text-[12px] text-slate-100/90 leading-snug">{step.detail}</p>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
         {flags.map(([label, ok]) => (
           <span
             key={label}
-            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
               ok
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-white text-gray-500 border-gray-200'
+                ? 'bg-emerald-400 text-slate-900 border-emerald-200 pe-dash-flag-on'
+                : 'bg-black/25 border-white/25 text-white/80 pe-dash-flag-off'
             }`}
           >
             {label}: {savedLabel(ok)}
           </span>
         ))}
       </div>
-      <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+      <p className="text-xs text-white/80 leading-relaxed">
         {hasLayout
           ? `A roof layout is saved (${panelCount} panels). On the costing sheet, Use roof layout copies that count onto the module line. Save the sheet afterwards. Turn the layout on when you generate the proposal if the customer should see the drawing.`
           : 'No roof layout yet. You can still price and send the proposal. Add a layout later if you want a site picture, then use it on the costing sheet.'}
@@ -166,7 +169,7 @@ function KbdRow({ keys, desc }: { keys: string[]; desc: string }) {
     <div className="flex items-center gap-3 py-1.5 border-b border-gray-100 last:border-0">
       <div className="flex gap-1 flex-shrink-0">
         {keys.map((k) => (
-          <kbd key={k} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700">
+          <kbd key={k} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono text-gray-700 pe-help-kbd">
             {k}
           </kbd>
         ))}
@@ -179,7 +182,7 @@ function KbdRow({ keys, desc }: { keys: string[]; desc: string }) {
 function FaqItem({ q, children }: { q: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden pe-help-card">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
@@ -197,14 +200,23 @@ function FaqItem({ q, children }: { q: string; children: React.ReactNode }) {
 }
 
 /* ─── Tip category labels for the Help page tip list ────────────────────── */
-const TIP_CATEGORIES: { label: string; icon: string; accent: string; bg: string; border: string }[] = [
-  { label: 'Customers',      icon: '👥', accent: '#0369a1', bg: '#eff6ff', border: '#bfdbfe' },
-  { label: 'Costing Sheet',  icon: '📊', accent: '#059669', bg: '#f0fdf4', border: '#a7f3d0' },
-  { label: 'BOM',            icon: '📦', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  { label: 'ROI Calculator', icon: '📈', accent: '#7c3aed', bg: '#faf5ff', border: '#ddd6fe' },
-  { label: 'Proposal',       icon: '📄', accent: '#be185d', bg: '#fdf2f8', border: '#fbcfe8' },
-  { label: 'Export & Data',  icon: '💾', accent: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
-  { label: 'Workflow',       icon: '⚡', accent: '#0d1b3a', bg: '#f0f4ff', border: '#c7d2fe' },
+const TIP_CATEGORIES: {
+  label: string;
+  icon: string;
+  accent: string;
+  bg: string;
+  border: string;
+  accentDark: string;
+  bgDark: string;
+  borderDark: string;
+}[] = [
+  { label: 'Customers',      icon: '👥', accent: '#0369a1', bg: '#eff6ff', border: '#bfdbfe', accentDark: '#38bdf8', bgDark: '#0b1f3a', borderDark: '#38bdf8' },
+  { label: 'Costing Sheet',  icon: '📊', accent: '#059669', bg: '#f0fdf4', border: '#a7f3d0', accentDark: '#34d399', bgDark: '#022c22', borderDark: '#34d399' },
+  { label: 'BOM',            icon: '📦', accent: '#d97706', bg: '#fffbeb', border: '#fde68a', accentDark: '#fbbf24', bgDark: '#422006', borderDark: '#fbbf24' },
+  { label: 'ROI Calculator', icon: '📈', accent: '#7c3aed', bg: '#faf5ff', border: '#ddd6fe', accentDark: '#c4b5fd', bgDark: '#2e1065', borderDark: '#a78bfa' },
+  { label: 'Proposal',       icon: '📄', accent: '#be185d', bg: '#fdf2f8', border: '#fbcfe8', accentDark: '#f9a8d4', bgDark: '#500724', borderDark: '#f472b6' },
+  { label: 'Export & Data',  icon: '💾', accent: '#0891b2', bg: '#ecfeff', border: '#a5f3fc', accentDark: '#22d3ee', bgDark: '#083344', borderDark: '#22d3ee' },
+  { label: 'Workflow',       icon: '⚡', accent: '#0d1b3a', bg: '#f0f4ff', border: '#c7d2fe', accentDark: '#93c5fd', bgDark: '#1e1b4b', borderDark: '#818cf8' },
 ];
 
 // Tip count per category (matches order in tipOfTheDay.ts)
@@ -227,6 +239,8 @@ const TOC = [
 /* ─── Main page ─────────────────────────────────────────────────────────── */
 export default function HelpPage() {
   const { pathname } = useLocation();
+  const { theme } = useThemeContext();
+  const isDark = theme === 'dark';
 
   // Build grouped tip list from the flat TIPS array using TIP_COUNTS
   const groupedTips: { category: typeof TIP_CATEGORIES[0]; tips: string[] }[] = [];
@@ -237,7 +251,7 @@ export default function HelpPage() {
   });
 
   return (
-    <div className="space-y-6 pb-12 w-full">
+    <div className="space-y-6 pb-12 w-full pe-help">
       {/* Same outer page card + horizontal padding as Dashboard / Customers / About (full width within Layout main). */}
       <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden">
         <div className={pageBanner}>
@@ -251,14 +265,14 @@ export default function HelpPage() {
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6">
       {/* ── Table of Contents ── */}
-      <div id="toc" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 scroll-mt-24">
+      <div id="toc" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 scroll-mt-24 pe-help-card">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to section</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {TOC.map((t) => (
             <a
               key={t.id}
               href={`#${t.id}`}
-              className="flex items-center px-3 py-2 rounded-lg bg-secondary-50 hover:bg-primary-50 text-secondary-700 text-sm font-medium transition-colors border border-secondary-100"
+              className="flex items-center px-3 py-2 rounded-lg bg-secondary-50 hover:bg-primary-50 text-secondary-700 text-sm font-medium transition-colors border border-secondary-100 pe-help-toc-link"
             >
               <span className="truncate">{t.label}</span>
             </a>
@@ -285,7 +299,7 @@ export default function HelpPage() {
             ['Continue to proposal', 'Price and payback are saved'],
             ['Review proposal', 'The document is already saved'],
           ].map(([label, when]) => (
-            <span key={label} className="px-2.5 py-1 rounded-full bg-white border border-indigo-200 text-indigo-900">
+            <span key={label} className="px-2.5 py-1 rounded-full bg-white border border-indigo-200 text-indigo-900 pe-help-chip">
               {label}
               <span className="font-normal text-gray-500"> — {when}</span>
             </span>
@@ -319,7 +333,7 @@ export default function HelpPage() {
           </Step>
         </div>
 
-        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 space-y-2">
+        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 space-y-2 pe-help-inset">
           <p className="text-sm font-semibold text-gray-800">Open another page only when this is true</p>
           <ul className="text-sm text-gray-700 space-y-1.5 list-disc list-inside leading-relaxed">
             <li><strong>BOM</strong> — a specification or make should differ from the costing line. Saving the sheet already created the list.</li>
@@ -1000,7 +1014,7 @@ export default function HelpPage() {
               orbit (3D) without accidentally dragging the roof.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 pe-help-compare pe-help-compare-desk">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">💻 Laptop / desktop</p>
                 <ul className="space-y-1.5 text-sm text-gray-600 list-disc list-inside">
                   <li>
@@ -1017,7 +1031,7 @@ export default function HelpPage() {
                   <li>The app may draw a fuller panel grid on screen for preview (higher cap) while you work.</li>
                 </ul>
               </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 pe-help-compare pe-help-compare-mobile">
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-900 mb-2">📱 Mobile (narrow screen)</p>
                 <ul className="space-y-1.5 text-sm text-gray-700 list-disc list-inside">
                   <li>
@@ -1196,17 +1210,20 @@ export default function HelpPage() {
               {/* Tip cards */}
               <div
                 className="rounded-xl border overflow-hidden"
-                style={{ borderColor: category.border, background: category.bg }}
+                style={{
+                  borderColor: isDark ? category.borderDark : category.border,
+                  background: isDark ? category.bgDark : category.bg,
+                }}
               >
                 {tips.map((tip, i) => (
                   <div
                     key={i}
                     className="flex items-start gap-3 px-4 py-3 text-sm text-gray-700 border-b last:border-b-0"
-                    style={{ borderColor: `${category.border}80` }}
+                    style={{ borderColor: isDark ? `${category.borderDark}80` : `${category.border}80` }}
                   >
                     <span
                       className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-extrabold text-white mt-0.5"
-                      style={{ background: category.accent }}
+                      style={{ background: isDark ? category.accentDark : category.accent }}
                     >
                       {i + 1}
                     </span>

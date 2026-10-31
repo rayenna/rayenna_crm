@@ -80,6 +80,598 @@
   }
 }
 
+/* ── Dark Mode (additive). Light rules above are unchanged. ── */
+[data-theme='dark'] {
+  --pe-page: #0A0A0F;
+  --pe-card: #14141C;
+  --pe-card-hover: rgba(255, 255, 255, 0.07);
+  --pe-elevated: #1C1C28;
+  --pe-border: rgba(255, 255, 255, 0.10);
+  --pe-border-strong: rgba(255, 255, 255, 0.16);
+  --pe-text: #F4F4F5;
+  --pe-text-secondary: rgba(255, 255, 255, 0.62);
+  --pe-text-muted: rgba(255, 255, 255, 0.42);
+  --pe-input: rgba(255, 255, 255, 0.06);
+  --pe-wash: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] body {
+  background-color: var(--pe-page);
+  background-image:
+    radial-gradient(ellipse 70% 42% at 100% -8%, rgba(234, 88, 12, 0.16), transparent 58%),
+    radial-gradient(ellipse 55% 40% at -6% 108%, rgba(10, 158, 135, 0.12), transparent 52%);
+  color: var(--pe-text);
+}
+
+[data-theme='dark'] .pe-shell {
+  background: var(--pe-card);
+  border-color: var(--pe-border);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track { background: #111118; }
+[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #4b5563; }
+
+[data-theme='dark'] .layout-preview-scroll-3d {
+  scrollbar-color: #4b5563 #1e293b;
+}
+[data-theme='dark'] .layout-preview-scroll-3d::-webkit-scrollbar-thumb { background: #4b5563; }
+[data-theme='dark'] .layout-preview-scroll-3d::-webkit-scrollbar-track { background: #1e293b; }
+
+/*
+ * Remap chrome surfaces in Dark Mode, stopping at the proposal document
+ * and any .pe-force-light region so Light letterhead / share HTML stay as-is.
+ */
+@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay) {
+  .bg-white,
+  .bg-white\/80,
+  .bg-white\/90,
+  .bg-white\/70,
+  .bg-white\/50 { background-color: var(--pe-card); }
+  .hover\:bg-white:hover { background-color: var(--pe-card); }
+
+  .bg-secondary-50,
+  .bg-secondary-100,
+  .bg-slate-50,
+  .bg-slate-100,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-primary-50,
+  .bg-\[\#F4F1EC\] { background-color: var(--pe-wash); }
+
+  .hover\:bg-secondary-50:hover,
+  .hover\:bg-secondary-100:hover,
+  .hover\:bg-slate-50:hover,
+  .hover\:bg-slate-100:hover,
+  .hover\:bg-gray-50:hover { background-color: var(--pe-card-hover); }
+
+  .hover\:text-secondary-800:hover,
+  .hover\:text-slate-800:hover,
+  .hover\:text-slate-900:hover,
+  .hover\:text-gray-600:hover,
+  .hover\:text-gray-800:hover { color: var(--pe-text); }
+
+  .bg-orange-50, .bg-amber-50, .bg-amber-100 { background-color: rgba(234, 88, 12, 0.14); }
+  .bg-teal-50, .bg-cyan-50, .bg-emerald-50, .bg-green-50 { background-color: rgba(10, 158, 135, 0.14); }
+  .bg-rose-50, .bg-red-50 { background-color: rgba(244, 63, 94, 0.14); }
+  .bg-blue-50, .bg-sky-50, .bg-indigo-50 { background-color: rgba(59, 130, 246, 0.14); }
+  .bg-violet-50, .bg-purple-50 { background-color: rgba(109, 62, 196, 0.16); }
+  .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.14); }
+
+  .text-orange-700, .text-orange-800, .text-orange-900, .text-amber-700, .text-amber-800, .text-amber-900 { color: #fdba74; }
+  .text-teal-700, .text-teal-800, .text-emerald-700, .text-emerald-800, .text-green-700, .text-green-800 { color: #5eead4; }
+  .text-rose-700, .text-rose-800, .text-red-700, .text-red-800 { color: #fda4af; }
+  .text-blue-700, .text-blue-800, .text-sky-700, .text-sky-800, .text-sky-900, .text-indigo-500, .text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900 { color: #93c5fd; }
+  .text-red-900 { color: #fda4af; }
+  .border-indigo-200 { border-color: rgba(129, 140, 248, 0.40); }
+
+  .border-orange-100, .border-orange-200, .border-amber-100, .border-amber-200, .border-amber-300 { border-color: rgba(234, 88, 12, 0.28); }
+  .hover\:text-indigo-700:hover { color: #a5b4fc; }
+  .border-teal-100, .border-teal-200, .border-emerald-100, .border-emerald-200 { border-color: rgba(10, 158, 135, 0.28); }
+  .border-rose-100, .border-rose-200 { border-color: rgba(244, 63, 94, 0.28); }
+  .border-blue-100, .border-blue-200, .border-sky-100, .border-sky-200 { border-color: rgba(59, 130, 246, 0.28); }
+
+  .even\:bg-secondary-50:nth-child(even),
+  .even\:bg-slate-50:nth-child(even) { background-color: var(--pe-wash); }
+
+  .bg-primary-50\/40,
+  .bg-primary-50\/60,
+  .bg-indigo-50\/80,
+  .bg-indigo-50\/60,
+  .bg-slate-50\/80,
+  .bg-slate-50\/90,
+  .bg-sky-50\/90,
+  .bg-orange-50\/80,
+  .bg-amber-50\/60,
+  .bg-slate-900\/5 { background-color: rgba(255, 255, 255, 0.04); }
+
+  .text-secondary-400,
+  .text-slate-400,
+  .text-gray-400 { color: var(--pe-text-muted); }
+  .text-secondary-500,
+  .text-slate-500,
+  .text-gray-500 { color: var(--pe-text-muted); }
+  .text-secondary-600,
+  .text-slate-600,
+  .text-gray-600 { color: var(--pe-text-secondary); }
+  .text-secondary-700,
+  .text-slate-700,
+  .text-gray-700,
+  .text-primary-700 { color: var(--pe-text-secondary); }
+  .text-secondary-800,
+  .text-secondary-900,
+  .text-slate-800,
+  .text-slate-900,
+  .text-gray-800,
+  .text-gray-900,
+  .text-primary-800,
+  .text-primary-900,
+  .text-\[\#0d1b3a\],
+  .text-\[\#1a1a2e\] { color: var(--pe-text); }
+
+  .placeholder\:text-secondary-400::placeholder,
+  .placeholder\:text-secondary-500::placeholder,
+  .placeholder\:text-slate-400::placeholder { color: var(--pe-text-muted); }
+
+  .border-secondary-100,
+  .border-secondary-200,
+  .border-secondary-300,
+  .border-slate-200,
+  .border-slate-300,
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-primary-100,
+  .border-primary-200 { border-color: var(--pe-border); }
+
+  .divide-secondary-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-secondary-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--pe-border); }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    background-color: var(--pe-input);
+    color: var(--pe-text);
+    border-color: var(--pe-border-strong);
+  }
+
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #1a1a26 inset;
+    -webkit-text-fill-color: #f4f4f5;
+  }
+}
+
+/* About page cards — elevated dark panels, bright body copy (Light unchanged). */
+[data-theme='dark'] .pe-about-card {
+  background-color: #1c1c28;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-about-body,
+[data-theme='dark'] .pe-about-body * {
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-about-footer {
+  color: #d4d4d8;
+}
+
+/* Help / User Guide — elevated dark panels, bright copy (Light unchanged). */
+[data-theme='dark'] .pe-help-card {
+  background-color: #1c1c28;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-help-heading {
+  color: #f8fafc;
+}
+[data-theme='dark'] .pe-help-body,
+[data-theme='dark'] .pe-help-body p,
+[data-theme='dark'] .pe-help-body li,
+[data-theme='dark'] .pe-help-body h3,
+[data-theme='dark'] .pe-help-body td,
+[data-theme='dark'] .pe-help-body th,
+[data-theme='dark'] .pe-help-body span,
+[data-theme='dark'] .pe-help-body strong,
+[data-theme='dark'] .pe-help-body em,
+[data-theme='dark'] .pe-help-body label {
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-help-body a {
+  color: #93c5fd;
+}
+[data-theme='dark'] .pe-help-body a.bg-indigo-600,
+[data-theme='dark'] .pe-help-body a.text-white {
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-help-body .bg-gray-50,
+[data-theme='dark'] .pe-help-inset {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-help-body kbd,
+[data-theme='dark'] .pe-help-body code,
+[data-theme='dark'] .pe-help-kbd {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+[data-theme='dark'] .pe-help-tip {
+  background-color: #422006;
+  border-color: #fbbf24;
+}
+[data-theme='dark'] .pe-help-tip,
+[data-theme='dark'] .pe-help-tip * {
+  color: #fde68a;
+}
+[data-theme='dark'] .pe-help-note {
+  background-color: #0b1f3a;
+  border-color: #38bdf8;
+}
+[data-theme='dark'] .pe-help-note,
+[data-theme='dark'] .pe-help-note * {
+  color: #bae6fd;
+}
+[data-theme='dark'] .pe-help-warn {
+  background-color: #450a0a;
+  border-color: #f87171;
+}
+[data-theme='dark'] .pe-help-warn,
+[data-theme='dark'] .pe-help-warn * {
+  color: #fecaca;
+}
+/* Quick Start open-project card — same navy→gold banner as Dashboard. */
+[data-theme='dark'] .pe-help-body .pe-help-dash,
+[data-theme='dark'] .pe-help-body .pe-help-dash p,
+[data-theme='dark'] .pe-help-body .pe-help-dash span,
+[data-theme='dark'] .pe-help-body .pe-help-dash strong {
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-help-body .pe-help-dash .text-white\/75,
+[data-theme='dark'] .pe-help-body .pe-help-dash .text-white\/85,
+[data-theme='dark'] .pe-help-body .pe-help-dash .text-white\/80,
+[data-theme='dark'] .pe-help-body .pe-help-dash .text-slate-100\/90 {
+  color: rgba(255, 255, 255, 0.88);
+}
+[data-theme='dark'] .pe-help-body .pe-dash-continue {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+[data-theme='dark'] .pe-help-body .pe-dash-flag-on {
+  background-color: #34d399;
+  color: #0f172a;
+  border-color: #a7f3d0;
+}
+[data-theme='dark'] .pe-help-body .pe-dash-flag-off {
+  background-color: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+[data-theme='dark'] .pe-help-chip,
+[data-theme='dark'] .pe-help-body .pe-help-chip {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-help-chip .font-normal,
+[data-theme='dark'] .pe-help-body .pe-help-chip .font-normal {
+  color: rgba(255, 255, 255, 0.72);
+}
+[data-theme='dark'] .pe-help-toc-link {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-help-toc-link:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-help-body .pe-help-compare-desk {
+  background-color: #1e293b;
+  border-color: #64748b;
+}
+[data-theme='dark'] .pe-help-body .pe-help-compare-desk,
+[data-theme='dark'] .pe-help-body .pe-help-compare-desk p,
+[data-theme='dark'] .pe-help-body .pe-help-compare-desk li,
+[data-theme='dark'] .pe-help-body .pe-help-compare-desk strong {
+  color: #f1f5f9;
+}
+[data-theme='dark'] .pe-help-body .pe-help-compare-mobile {
+  background-color: #422006;
+  border-color: #fbbf24;
+}
+[data-theme='dark'] .pe-help-body .pe-help-compare-mobile,
+[data-theme='dark'] .pe-help-body .pe-help-compare-mobile p,
+[data-theme='dark'] .pe-help-body .pe-help-compare-mobile li,
+[data-theme='dark'] .pe-help-body .pe-help-compare-mobile strong {
+  color: #fde68a;
+}
+
+/* Status chips that must stay high-contrast in Dark Mode (unlayered, beats @scope remaps). */
+[data-theme='dark'] .pe-badge-active {
+  background-color: #fbbf24;
+  color: #0f172a;
+  border-color: #fde68a;
+}
+[data-theme='dark'] .pe-badge-not-started {
+  background-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.80);
+  border-color: rgba(255, 255, 255, 0.20);
+}
+[data-theme='dark'] .pe-badge-draft {
+  background-color: rgba(249, 115, 22, 0.20);
+  color: #fed7aa;
+  border-color: rgba(251, 146, 60, 0.40);
+}
+[data-theme='dark'] .pe-badge-ready {
+  background-color: #38bdf8;
+  color: #0f172a;
+  border-color: #bae6fd;
+}
+[data-theme='dark'] .pe-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.20);
+}
+[data-theme='dark'] .pe-btn-ghost {
+  color: rgba(255, 255, 255, 0.55);
+}
+[data-theme='dark'] .pe-btn-ghost:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.10);
+}
+[data-theme='dark'] .pe-shortcut {
+  background-color: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.20);
+}
+[data-theme='dark'] .pe-meta {
+  color: rgba(255, 255, 255, 0.62);
+}
+[data-theme='dark'] .pe-meta-icon {
+  color: rgba(255, 255, 255, 0.42);
+}
+[data-theme='dark'] .pe-badge-roof {
+  background-color: #7c2d12;
+  color: #ffedd5;
+  border-color: #fb923c;
+}
+[data-theme='dark'] .pe-badge-roof,
+[data-theme='dark'] .pe-badge-roof * {
+  color: #ffedd5;
+}
+
+/* ROI panels — Light keeps the original white wash; Dark is a flat card (no OS-theme leak). */
+[data-theme='dark'] .pe-roi-panel {
+  background-image: none;
+  background-color: #14141c;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .pe-roi-empty {
+  background-color: #14141c;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+[data-theme='dark'] .pe-roi-empty p,
+[data-theme='dark'] .pe-roi-empty strong {
+  color: #e4e4e7;
+}
+
+/* Costing / BOM category chips — filled bright + dark label (Light classes unchanged). */
+[data-theme='dark'] [data-pe-cat] {
+  color: #0f172a;
+  border-color: transparent;
+}
+[data-theme='dark'] [data-pe-cat='pv-modules']         { background-color: #38bdf8; }
+[data-theme='dark'] [data-pe-cat='inverters']          { background-color: #fbbf24; }
+[data-theme='dark'] [data-pe-cat='mounting-structure'] { background-color: #94a3b8; }
+[data-theme='dark'] [data-pe-cat='dc-db']              { background-color: #fb923c; }
+[data-theme='dark'] [data-pe-cat='ac-db']              { background-color: #f87171; }
+[data-theme='dark'] [data-pe-cat='dc-cable']           { background-color: #f59e0b; }
+[data-theme='dark'] [data-pe-cat='ac-cable']           { background-color: #a3e635; }
+[data-theme='dark'] [data-pe-cat='earthing']           { background-color: #34d399; }
+[data-theme='dark'] [data-pe-cat='meter']              { background-color: #a78bfa; }
+[data-theme='dark'] [data-pe-cat='electrical-items']   { background-color: #fb7185; }
+[data-theme='dark'] [data-pe-cat='installation']       { background-color: #60a5fa; }
+[data-theme='dark'] [data-pe-cat='others']             { background-color: #a1a1aa; }
+
+/* BOM GST split cards — dark panels, bright type (Light unchanged). */
+[data-theme='dark'] .pe-gst-5 {
+  background-color: #022c22;
+  border-color: #34d399;
+}
+[data-theme='dark'] .pe-gst-5,
+[data-theme='dark'] .pe-gst-5 * {
+  color: #a7f3d0;
+}
+[data-theme='dark'] .pe-gst-18 {
+  background-color: #0b1f3a;
+  border-color: #60a5fa;
+}
+[data-theme='dark'] .pe-gst-18,
+[data-theme='dark'] .pe-gst-18 * {
+  color: #bfdbfe;
+}
+[data-theme='dark'] .pe-gst-badge {
+  background-color: #1e3a5f;
+  border-color: #60a5fa;
+  color: #93c5fd;
+}
+
+.pe-breakdown-track {
+  background-color: transparent;
+}
+.pe-breakdown-chart {
+  border: 2px solid #64748b;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+}
+.pe-breakdown-grid {
+  background-image: repeating-linear-gradient(
+    to right,
+    #94a3b8 0,
+    #94a3b8 1px,
+    transparent 1px,
+    transparent 25%
+  );
+}
+[data-theme='dark'] .pe-breakdown-chart {
+  border-color: rgba(255, 255, 255, 0.35);
+  background-color: #14141c;
+}
+[data-theme='dark'] .pe-breakdown-grid {
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.22) 0,
+    rgba(255, 255, 255, 0.22) 1px,
+    transparent 1px,
+    transparent 25%
+  );
+}
+[data-theme='dark'] .pe-breakdown-figure {
+  color: #f1f5f9;
+}
+
+.pe-margin-field {
+  background-color: #fde68a;
+  border: 2px solid #d97706;
+}
+.pe-margin-field label,
+.pe-margin-field span {
+  color: #92400e;
+}
+.pe-margin-field input {
+  background-color: #fffbeb;
+  color: #78350f;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.25rem;
+}
+[data-theme='dark'] .pe-margin-field {
+  background-color: #fbbf24;
+  border-color: #fde68a;
+}
+[data-theme='dark'] .pe-margin-field label,
+[data-theme='dark'] .pe-margin-field span {
+  color: #0f172a;
+}
+[data-theme='dark'] .pe-margin-field input {
+  background-color: rgba(255, 255, 255, 0.55);
+  color: #0f172a;
+  border: none;
+}
+
+/* Costing / BOM column headers — dark bar, bright labels (Light unchanged). */
+[data-theme='dark'] .pe-sheet-thead {
+  background-color: #1c1c28;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-sheet-thead th {
+  color: #f1f5f9;
+}
+[data-theme='dark'] .pe-sheet-thead .text-emerald-600 {
+  color: #6ee7b7;
+}
+[data-theme='dark'] .pe-sheet-thead .text-blue-600 {
+  color: #7dd3fc;
+}
+
+[data-theme='dark'] .pe-summary-head {
+  background-color: #1c1c28;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-summary-head,
+[data-theme='dark'] .pe-summary-head span {
+  color: #f1f5f9;
+}
+
+/* Project summary Margin / GST rows — dark washes, bright labels (Light unchanged). */
+[data-theme='dark'] .pe-summary-margin {
+  background-color: rgba(251, 191, 36, 0.18);
+}
+[data-theme='dark'] .pe-summary-margin,
+[data-theme='dark'] .pe-summary-margin span {
+  color: #fde68a;
+}
+[data-theme='dark'] .pe-summary-gst {
+  background-color: rgba(56, 189, 248, 0.16);
+}
+[data-theme='dark'] .pe-summary-gst,
+[data-theme='dark'] .pe-summary-gst span {
+  color: #7dd3fc;
+}
+[data-theme='dark'] .pe-summary-gst-note {
+  color: #bae6fd;
+}
+[data-theme='dark'] .pe-summary-gst-total {
+  background-color: rgba(56, 189, 248, 0.28);
+}
+[data-theme='dark'] .pe-summary-gst-total,
+[data-theme='dark'] .pe-summary-gst-total span {
+  color: #e0f2fe;
+}
+
+/* Customer-facing proposal document: always the current Light letterhead. */
+#proposal-print-root,
+.pe-force-light {
+  color-scheme: light;
+  background-color: #fff;
+  color: #1a1a2e;
+}
+
+/* AI Roof Layout chrome (not the map) — dark panels, bright type. */
+[data-theme='dark'] .pe-roof-card {
+  background-color: #1c1c28;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme='dark'] .pe-roof-card,
+[data-theme='dark'] .pe-roof-card p,
+[data-theme='dark'] .pe-roof-card span,
+[data-theme='dark'] .pe-roof-card label,
+[data-theme='dark'] .pe-roof-card strong,
+[data-theme='dark'] .pe-roof-card li,
+[data-theme='dark'] .pe-roof-card kbd {
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-roof-card select {
+  background-color: #14141c;
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+[data-theme='dark'] .pe-roof-card .bg-emerald-600,
+[data-theme='dark'] .pe-roof-card .bg-indigo-600,
+[data-theme='dark'] .pe-roof-card .bg-indigo-500 {
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-roof-card .text-emerald-100 {
+  color: #d1fae5;
+}
+[data-theme='dark'] .pe-roof-card .bg-emerald-100 {
+  background-color: #022c22;
+  color: #6ee7b7;
+}
+[data-theme='dark'] .pe-roof-card .bg-amber-100 {
+  background-color: #422006;
+  color: #fde68a;
+}
+[data-theme='dark'] .pe-roof-card button.bg-white {
+  background-color: #14141c;
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* AI Roof Layout map overlays — same Light cards/type in both themes. */
+.pe-map-overlay {
+  color-scheme: light;
+  color: #334155;
+}
+.pe-map-overlay .text-slate-800 { color: #1e293b; }
+.pe-map-overlay .text-slate-700 { color: #334155; }
+.pe-map-overlay .text-slate-600 { color: #475569; }
+.pe-map-overlay .text-slate-500 { color: #64748b; }
+.pe-map-overlay .bg-white\/95 { background-color: rgb(255 255 255 / 0.95); }
+.pe-map-overlay .bg-slate-100 { background-color: #f1f5f9; }
+.pe-map-overlay .border-slate-200 { border-color: #e2e8f0; }
+
 /*
  * AI Roof Layout — preview frame (full width of workspace column).
  */

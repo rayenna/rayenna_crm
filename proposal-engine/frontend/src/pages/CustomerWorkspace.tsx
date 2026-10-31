@@ -371,7 +371,7 @@ export default function CustomerWorkspace() {
                   </span>
                 )}
                 {isActive && !hydrating && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200 font-semibold">Active</span>
+                  <span className="pe-badge-active text-[10px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200 font-semibold">Active</span>
                 )}
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}>
                   {STATUS_LABELS[record.status]}

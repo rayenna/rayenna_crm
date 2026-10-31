@@ -100,7 +100,10 @@ function Action({
     variant === 'primary' ||
     variant === 'navy' ||
     variant === 'success' ||
-    variant === 'danger';
+    variant === 'danger' ||
+    variant === 'export-pdf' ||
+    variant === 'export-docx' ||
+    variant === 'export-ppt';
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title} className={cls}>
       {busy ? <Spinner light={spinnerLight} /> : null}
@@ -156,32 +159,30 @@ export function ProposalToolbar({
           <Action label="Edit" title="Edit proposal" onClick={onEdit} variant="edit" />
         ))}
 
-      <div className="inline-flex items-center rounded-lg border border-slate-200/80 bg-white/80 p-0.5 gap-0.5 shadow-sm">
-        <Action
-          label="PDF"
-          title="Export as PDF"
-          onClick={onExportPdf}
-          disabled={locked}
-          busy={exporting === 'pdf'}
-          variant="export-pdf"
-        />
-        <Action
-          label="DOCX"
-          title="Export as Word"
-          onClick={onExportDocx}
-          disabled={locked}
-          busy={exporting === 'docx'}
-          variant="export-docx"
-        />
-        <Action
-          label="PPT"
-          title="Export as PowerPoint"
-          onClick={onExportPpt}
-          disabled={locked}
-          busy={exporting === 'ppt'}
-          variant="export-ppt"
-        />
-      </div>
+      <Action
+        label="PDF"
+        title="Export as PDF"
+        onClick={onExportPdf}
+        disabled={locked}
+        busy={exporting === 'pdf'}
+        variant="export-pdf"
+      />
+      <Action
+        label="DOCX"
+        title="Export as Word"
+        onClick={onExportDocx}
+        disabled={locked}
+        busy={exporting === 'docx'}
+        variant="export-docx"
+      />
+      <Action
+        label="PPT"
+        title="Export as PowerPoint"
+        onClick={onExportPpt}
+        disabled={locked}
+        busy={exporting === 'ppt'}
+        variant="export-ppt"
+      />
 
       {canWrite && onShare && (
         <Action

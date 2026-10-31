@@ -22,7 +22,7 @@ export function RoofLayoutIndiaHints({
 
   return (
     <aside
-      className={`rounded-lg border border-sky-100 bg-sky-50/90 px-3 py-2.5 space-y-2 ${className}`}
+      className={`rounded-lg border border-sky-100 bg-sky-50/90 px-3 py-2.5 space-y-2 pe-roof-card ${className}`}
       aria-label="India rooftop layout guidance"
     >
       <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-900">

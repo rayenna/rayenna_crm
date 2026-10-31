@@ -35,7 +35,7 @@ export function MapCoordinatesBadgeFromRecord({ record }: { record: CustomerReco
 export function RoofLayoutSavedBadge({ className = '' }: { className?: string }) {
   return (
     <span
-      className={`${PE_PILL_BADGE} bg-orange-50 text-orange-900 border-orange-200/90 ${className}`}
+      className={`${PE_PILL_BADGE} bg-orange-50 text-orange-900 border-orange-200/90 pe-badge-roof ${className}`}
       title="AI Roof Layout saved for this project"
     >
       <IconLayout size={11} />

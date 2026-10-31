@@ -1001,7 +1001,7 @@ function EditorToolbar({
       className="flex flex-nowrap sm:flex-wrap items-center gap-x-1 gap-y-1
                     overflow-x-auto sm:overflow-x-visible
                     rounded-t-lg border border-b-0 border-slate-200
-                    bg-gradient-to-b from-slate-50 to-white
+                    bg-gradient-to-b from-slate-50 to-white dark:from-white/5 dark:to-[#14141C]
                     px-2.5 py-2 print-hide shadow-sm
                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       onTouchStart={(e) => e.preventDefault()}

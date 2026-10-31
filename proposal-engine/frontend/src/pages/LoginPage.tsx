@@ -12,6 +12,8 @@ import {
   setUserName,
 } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
+import { useThemeContext } from '../theme/ThemeProvider';
+import { isPeTheme } from '../theme/theme';
 
 /**
  * Matches the Rayenna CRM login card (Zenith dark): frosted navy panel, gold
@@ -44,6 +46,7 @@ type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setTheme } = useThemeContext();
   const fromLocation = (location.state as any)?.from;
   const from =
     fromLocation && fromLocation.pathname && fromLocation.pathname !== '/login'
@@ -124,6 +127,9 @@ export default function LoginPage() {
       setUserId(result.user.id);
       setUserRole(result.user.role);
       setUserName(result.user.name || result.user.email);
+      if (isPeTheme(result.user.themePreference)) {
+        setTheme(result.user.themePreference);
+      }
       navigate(from, { replace: true });
     } catch (err: any) {
       stopElapsedCounter();

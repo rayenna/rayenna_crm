@@ -24,6 +24,7 @@ import {
 } from '../lib/apiClient';
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { buildRoiFromCosting } from '../lib/roiFromCosting';
+import { useThemeContext } from '../theme/ThemeProvider';
 import { applyRoofLayoutToModuleLines } from '../lib/applyRoofLayoutToCosting';
 import { getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { FormValues, CostingTemplate } from '../costing/types';
@@ -46,6 +47,7 @@ import {
 } from '../costing/CostingTable';
 
 export default function CostingSheet() {
+  const { theme } = useThemeContext();
   // Read active customer data synchronously before form init — avoids useEffect lag
   const _initCustomer = getActiveCustomer();
   const _initCosting  = _initCustomer?.costing;
@@ -695,7 +697,7 @@ export default function CostingSheet() {
                     {ac.master.location ? ` · ${ac.master.location}` : ''}
                     {ac.costing && <span className="ml-2 text-emerald-600 font-medium">· Costing saved ✓</span>}
                   </p>
-                  <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+                  <Link to="/dashboard" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
                     View Dashboard →
                   </Link>
                 </div>
@@ -813,14 +815,19 @@ export default function CostingSheet() {
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   {CATEGORIES.map((cat) => {
-                    const accent = catAccentColor(cat.value);
+                    const accent = catAccentColor(cat.value, theme);
                     return (
                       <button
                         key={cat.value}
                         type="button"
+                        data-pe-cat={cat.value}
                         onClick={() => append({ ...EMPTY_ROW, category: cat.value, gstPercent: String(CATEGORY_GST[cat.value]) })}
                         className="flex items-center gap-1 text-xs font-medium transition-colors px-2.5 py-1.5 rounded-lg border hover:opacity-80"
-                        style={{ color: accent, borderColor: `${accent}50`, background: `${accent}08` }}
+                        style={
+                          theme === 'dark'
+                            ? undefined
+                            : { color: accent, borderColor: `${accent}50`, background: `${accent}08` }
+                        }
                       >
                         <span className="text-sm leading-none">+</span>
                         {cat.label}
@@ -831,8 +838,8 @@ export default function CostingSheet() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   {/* Editable Margin % */}
-                  <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                    <label className="text-xs font-semibold text-yellow-700 whitespace-nowrap">Margin %</label>
+                  <div className="pe-margin-field flex items-center gap-1.5 rounded-lg px-3 py-2">
+                    <label className="text-xs font-semibold whitespace-nowrap">Margin %</label>
                     <input
                       type="number"
                       min="0"
@@ -845,9 +852,9 @@ export default function CostingSheet() {
                         const clamped = Math.max(0, Math.min(100, v));
                         setMarginPercent(Math.round(clamped * 1000) / 1000);
                       }}
-                      className="w-16 bg-transparent text-sm font-bold text-yellow-800 text-right focus:outline-none tabular-nums"
+                      className="w-16 text-sm font-bold text-right focus:outline-none tabular-nums"
                     />
-                    <span className="text-xs text-yellow-600">%</span>
+                    <span className="text-xs font-semibold">%</span>
                   </div>
 
                   <div className="flex items-center gap-2 sm:ml-auto">
@@ -882,7 +889,7 @@ export default function CostingSheet() {
             <CategoryBreakdown items={liveItems} />
 
             {/* How to import — help panel */}
-            <div className="mt-8 bg-gradient-to-br from-primary-50/30 to-transparent border-t border-primary-100 rounded-xl p-4 sm:p-5">
+            <div className="mt-8 bg-gradient-to-br from-primary-50/30 to-transparent dark:from-white/5 border-t border-primary-100 dark:border-white/10 rounded-xl p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-secondary-600 mb-4">How to import from Excel</h3>
               <ol className="space-y-4">
 
@@ -918,7 +925,7 @@ export default function CostingSheet() {
                     Valid categories (use the exact key value in your Excel):
                     <span className="block mt-1 flex flex-wrap gap-1">
                       {CATEGORIES.map((c) => (
-                        <span key={c.value} className={`inline-block border rounded px-1.5 py-0.5 font-semibold text-[11px] ${CATEGORY_COLORS[c.value]}`}>
+                        <span key={c.value} data-pe-cat={c.value} className={`inline-block border rounded px-1.5 py-0.5 font-semibold text-[11px] ${CATEGORY_COLORS[c.value]}`}>
                           {c.value}
                         </span>
                       ))}

@@ -16,6 +16,8 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 import { getToken, getApiBaseUrl, setToken, setUserId, setUserRole, setUserName } from './lib/apiClient';
 import { clearActiveCustomer } from './lib/customerStore';
+import { useThemeContext } from './theme/ThemeProvider';
+import { isPeTheme } from './theme/theme';
 
 function stripLandingFlags(params: URLSearchParams): URLSearchParams {
   const keep = new URLSearchParams();
@@ -46,6 +48,7 @@ let ssoExchangeStarted = false;
 
 /** SSO: exchange one-time ticket for JWT and remove ticket from URL. Runs once on load. */
 function useSsoTicketExchange() {
+  const { hydrateFromServer, setTheme } = useThemeContext();
   // If ticket is in URL on first paint, start as 'exchanging' so we never render RequireAuth before exchange completes
   const [status, setStatus] = useState<'idle' | 'exchanging' | 'done'>(() => {
     if (typeof window === 'undefined') return 'idle';
@@ -83,13 +86,18 @@ function useSsoTicketExchange() {
         const msg = errBody?.error || res.statusText || `HTTP ${res.status}`;
         return Promise.reject(new Error(msg));
       })
-      .then((data: { token: string; user?: { id: string; email?: string; name?: string; role?: string } }) => {
+      .then((data: {
+        token: string;
+        user?: { id: string; email?: string; name?: string; role?: string; themePreference?: string | null };
+      }) => {
         setToken(data.token);
         if (data.user) {
           setUserId(data.user.id);
           if (data.user.role) setUserRole(data.user.role);
           if (data.user.name) setUserName(data.user.name);
+          if (isPeTheme(data.user.themePreference)) setTheme(data.user.themePreference);
         }
+        void hydrateFromServer();
         const keep = stripLandingFlags(params);
         const newSearch = keep.toString();
         const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
@@ -115,10 +123,10 @@ export default function App() {
 
   if (ssoStatus === 'exchanging') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-50">
+      <div className="min-h-screen flex items-center justify-center bg-primary-50 dark:bg-[#0A0A0F]">
         <div className="text-center">
           <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-secondary-600 font-medium">Signing you in…</p>
+          <p className="text-secondary-600 dark:text-white/70 font-medium">Signing you in…</p>
         </div>
       </div>
     );
@@ -131,7 +139,7 @@ export default function App() {
           <div className="min-h-[50vh] flex items-center justify-center">
             <div className="text-center">
               <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-secondary-600 font-medium">Loading…</p>
+              <p className="text-secondary-600 dark:text-white/70 font-medium">Loading…</p>
             </div>
           </div>
         }

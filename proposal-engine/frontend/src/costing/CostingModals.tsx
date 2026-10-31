@@ -169,7 +169,7 @@ export function SavedSheetsPanel({
                         <span className="text-xs text-secondary-400">{date} · {time}</span>
                         <div className="flex gap-1">
                           {cats.slice(0, 4).map((c) => (
-                            <span key={c} className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${CATEGORY_COLORS[c as Category] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                            <span key={c} data-pe-cat={c} className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${CATEGORY_COLORS[c as Category] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                               {c}
                             </span>
                           ))}
@@ -520,7 +520,7 @@ export function TemplateCard({
           <span className="text-xs text-secondary-400">{date}</span>
           <div className="flex gap-1">
             {cats.slice(0, 4).map((c) => (
-              <span key={c} className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${CATEGORY_COLORS[c as Category] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+              <span key={c} data-pe-cat={c} className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${CATEGORY_COLORS[c as Category] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                 {c}
               </span>
             ))}
@@ -639,7 +639,7 @@ export function ImportModal({
                     className={`border-b border-secondary-100 ${isErr ? 'bg-amber-50/60' : 'hover:bg-primary-50/30'}`}
                   >
                     <td className="px-3 py-2">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${CATEGORY_COLORS[snapped]}`}>
+                      <span data-pe-cat={snapped} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${CATEGORY_COLORS[snapped]}`}>
                         {snapped}
                       </span>
                     </td>

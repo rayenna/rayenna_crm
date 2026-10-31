@@ -191,12 +191,15 @@ const SECTION_HEADING_GRADIENTS = [
   'from-violet-600 to-fuchsia-500',
 ]
 
+const ABOUT_CARD =
+  'p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full pe-about-card'
+
 /* ─── Block renderer ─────────────────────────────────────────────────────── */
 function renderBlock(b: Block, idx: number) {
   if (b.type === 'title') {
     return (
       <div key={idx} className="space-y-2">
-        <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">
+        <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 dark:from-white dark:to-yellow-400 bg-clip-text text-transparent">
           {b.text}
         </h3>
         <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500" />
@@ -270,7 +273,7 @@ export default function AboutPage() {
           {mainTitleBlock && (
             <div className="w-full max-w-full mb-6 sm:mb-8">
               <div className="space-y-2">
-                <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent text-center sm:text-left">
+                <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 dark:from-white dark:to-yellow-400 bg-clip-text text-transparent text-center sm:text-left">
                   {mainTitleBlock.text}
                 </h3>
                 <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500 mx-auto sm:mx-0" />
@@ -281,11 +284,11 @@ export default function AboutPage() {
           <div className="flex flex-col gap-6 w-full max-w-full">
 
             {/* Quick Summary */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
+            <div className={ABOUT_CARD}>
               <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent mb-3">
                 Quick Summary
               </h4>
-              <div className="space-y-2 text-sm sm:text-base text-gray-700">
+              <div className="space-y-2 text-sm sm:text-base text-gray-700 pe-about-body">
                 <p>
                   This Proposal Engine is a custom-built CPQ module for Rayenna Energy Private Limited, with original workflows, architecture, and UI/UX designed specifically for solar EPC project proposals.
                 </p>
@@ -299,21 +302,21 @@ export default function AboutPage() {
             </div>
 
             {/* Title Credits */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
+            <div className={ABOUT_CARD}>
               <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent mb-4">
                 Title Credits
               </h4>
-              <div className="space-y-4 text-sm sm:text-base text-gray-700">
+              <div className="space-y-4 text-sm sm:text-base text-gray-700 pe-about-body">
                 {titleCreditsBlocks.map((b, i) => renderBlock(b, (mainTitleBlock ? 2 : 1) + i))}
               </div>
             </div>
 
             {/* Rayenna Identity */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-gradient-to-br from-white to-primary-50/40 shadow-lg w-full">
+            <div className={ABOUT_CARD}>
               <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
                 Rayenna Identity
               </h4>
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed pe-about-body">
                 Rayenna Energy is a solar EPC focused on quality execution, compliant subsidy handling, and reliable operations. The Proposal Engine supports the full pre-sales workflow — from costing and BOM to ROI analysis and professional proposal generation.
               </p>
             </div>
@@ -325,12 +328,12 @@ export default function AboutPage() {
               return (
                 <div
                   key={section.heading}
-                  className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full"
+                  className={ABOUT_CARD}
                 >
                   <h4 className={`text-base sm:text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent mb-4`}>
                     {section.heading}
                   </h4>
-                  <div className="space-y-4 text-sm sm:text-base text-gray-700">
+                  <div className="space-y-4 text-sm sm:text-base text-gray-700 pe-about-body">
                     {contentBlocks.map((b, i) => renderBlock(b, section.startIdx + 1 + i))}
                   </div>
                 </div>
@@ -346,7 +349,7 @@ export default function AboutPage() {
                 alt="Proposal Engine"
                 className="w-full max-w-[260px] sm:max-w-[320px] h-auto object-contain drop-shadow-2xl"
               />
-              <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
+              <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center pe-about-footer">
                 ©2026 – Present. Rayenna Energy Private Limited<br />
                 www.rayennaenergy.com | sales@rayenna.energy
               </p>

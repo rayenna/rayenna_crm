@@ -8,6 +8,7 @@ import type { Category, LineItem } from '../lib/costingConstants';
 import type { FormValues } from './types';
 import { fmt, toNum } from './format';
 import { EMPTY_ROW } from './builtInTemplates';
+import { useThemeContext } from '../theme/ThemeProvider';
 
 export function CostRow({
   index,
@@ -174,6 +175,7 @@ export function CostingGroupedTable({
   resetSignal:    number;     // increment to clear collapsed state without remounting
   canEdit:        boolean;    // false for Ops/Finance/Management (read-only)
 }) {
+  const { theme } = useThemeContext();
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => (allCollapsed ? new Set(CATEGORIES.map((c) => c.value)) : new Set()),
   );
@@ -219,7 +221,7 @@ export function CostingGroupedTable({
     <div className="bg-white rounded-xl shadow-sm border border-primary-100 overflow-x-auto">
       <table className={`border-collapse w-full ${showGst ? 'min-w-[1020px]' : 'min-w-[860px]'}`}>
         <thead>
-          <tr className="border-b-2 border-primary-200 bg-primary-50/80">
+          <tr className="pe-sheet-thead border-b-2 border-primary-200 bg-primary-50/80">
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide w-36">Category</th>
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide">Item / Description</th>
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide">
@@ -237,7 +239,7 @@ export function CostingGroupedTable({
         <tbody>
           {grouped.map(({ cat, indices }) => {
             const isOpen   = !collapsed.has(cat.value);
-            const accent   = catAccentColor(cat.value);
+            const accent   = catAccentColor(cat.value, theme);
             const catItems = indices.map((i) => liveItems[i]).filter(Boolean);
             const m = 1 + (marginPercent / 100);
             const base     = catItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m, 0);
@@ -258,7 +260,10 @@ export function CostingGroupedTable({
                         <span className="text-xs font-bold" style={{ color: accent }}>
                           {isOpen ? '▼' : '▶'}
                         </span>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-bold ${CATEGORY_COLORS[cat.value]}`}>
+                        <span
+                          data-pe-cat={cat.value}
+                          className={`text-xs px-2.5 py-0.5 rounded-full border font-bold ${CATEGORY_COLORS[cat.value]}`}
+                        >
                           {cat.label}
                         </span>
                         <span className="text-xs text-secondary-500">
@@ -274,13 +279,18 @@ export function CostingGroupedTable({
                         {canEdit && (
                           <button
                             type="button"
+                            data-pe-cat={cat.value}
                             onClick={(e) => {
                               e.stopPropagation();
                               append({ ...EMPTY_ROW, category: cat.value, gstPercent: String(CATEGORY_GST[cat.value]) });
                               setCollapsed((prev) => { const n = new Set(prev); n.delete(cat.value); return n; });
                             }}
                             className="text-xs font-semibold px-2.5 py-0.5 rounded-lg border"
-                            style={{ color: accent, borderColor: `${accent}60`, background: 'white' }}
+                            style={
+                              theme === 'dark'
+                                ? undefined
+                                : { color: accent, borderColor: `${accent}60`, background: 'white' }
+                            }
                           >
                             + Add row
                           </button>
@@ -350,7 +360,7 @@ export function GrandTotalCard({ items, showGst, marginPercent }: { items: LineI
 
   return (
     <div className="mt-4 rounded-xl border border-primary-200 overflow-hidden shadow-sm">
-      <div className="bg-primary-50/60 px-4 py-2 border-b border-primary-100">
+      <div className="pe-summary-head bg-primary-50/60 px-4 py-2 border-b border-primary-100">
         <span className="text-xs font-semibold text-secondary-500 uppercase tracking-wide">Project Summary</span>
       </div>
       <div className="bg-white divide-y divide-primary-100">
@@ -359,16 +369,16 @@ export function GrandTotalCard({ items, showGst, marginPercent }: { items: LineI
           <span className="text-sm font-medium text-secondary-700 tabular-nums">₹{fmt(totalBase)}</span>
         </div>
         {totalMargin > 0 && (
-          <div className="flex items-center justify-between px-4 py-2 bg-yellow-50/40">
+          <div className="pe-summary-margin flex items-center justify-between px-4 py-2 bg-yellow-50/40">
             <span className="text-xs text-secondary-500">Margin ({marginPercent}%)</span>
             <span className="text-xs font-medium text-yellow-700 tabular-nums">+ ₹{fmt(totalMargin)}</span>
           </div>
         )}
         {showGst && Object.entries(gstByRate).sort(([a], [b]) => Number(a) - Number(b)).map(([rate, amt]) => (
-          <div key={rate} className="flex items-center justify-between px-4 py-2 bg-blue-50/40">
+          <div key={rate} className="pe-summary-gst flex items-center justify-between px-4 py-2 bg-blue-50/40">
             <span className="text-xs text-blue-700">
               GST @ {rate}%
-              <span className="ml-1.5 text-[10px] text-blue-500">
+              <span className="pe-summary-gst-note ml-1.5 text-[10px] text-blue-500">
                 {Number(rate) === 5 ? '(Modules & Inverters)' : '(Structure / Cable / Labour / Misc)'}
               </span>
             </span>
@@ -376,7 +386,7 @@ export function GrandTotalCard({ items, showGst, marginPercent }: { items: LineI
           </div>
         ))}
         {showGst && totalGst > 0 && (
-          <div className="flex items-center justify-between px-4 py-2 bg-blue-50/70">
+          <div className="pe-summary-gst-total flex items-center justify-between px-4 py-2 bg-blue-50/70">
             <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Total GST</span>
             <span className="text-sm font-bold text-blue-800 tabular-nums">₹{fmt(totalGst)}</span>
           </div>
@@ -397,6 +407,7 @@ export function GrandTotalCard({ items, showGst, marginPercent }: { items: LineI
 // ─────────────────────────────────────────────
 
 export function CategoryBreakdown({ items }: { items: LineItem[] }) {
+  const { theme } = useThemeContext();
   const byCategory = CATEGORIES.map(({ value, label }) => {
     const cost = items
       .filter((r) => r.category === value)
@@ -409,32 +420,39 @@ export function CategoryBreakdown({ items }: { items: LineItem[] }) {
   if (byCategory.length === 0) return null;
 
   return (
-    <div className="mt-8 bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-5">
+    <div className="pe-breakdown-chart mt-8 p-5">
       <h3 className="text-sm font-semibold text-secondary-700 mb-4 uppercase tracking-wide">
         Cost Breakdown by Category
       </h3>
-      <div className="space-y-3">
-        {byCategory.map(({ value, label, cost }) => {
-          const pct = total > 0 ? (cost / total) * 100 : 0;
-          return (
-            <div key={value}>
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded border font-medium ${CATEGORY_COLORS[value as Category]}`}>
-                  {label}
-                </span>
-                <span className="text-xs text-secondary-500 tabular-nums">
-                  ₹{fmt(cost)} · {pct.toFixed(1)}%
-                </span>
+      <div className="relative">
+        <div className="pe-breakdown-grid absolute inset-0 pointer-events-none" aria-hidden />
+        <div className="relative space-y-3">
+          {byCategory.map(({ value, label, cost }) => {
+            const pct = total > 0 ? (cost / total) * 100 : 0;
+            const accent = catAccentColor(value, theme);
+            return (
+              <div key={value}>
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    data-pe-cat={value}
+                    className={`text-xs px-2 py-0.5 rounded-full border font-medium ${CATEGORY_COLORS[value as Category]}`}
+                  >
+                    {label}
+                  </span>
+                  <span className="pe-breakdown-figure text-xs font-semibold text-secondary-800 tabular-nums">
+                    ₹{fmt(cost)} · {pct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="pe-breakdown-track h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: accent }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 bg-primary-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary-600 transition-all duration-500"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

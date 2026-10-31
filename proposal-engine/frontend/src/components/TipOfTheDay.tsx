@@ -55,7 +55,7 @@ const TipOfTheDay = () => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black/30 dark:bg-black/60 flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-xl max-w-md w-full border border-secondary-200 overflow-hidden">
         <div className="pe-banner px-4 py-3 flex items-center gap-3">
           <h3 className="text-base font-semibold text-white">Tip of the Day</h3>

@@ -32,7 +32,7 @@ export function RoofLayoutFacetBar({
   const activeYieldFactor = active ? indiaFacetYieldFactor(active.azimuthDeg) : null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
+    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2 pe-roof-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold text-slate-800">Roof sections</p>
         <span className="text-[10px] text-slate-500">

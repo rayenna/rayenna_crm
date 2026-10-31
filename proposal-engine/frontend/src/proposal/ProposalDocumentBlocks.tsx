@@ -1468,7 +1468,7 @@ export function CustomerForm({
             <span className="font-semibold">Active customer:</span> {activeCustomer.master.name}
             {' · '}Generating proposal will save all 4 artifacts to this customer record.
           </p>
-          <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
+          <Link to="/dashboard" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
             View Dashboard →
           </Link>
         </div>

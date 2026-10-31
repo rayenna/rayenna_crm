@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  // Must follow the in-app toggle (data-theme), not macOS appearance.
+  // The ['selector', '[data-theme="dark"]'] form was still emitting
+  // @media (prefers-color-scheme: dark), which painted Light UI with Dark gradients.
+  darkMode: ['variant', '&:is([data-theme="dark"] *)'],
   theme: {
     extend: {
       screens: {

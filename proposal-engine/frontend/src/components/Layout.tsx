@@ -7,6 +7,8 @@ import {
   type BrowserStorageErrorDetail,
 } from '../lib/safeLocalStorage';
 import TipOfTheDay from './TipOfTheDay';
+import ThemeToggle from './ThemeToggle';
+import { useThemeContext } from '../theme/ThemeProvider';
 
 const NAV = [
   { label: 'Customers',             to: '/customers' },
@@ -31,6 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown]     = useState(60);
   const helpRef                     = useRef<HTMLDivElement>(null);
+  const { resetTheme }              = useThemeContext();
   const showIdleWarningRef = useRef(false);
   const idleCountdownRef = useRef(60);
   // Re-read active customer on every navigation so the pill stays current
@@ -146,6 +149,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     clearToken();
+    resetTheme();
     navigate('/login', { replace: true });
   };
 
@@ -291,11 +295,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} aria-hidden>▾</span>
                 </button>
                 {helpOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-lg border border-secondary-200 overflow-hidden z-50" role="menu">
+                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white dark:bg-[#14141C] rounded-lg border border-secondary-200 dark:border-white/10 overflow-hidden z-50" role="menu">
                     <Link
                       to="/help"
                       role="menuitem"
-                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors"
+                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 dark:text-white/80 hover:bg-secondary-50 dark:hover:bg-white/10 transition-colors"
                       onClick={() => setHelpOpen(false)}
                     >
                       <span className="font-medium">User Guide</span>
@@ -304,14 +308,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       type="button"
                       role="menuitem"
                       onClick={() => { setHelpOpen(false); navigate(`${pathname}?showTip=1`); }}
-                      className="w-full flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors border-t border-secondary-100 text-left"
+                      className="w-full flex items-center px-4 py-2.5 text-sm text-secondary-700 dark:text-white/80 hover:bg-secondary-50 dark:hover:bg-white/10 transition-colors border-t border-secondary-100 dark:border-white/10 text-left"
                     >
                       <span className="font-medium">Tip of the Day</span>
                     </button>
                     <Link
                       to="/about"
                       role="menuitem"
-                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 hover:bg-secondary-50 transition-colors border-t border-secondary-100"
+                      className="flex items-center px-4 py-2.5 text-sm text-secondary-700 dark:text-white/80 hover:bg-secondary-50 dark:hover:bg-white/10 transition-colors border-t border-secondary-100 dark:border-white/10"
                       onClick={() => setHelpOpen(false)}
                     >
                       <span className="font-medium">About</span>
@@ -346,6 +350,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )}
 
+              {hasToken && (
+                <div className="hidden lg:flex">
+                  <ThemeToggle />
+                </div>
+              )}
+
               {/* Logout button — desktop only */}
               {hasToken && (
                 <div className="hidden lg:flex items-center gap-2">
@@ -360,7 +370,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-800 bg-white hover:bg-secondary-100 transition-colors"
+                    className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-800 bg-white hover:bg-secondary-100 dark:bg-white/10 dark:hover:bg-white/15 dark:text-white dark:border dark:border-white/20 transition-colors"
                   >
                     Logout
                   </button>
@@ -441,15 +451,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 </div>
 
-                {/* Mobile user name (match CRM: visible in hamburger menu) */}
-                {hasToken && userName && (
-                  <div className="mt-2 pt-2 border-t border-white/20">
-                    <div
-                      className="px-3 py-2 rounded-lg text-sm text-white/90 font-medium bg-white/10 border border-white/20 truncate"
-                      title={userName}
-                    >
-                      {userName}
-                    </div>
+                {hasToken && (
+                  <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between gap-2">
+                    {userName ? (
+                      <div
+                        className="px-3 py-2 rounded-lg text-sm text-white/90 font-medium bg-white/10 border border-white/20 truncate min-w-0"
+                        title={userName}
+                      >
+                        {userName}
+                      </div>
+                    ) : (
+                      <span />
+                    )}
+                    <ThemeToggle />
                   </div>
                 )}
 
@@ -458,7 +472,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={() => { setMenuOpen(false); handleLogout(); }}
-                    className="mt-2 w-full flex items-center justify-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-primary-800 bg-white hover:bg-secondary-100 transition-colors touch-manipulation"
+                    className="mt-2 w-full flex items-center justify-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-primary-800 bg-white hover:bg-secondary-100 dark:bg-white/10 dark:hover:bg-white/15 dark:text-white dark:border dark:border-white/20 transition-colors touch-manipulation"
                   >
                     <span>Logout</span>
                   </button>

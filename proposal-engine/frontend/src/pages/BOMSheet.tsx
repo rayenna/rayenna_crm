@@ -16,6 +16,7 @@ import type { BomArtifact } from '../lib/customerStore';
 import { canEditProposalArtifacts } from '../lib/apiClient';
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
+import { useThemeContext } from '../theme/ThemeProvider';
 
 // ─────────────────────────────────────────────
 // Export helpers (BOM)
@@ -193,21 +194,21 @@ function GstSummaryPanel({ rows }: { rows: BomRow[] }) {
   const at18 = rows.filter((r) => getRate(r) === 18);
 
   return (
-    <div className="mt-6 bg-gradient-to-br from-blue-50/60 to-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+    <div className="mt-6 rounded-xl border border-blue-200 dark:border-white/15 overflow-hidden bg-transparent">
       {/* Panel header */}
-      <div className="px-5 py-3 border-b border-blue-100 flex items-center justify-between">
+      <div className="px-5 py-3 border-b border-blue-200/80 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-base">🧾</span>
           <h3 className="text-sm font-bold text-primary-800">GST Applicability — Solar Project</h3>
         </div>
-        <span className="text-[10px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-semibold">
+        <span className="pe-gst-badge text-[10px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-semibold">
           Post 56th GST Council · Sep 2025
         </span>
       </div>
 
       <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
         {/* 5% bucket */}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+        <div className="pe-gst-5 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg font-extrabold text-emerald-700">5%</span>
             <span className="text-xs text-emerald-600 font-medium">GST</span>
@@ -229,7 +230,7 @@ function GstSummaryPanel({ rows }: { rows: BomRow[] }) {
         </div>
 
         {/* 18% bucket */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4">
+        <div className="pe-gst-18 rounded-xl border border-blue-200 bg-blue-50/60 p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg font-extrabold text-blue-700">18%</span>
             <span className="text-xs text-blue-600 font-medium">GST</span>
@@ -252,7 +253,7 @@ function GstSummaryPanel({ rows }: { rows: BomRow[] }) {
       </div>
 
       {/* Rate reference footer */}
-      <div className="px-5 py-3 border-t border-blue-100 bg-white/60">
+      <div className="px-5 py-3 border-t border-blue-200/80 dark:border-white/10 bg-transparent">
         <p className="text-[10px] text-secondary-400 leading-relaxed">
           <strong className="text-secondary-500">Note:</strong> GST classification is auto-detected from item names.
           Hybrid inverters attract 18% GST. For composite EPC contracts, an effective blended rate of ~8.7% may apply
@@ -294,13 +295,15 @@ function BomRowInput({
     // Rows without gstPercent (older/manual BOMs) fall back to keyword-based inference.
     return deriveGstRate(itemName ?? '');
   })();
-  const accent   = catAccentColor(category ?? 'others');
+  const { theme } = useThemeContext();
+  const accent   = catAccentColor(category ?? 'others', theme);
 
   return (
     <tr className="group border-b border-primary-100/60 hover:bg-primary-50/40 transition-colors">
       {/* Category pill */}
       <td className="px-3 py-2 w-36">
         <span
+          data-pe-cat={category ?? 'others'}
           className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS] ?? ''}`}
           style={{ borderColor: `${accent}40` }}
         >
@@ -390,6 +393,7 @@ function BomTable({
   allCollapsed: boolean;
   canEdit:      boolean;
 }) {
+  const { theme } = useThemeContext();
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => (allCollapsed ? new Set(CATEGORIES.map((c) => c.value)) : new Set()),
   );
@@ -429,7 +433,7 @@ function BomTable({
     <div className="bg-white rounded-xl shadow-sm border border-primary-100 overflow-x-auto">
       <table className="w-full border-collapse min-w-[800px]">
         <thead>
-          <tr className="border-b-2 border-primary-200 bg-primary-50/80">
+          <tr className="pe-sheet-thead border-b-2 border-primary-200 bg-primary-50/80">
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide w-36">Category</th>
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide w-16">Source</th>
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide">Item / Description</th>
@@ -442,7 +446,7 @@ function BomTable({
         <tbody>
           {grouped.map(({ cat, indices }) => {
             const isOpen   = !collapsed.has(cat.value);
-            const accent   = catAccentColor(cat.value);
+            const accent   = catAccentColor(cat.value, theme);
             const catRows  = indices.map((i) => liveRows[i]).filter(Boolean);
             const totalQty = catRows.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
 
@@ -461,7 +465,10 @@ function BomTable({
                           className="text-xs font-bold transition-transform duration-200 inline-block"
                           style={{ color: accent, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
                         >▶</span>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-bold ${CATEGORY_COLORS[cat.value as keyof typeof CATEGORY_COLORS] ?? ''}`}>
+                        <span
+                          data-pe-cat={cat.value}
+                          className={`text-xs px-2.5 py-0.5 rounded-full border font-bold ${CATEGORY_COLORS[cat.value as keyof typeof CATEGORY_COLORS] ?? ''}`}
+                        >
                           {cat.label}
                         </span>
                         <span className="text-xs text-secondary-500">
@@ -483,7 +490,11 @@ function BomTable({
                             setCollapsed((prev) => { const n = new Set(prev); n.delete(cat.value); return n; });
                           }}
                           className="text-xs font-semibold px-2.5 py-0.5 rounded-lg border transition-colors hover:opacity-80"
-                          style={{ color: accent, borderColor: `${accent}60`, background: 'white' }}
+                          style={{
+                            color: accent,
+                            borderColor: `${accent}60`,
+                            background: theme === 'dark' ? 'rgba(15,23,42,0.55)' : 'white',
+                          }}
                         >
                           + Add row
                         </button>
@@ -759,7 +770,7 @@ export default function BOMSheet() {
                   <span className="font-semibold">Active customer:</span> {ac.master.name}
                   {ac.bom && <span className="ml-2 text-emerald-600 font-medium">· BOM saved ✓</span>}
                 </p>
-                <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+                <Link to="/dashboard" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
                   View Dashboard →
                 </Link>
               </div>
@@ -958,7 +969,7 @@ export default function BOMSheet() {
 
           {/* Info panel — relative z-[1] avoids mobile WebKit painting stray shadows from action buttons above */}
           {!loading && !fetchError && (
-            <div className="relative z-[1] mt-8 bg-gradient-to-br from-primary-50/30 to-transparent border-t border-primary-100 rounded-xl p-5">
+            <div className="relative z-[1] mt-8 bg-gradient-to-br from-primary-50/30 to-transparent dark:from-white/5 border-t border-primary-100 dark:border-white/10 rounded-xl p-5">
               <h3 className="text-sm font-semibold text-secondary-600 mb-3">How BOM generation works</h3>
               <ol className="space-y-2 text-xs text-secondary-500">
                 <li className="flex items-start gap-2 [-webkit-tap-highlight-color:transparent]">
