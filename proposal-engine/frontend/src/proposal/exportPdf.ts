@@ -44,9 +44,19 @@ export const PROPOSAL_PRINT_CSS = `
     svg { overflow:visible!important; }
     textarea { display:none!important; }
     img { max-width:100%; max-height:160mm; object-fit:contain; }
-    /* Ensure Our Process cards don't overflow page width when printed */
-    .pdf-process-steps { flex-wrap:wrap; }
-    .pdf-process-steps > div { min-width:220px; flex:1 1 45%; }
+    /* Our Process: two columns on A4 so cards never clip the page edge */
+    .pdf-process-steps {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      min-width: 0 !important;
+      width: 100% !important;
+    }
+    .pdf-process-steps > div {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      flex: none !important;
+    }
 `;
 
 export function exportToPdf(printRootId: string): void {

@@ -1029,34 +1029,48 @@ export function buildDocx(
       children: [new TextRun({ text: OUR_PROCESS_INTRO, size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
-    // 5-step process table (row of 5 cells)
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [
-        new TableRow({
-          children: OUR_PROCESS_STEPS.map((step, idx) => {
-            const bgColors = ['EFF6FF', 'E0F2FE', 'F0FDF4', 'FFFBEB', 'F5F3FF'];
-            const fgColors = ['0369a1', '0891b2', '059669', 'd97706', '7c3aed'];
-            return new TableCell({
-              shading: { type: ShadingType.SOLID, color: bgColors[idx] },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: `${idx + 1}`, bold: true, size: 28, color: fgColors[idx] })],
-                  spacing: { after: 40 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `${step.icon}  ${step.title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
-                  spacing: { after: 60 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: step.desc, size: 17, color: '374151' })],
-                }),
-              ],
-            });
-          }),
-        }),
-      ],
-    }),
+    // Process steps as 2-column rows so Word on phone/iPad/A4 does not clip a 5-wide row
+    (() => {
+      const bgColors = ['EFF6FF', 'E0F2FE', 'F0FDF4', 'FFFBEB', 'F5F3FF'];
+      const fgColors = ['0369a1', '0891b2', '059669', 'd97706', '7c3aed'];
+      const processCell = (idx: number) => {
+        const step = OUR_PROCESS_STEPS[idx]!;
+        return new TableCell({
+          shading: { type: ShadingType.SOLID, color: bgColors[idx] },
+          width: { size: 50, type: WidthType.PERCENTAGE },
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: `${idx + 1}`, bold: true, size: 28, color: fgColors[idx] })],
+              spacing: { after: 40 },
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: `${step.icon}  ${step.title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
+              spacing: { after: 60 },
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: step.desc, size: 17, color: '374151' })],
+            }),
+          ],
+        });
+      };
+      const emptyCell = new TableCell({
+        width: { size: 50, type: WidthType.PERCENTAGE },
+        children: [new Paragraph({ text: '' })],
+      });
+      const rows: DocxTableRow[] = [];
+      for (let i = 0; i < OUR_PROCESS_STEPS.length; i += 2) {
+        rows.push(new TableRow({
+          children: [
+            processCell(i),
+            i + 1 < OUR_PROCESS_STEPS.length ? processCell(i + 1) : emptyCell,
+          ],
+        }));
+      }
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows,
+      });
+    })(),
     new Paragraph({ text: '', spacing: { after: 120 } }),
     heading('Scope of Work'),
     new Paragraph({

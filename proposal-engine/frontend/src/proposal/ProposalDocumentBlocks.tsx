@@ -381,7 +381,7 @@ export function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) 
 
       {/* Key metrics strip — only shown when data is available */}
       {highlights.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 min-w-0">
           {highlights.map((h) => (
             <div
               key={h.label}
@@ -485,8 +485,8 @@ export function WhatWeOfferBlock() {
         </div>
       </div>
 
-      {/* 3 service cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* 3 service cards — 1 / 2 / 3 so tablet portrait does not crush titles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
         {OUR_SERVICES.map((s) => (
           <div
             key={s.title}
@@ -511,10 +511,10 @@ export function OurProcessBlock() {
   return (
     <div className="mb-8">
       {/* Section heading */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-start sm:items-center gap-3 mb-4 min-w-0">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
-        <span className="text-lg leading-none">🔄</span>
-        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
+        <span className="text-lg leading-none flex-shrink-0">🔄</span>
+        <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide sm:tracking-widest min-w-0 break-words" style={{ color: accent }}>
           Our Process for Seamless Solar Integration
         </h2>
       </div>
@@ -523,12 +523,13 @@ export function OurProcessBlock() {
         {OUR_PROCESS_INTRO}
       </OverriddenParagraph>
 
-      {/* Process steps — horizontal on desktop, but constrained to printable width */}
-      <div className="flex flex-col sm:flex-row gap-3 pdf-process-steps">
+      {/* Process steps reflow: 1 / 2 / 3 / 5 columns. CSS in index.css also
+          overrides older shared-HTML snapshots that still use flex-row. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 min-w-0 pdf-process-steps">
         {OUR_PROCESS_STEPS.map((step, idx) => (
           <div
             key={step.title}
-            className="flex-1 rounded-xl border p-3.5 flex flex-col gap-1.5 relative"
+            className="min-w-0 max-w-full rounded-xl border p-3.5 flex flex-col gap-1.5 relative"
             style={{ borderColor: `${stepColors[idx]}40`, background: `${stepColors[idx]}08` }}
           >
             {/* Step number badge */}
@@ -538,11 +539,11 @@ export function OurProcessBlock() {
             >
               {idx + 1}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">{step.icon}</span>
-              <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: stepColors[idx] }}>{step.title}</span>
+            <div className="flex items-start gap-1.5 min-w-0">
+              <span className="text-base flex-shrink-0">{step.icon}</span>
+              <span className="text-xs font-extrabold uppercase tracking-wide break-words min-w-0" style={{ color: stepColors[idx] }}>{step.title}</span>
             </div>
-            <p className="text-xs text-secondary-600 leading-relaxed">{step.desc}</p>
+            <p className="text-xs text-secondary-600 leading-relaxed break-words">{step.desc}</p>
           </div>
         ))}
       </div>
@@ -727,10 +728,10 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
 
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-start sm:items-center gap-3 mb-4 min-w-0">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
-        <span className="text-lg leading-none">📊</span>
-        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#059669' }}>Financial Benefits &amp; Savings</h2>
+        <span className="text-lg leading-none flex-shrink-0">📊</span>
+        <h2 className="text-sm sm:text-base font-extrabold uppercase tracking-wide sm:tracking-widest min-w-0 break-words" style={{ color: '#059669' }}>Financial Benefits &amp; Savings</h2>
       </div>
 
       {/* Narrative — rich formatted block */}
@@ -764,7 +765,7 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
             </div>
 
             {/* 4 highlight stat pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 min-w-0">
               {highlights.map((h) => (
                 <div key={h.label} className="rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 flex items-start gap-2.5">
                   <span className="text-base flex-shrink-0 mt-0.5">{h.icon}</span>
@@ -808,7 +809,7 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
 
       {/* KPI tiles */}
       {kpis.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6 min-w-0">
           {kpis.map((k) => (
             <div
               key={k.label}
@@ -828,11 +829,11 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
         <div className="flex flex-col lg:flex-row gap-4 mb-2">
 
           {/* ── Left: SVG bar chart ── */}
-          <div className="lg:w-[58%] rounded-xl border border-primary-100 bg-white p-3 flex flex-col">
+          <div className="lg:w-[58%] min-w-0 rounded-xl border border-primary-100 bg-white p-3 flex flex-col">
             <p className="text-[10px] font-semibold text-secondary-400 uppercase tracking-widest mb-2">
               25-Year Cumulative Savings
             </p>
-            <svg viewBox={`0 0 ${W} ${H}`} className="w-full flex-1" style={{ minWidth: 260 }}>
+            <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-full flex-1 min-w-0" style={{ minWidth: 0 }}>
               {guides.map((g) => {
                 const y = padT + plotH - g * plotH;
                 return (
@@ -876,7 +877,7 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
           </div>
 
           {/* ── Right: compact table ── */}
-          <div className="lg:w-[42%] rounded-xl border border-primary-100 overflow-hidden flex flex-col">
+          <div className="lg:w-[42%] min-w-0 rounded-xl border border-primary-100 overflow-hidden flex flex-col">
             {/* Table header */}
             <div className="px-3 py-2 flex-shrink-0" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
               <p className="text-[10px] font-semibold text-white uppercase tracking-widest">Savings Breakdown</p>

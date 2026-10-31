@@ -1264,7 +1264,7 @@ export default function ProposalPreview() {
             <div
               ref={printRef}
               id="proposal-print-root"
-              className={`bg-white rounded-2xl border shadow-sm overflow-hidden print:overflow-visible transition-all ${
+              className={`bg-white rounded-2xl border shadow-sm min-w-0 max-w-full overflow-hidden print:overflow-visible transition-all ${
                 isEditing
                   ? 'border-amber-300 ring-2 ring-amber-200'
                   : 'border-primary-100'
@@ -1285,7 +1285,7 @@ export default function ProposalPreview() {
                 </div>
               )}
               {/* Letterhead */}
-              <div className="px-4 sm:px-8 py-6 sm:py-8" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+              <div className="px-3 sm:px-6 md:px-8 py-6 sm:py-8 min-w-0" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
                 {/* Top bar: logo left, ref/date right */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-5 border-b border-white/20">
                   {/* Logo + company name */}
@@ -1361,7 +1361,7 @@ export default function ProposalPreview() {
               </div>
 
               {/* Two contentEditable regions: nested editors inside a parent contentEditable break image paste/insert in browsers. */}
-              <div className="px-4 sm:px-8 py-6 sm:py-8">
+              <div className="px-3 sm:px-6 md:px-8 py-6 sm:py-8 min-w-0">
                 <ProposalTextOverridesContext.Provider key={docRevision} value={displayTextOverrides}>
                 <div
                   ref={docBodyTopRef}

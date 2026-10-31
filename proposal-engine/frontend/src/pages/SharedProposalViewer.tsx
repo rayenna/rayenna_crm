@@ -107,7 +107,7 @@ export default function SharedProposalViewer() {
             <p className="text-xs text-gray-500 mb-2 text-center">Ref: {refNumber} · Read-only shared view</p>
           )}
           <div
-            className="bg-white rounded-2xl border shadow-sm overflow-hidden proposal-shared-content"
+            className="bg-white rounded-2xl border shadow-sm overflow-hidden proposal-shared-content min-w-0 max-w-full"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>

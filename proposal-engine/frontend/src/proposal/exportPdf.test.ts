@@ -12,4 +12,10 @@ describe('PROPOSAL_PRINT_CSS', () => {
     const roundedRule = PROPOSAL_PRINT_CSS.match(/\.rounded-xl[\s\S]*?}/);
     expect(roundedRule?.[0]).not.toMatch(/page-break-inside:\s*avoid/);
   });
+
+  it('prints Our Process as a 2-column grid so cards are not clipped', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-process-steps[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)/,
+    );
+  });
 });
