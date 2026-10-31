@@ -6,6 +6,7 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
 import { ProjectStatus } from '../../types'
 import { defaultNextFollowUpYmd } from '../../utils/supportTicketQueue'
+import { Ticket, X } from 'lucide-react'
 import { stGhostBtn, stInputCls, stLabelCls, stMutedCls, stPrimaryBtn, stSectionInner } from './supportTicketsZenith'
 
 interface CreateTicketModalProps {
@@ -147,8 +148,8 @@ const CreateTicketModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-5 py-4 backdrop-blur-xl sm:px-6">
-          <h2 id="create-ticket-title" className="truncate text-base font-bold text-[color:var(--text-primary)] sm:text-lg">
-            Create Support Ticket
+          <h2 id="create-ticket-title" className="zenith-display truncate text-base font-bold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
+            Create support ticket
           </h2>
           <button
             type="button"
@@ -156,9 +157,7 @@ const CreateTicketModal = ({
             className="shrink-0 rounded-xl p-2 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
             aria-label="Close"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
 
@@ -166,15 +165,8 @@ const CreateTicketModal = ({
           <div className="space-y-6">
             <div className={stSectionInner}>
               <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
-                <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket Details</h3>
+                <Ticket className="h-4 w-4 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket details</h3>
               </div>
               <div className="space-y-4">
                 {!needsPicker && lockedProjectId ? (

@@ -71,7 +71,7 @@ Follow-ups allow you to document progress, communications, and next steps for ea
 
 ### Adding a Follow-up
 
-1. Open the ticket by clicking the ticket number or **View** in the table
+1. Open the ticket by tapping the row or card (project name still opens **Project detail**)
 2. The **Ticket Detail Drawer** opens from the right (slide-in panel)
 3. In the drawer, scroll to the **Follow-up Timeline** section
 4. Click **Add Follow-up** (if the form is not visible)
@@ -120,7 +120,7 @@ Support tickets have three possible statuses:
 
 When a support issue has been resolved:
 
-1. Open the ticket from the Support Tickets Dashboard or Project page (**View** — there is no Close on the list, so comments cannot be skipped)
+1. Open the ticket from the Support Tickets Dashboard or Project page (tap the row or card — there is no Close on the list, so comments cannot be skipped)
 2. Review the ticket details and follow-up history
 3. Click **Close ticket** (or **Save note & close** if you already typed a note)
 4. Enter a **resolution note** in the confirm dialog (pre-filled from any unsaved follow-up note). A next follow-up date is **not** required
@@ -147,19 +147,20 @@ If you type a follow-up and close the drawer without saving, you will be asked t
 The Support Tickets page is a **daily queue** for open work:
 
 1. Navigate to **Support Tickets** from the main menu
-2. View key metrics at the top:
+2. View the KPI strip at the top (**Opens list →**):
    - **Open**: Number of new tickets
    - **In Progress**: Tickets being actively worked on
    - **Closed**: Resolved tickets
    - **Overdue**: Latest next follow-up passed, or no next date for 7 days
-3. Use the metric cards or chart slices to filter the table
+3. Use the KPI tiles or **By status** chart slices to filter the queue
 4. Search by ticket number, customer, title, or project number; click a project name to open **Project detail** (Operations can open project detail only for Confirmed → Subsidy Credited — work early-stage tickets from this page)
-5. Review the **Open queue** list (desktop table or stacked cards); overdue tickets sort first, then Solar Hub. **Last updated** reflects follow-ups and other ticket changes (sort the column to see most recently touched tickets)
+5. Review the **Open queue** list (desktop table or stacked cards). Tap a row or card to open the ticket. Overdue tickets sort first, then Solar Hub. **Last updated** reflects follow-ups and other ticket changes (sort the column to see most recently touched tickets)
+6. On a phone, **Insights** holds the status chart so the queue stays above the fold
 
 ### Filtering Tickets
 
-- Click any **KPI card** (Open, In Progress, Closed, Overdue) to filter the table; click again to toggle that filter off
-- Click a **chart slice** in the Ticket Status Breakdown to filter by that status; click again to toggle off
+- Click any **KPI tile** (Open, In Progress, Closed, Overdue) to filter the queue; click again to toggle that filter off
+- Click a **chart slice** in **By status** to filter by that status; click again to toggle off
 - **Overdue** uses the latest next follow-up date (or 7 days with no next date)
 - Search, **Create ticket**, and project name links are on the same page
 - **Clear Filters** appears when filters are active; use it to reset to the default open queue
@@ -169,7 +170,7 @@ The Support Tickets page is a **daily queue** for open work:
 1. Navigate to a specific project (Operations: Confirmed → Subsidy Credited only)
 2. Scroll to the **Support / Service Tickets** section
 3. View all tickets associated with that project
-4. Click a ticket number or **View** to open the **Ticket Detail Drawer** (slide-in panel from the right)
+4. Tap a ticket row or card to open the **Ticket Detail Drawer** (slide-in panel from the right)
 5. See ticket status, creation date, and latest follow-up information
 
 Early-stage tickets (Lead / Survey / Proposal) are worked from **Support Tickets**, not project detail, for Operations.

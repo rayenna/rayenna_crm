@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { SupportTicket, ProjectStatus } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { Plus, Ticket } from 'lucide-react'
 import CreateTicketModal from './CreateTicketModal'
 import TicketDetailDrawer from './TicketDetailDrawer'
 import { ErrorModal } from '@/components/common/ErrorModal'
@@ -90,24 +91,13 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
 
   return (
     <div className="relative">
-      <section className="space-y-4 overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]">
+      <section className="space-y-4 overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <svg
-              className="h-5 w-5 shrink-0 text-[color:var(--accent-gold)]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            <h2 className="truncate text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">
+            <div className="shrink-0 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-1.5">
+              <Ticket className="h-4 w-4 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+            </div>
+            <h2 className="zenith-display truncate text-sm font-semibold tracking-tight text-[color:var(--text-primary)] sm:text-[15px]">
               Support / Service Tickets
             </h2>
           </div>
@@ -118,14 +108,12 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
               disabled={isProjectLost}
               className={
                 isProjectLost
-                  ? 'inline-flex min-h-[44px] touch-manipulation cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-muted)]'
-                  : `${stPrimaryBtn} min-h-[44px] touch-manipulation`
+                  ? 'inline-flex min-h-[40px] touch-manipulation cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-muted)]'
+                  : `${stPrimaryBtn} min-h-[40px] touch-manipulation`
               }
               title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create Ticket'}
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
+              <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
               Create Ticket
             </button>
           )}
@@ -166,52 +154,56 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
           </div>
         ) : (
           <>
-            <ul className="space-y-3 md:hidden" aria-label="Support tickets for this project">
+            <ul className="space-y-2.5 md:hidden" aria-label="Support tickets for this project">
               {tickets.map((ticket) => (
                 <li
                   key={ticket.id}
-                  className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] p-4 shadow-inner ring-1 ring-[color:var(--border-default)]"
+                  className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3.5 ring-1 ring-[color:var(--border-default)]"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-semibold text-[color:var(--accent-teal)]">{ticket.ticketNumber}</p>
-                    <span className={`inline-flex max-w-[55%] shrink-0 items-center truncate ${supportTicketStatusPillClass(ticket.status)}`}>
-                      {supportTicketStatusLabel(ticket.status)}
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm font-medium text-[color:var(--text-primary)]" title={ticket.title}>
-                    {ticket.title}
-                  </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
-                      <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Closed</span>
-                      <span className="tabular-nums">
-                        {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => void handleViewTicket(ticket)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        void handleViewTicket(ticket)
+                      }
+                    }}
+                    className="cursor-pointer text-left touch-manipulation"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[color:var(--accent-teal)]">{ticket.ticketNumber}</p>
+                      <span className={`inline-flex max-w-[55%] shrink-0 items-center truncate ${supportTicketStatusPillClass(ticket.status)}`}>
+                        {supportTicketStatusLabel(ticket.status)}
                       </span>
                     </div>
+                    <p className="mt-2 line-clamp-2 text-sm font-medium text-[color:var(--text-primary)]" title={ticket.title}>
+                      {ticket.title}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
+                        <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Closed</span>
+                        <span className="tabular-nums">
+                          {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-4 flex flex-col gap-2">
+                  {isAdmin ? (
                     <button
                       type="button"
-                      onClick={() => void handleViewTicket(ticket)}
-                      className="inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] hover:opacity-95"
+                      onClick={() => handleDeleteTicket(ticket)}
+                      disabled={deleteTicketMutation.isPending}
+                      className={`${touchActionBtn} mt-3 border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
                     >
-                      View ticket
+                      Delete
                     </button>
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTicket(ticket)}
-                        disabled={deleteTicketMutation.isPending}
-                        className={`${touchActionBtn} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
-                      >
-                        Delete
-                      </button>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -230,46 +222,47 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
                 </thead>
                 <tbody className="divide-y divide-[color:var(--border-default)]">
                   {tickets.map((ticket) => (
-                    <tr key={ticket.id} className="transition-colors hover:bg-[color:var(--bg-table-hover)]">
-                      <td className="whitespace-nowrap px-4 py-3.5">
-                        <span className="text-sm font-semibold text-[color:var(--text-primary)]">{ticket.ticketNumber}</span>
+                    <tr
+                      key={ticket.id}
+                      className="cursor-pointer transition-colors hover:bg-[color:var(--bg-table-hover)]"
+                      onClick={() => void handleViewTicket(ticket)}
+                    >
+                      <td className="whitespace-nowrap px-4 py-2.5">
+                        <span className="text-sm font-semibold text-[color:var(--accent-teal)]">{ticket.ticketNumber}</span>
                       </td>
-                      <td className="max-w-[14rem] px-4 py-3.5 sm:max-w-xs">
+                      <td className="max-w-[14rem] px-4 py-2.5 sm:max-w-xs">
                         <div className="truncate text-sm text-[color:var(--text-secondary)]" title={ticket.title}>
                           {ticket.title}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3.5">
+                      <td className="whitespace-nowrap px-4 py-2.5">
                         <span className={supportTicketStatusPillClass(ticket.status)}>
                           {supportTicketStatusLabel(ticket.status)}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
+                      <td className="whitespace-nowrap px-4 py-2.5 text-sm tabular-nums text-[color:var(--text-muted)]">
                         {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
+                      <td className="whitespace-nowrap px-4 py-2.5 text-sm tabular-nums text-[color:var(--text-muted)]">
                         {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3.5">
+                      <td className="whitespace-nowrap px-4 py-2.5">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
-                          <button
-                            type="button"
-                            onClick={() => void handleViewTicket(ticket)}
-                            className="text-[color:var(--accent-gold)] hover:opacity-90 hover:underline"
-                            title="View ticket"
-                          >
-                            View
-                          </button>
-                          {isAdmin && (
+                          {isAdmin ? (
                             <button
                               type="button"
-                              onClick={() => handleDeleteTicket(ticket)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteTicket(ticket)
+                              }}
                               className="text-[color:var(--accent-red)] hover:opacity-90 hover:underline"
                               title="Delete ticket (Admin only)"
                               disabled={deleteTicketMutation.isPending}
                             >
                               Delete
                             </button>
+                          ) : (
+                            <span className="text-[color:var(--text-muted)]">—</span>
                           )}
                         </div>
                       </td>

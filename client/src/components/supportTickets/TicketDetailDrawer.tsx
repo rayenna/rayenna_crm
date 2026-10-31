@@ -7,6 +7,7 @@ import { SupportTicket, SupportTicketStatus, SupportTicketSource } from '../../t
 import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { Clock, Ticket, X } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { canDeleteSupportTickets, canManageSupportTickets } from '../../utils/supportTicketPermissions'
 import {
@@ -242,8 +243,8 @@ const TicketDetailDrawer = ({
       >
         <div className="flex h-full flex-col">
           <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-5 py-4 backdrop-blur-xl sm:px-6">
-            <div className="min-w-0 border-l-4 border-l-[color:var(--accent-gold)] pl-3">
-              <h2 className="text-xl font-bold text-[color:var(--text-primary)]">Ticket Details</h2>
+            <div className="min-w-0">
+              <h2 className="zenith-display text-lg font-bold tracking-tight text-[color:var(--text-primary)] sm:text-xl">Ticket details</h2>
               <p className="mt-0.5 text-sm font-medium text-[color:var(--accent-gold)]">#{displayTicket?.ticketNumber ?? ticket.ticketNumber}</p>
             </div>
             <button
@@ -252,9 +253,7 @@ const TicketDetailDrawer = ({
               className="shrink-0 rounded-xl p-2 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
               aria-label="Close drawer"
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-5 w-5" strokeWidth={2} />
             </button>
           </div>
 
@@ -280,15 +279,8 @@ const TicketDetailDrawer = ({
               <>
                 <div className={stSectionInner}>
                   <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
-                    <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                      />
-                    </svg>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket Info</h3>
+                    <Ticket className="h-4 w-4 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket info</h3>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -393,10 +385,8 @@ const TicketDetailDrawer = ({
 
                 <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]">
                   <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
-                    <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Follow-up Timeline</h3>
+                    <Clock className="h-4 w-4 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Follow-up timeline</h3>
                   </div>
                   {displayTicket.activities && displayTicket.activities.length > 0 ? (
                     <div className="space-y-3">

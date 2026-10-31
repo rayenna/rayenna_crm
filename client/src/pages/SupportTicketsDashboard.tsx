@@ -5,12 +5,11 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import toast from 'react-hot-toast'
 import { SupportTicket, SupportTicketStatus, SupportTicketSource } from '../types'
 import { format } from 'date-fns'
-import MetricCard from '../components/dashboard/MetricCard'
 import TicketStatusDonutChart from '../components/supportTickets/TicketStatusDonutChart'
 import TicketDetailDrawer from '../components/supportTickets/TicketDetailDrawer'
 import CreateTicketModal from '../components/supportTickets/CreateTicketModal'
-import { Ticket, Sparkles } from 'lucide-react'
-import { FaTicketAlt, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import SupportKpiTile from '../components/supportTickets/SupportKpiTile'
+import { AlertTriangle, CheckCircle2, CircleDot, Ticket } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { canManageSupportTickets } from '../utils/supportTicketPermissions'
 import {
@@ -50,6 +49,42 @@ function ProjectTicketLink({ ticket }: { ticket: SupportTicket }) {
     >
       {label}
     </Link>
+  )
+}
+
+function SupportStatusInsights({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] ring-1 ring-[color:var(--border-default)] lg:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex min-h-[44px] w-full touch-manipulation items-center justify-between gap-2 px-3 py-2.5 text-left sm:px-4"
+        aria-expanded={open}
+        aria-controls="support-tickets-insights"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-[color:var(--text-primary)]">Insights</span>
+          <span className="mt-0.5 block text-[11px] text-[color:var(--text-muted)]">
+            {open ? 'Hide' : 'Show'} status mix — tap the chart to filter the queue
+          </span>
+        </span>
+        <svg
+          className={`h-4 w-4 shrink-0 text-[color:var(--text-muted)] transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open ? (
+        <div id="support-tickets-insights" className="border-t border-[color:var(--border-default)] px-3 pb-3 pt-3 sm:px-4">
+          {children}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -259,43 +294,33 @@ const SupportTicketsDashboard = () => {
   const ariaSortFor = (key: SupportTicketsTableSortKey): 'ascending' | 'descending' | 'none' =>
     tableSortBy === key ? (tableSortOrder === 'asc' ? 'ascending' : 'descending') : 'none'
 
-  // Prepare chart data
   const chartData = [
-    {
-      status: SupportTicketStatus.OPEN,
-      label: 'Open',
-      value: stats.open,
-      color: '#3b82f6', // blue
-    },
-    {
-      status: SupportTicketStatus.IN_PROGRESS,
-      label: 'In Progress',
-      value: stats.inProgress,
-      color: '#f59e0b', // yellow
-    },
-    {
-      status: SupportTicketStatus.CLOSED,
-      label: 'Closed',
-      value: stats.closed,
-      color: '#6b7280', // gray
-    },
+    { status: SupportTicketStatus.OPEN, label: 'Open', value: stats.open },
+    { status: SupportTicketStatus.IN_PROGRESS, label: 'In Progress', value: stats.inProgress },
+    { status: SupportTicketStatus.CLOSED, label: 'Closed', value: stats.closed },
   ]
+
+  const scrollQueueIntoView = () => {
+    requestAnimationFrame(() => {
+      document.getElementById('support-tickets-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   const handleKPIClick = (status: SupportTicketStatus | null, isOverdue: boolean = false) => {
     if (isOverdue) {
       setShowOverdueOnly(!showOverdueOnly)
-      setSelectedStatus(null) // Clear status filter when showing overdue
+      setSelectedStatus(null)
     } else {
-      setShowOverdueOnly(false) // Clear overdue filter when selecting status
-      // Toggle: if already selected, deselect
+      setShowOverdueOnly(false)
       setSelectedStatus(selectedStatus === status ? null : status)
     }
+    scrollQueueIntoView()
   }
 
   const handleChartSliceClick = (status: SupportTicketStatus | null) => {
-    setShowOverdueOnly(false) // Clear overdue filter when selecting from chart
-    // Toggle: if already selected, deselect
+    setShowOverdueOnly(false)
     setSelectedStatus(selectedStatus === status ? null : status)
+    scrollQueueIntoView()
   }
 
   const handleTicketClick = async (ticket: SupportTicket) => {
@@ -396,69 +421,90 @@ const SupportTicketsDashboard = () => {
     return 'bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] border border-[color:var(--border-default)]'
   }
 
+  const statusChart = isLoading ? (
+    <div className="flex h-[260px] items-center justify-center rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+      <div className="text-sm text-[color:var(--text-muted)]">Loading chart…</div>
+    </div>
+  ) : (
+    <TicketStatusDonutChart data={chartData} onSliceClick={handleChartSliceClick} selectedStatus={selectedStatus} />
+  )
+
   return shell(
     <>
-      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
-              <Ticket className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Support Tickets</h1>
-              <p className="mt-0.5 text-sm text-[color:var(--text-muted)]">
-                Your open queue first — overdue and Solar Hub tickets at the top
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {canCreate ? (
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg hover:opacity-95"
-              >
-                Create ticket
-              </button>
-            ) : null}
-            {hasActiveFilters ? (
+      <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:items-start sm:justify-between sm:pt-5">
+        <div className="min-w-0">
+          <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
+            Support Tickets
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-[color:var(--text-secondary)]">
+            Your open queue first — overdue and Solar Hub tickets at the top
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canCreate ? (
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex min-h-[40px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg hover:opacity-95"
+            >
+              Create ticket
+            </button>
+          ) : null}
+          {hasActiveFilters ? (
             <button
               type="button"
               onClick={handleClearFilters}
-              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)] sm:w-auto"
+              className="inline-flex min-h-[40px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]"
             >
-              <span className="text-[color:var(--text-muted)]" aria-hidden>×</span>
+              <span className="text-[color:var(--text-muted)]" aria-hidden>
+                ×
+              </span>
               Clear filters
             </button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-      </header>
+      </div>
 
-      <div className="min-w-0 space-y-6">
+      <div className="mt-5 min-w-0 space-y-5">
         {isError ? (
           listErrorPanel
         ) : (
         <>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <button type="button" onClick={() => handleKPIClick(SupportTicketStatus.OPEN)} className="text-left">
-            <MetricCard variant="zenith" title="Open" value={stats.open} icon={<FaTicketAlt />} gradient="from-[color:var(--accent-blue)] to-[color:var(--accent-teal)]" />
-          </button>
-          <button type="button" onClick={() => handleKPIClick(SupportTicketStatus.IN_PROGRESS)} className="text-left">
-            <MetricCard variant="zenith" title="In Progress" value={stats.inProgress} icon={<FaSpinner />} gradient="from-[color:var(--accent-gold)] to-[color:var(--accent-amber)]" />
-          </button>
-          <button type="button" onClick={() => handleKPIClick(SupportTicketStatus.CLOSED)} className="text-left">
-            <MetricCard variant="zenith" title="Closed" value={stats.closed} icon={<FaCheckCircle />} gradient="from-[#94a3b8] to-[#64748b]" />
-          </button>
-          <button type="button" onClick={() => handleKPIClick(null, true)} className="text-left">
-            <MetricCard
-              variant="zenith"
-              title="Overdue"
-              value={stats.overdue}
-              icon={<FaExclamationTriangle />}
-              gradient="from-[color:var(--accent-red)] to-[color:var(--accent-amber)]"
-            />
-          </button>
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <SupportKpiTile
+            index={0}
+            label="Open"
+            value={stats.open}
+            icon={Ticket}
+            tone="blue"
+            selected={selectedStatus === SupportTicketStatus.OPEN && !showOverdueOnly}
+            onClick={() => handleKPIClick(SupportTicketStatus.OPEN)}
+          />
+          <SupportKpiTile
+            index={1}
+            label="In Progress"
+            value={stats.inProgress}
+            icon={CircleDot}
+            selected={selectedStatus === SupportTicketStatus.IN_PROGRESS && !showOverdueOnly}
+            onClick={() => handleKPIClick(SupportTicketStatus.IN_PROGRESS)}
+          />
+          <SupportKpiTile
+            index={2}
+            label="Closed"
+            value={stats.closed}
+            icon={CheckCircle2}
+            selected={selectedStatus === SupportTicketStatus.CLOSED}
+            onClick={() => handleKPIClick(SupportTicketStatus.CLOSED)}
+          />
+          <SupportKpiTile
+            index={3}
+            label="Overdue"
+            value={stats.overdue}
+            icon={AlertTriangle}
+            tone="red"
+            selected={showOverdueOnly}
+            onClick={() => handleKPIClick(null, true)}
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -489,99 +535,86 @@ const SupportTicketsDashboard = () => {
           />
         </div>
 
-        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
-          <div className="min-w-0 lg:self-start">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+          <div id="support-tickets-queue" className="flex min-h-[22rem] min-w-0 flex-col scroll-mt-20 lg:col-span-2">
             {isLoading ? (
-              <div className="flex h-[420px] items-center justify-center rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
-                <div className="text-[color:var(--text-muted)]">Loading chart…</div>
-              </div>
-            ) : (
-              <TicketStatusDonutChart data={chartData} onSliceClick={handleChartSliceClick} selectedStatus={selectedStatus} />
-            )}
-          </div>
-
-          <div className="flex min-h-[22rem] min-w-0 flex-col lg:h-full lg:min-h-0">
-            {isLoading ? (
-              <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full lg:min-h-0">
-                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">Open queue</h3>
-                <div className="flex flex-1 items-center justify-center text-[color:var(--text-muted)]">Loading tickets…</div>
+              <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+                <h3 className="zenith-display mb-3 shrink-0 text-[15px] font-semibold text-[color:var(--text-primary)]">Open queue</h3>
+                <div className="flex flex-1 items-center justify-center text-sm text-[color:var(--text-muted)]">Loading tickets…</div>
               </div>
             ) : tableTickets.length === 0 ? (
-              <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full lg:min-h-0">
-                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">Open queue</h3>
-                <div className="flex flex-1 flex-col items-center justify-center text-center text-[color:var(--text-muted)]">
+              <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+                <h3 className="zenith-display mb-3 shrink-0 text-[15px] font-semibold text-[color:var(--text-primary)]">
+                  {selectedStatus === SupportTicketStatus.CLOSED ? 'Closed tickets' : 'Open queue'}
+                </h3>
+                <div className="flex flex-1 flex-col items-center justify-center text-center text-sm text-[color:var(--text-muted)]">
                   <p>No support tickets found</p>
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <h3 className="zenith-display shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">
-                    {selectedStatus === SupportTicketStatus.CLOSED ? 'Closed tickets' : 'Open queue'}
-                  </h3>
-                  <div className="hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)] lg:flex">
-                    <Sparkles className="h-4 w-4 text-[color:var(--accent-gold)]" aria-hidden />
-                    Live list
-                  </div>
-                </div>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
+                <h3 className="zenith-display mb-3 shrink-0 text-[15px] font-semibold tracking-tight text-[color:var(--text-primary)]">
+                  {selectedStatus === SupportTicketStatus.CLOSED ? 'Closed tickets' : 'Open queue'}
+                </h3>
 
-                <ul className="space-y-3 md:hidden" aria-label="Support tickets list">
+                <ul className="space-y-2.5 md:hidden" aria-label="Support tickets list">
                   {tableTickets.map((ticket) => (
-                    <li key={ticket.id} className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleTicketClick(ticket)}
-                          className="text-left font-semibold text-[color:var(--accent-teal)] hover:opacity-90"
-                          title={ticket.ticketNumber}
-                        >
-                          {ticket.ticketNumber}
-                        </button>
-                        <span className={`inline-flex max-w-[55%] items-center truncate rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${statusChipClass(ticket.status)}`}>
-                          {getStatusLabel(ticket.status)}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-[color:var(--text-primary)]">
-                        <ProjectTicketLink ticket={ticket} />
-                      </p>
-                      {isSupportTicketOverdue(ticket) ? (
-                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--accent-red)]">Overdue</p>
-                      ) : null}
-                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-                        {sourceLabel(ticket)}
-                        {ticket.hubUsername ? ` · @${ticket.hubUsername}` : ''}
-                      </p>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
-                        <div>
-                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
-                          <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-                            {showingClosed ? 'Closed' : 'Next follow-up'}
-                          </span>
-                          <span className="tabular-nums">
-                            {showingClosed
-                              ? ticket.closedAt
-                                ? format(new Date(ticket.closedAt), 'MMM dd, yyyy')
-                                : '—'
-                              : getNextFollowUpLabel(ticket)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Last updated</span>
-                          <span className="tabular-nums" title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}>
-                            {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleTicketClick(ticket)}
-                        className="mt-4 inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] hover:opacity-95"
+                    <li key={ticket.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => void handleTicketClick(ticket)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            void handleTicketClick(ticket)
+                          }
+                        }}
+                        className="w-full cursor-pointer rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3.5 text-left shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] touch-manipulation hover:border-[color:var(--border-strong)]"
                       >
-                        View
-                      </button>
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-semibold text-[color:var(--accent-teal)]" title={ticket.ticketNumber}>
+                            {ticket.ticketNumber}
+                          </span>
+                          <span className={`inline-flex max-w-[55%] items-center truncate rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${statusChipClass(ticket.status)}`}>
+                            {getStatusLabel(ticket.status)}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-[color:var(--text-primary)]">
+                          <ProjectTicketLink ticket={ticket} />
+                        </p>
+                        {isSupportTicketOverdue(ticket) ? (
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--accent-red)]">Overdue</p>
+                        ) : null}
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                          {sourceLabel(ticket)}
+                          {ticket.hubUsername ? ` · @${ticket.hubUsername}` : ''}
+                        </p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
+                          <div>
+                            <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
+                            <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                              {showingClosed ? 'Closed' : 'Next follow-up'}
+                            </span>
+                            <span className="tabular-nums">
+                              {showingClosed
+                                ? ticket.closedAt
+                                  ? format(new Date(ticket.closedAt), 'MMM dd, yyyy')
+                                  : '—'
+                                : getNextFollowUpLabel(ticket)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Last updated</span>
+                            <span className="tabular-nums" title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}>
+                              {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -682,16 +715,15 @@ const SupportTicketsDashboard = () => {
                     </thead>
                     <tbody className="divide-y divide-[color:var(--border-default)]">
                       {tableTickets.map((ticket) => (
-                        <tr key={ticket.id} className="bg-[color:var(--bg-card)] transition-colors duration-150 ease-out hover:bg-[color:var(--bg-table-hover)]">
+                        <tr
+                          key={ticket.id}
+                          className="cursor-pointer bg-[color:var(--bg-card)] transition-colors duration-150 ease-out hover:bg-[color:var(--bg-table-hover)]"
+                          onClick={() => void handleTicketClick(ticket)}
+                        >
                           <td className="max-w-[9rem] min-w-0 px-2 py-2 sm:max-w-[11rem] sm:px-2.5 lg:py-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleTicketClick(ticket)}
-                              className="block w-full truncate whitespace-nowrap text-left text-sm font-semibold text-[color:var(--accent-teal)] hover:opacity-90"
-                              title={ticket.ticketNumber}
-                            >
+                            <span className="block truncate whitespace-nowrap text-sm font-semibold text-[color:var(--accent-teal)]" title={ticket.ticketNumber}>
                               {ticket.ticketNumber}
-                            </button>
+                            </span>
                           </td>
                           <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5">
                             <div className="flex min-w-0 items-center gap-2">
@@ -734,17 +766,12 @@ const SupportTicketsDashboard = () => {
                               : getNextFollowUpLabel(ticket)}
                           </td>
                           <td className="min-w-0 px-2 py-2 text-sm font-medium sm:px-2.5 lg:py-1.5">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span
-                                className="tabular-nums text-[color:var(--text-secondary)]"
-                                title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}
-                              >
-                                {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
-                              </span>
-                              <button type="button" onClick={() => handleTicketClick(ticket)} className="whitespace-nowrap font-semibold text-[color:var(--accent-gold)] hover:opacity-90">
-                                View
-                              </button>
-                            </div>
+                            <span
+                              className="tabular-nums text-[color:var(--text-secondary)]"
+                              title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}
+                            >
+                              {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -754,7 +781,9 @@ const SupportTicketsDashboard = () => {
               </div>
             )}
           </div>
+          <div className="hidden min-w-0 lg:block">{statusChart}</div>
         </div>
+        <SupportStatusInsights>{statusChart}</SupportStatusInsights>
         </>
         )}
       </div>

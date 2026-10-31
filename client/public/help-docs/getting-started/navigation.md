@@ -225,7 +225,7 @@ Click on a project to view detailed information:
 - **Support Tickets Section**:
   - List of support tickets for the project
   - Create new tickets (not for **Lost** projects)
-  - **View** opens the Ticket Detail Drawer (follow-ups and **Save and close** with a resolution note)
+  - Tap a ticket row or card to open the Ticket Detail Drawer (follow-ups and **Save and close** with a resolution note)
   - **Delete** (Admin only). There is no Close on the list.
 
 #### Project Actions
@@ -245,28 +245,22 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 
 - **Header Section**:
   - Page title: **Support Tickets**
-  - Subtitle: Monitor and manage support tickets across projects
-  - "Clear Filters" button (appears when filters are active)
+  - Subtitle: Your open queue first — overdue and Solar Hub tickets at the top
+  - **Create ticket** and **Clear filters** (when filters are active)
 
-- **KPI Cards Section**:
-  - Four clickable metric cards:
-    - **Open**: Number of open tickets
-    - **In Progress**: Tickets being worked on
-    - **Closed**: Completed tickets
-    - **Overdue**: Tickets with past follow-up dates
-  - Clicking a card filters the table below
+- **KPI strip** (Zenith-style tiles, **Opens list →**):
+  - **Open**: Number of open tickets
+  - **In Progress**: Tickets being worked on
+  - **Closed**: Completed tickets
+  - **Overdue**: Tickets with past follow-up dates
+  - Clicking a tile filters the queue
 
-- **Middle Section** (Two-column layout):
-  - **Left Column**: Ticket Status Breakdown (Donut Chart)
-    - Visual representation of ticket statuses
-    - Clickable slices to filter table
-    - Color-coded (Blue: Open, Yellow: In Progress, Gray: Closed)
-  
-  - **Right Column**: **Open queue** (cards on phones, table from tablet up)
-    - Filter via KPI cards or donut chart (Open, In Progress, Closed, Overdue)
-    - Sortable columns on desktop including **Last updated**; **View** opens the **Ticket Detail Drawer** (no Close on the list)
-    - **Operations** sees every open ticket (all project stages); **Sales** sees own projects
-    - If loading fails, **Try again** is shown
+- **Queue and status chart**:
+  - **Open queue** is the main panel (cards on phones, table from tablet up). Tap a row or card to open the **Ticket Detail Drawer** (no Close on the list)
+  - **By status** donut sits beside the queue on laptop; on phones it lives in a collapsed **Insights** accordion
+  - Clickable slices filter the queue (Blue: Open, Gold: In Progress, muted: Closed)
+  - **Operations** sees every open ticket (all project stages); **Sales** sees own projects
+  - If loading fails, **Try again** is shown
 
 - **Ticket Detail Drawer**:
   - Opens from the right side when viewing a ticket
@@ -277,7 +271,7 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 #### Support Ticket Features
 
 - **Create Ticket**: From the Support Tickets page or project detail
-- **View Ticket**: Click ticket number or View button
+- **View Ticket**: Tap a row or card (project name still opens **Project detail**)
 - **Add Follow-up**: Add activity notes with a next follow-up date
 - **Close Ticket**: Open the ticket, enter a resolution note, then **Save and close**
 - **Filter Tickets**: Use KPI cards, chart slices, source chips, or search
@@ -287,7 +281,7 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 - **Support Tickets Section**:
   - On project detail (near remarks / documents)
   - **Cards on phones**, **table on desktop**; same **Ticket Detail Drawer** as the dashboard
-  - **Create Ticket**; **View ticket** to add follow-ups or close with a resolution note; **Delete** (Admin) when allowed
+  - **Create Ticket**; tap a ticket to add follow-ups or close with a resolution note; **Delete** (Admin) when allowed
 
 ## Filters and Search
 
