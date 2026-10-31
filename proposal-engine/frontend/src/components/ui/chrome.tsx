@@ -147,6 +147,30 @@ export const toolbarBtnPrimary = `${toolbarBtn} bg-[#0A9E87] hover:bg-[#087A6A] 
 
 export const toolbarBtnNavy = `${toolbarBtn} bg-[#0d1b3a] hover:bg-[#0a1530] text-white border border-transparent`;
 
+/** Proposal page: Edit — indigo, distinct from save/export. */
+export const toolbarBtnEdit =
+  `${toolbarBtn} bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700/20 shadow-sm`;
+
+/** Proposal page: Cancel edit — soft slate. */
+export const toolbarBtnCancel =
+  `${toolbarBtn} bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300`;
+
+/** Proposal page: Share — sky. */
+export const toolbarBtnShare =
+  `${toolbarBtn} bg-sky-600 hover:bg-sky-700 text-white border border-sky-700/20 shadow-sm`;
+
+/** Proposal page: Regenerate — amber, distinct from Edit and Save. */
+export const toolbarBtnRegenerate =
+  `${toolbarBtn} bg-amber-500 hover:bg-amber-600 text-white border border-amber-600/20 shadow-sm`;
+
+/** Proposal page: PDF / DOCX / PPT cluster chips. */
+export const toolbarBtnExportPdf =
+  `${toolbarBtn} bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200`;
+export const toolbarBtnExportDocx =
+  `${toolbarBtn} bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200`;
+export const toolbarBtnExportPpt =
+  `${toolbarBtn} bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200`;
+
 export const shortcutLink =
   'text-[11px] font-medium px-3 py-1.5 rounded-lg bg-white text-primary-800 border border-secondary-300 hover:border-primary-400 transition-colors';
 
