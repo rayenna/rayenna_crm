@@ -5,7 +5,7 @@
 | Role | Menu access | Create / close |
 | :-- | :-- | :-- |
 | **Sales** | ✓ | Own projects |
-| **Operations** | ✓ | Any project you can open |
+| **Operations** | ✓ | All tickets, every project stage |
 | **Management** | ✓ | Any project |
 | **Admin** | ✓ | Full (+ closed-ticket follow-ups) |
 | **Finance** | — | No access |
@@ -54,11 +54,12 @@ The system will automatically:
 - Link the ticket to the project
 - Set the initial status to "Open"
 - Record who created the ticket and when
+- Add a **system** “Ticket opened” event on the timeline when a next follow-up date is set (this is not a staff comment)
 
 ### Who Can Create Tickets
 
 - **Sales** users can create tickets for their projects
-- **Operations** users can create tickets for any project
+- **Operations** users can create tickets for any project (every stage except **Lost**) — they own the company-wide open-ticket queue
 - **Management** users can create tickets for any project
 - **Admin** users have full access to create tickets
 
@@ -75,9 +76,10 @@ Follow-ups allow you to document progress, communications, and next steps for ea
 3. In the drawer, scroll to the **Follow-up Timeline** section
 4. Click **Add Follow-up** (if the form is not visible)
 5. Enter your notes in the **Note** field (required)
-6. Set a **next follow-up date** (required; defaults to 3 days from today). **Overdue** uses only this latest date — older dates do not keep the ticket overdue
+6. Set a **next follow-up date** (required on open tickets; defaults to 3 days from today). **Overdue** uses only this latest date — older dates do not keep the ticket overdue
 7. Click **Add Follow-up** to save
 8. Use **Add to My Day** on the ticket to pin a follow-up on your personal list
+9. **Admin** can still add a note after the ticket is closed (no next follow-up date required)
 
 ### Follow-up Best Practices
 
@@ -111,28 +113,32 @@ Support tickets have three possible statuses:
 
 ### Closed
 - Set when the issue is resolved
-- Tickets can be reopened if needed (Admin only)
+- Closing **requires a resolution note**, which is saved on the follow-up timeline
 - **Closed** uses a neutral dark chip (still readable on the Zenith-style dark surfaces)
 
 ## Resolving and Closing Tickets
 
 When a support issue has been resolved:
 
-1. Open the ticket from the Support Tickets Dashboard or Project page
+1. Open the ticket from the Support Tickets Dashboard or Project page (**View** — there is no Close on the list, so comments cannot be skipped)
 2. Review the ticket details and follow-up history
-3. Ensure all necessary actions have been completed
-4. Click the **Close Ticket** button
-5. The system will:
-   - Change the status to "Closed"
-   - Record the closure date and time
-   - Prevent further follow-ups (unless you're an Admin)
+3. Click **Close ticket** (or **Save note & close** if you already typed a note)
+4. Enter a **resolution note** in the confirm dialog (pre-filled from any unsaved follow-up note). A next follow-up date is **not** required
+5. Click **Save and close**. The system will:
+   - Save the resolution note on the timeline
+   - Change the status to "Closed" and record the closure date and time
+   - Show the ticket under the **Closed** filter so it does not disappear from the queue
+   - Prevent further follow-ups except **Admin**, who can still add a note on a closed ticket
+
+If you type a follow-up and close the drawer without saving, you will be asked to discard or keep editing.
 
 ### Who Can Close Tickets
 
-- **Sales**, **Operations**, and **Management** users can close tickets
+- **Sales** users can close tickets on their own projects
+- **Operations** and **Management** users can close tickets on any stage (Operations owns all open tickets)
 - **Admin** users can close any ticket
 
-**Note**: Once closed, only Admin users can add follow-ups to the ticket.
+**Note**: Once closed, only Admin users can add follow-ups to the ticket. Tickets cannot be reopened.
 
 ## Viewing Tickets
 
@@ -147,8 +153,8 @@ The Support Tickets page is a **daily queue** for open work:
    - **Closed**: Resolved tickets
    - **Overdue**: Latest next follow-up passed, or no next date for 7 days
 3. Use the metric cards or chart slices to filter the table
-4. Search by ticket number, customer, title, or project number; click a project name to open **Project detail**
-5. Review the **Open queue** list (desktop table or stacked cards); overdue tickets sort first, then Solar Hub
+4. Search by ticket number, customer, title, or project number; click a project name to open **Project detail** (Operations can open project detail only for Confirmed → Subsidy Credited — work early-stage tickets from this page)
+5. Review the **Open queue** list (desktop table or stacked cards); overdue tickets sort first, then Solar Hub. **Last updated** reflects follow-ups and other ticket changes (sort the column to see most recently touched tickets)
 
 ### Filtering Tickets
 
@@ -160,11 +166,13 @@ The Support Tickets page is a **daily queue** for open work:
 
 ### From Project Details
 
-1. Navigate to a specific project
+1. Navigate to a specific project (Operations: Confirmed → Subsidy Credited only)
 2. Scroll to the **Support / Service Tickets** section
 3. View all tickets associated with that project
 4. Click a ticket number or **View** to open the **Ticket Detail Drawer** (slide-in panel from the right)
 5. See ticket status, creation date, and latest follow-up information
+
+Early-stage tickets (Lead / Survey / Proposal) are worked from **Support Tickets**, not project detail, for Operations.
 
 ## Ticket Information
 
@@ -178,11 +186,11 @@ Each ticket displays:
 - **Created By**: User who created the ticket
 - **Created Date**: When the ticket was created
 - **Closed Date**: When the ticket was resolved (if closed)
-- **Follow-up Timeline**: Complete history of all activities
+- **Follow-up Timeline**: Complete history of all activities. The auto “Ticket opened” stub is shown as a **system** event (Opened), distinct from staff follow-ups
 
 ## Permissions
 
-See [Roles → Permission matrix](/help/roles#permission-matrix). **Finance** has no Support Tickets menu. Only **Admin** adds follow-ups on **closed** tickets or deletes tickets.
+See [Roles → Permission matrix](/help/roles#permission-matrix). **Finance** has no Support Tickets menu. **Operations** sees and works **all** open tickets (every project stage); **Sales** is limited to own projects. Only **Admin** adds follow-ups on **closed** tickets or deletes tickets.
 
 ## Related help
 

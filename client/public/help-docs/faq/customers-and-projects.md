@@ -49,7 +49,7 @@ From **Support Tickets** → **Create ticket** (search a project by customer or 
 Open the ticket (list or project) → **Ticket Details** drawer → add a follow-up. Timeline shows history. [Support Tickets](/help/modules#support-tickets-module).
 
 ### Can I close tickets?
-**Sales**, **Operations**, **Management**, and **Admin** can close tickets on projects they can access. After close, only **Admin** adds follow-ups on closed tickets. **Finance** has no Support Tickets menu. [Support Tickets](/help/modules#support-tickets-module).
+Closing **requires a resolution note** (saved on the timeline). **Sales** closes tickets on their own projects. **Operations** and **Management** can close any ticket — Operations owns the company-wide open queue, including Lead / Survey / Proposal tickets they cannot open on the Projects page. After close, only **Admin** can add a note. **Finance** has no Support Tickets menu. [Support Tickets](/help/modules#support-tickets-module).
 
 ## Data and reports
 

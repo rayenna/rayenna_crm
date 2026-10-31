@@ -31,7 +31,7 @@ Menu items are displayed based on your user role:
 - **Projects**: Project management and tracking
 - **Reports**: Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, and Margin & Mix (role-filtered packs)
 - **Lost Deals**: Lost analytics (Admin and Management)
-- **Support Tickets**: Customer service ticket management (Sales, Operations, Admin only)
+- **Support Tickets**: Customer service ticket management (Admin, Sales, Operations, Management — not Finance)
 - **Tally Export**: Financial data export (Finance and Admin only)
 - **Solar Hub**: Homeowner accounts, plant mapping, Help Center (Operations and Admin) — Users / Maintenance / Provisioning
 - **Users**: User management (Admin only)
@@ -225,9 +225,9 @@ Click on a project to view detailed information:
 
 - **Support Tickets Section**:
   - List of support tickets for the project
-  - Create new tickets
-  - View ticket details
-  - Manage ticket activities
+  - Create new tickets (not for **Lost** projects)
+  - **View** opens the Ticket Detail Drawer (follow-ups and **Save and close** with a resolution note)
+  - **Delete** (Admin only). There is no Close on the list.
 
 #### Project Actions
 
@@ -263,16 +263,17 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
     - Clickable slices to filter table
     - Color-coded (Blue: Open, Yellow: In Progress, Gray: Closed)
   
-  - **Right Column**: **All Support Tickets** (cards on phones, table from tablet up)
+  - **Right Column**: **Open queue** (cards on phones, table from tablet up)
     - Filter via KPI cards or donut chart (Open, In Progress, Closed, Overdue)
-    - Sortable columns on desktop; **View** opens the **Ticket Detail Drawer**
+    - Sortable columns on desktop including **Last updated**; **View** opens the **Ticket Detail Drawer** (no Close on the list)
+    - **Operations** sees every open ticket (all project stages); **Sales** sees own projects
     - If loading fails, **Try again** is shown
 
 - **Ticket Detail Drawer**:
   - Opens from the right side when viewing a ticket
   - Shows complete ticket information
   - Displays activity timeline
-  - Actions: Add follow-up, Close ticket, Delete (Admin only)
+  - Actions: Add follow-up, **Close ticket** (requires a resolution note), Delete (Admin only). Admin can add a note after close.
 
 #### Support Ticket Features
 

@@ -70,11 +70,12 @@ You generally **do not** see Lost projects. If a confirmed project is marked Los
 
 ## Support tickets
 
-Operations often owns site and service issues:
+Operations owns the **company-wide open-ticket queue** — including tickets on Lead, Site Survey, and Proposal, not only confirmed jobs. (Project **detail** pages stay limited to Confirmed → Subsidy Credited.)
 
-1. Open the project → create or update a **support ticket**.  
-2. Add follow-ups with notes and optional follow-up dates.  
-3. **Close** when resolved.
+1. Open **Support Tickets** from the menu (or the ticket from Zenith) to see every open ticket.  
+2. Add follow-ups with notes and next follow-up dates.  
+3. **Close** when resolved, with a resolution note.  
+4. Create a ticket from that page for any non-Lost project, or from a project you can open.
 
 **Management** and **Sales** can also manage tickets; **Finance** cannot.
 

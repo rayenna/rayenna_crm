@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SUPPORT_TICKET_OPENED_NOTE,
   SUPPORT_TICKET_STALE_DAYS,
   compareSupportTicketQueue,
   isSupportTicketOverdue,
+  isSupportTicketSystemNote,
   supportTicketMatchesSearch,
 } from './supportTicketQueue'
 
@@ -90,11 +92,27 @@ describe('compareSupportTicketQueue', () => {
     })
     const crmOld = ticket({ createdAt: '2026-08-01T00:00:00.000Z', activities: [{ createdAt: '2026-08-28T00:00:00.000Z', followUpDate: '2026-09-10T00:00:00.000Z' }] })
     const crmNew = ticket({ createdAt: '2026-08-15T00:00:00.000Z', activities: [{ createdAt: '2026-08-28T00:00:00.000Z', followUpDate: '2026-09-10T00:00:00.000Z' }] })
-    const list = [crmNew, hubFresh, crmOld, overdueCrm].sort(compareSupportTicketQueue)
+    const list = [crmNew, hubFresh, crmOld, overdueCrm].sort((a, b) =>
+      compareSupportTicketQueue(a, b, now),
+    )
     expect(list[0]).toBe(overdueCrm)
     expect(list[1]).toBe(hubFresh)
     expect(list[2]).toBe(crmOld)
     expect(list[3]).toBe(crmNew)
+  })
+})
+
+describe('isSupportTicketSystemNote', () => {
+  it('matches the exact auto-opened stub', () => {
+    expect(isSupportTicketSystemNote(SUPPORT_TICKET_OPENED_NOTE)).toBe(true)
+    expect(isSupportTicketSystemNote(`  ${SUPPORT_TICKET_OPENED_NOTE}  `)).toBe(true)
+  })
+
+  it('does not treat staff notes as system events', () => {
+    expect(isSupportTicketSystemNote('Replaced ACDB and tested output.')).toBe(false)
+    expect(isSupportTicketSystemNote('Ticket opened.')).toBe(false)
+    expect(isSupportTicketSystemNote('')).toBe(false)
+    expect(isSupportTicketSystemNote(null)).toBe(false)
   })
 })
 

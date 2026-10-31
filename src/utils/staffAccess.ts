@@ -38,20 +38,58 @@ export function projectAccessDeniedMessage(
   return null
 }
 
+async function loadProjectAccessSlice(projectId: string): Promise<ProjectAccessSlice | null> {
+  return prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, salespersonId: true, projectStatus: true },
+  })
+}
+
 export async function requireProjectAccess(
   req: Request,
   res: Response,
   projectId: string,
 ): Promise<boolean> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { id: true, salespersonId: true, projectStatus: true },
-  })
+  const project = await loadProjectAccessSlice(projectId)
   if (!project) {
     res.status(404).json({ error: 'Project not found' })
     return false
   }
   const denied = projectAccessDeniedMessage(project, req.user)
+  if (denied) {
+    res.status(403).json({ error: denied })
+    return false
+  }
+  return true
+}
+
+/**
+ * Support-ticket access. Operations owns the company-wide open-ticket queue
+ * on every project stage (Lead through Completed). Sales is still own-projects
+ * only. Project pages stay gated by requireProjectAccess.
+ */
+export function supportTicketAccessDeniedMessage(
+  project: ProjectAccessSlice,
+  user: { id: string; role: UserRole } | undefined,
+): string | null {
+  if (!user) return 'Authentication required'
+  if (user.role === UserRole.SALES && project.salespersonId !== user.id) {
+    return 'Access denied'
+  }
+  return null
+}
+
+export async function requireSupportTicketAccess(
+  req: Request,
+  res: Response,
+  projectId: string,
+): Promise<boolean> {
+  const project = await loadProjectAccessSlice(projectId)
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' })
+    return false
+  }
+  const denied = supportTicketAccessDeniedMessage(project, req.user)
   if (denied) {
     res.status(403).json({ error: denied })
     return false

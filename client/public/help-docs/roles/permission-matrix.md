@@ -72,7 +72,7 @@ Roles: **ADMIN** · **SALES** · **OPS** (Operations) · **FINANCE** · **MGMT**
 | Proposal Engine card / PE buckets (dashboard) | ✓ | ✓ | — | — | ✓ |
 | Open Proposals / Proposal Engine (project or **More** menu) | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-**Own** = assigned salesperson on that project or customer. **Gated** = Operations status rules above.
+**Own** = assigned salesperson on that project or customer. **Gated** = Operations status rules above. **Support tickets** are the exception for Operations: they see and work **all** tickets on every project stage (Lead through Completed). Project list and project detail stay gated.
 
 ## Project visibility by status
 
@@ -91,7 +91,7 @@ Who can **see** a project in the list and open its detail page (edit rules are s
 
 **Sales “own”:** only rows where you are the assigned salesperson. **Reports → Sales Review**, **Funnel Velocity**, **Delivery Control**, and **Collections & Cash** use the same scope. **Operations** sees company-wide in-delivery jobs on Delivery Control. **Finance** sees company-wide Collections & Cash and Margin & Mix. **Margin & Mix** is Admin / Management / Finance only (no Sales or Operations).
 
-**Operations:** early-stage and **Lost** projects are excluded from the default list; opening a disallowed project returns access denied.
+**Operations:** early-stage and **Lost** projects are excluded from the default **Projects** list; opening a disallowed project returns access denied. **Support Tickets** still lists and allows work on open tickets at those early stages.
 
 ## Project form sections (edit mode)
 

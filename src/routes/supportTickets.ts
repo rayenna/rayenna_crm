@@ -10,8 +10,12 @@ import {
   resolveHubUserIdForProject,
 } from '../services/consumerNotificationService';
 import { attachHubUsernames } from '../utils/supportTicketEnrich';
-import { isSupportTicketOverdue, ticketNextFollowUpDate } from '../utils/supportTicketQueue';
-import { requireProjectAccess, SUPPORT_TICKET_QUEUE_ROLES } from '../utils/staffAccess';
+import {
+  isSupportTicketOverdue,
+  SUPPORT_TICKET_OPENED_NOTE,
+  ticketNextFollowUpDate,
+} from '../utils/supportTicketQueue';
+import { requireSupportTicketAccess, SUPPORT_TICKET_QUEUE_ROLES } from '../utils/staffAccess';
 
 const router = express.Router();
 
@@ -76,7 +80,7 @@ router.post(
       const { projectId, title, description, followUpDate } = req.body;
       const createdById = req.user!.id;
 
-      if (!(await requireProjectAccess(req, res, projectId))) return;
+      if (!(await requireSupportTicketAccess(req, res, projectId))) return;
 
       const project = await prisma.project.findUnique({
         where: { id: projectId },
@@ -107,7 +111,7 @@ router.post(
             ? {
                 activities: {
                   create: {
-                    note: 'Ticket opened. Next follow-up scheduled.',
+                    note: SUPPORT_TICKET_OPENED_NOTE,
                     followUpDate: new Date(followUpDate),
                     createdById,
                   },
@@ -155,13 +159,60 @@ router.post(
 );
 
 /**
+ * GET /api/support-tickets/project-options
+ * Project picker for creating tickets. Operations sees every non-Lost stage
+ * because they own the company-wide ticket queue. Sales sees own projects only.
+ */
+router.get(
+  '/project-options',
+  authenticate,
+  authorize(...SUPPORT_TICKET_QUEUE_ROLES),
+  async (req: Request, res: Response) => {
+    try {
+      const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+      const where: Record<string, unknown> = {
+        projectStatus: { not: ProjectStatus.LOST },
+      };
+      if (req.user?.role === UserRole.SALES) {
+        where.salespersonId = req.user.id;
+      }
+      if (search) {
+        const searchOr: Record<string, unknown>[] = [
+          { customer: { customerName: { contains: search, mode: 'insensitive' } } },
+        ];
+        const slNo = Number(search);
+        if (Number.isInteger(slNo) && slNo > 0) {
+          searchOr.push({ slNo });
+        }
+        where.OR = searchOr;
+      }
+      const projects = await prisma.project.findMany({
+        where,
+        select: {
+          id: true,
+          slNo: true,
+          projectStatus: true,
+          customer: { select: { customerName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 15,
+      });
+      res.json({ projects });
+    } catch (error: any) {
+      console.error('Error fetching support ticket project options:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch projects' });
+    }
+  },
+)
+
+/**
  * GET /api/support-tickets/project/:projectId
  * Get all support tickets for a project
  */
 router.get('/project/:projectId', authenticate, async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    if (!(await requireProjectAccess(req, res, projectId))) return;
+    if (!(await requireSupportTicketAccess(req, res, projectId))) return;
 
     const tickets = await prisma.supportTicket.findMany({
       where: { projectId },
@@ -239,7 +290,7 @@ router.get('/:ticketId', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Support ticket not found' });
     }
 
-    if (!(await requireProjectAccess(req, res, ticket.projectId))) return;
+    if (!(await requireSupportTicketAccess(req, res, ticket.projectId))) return;
 
     const [enriched] = await attachHubUsernames([ticket]);
     res.json(enriched);
@@ -288,36 +339,43 @@ router.post(
         return res.status(404).json({ error: 'Support ticket not found' });
       }
 
+      if (!(await requireSupportTicketAccess(req, res, ticket.projectId))) return;
+
       // If ticket is closed, prevent adding activities (only ADMIN can override)
       if (ticket.status === SupportTicketStatus.CLOSED && userRole !== UserRole.ADMIN) {
         return res.status(403).json({ error: 'Cannot add activities to closed tickets' });
       }
 
-      // Create activity
-      const activity = await prisma.supportTicketActivity.create({
-        data: {
-          supportTicketId: ticketId,
-          note: note.trim(),
-          followUpDate: followUpDate ? new Date(followUpDate) : null,
-          createdById,
-        },
-        include: {
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+      const wasOpen = ticket.status === SupportTicketStatus.OPEN;
+      const activity = await prisma.$transaction(async (tx) => {
+        const created = await tx.supportTicketActivity.create({
+          data: {
+            supportTicketId: ticketId,
+            note: note.trim(),
+            followUpDate: followUpDate ? new Date(followUpDate) : null,
+            createdById,
+          },
+          include: {
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
-        },
+        });
+        await tx.supportTicket.update({
+          where: { id: ticketId },
+          data: {
+            updatedAt: new Date(),
+            ...(wasOpen ? { status: SupportTicketStatus.IN_PROGRESS } : {}),
+          },
+        });
+        return created;
       });
 
-      // Update ticket status to IN_PROGRESS if it was OPEN
-      if (ticket.status === SupportTicketStatus.OPEN) {
-        await prisma.supportTicket.update({
-          where: { id: ticketId },
-          data: { status: SupportTicketStatus.IN_PROGRESS },
-        });
+      if (wasOpen) {
         try {
           const hubUserId =
             ticket.consumerUserId || (await resolveHubUserIdForProject(ticket.projectId));
@@ -341,14 +399,50 @@ router.post(
   }
 );
 
+const TICKET_DETAIL_INCLUDE = {
+  project: {
+    include: {
+      customer: true,
+    },
+  },
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  activities: {
+    orderBy: { createdAt: 'desc' as const },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  },
+};
+
 /**
  * PATCH /api/support-tickets/:ticketId/close
- * Close a support ticket (set status to CLOSED and closedAt timestamp)
+ * Close a support ticket. Requires a resolution note, which is stored as the closing activity.
  * Auth: SALES, OPERATIONS, MANAGEMENT, ADMIN
  */
 router.patch(
   '/:ticketId/close',
   authenticate,
+  [
+    body('note')
+      .isString()
+      .trim()
+      .notEmpty()
+      .withMessage('A resolution note is required to close the ticket')
+      .isLength({ max: 8000 })
+      .withMessage('Resolution note must be 8000 characters or fewer'),
+  ],
   async (req: Request, res: Response) => {
     try {
       // Check permissions - SALES, OPERATIONS, MANAGEMENT, ADMIN can close tickets
@@ -358,7 +452,19 @@ router.patch(
         return res.status(403).json({ error: 'Only SALES, OPERATIONS, MANAGEMENT, and ADMIN users can close tickets' });
       }
 
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const first = errors.array()[0]
+        const message =
+          first && 'msg' in first && typeof first.msg === 'string'
+            ? first.msg
+            : 'A resolution note is required to close the ticket'
+        return res.status(400).json({ error: message, errors: errors.array() });
+      }
+
       const { ticketId } = req.params;
+      const note = String(req.body.note).trim();
+      const closedById = req.user!.id;
 
       // Verify ticket exists
       const ticket = await prisma.supportTicket.findUnique({
@@ -369,44 +475,30 @@ router.patch(
         return res.status(404).json({ error: 'Support ticket not found' });
       }
 
+      if (!(await requireSupportTicketAccess(req, res, ticket.projectId))) return;
+
       // Check if already closed
       if (ticket.status === SupportTicketStatus.CLOSED) {
         return res.status(400).json({ error: 'Ticket is already closed' });
       }
 
-      // Close ticket
-      const updatedTicket = await prisma.supportTicket.update({
-        where: { id: ticketId },
-        data: {
-          status: SupportTicketStatus.CLOSED,
-          closedAt: new Date(),
-        },
-        include: {
-          project: {
-            include: {
-              customer: true,
-            },
+      const updatedTicket = await prisma.$transaction(async (tx) => {
+        await tx.supportTicketActivity.create({
+          data: {
+            supportTicketId: ticketId,
+            note,
+            followUpDate: null,
+            createdById: closedById,
           },
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+        });
+        return tx.supportTicket.update({
+          where: { id: ticketId },
+          data: {
+            status: SupportTicketStatus.CLOSED,
+            closedAt: new Date(),
           },
-          activities: {
-            orderBy: { createdAt: 'desc' },
-            include: {
-              createdBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
+          include: TICKET_DETAIL_INCLUDE,
+        });
       });
 
       if (req.user) {
@@ -459,6 +551,8 @@ router.delete(
       if (!ticket) {
         return res.status(404).json({ error: 'Support ticket not found' });
       }
+
+      if (!(await requireSupportTicketAccess(req, res, ticket.projectId))) return;
 
       // Delete ticket (cascade will delete all activities)
       await prisma.supportTicket.delete({

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useModalEscape } from '@/contexts/ModalEscapeContext'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -22,8 +22,15 @@ import {
   supportTicketStatusPillClass,
 } from './supportTicketsZenith'
 import AddToMyDayButton from '../my-day/components/AddToMyDayButton'
-import { defaultNextFollowUpYmd, supportTicketMyDayContent, supportTicketProjectLabel } from '../../utils/supportTicketQueue'
+import {
+  defaultNextFollowUpYmd,
+  isSupportTicketSystemNote,
+  supportTicketMyDayContent,
+  supportTicketProjectLabel,
+} from '../../utils/supportTicketQueue'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../hooks/useMyDaySuggestionsQuery'
+
+const CLOSE_NOTE_MAX_LENGTH = 8000
 
 interface TicketDetailDrawerProps {
   ticket: SupportTicket | null
@@ -32,19 +39,27 @@ interface TicketDetailDrawerProps {
   onRefresh: () => void
   /** When opened from a project, invalidate that project's ticket list. */
   projectId?: string
+  /** Fired after a ticket is closed so the list can keep the row visible. */
+  onTicketClosed?: (ticket: SupportTicket) => void
 }
 
-type ConfirmAction = 'close' | 'delete' | null
+type ConfirmAction = 'close' | 'delete' | 'discard' | null
 
-const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: TicketDetailDrawerProps) => {
+const TicketDetailDrawer = ({
+  ticket,
+  isOpen,
+  onClose,
+  onRefresh,
+  projectId,
+  onTicketClosed,
+}: TicketDetailDrawerProps) => {
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [note, setNote] = useState('')
   const [followUpDate, setFollowUpDate] = useState(() => defaultNextFollowUpYmd())
+  const [closeNote, setCloseNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
-
-  useModalEscape(!!ticket && isOpen, onClose)
 
   const canManageTickets = canManageSupportTickets(hasRole)
   const isAdmin = canDeleteSupportTickets(hasRole)
@@ -95,14 +110,21 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
   })
 
   const closeTicketMutation = useMutation({
-    mutationFn: async () => {
-      const res = await axiosInstance.patch(`/api/support-tickets/${ticketId!}/close`)
-      return res.data
+    mutationFn: async (resolutionNote: string) => {
+      const res = await axiosInstance.patch(`/api/support-tickets/${ticketId!}/close`, {
+        note: resolutionNote,
+      })
+      return res.data as SupportTicket
     },
-    onSuccess: () => {
-      toast.success('Ticket closed successfully')
+    onSuccess: (closedTicket) => {
+      toast.success('Ticket closed. Resolution saved.')
+      setNote('')
+      setCloseNote('')
+      setFollowUpDate(defaultNextFollowUpYmd())
+      setConfirmAction(null)
       onRefresh()
       invalidateTicketQueries()
+      onTicketClosed?.(closedTicket)
       void refetchDetails()
     },
     onError: (error: unknown) => {
@@ -130,27 +152,69 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
       toast.error('Please enter a note')
       return
     }
-    if (!followUpDate) {
+    const ticketIsClosed = (fullTicket ?? ticket)?.status === SupportTicketStatus.CLOSED
+    if (!ticketIsClosed && !followUpDate) {
       toast.error('Set a next follow-up date')
       return
     }
     setIsSubmitting(true)
     addActivityMutation.mutate({
       note: note.trim(),
-      followUpDate,
+      ...(ticketIsClosed ? {} : { followUpDate }),
     })
   }
 
+  const requestCloseDrawer = () => {
+    if (confirmAction) return
+    if (note.trim()) {
+      setConfirmAction('discard')
+      return
+    }
+    onClose()
+  }
+
+  const openCloseDialog = () => {
+    setCloseNote((current) => note.trim() || current.trim())
+    setConfirmAction('close')
+  }
+
+  const confirmCloseTicket = () => {
+    if (closeTicketMutation.isPending) return
+    const resolution = closeNote.trim()
+    if (!resolution) {
+      toast.error('Enter a resolution note so the comment is saved')
+      return
+    }
+    closeTicketMutation.mutate(resolution)
+  }
+
   const runConfirmAction = () => {
-    if (confirmAction === 'close') {
-      closeTicketMutation.mutate()
-    } else if (confirmAction === 'delete') {
+    if (confirmAction === 'delete') {
       deleteTicketMutation.mutate()
+    } else if (confirmAction === 'discard') {
+      setNote('')
+      setCloseNote('')
+      setConfirmAction(null)
+      onClose()
+      return
     }
     setConfirmAction(null)
   }
 
+  useEffect(() => {
+    setNote('')
+    setCloseNote('')
+    setFollowUpDate(defaultNextFollowUpYmd())
+    setConfirmAction(null)
+  }, [ticketId])
+
+  useModalEscape(!!ticket && isOpen && !confirmAction, requestCloseDrawer)
+
   const displayTicket = fullTicket ?? ticket
+  const ticketIsClosed = displayTicket?.status === SupportTicketStatus.CLOSED
+  const canAddFollowUp = canManageTickets && (!ticketIsClosed || isAdmin)
+  const followUpDateRequired = !ticketIsClosed
+  const hasDraftNote = note.trim().length > 0
 
   const getCustomerName = () => {
     if (!displayTicket?.project?.customer) return 'N/A'
@@ -166,7 +230,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-[color:var(--bg-overlay)] backdrop-blur-sm transition-opacity"
-          onClick={onClose}
+          onClick={requestCloseDrawer}
           aria-hidden
         />
       )}
@@ -184,7 +248,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestCloseDrawer}
               className="shrink-0 rounded-xl p-2 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
               aria-label="Close drawer"
             >
@@ -336,38 +400,70 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                   </div>
                   {displayTicket.activities && displayTicket.activities.length > 0 ? (
                     <div className="space-y-3">
-                      {displayTicket.activities.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="rounded-lg border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-input)] py-3 pl-3 pr-3"
-                        >
-                          <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-semibold text-[color:var(--text-primary)]">{activity.createdBy?.name || 'N/A'}</p>
-                              <p className={stTimestampCls}>{format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                      {displayTicket.activities.map((activity) => {
+                        const isSystem = isSupportTicketSystemNote(activity.note)
+                        return (
+                          <div
+                            key={activity.id}
+                            className={
+                              isSystem
+                                ? 'rounded-lg border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--border-strong)] bg-[color:var(--bg-card)] py-3 pl-3 pr-3'
+                                : 'rounded-lg border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-input)] py-3 pl-3 pr-3'
+                            }
+                          >
+                            <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p
+                                  className={
+                                    isSystem
+                                      ? 'text-sm font-semibold text-[color:var(--text-muted)]'
+                                      : 'text-sm font-semibold text-[color:var(--text-primary)]'
+                                  }
+                                >
+                                  {isSystem ? 'System' : activity.createdBy?.name || 'N/A'}
+                                </p>
+                                <p className={stTimestampCls}>{format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {isSystem ? (
+                                  <span className="rounded-full bg-[color:var(--bg-input)] px-2 py-1 text-xs font-semibold text-[color:var(--text-muted)] ring-1 ring-[color:var(--border-default)]">
+                                    Opened
+                                  </span>
+                                ) : null}
+                                {activity.followUpDate && (
+                                  <span className="rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-1 text-xs font-semibold text-[color:var(--text-primary)] ring-1 ring-[color:var(--accent-gold-border)]">
+                                    Follow-up: {format(new Date(activity.followUpDate), 'MMM dd, yyyy')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {activity.followUpDate && (
-                              <span className="rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-1 text-xs font-semibold text-[color:var(--text-primary)] ring-1 ring-[color:var(--accent-gold-border)]">
-                                Follow-up: {format(new Date(activity.followUpDate), 'MMM dd, yyyy')}
-                              </span>
-                            )}
+                            <p
+                              className={
+                                isSystem
+                                  ? 'whitespace-pre-wrap text-sm italic leading-relaxed text-[color:var(--text-muted)]'
+                                  : 'whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]'
+                              }
+                            >
+                              {activity.note}
+                            </p>
                           </div>
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]">{activity.note}</p>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className={`${stMutedCls} italic`}>No follow-ups yet</p>
                   )}
                 </div>
 
-                {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
+                {canAddFollowUp && (
                   <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] p-5 ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-blue)]">
                     <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
                       <svg className="h-5 w-5 text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Add Follow-up</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">
+                        {ticketIsClosed ? 'Add note (Admin)' : 'Add Follow-up'}
+                      </h3>
                     </div>
                     <form onSubmit={handleAddFollowUp} className="space-y-4">
                       <div>
@@ -379,24 +475,28 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                           rows={4}
                           className={`mt-1.5 ${stInputCls}`}
                           value={note}
-                          onChange={(e) => setNote(e.target.value)}
+                          onChange={(e) => setNote(e.target.value.slice(0, CLOSE_NOTE_MAX_LENGTH))}
                           required
                         />
                       </div>
-                      <div>
-                        <label htmlFor="st-drawer-follow-up" className={stLabelCls}>
-                          Next follow-up date *
-                        </label>
-                        <input
-                          type="date"
-                          id="st-drawer-follow-up"
-                          className={`mt-1.5 ${stSelectCls}`}
-                          value={followUpDate}
-                          onChange={(e) => setFollowUpDate(e.target.value)}
-                          required
-                        />
-                        <p className={`${stMutedCls} mt-1.5`}>Defaults to 3 days from today. Overdue uses this latest date only.</p>
-                      </div>
+                      {followUpDateRequired ? (
+                        <div>
+                          <label htmlFor="st-drawer-follow-up" className={stLabelCls}>
+                            Next follow-up date *
+                          </label>
+                          <input
+                            type="date"
+                            id="st-drawer-follow-up"
+                            className={`mt-1.5 ${stSelectCls}`}
+                            value={followUpDate}
+                            onChange={(e) => setFollowUpDate(e.target.value)}
+                            required
+                          />
+                          <p className={`${stMutedCls} mt-1.5`}>Defaults to 3 days from today. Overdue uses this latest date only.</p>
+                        </div>
+                      ) : (
+                        <p className={stMutedCls}>Closed tickets do not need a next follow-up date.</p>
+                      )}
                       <button type="submit" disabled={isSubmitting} className={`w-full ${stPrimaryBtn}`}>
                         {isSubmitting ? 'Adding…' : 'Add follow-up'}
                       </button>
@@ -409,14 +509,18 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
 
           {displayTicket && (canManageTickets || isAdmin) && (
             <div className="shrink-0 space-y-2 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-5 sm:p-6">
-              {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
+              {canManageTickets && !ticketIsClosed && (
                 <button
                   type="button"
-                  onClick={() => setConfirmAction('close')}
-                  disabled={closeTicketMutation.isPending}
+                  onClick={openCloseDialog}
+                  disabled={closeTicketMutation.isPending || addActivityMutation.isPending}
                   className="w-full rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {closeTicketMutation.isPending ? 'Closing…' : 'Close ticket'}
+                  {closeTicketMutation.isPending
+                    ? 'Closing…'
+                    : hasDraftNote
+                      ? 'Save note & close'
+                      : 'Close ticket'}
                 </button>
               )}
               {isAdmin && (
@@ -435,19 +539,54 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
       </div>
 
       <ErrorModal
-        open={!!confirmAction}
+        open={confirmAction === 'close'}
+        onClose={() => {
+          if (!closeTicketMutation.isPending) setConfirmAction(null)
+        }}
+        type="warning"
+        message={`Close ticket ${displayTicket?.ticketNumber ?? ticket.ticketNumber}? The resolution note is saved on the timeline. A next follow-up date is not required.`}
+        actions={[
+          {
+            label: 'Cancel',
+            variant: 'ghost',
+            onClick: () => {
+              if (!closeTicketMutation.isPending) setConfirmAction(null)
+            },
+          },
+          {
+            label: closeTicketMutation.isPending ? 'Closing…' : 'Save and close',
+            variant: 'primary',
+            onClick: confirmCloseTicket,
+          },
+        ]}
+      >
+        <label htmlFor="st-close-resolution" className={stLabelCls}>
+          Resolution note *
+        </label>
+        <textarea
+          id="st-close-resolution"
+          rows={4}
+          className={`mt-1.5 ${stInputCls}`}
+          value={closeNote}
+          onChange={(e) => setCloseNote(e.target.value.slice(0, CLOSE_NOTE_MAX_LENGTH))}
+          placeholder="What was done, and why this ticket is closed"
+          disabled={closeTicketMutation.isPending}
+        />
+        <p className={`${stMutedCls} mt-1.5`}>{closeNote.trim().length}/{CLOSE_NOTE_MAX_LENGTH}</p>
+      </ErrorModal>
+
+      <ErrorModal
+        open={confirmAction === 'delete' || confirmAction === 'discard'}
         onClose={() => setConfirmAction(null)}
         type="warning"
         message={
-          confirmAction === 'close'
-            ? `Are you sure you want to close ticket ${displayTicket?.ticketNumber ?? ticket.ticketNumber}?`
-            : confirmAction === 'delete'
-              ? `Are you sure you want to permanently delete ticket ${displayTicket?.ticketNumber ?? ticket.ticketNumber}? This cannot be undone.`
-              : ''
+          confirmAction === 'delete'
+            ? `Are you sure you want to permanently delete ticket ${displayTicket?.ticketNumber ?? ticket.ticketNumber}? This cannot be undone.`
+            : 'You have an unsaved follow-up note. Discard it?'
         }
         actions={[
-          { label: 'Cancel', variant: 'ghost', onClick: () => setConfirmAction(null) },
-          { label: 'Confirm', variant: 'primary', onClick: runConfirmAction },
+          { label: confirmAction === 'discard' ? 'Keep editing' : 'Cancel', variant: 'ghost', onClick: () => setConfirmAction(null) },
+          { label: confirmAction === 'discard' ? 'Discard' : 'Confirm', variant: 'primary', onClick: runConfirmAction },
         ]}
       />
     </>

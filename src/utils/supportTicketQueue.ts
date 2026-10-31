@@ -9,6 +9,13 @@ export const SUPPORT_TICKET_STALE_DAYS = 7
 /** Default next follow-up when creating or logging an activity. */
 export const DEFAULT_FOLLOW_UP_OFFSET_DAYS = 3
 
+/** Auto stub stored as the first activity when a ticket is created with a follow-up date. */
+export const SUPPORT_TICKET_OPENED_NOTE = 'Ticket opened. Next follow-up scheduled.'
+
+export function isSupportTicketSystemNote(note: string | null | undefined): boolean {
+  return (note ?? '').trim() === SUPPORT_TICKET_OPENED_NOTE
+}
+
 export type TicketQueueActivity = {
   createdAt: Date | string
   followUpDate?: Date | string | null
@@ -69,9 +76,13 @@ export function isSupportTicketOverdue(ticket: TicketQueueInput, now: Date = new
 }
 
 /** Overdue first, then Solar Hub, then oldest open. */
-export function compareSupportTicketQueue(a: TicketQueueInput, b: TicketQueueInput): number {
-  const ao = isSupportTicketOverdue(a) ? 0 : 1
-  const bo = isSupportTicketOverdue(b) ? 0 : 1
+export function compareSupportTicketQueue(
+  a: TicketQueueInput,
+  b: TicketQueueInput,
+  now: Date = new Date(),
+): number {
+  const ao = isSupportTicketOverdue(a, now) ? 0 : 1
+  const bo = isSupportTicketOverdue(b, now) ? 0 : 1
   if (ao !== bo) return ao - bo
   const ah = isSolarHubTicket(a.source) ? 0 : 1
   const bh = isSolarHubTicket(b.source) ? 0 : 1

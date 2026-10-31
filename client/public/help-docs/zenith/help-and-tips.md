@@ -20,7 +20,7 @@ The rotation includes many **Zenith**-oriented hints, for example: **Ask Zenith*
 
 ## Support Tickets (dashboard + project)
 
-From **[Support Tickets](/help/modules#support-tickets-module)** in **Modules**: the page is an **open queue** (search, create from the page, project links). **Overdue** uses the **latest** next follow-up date (or 7 days with no next date). **Zenith → Your Focus** shows ticket counts for Sales, Operations, and Management/Admin. Opening a row uses the **Ticket Details** drawer (**Add to My Day**, follow-up date required). Shortcut: **Ctrl+Shift+K** / **⌘⇧K**.
+From **[Support Tickets](/help/modules#support-tickets-module)** in **Modules**: the page is an **open queue** (search, create from the page, project links). **Overdue** uses the **latest** next follow-up date (or 7 days with no next date). **Zenith → Your Focus** shows ticket counts for Sales, Operations, and Management/Admin — Operations counts are company-wide (every stage). Opening a row uses the **Ticket Details** drawer (**Add to My Day**; follow-up date required on open tickets). **Close** needs a **resolution note**. Shortcut: **Ctrl+Shift+K** / **⌘⇧K**.
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 
 export type ErrorModalType = 'error' | 'warning' | 'info' | 'fatal'
@@ -22,6 +22,8 @@ export interface ErrorModalProps {
   countdown?: number
   /** Dark glass styling for Zenith-style pages (default unchanged for other call sites). */
   surface?: 'default' | 'zenith'
+  /** Extra content below the message (e.g. a required resolution textarea). */
+  children?: ReactNode
 }
 
 const typeConfig: Record<ErrorModalType, { title: string; icon: string }> = {
@@ -53,6 +55,7 @@ export function ErrorModal({
   anchor: _anchor = 'viewport',
   countdown,
   surface = 'default',
+  children,
 }: ErrorModalProps) {
   const [showTechnical, setShowTechnical] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -212,6 +215,7 @@ export function ErrorModal({
           >
             {displayMessage}
           </p>
+          {children}
           {technical != null && technical !== '' && (
             <div className="mt-4">
               <button

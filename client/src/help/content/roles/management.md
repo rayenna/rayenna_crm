@@ -51,7 +51,7 @@ Sales still runs day-to-day edits on accounts assigned to them.
 
 ## Support tickets
 
-You have the same ticket **create / follow-up / close** rights as Sales and Operations — useful for escalations without editing the underlying project.
+You have the same ticket **create / follow-up / close** rights as Operations (any project stage) — useful for escalations without editing the underlying project. Closing needs a **resolution note**.
 
 You **cannot** add follow-ups to **closed** tickets (Admin only).
 

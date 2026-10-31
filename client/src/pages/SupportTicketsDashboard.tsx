@@ -203,7 +203,11 @@ const SupportTicketsDashboard = () => {
           cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           break
         case 'lastFollowUp':
-          cmp = lastFollowUpActivityTime(a) - lastFollowUpActivityTime(b)
+          if (selectedStatus === SupportTicketStatus.CLOSED) {
+            cmp = new Date(a.closedAt ?? 0).getTime() - new Date(b.closedAt ?? 0).getTime()
+          } else {
+            cmp = lastFollowUpActivityTime(a) - lastFollowUpActivityTime(b)
+          }
           break
         case 'updatedAt':
           cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
@@ -214,7 +218,7 @@ const SupportTicketsDashboard = () => {
       return cmp * mul
     })
     return list
-  }, [filteredTickets, tableSortBy, tableSortOrder, useAttentionSort])
+  }, [filteredTickets, tableSortBy, tableSortOrder, useAttentionSort, selectedStatus])
 
   /** Same ⇕ icon as Projects table; reserved box size so labels never clip. */
   function SupportTicketsSortGlyph({ sortKey }: { sortKey: SupportTicketsTableSortKey }) {
@@ -310,6 +314,14 @@ const SupportTicketsDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
   }
 
+  const handleTicketClosed = () => {
+    setShowOverdueOnly(false)
+    setSelectedStatus(SupportTicketStatus.CLOSED)
+    const next = new URLSearchParams(searchParams)
+    next.set('filter', 'closed')
+    setSearchParams(next, { replace: true })
+  }
+
   const getStatusLabel = (status: SupportTicketStatus) => {
     switch (status) {
       case SupportTicketStatus.OPEN:
@@ -343,6 +355,7 @@ const SupportTicketsDashboard = () => {
 
   const hasActiveFilters =
     selectedStatus !== null || showOverdueOnly || selectedSource !== 'ALL' || listSearch.trim().length > 0
+  const showingClosed = selectedStatus === SupportTicketStatus.CLOSED
 
   const sourceLabel = (ticket: SupportTicket) =>
     (ticket.source ?? SupportTicketSource.CRM) === SupportTicketSource.CONSUMER_APP
@@ -544,8 +557,22 @@ const SupportTicketsDashboard = () => {
                           <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
                         </div>
                         <div>
-                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Next follow-up</span>
-                          <span className="tabular-nums">{getNextFollowUpLabel(ticket)}</span>
+                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                            {showingClosed ? 'Closed' : 'Next follow-up'}
+                          </span>
+                          <span className="tabular-nums">
+                            {showingClosed
+                              ? ticket.closedAt
+                                ? format(new Date(ticket.closedAt), 'MMM dd, yyyy')
+                                : '—'
+                              : getNextFollowUpLabel(ticket)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Last updated</span>
+                          <span className="tabular-nums" title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}>
+                            {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
+                          </span>
                         </div>
                       </div>
                       <button
@@ -626,13 +653,13 @@ const SupportTicketsDashboard = () => {
                           <button
                             type="button"
                             className={sortBtnHeader}
-                            title="Sort by next follow-up date"
+                            title={showingClosed ? 'Sort by closed date' : 'Sort by next follow-up date'}
                             onClick={(e) => {
                               e.stopPropagation()
                               handleSupportTicketsColumnSort('lastFollowUp')
                             }}
                           >
-                            <span className={sortLabelLeft}>Next follow-up</span>
+                            <span className={sortLabelLeft}>{showingClosed ? 'Closed date' : 'Next follow-up'}</span>
                             <SupportTicketsSortGlyph sortKey="lastFollowUp" />
                           </button>
                         </th>
@@ -647,7 +674,7 @@ const SupportTicketsDashboard = () => {
                               handleSupportTicketsColumnSort('updatedAt')
                             }}
                           >
-                            <span className={sortLabelLeft}>Action</span>
+                            <span className={sortLabelLeft}>Last updated</span>
                             <SupportTicketsSortGlyph sortKey="updatedAt" />
                           </button>
                         </th>
@@ -690,13 +717,34 @@ const SupportTicketsDashboard = () => {
                           <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5" title={format(new Date(ticket.createdAt), 'MMM dd, yyyy')}>
                             {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                           </td>
-                          <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5" title={getNextFollowUpLabel(ticket)}>
-                            {getNextFollowUpLabel(ticket)}
+                          <td
+                            className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5"
+                            title={
+                              showingClosed
+                                ? ticket.closedAt
+                                  ? format(new Date(ticket.closedAt), 'MMM dd, yyyy')
+                                  : '—'
+                                : getNextFollowUpLabel(ticket)
+                            }
+                          >
+                            {showingClosed
+                              ? ticket.closedAt
+                                ? format(new Date(ticket.closedAt), 'MMM dd, yyyy')
+                                : '—'
+                              : getNextFollowUpLabel(ticket)}
                           </td>
                           <td className="min-w-0 px-2 py-2 text-sm font-medium sm:px-2.5 lg:py-1.5">
-                            <button type="button" onClick={() => handleTicketClick(ticket)} className="whitespace-nowrap font-semibold text-[color:var(--accent-gold)] hover:opacity-90">
-                              View
-                            </button>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span
+                                className="tabular-nums text-[color:var(--text-secondary)]"
+                                title={format(new Date(ticket.updatedAt), 'MMM dd, yyyy HH:mm')}
+                              >
+                                {format(new Date(ticket.updatedAt), 'MMM dd, yyyy')}
+                              </span>
+                              <button type="button" onClick={() => handleTicketClick(ticket)} className="whitespace-nowrap font-semibold text-[color:var(--accent-gold)] hover:opacity-90">
+                                View
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -719,6 +767,7 @@ const SupportTicketsDashboard = () => {
           setSelectedTicket(null)
         }}
         onRefresh={handleRefresh}
+        onTicketClosed={handleTicketClosed}
       />
 
       {showCreateModal ? (
@@ -732,6 +781,13 @@ const SupportTicketsDashboard = () => {
           onSuccess={() => {
             setShowCreateModal(false)
             setCreatePrefill({})
+            setSelectedStatus(null)
+            setShowOverdueOnly(false)
+            if (searchParams.get('filter')) {
+              const next = new URLSearchParams(searchParams)
+              next.delete('filter')
+              setSearchParams(next, { replace: true })
+            }
             queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
             queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
           }}

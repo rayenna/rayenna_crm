@@ -81,7 +81,7 @@ You can **view** payment status and balances on your projects. **Entering paymen
 2. Before the weekly seller call, open **Reports → Sales Review** (achievement / forecast / deal list) and **Funnel Velocity** (stuck / SLA). Guide: [Reports](/help/modules#reports).
 3. Update **lead / survey / proposal** stages on active projects; clear **Needs review** flags when the record is wrong.
 4. Create customers and projects for new opportunities.
-5. Log **support tickets** when customers need follow-up.
+5. Log **support tickets** on **your** projects when customers need follow-up (close with a resolution note).
 6. At handover, open **Project detail** → **Install Hub on this visit** and add Solar Hub to the customer’s home screen. Operations maps the inverter cloud for live Track kWh. [Solar Hub handover](/help/modules#solar-hub-handover)
 7. Use **My Day** (**Ctrl+Shift+M** / **⌘⇧M**) to pin follow-ups from the dashboard or Hit List.
 

@@ -67,10 +67,15 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 ### Creating a Support Ticket
 
-**Who can create**: Sales users, Operations users, and Administrators
+**Who can create**: Sales (own projects), Operations (any non-Lost project), Management, and Administrators
+
+**From Support Tickets**:
+1. Open **Support Tickets** (**Ctrl+Shift+K** / **⌘⇧K**) → **Create ticket**
+2. Search by customer name or project number and select the project
+3. Enter a title, optional description, and next follow-up date (defaults to +3 days)
 
 **From Project Detail Page**:
-1. Navigate to a project's detail page
+1. Navigate to a project's detail page (Operations: Confirmed → Subsidy Credited)
 2. Scroll to the **Support / Service Tickets** section
 3. Click **Create Ticket** button
 4. Fill in the ticket form:
@@ -83,7 +88,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 - Tickets are linked to the project
 - You can add follow-ups after creation
 - Ticket status starts as "Open"
-- Only tickets for your projects are visible (Sales users)
+- **Sales** sees only their projects; **Operations** sees the company-wide queue (every stage)
 
 ### Creating a User (Admin Only)
 
@@ -191,19 +196,19 @@ Guide: [Reports](/help/modules#reports).
 
 ### Editing Support Tickets
 
-**Who can edit**: Sales users, Operations users, and Administrators
+**Who can edit**: Sales (own projects), Operations (company-wide queue, every stage except Lost), Management, and Administrators
 
 **Adding Follow-ups**:
-1. Open the ticket (from project detail page or Support Tickets Dashboard)
-2. Scroll to **Activities** section
-3. Enter a note in the "Add Follow-up" form
-4. Set the next follow-up date (defaults to 3 days)
-5. Click **Add Follow-up** to save
+1. Open the ticket (from **Support Tickets** or project detail)
+2. Scroll to the **Follow-up Timeline**
+3. Enter a note in the **Add Follow-up** form
+4. Set the next follow-up date (defaults to 3 days; required on open tickets)
+5. Click **Add Follow-up** to save. Leaving with an unsaved note asks you to discard or keep editing.
 
 **Updating Ticket Status**:
-1. Open the ticket
-2. Click **Close Ticket** button to mark as resolved
-3. Ticket status changes to "Closed"
+1. Open the ticket (**View**)
+2. Click **Close ticket** (or **Save note & close** if a note is already typed)
+3. Enter a **resolution note** and click **Save and close** — the note is stored on the timeline
 4. Only Admin can add follow-ups to closed tickets
 
 **What can be edited**:

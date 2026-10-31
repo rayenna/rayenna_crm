@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { SupportTicket, SupportTicketStatus, ProjectStatus } from '../../types'
+import { SupportTicket, ProjectStatus } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import CreateTicketModal from './CreateTicketModal'
@@ -31,7 +31,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [confirmState, setConfirmState] = useState<{ action: 'close' | 'delete'; ticket: SupportTicket } | null>(null)
+  const [confirmState, setConfirmState] = useState<SupportTicket | null>(null)
 
   const canManageTickets = canManageSupportTickets(hasRole)
   const isAdmin = canDeleteSupportTickets(hasRole)
@@ -42,23 +42,6 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/support-tickets/project/${projectId}`)
       return res.data as SupportTicket[]
-    },
-  })
-
-  const closeTicketMutation = useMutation({
-    mutationFn: async (ticketId: string) => {
-      const res = await axiosInstance.patch(`/api/support-tickets/${ticketId}/close`)
-      return res.data as SupportTicket
-    },
-    onSuccess: () => {
-      toast.success('Ticket closed successfully')
-      queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
-      queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
-    },
-    onError: (err: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
 
@@ -88,21 +71,13 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     }
   }
 
-  const handleCloseTicket = (ticket: SupportTicket) => {
-    setConfirmState({ action: 'close', ticket })
-  }
-
   const handleDeleteTicket = (ticket: SupportTicket) => {
-    setConfirmState({ action: 'delete', ticket })
+    setConfirmState(ticket)
   }
 
   const runConfirmAction = () => {
     if (!confirmState) return
-    if (confirmState.action === 'close') {
-      closeTicketMutation.mutate(confirmState.ticket.id)
-    } else {
-      deleteTicketMutation.mutate(confirmState.ticket.id)
-    }
+    deleteTicketMutation.mutate(confirmState.id)
     setConfirmState(null)
   }
 
@@ -226,29 +201,15 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
                     >
                       View ticket
                     </button>
-                    {(canManageTickets && ticket.status !== SupportTicketStatus.CLOSED) || isAdmin ? (
-                      <div className="flex gap-2">
-                        {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
-                          <button
-                            type="button"
-                            onClick={() => handleCloseTicket(ticket)}
-                            disabled={closeTicketMutation.isPending}
-                            className={`${touchActionBtn} border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-card)] text-[color:var(--accent-gold)] hover:bg-[color:var(--bg-card-hover)]`}
-                          >
-                            Close
-                          </button>
-                        )}
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteTicket(ticket)}
-                            disabled={deleteTicketMutation.isPending}
-                            className={`${touchActionBtn} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTicket(ticket)}
+                        disabled={deleteTicketMutation.isPending}
+                        className={`${touchActionBtn} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
+                      >
+                        Delete
+                      </button>
                     ) : null}
                   </div>
                 </li>
@@ -299,17 +260,6 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
                           >
                             View
                           </button>
-                          {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
-                            <button
-                              type="button"
-                              onClick={() => handleCloseTicket(ticket)}
-                              className="text-[color:var(--accent-gold)] hover:underline"
-                              title="Close ticket"
-                              disabled={closeTicketMutation.isPending}
-                            >
-                              Close
-                            </button>
-                          )}
                           {isAdmin && (
                             <button
                               type="button"
@@ -364,9 +314,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
         anchor="parent"
         message={
           confirmState
-            ? confirmState.action === 'close'
-              ? `Are you sure you want to close ticket ${confirmState.ticket.ticketNumber}?`
-              : `Are you sure you want to permanently delete ticket ${confirmState.ticket.ticketNumber}? This action cannot be undone.`
+            ? `Are you sure you want to permanently delete ticket ${confirmState.ticketNumber}? This action cannot be undone.`
             : ''
         }
         actions={[

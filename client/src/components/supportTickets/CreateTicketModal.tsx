@@ -68,13 +68,9 @@ const CreateTicketModal = ({
     queryKey: ['support-ticket-project-picker', debouncedQuery],
     queryFn: async () => {
       const params = new URLSearchParams()
-      params.set('limit', '15')
-      params.set('sortBy', 'creationDate')
-      params.set('sortOrder', 'desc')
       if (debouncedQuery) params.set('search', debouncedQuery)
-      const res = await axiosInstance.get(`/api/projects?${params.toString()}`)
-      const projects = (res.data?.projects ?? []) as PickerProject[]
-      return projects.filter((p) => p.projectStatus !== ProjectStatus.LOST)
+      const res = await axiosInstance.get(`/api/support-tickets/project-options?${params.toString()}`)
+      return (res.data?.projects ?? []) as PickerProject[]
     },
     enabled: needsPicker,
     staleTime: 15_000,
