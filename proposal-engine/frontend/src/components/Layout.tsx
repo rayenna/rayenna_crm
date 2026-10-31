@@ -245,7 +245,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* ── Navbar ── */}
       <nav
         style={{ background: '#0d1b3a' }}
-        className="border-b-2 border-[#EA580C] sticky top-0 z-20"
+        className="pe-app-nav border-b-2 border-[#EA580C] sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex items-center justify-between h-14 gap-2">
@@ -384,9 +384,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 aria-expanded={menuOpen}
                 className="lg:hidden flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 touch-manipulation"
               >
-                <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
-                <span className={`block w-5 h-0.5 bg-white transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
-                <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+                <span className={`pe-nav-icon block w-5 h-0.5 transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                <span className={`pe-nav-icon block w-5 h-0.5 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
+                <span className={`pe-nav-icon block w-5 h-0.5 transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
               </button>
             </div>
           </div>

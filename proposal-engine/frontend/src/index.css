@@ -123,7 +123,7 @@
  * Remap chrome surfaces in Dark Mode, stopping at the proposal document
  * and any .pe-force-light region so Light letterhead / share HTML stay as-is.
  */
-@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay) {
+@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay, .pe-app-nav) {
   .bg-white,
   .bg-white\/80,
   .bg-white\/90,
@@ -618,6 +618,11 @@
   color-scheme: light;
   background-color: #fff;
   color: #1a1a2e;
+}
+
+/* Navy app bar stays white-on-navy in both themes (hamburger, logo plate). */
+.pe-nav-icon {
+  background-color: #ffffff;
 }
 
 /* Proposal Project View — reflow on phone, tablet, and laptop (portrait + landscape).
