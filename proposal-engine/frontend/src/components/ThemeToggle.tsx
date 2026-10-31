@@ -3,19 +3,22 @@ import { useThemeContext } from '../theme/ThemeProvider';
 
 const MOBILE_MAX = 1279;
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ forceCompact }: { forceCompact?: boolean } = {}) {
   const { theme, persistTheme } = useThemeContext();
-  const [compact, setCompact] = useState(
+  const [compactMq, setCompactMq] = useState(
     typeof window !== 'undefined' ? window.innerWidth < MOBILE_MAX : false,
   );
 
   useEffect(() => {
+    if (forceCompact !== undefined) return;
     const mq = window.matchMedia(`(max-width: ${MOBILE_MAX}px)`);
-    const onChange = () => setCompact(mq.matches);
+    const onChange = () => setCompactMq(mq.matches);
     onChange();
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
-  }, []);
+  }, [forceCompact]);
+
+  const compact = forceCompact ?? compactMq;
 
   const btn = (active: boolean) =>
     [

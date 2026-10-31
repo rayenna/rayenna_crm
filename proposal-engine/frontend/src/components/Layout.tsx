@@ -9,6 +9,7 @@ import {
 import TipOfTheDay from './TipOfTheDay';
 import ThemeToggle from './ThemeToggle';
 import { useThemeContext } from '../theme/ThemeProvider';
+import { shouldUseCompactNav } from './layoutNav';
 
 const NAV = [
   { label: 'Customers',             to: '/customers' },
@@ -29,7 +30,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate     = useNavigate();
   const [menuOpen, setMenuOpen]     = useState(false);
+  const [compactNav, setCompactNav] = useState(
+    () => (typeof window === 'undefined' ? true : window.innerWidth < 1280),
+  );
   const [helpOpen, setHelpOpen]     = useState(false);
+  const barRef                      = useRef<HTMLDivElement>(null);
+  const measureRef                  = useRef<HTMLDivElement>(null);
   const [showIdleWarning, setShowIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown]     = useState(60);
   const helpRef                     = useRef<HTMLDivElement>(null);
@@ -53,6 +59,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { setMenuOpen(false); setHelpOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!compactNav) setMenuOpen(false);
+  }, [compactNav]);
+
+  useEffect(() => {
+    const bar = barRef.current;
+    const measure = measureRef.current;
+    if (!bar || !measure) return;
+
+    let raf = 0;
+    const check = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        setCompactNav((prev) =>
+          shouldUseCompactNav(measure.scrollWidth, bar.clientWidth, prev),
+        );
+      });
+    };
+
+    const ro = new ResizeObserver(check);
+    ro.observe(bar);
+    ro.observe(measure);
+    window.addEventListener('resize', check);
+    check();
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', check);
+    };
+  }, [pathname, userName, hasToken, activeCustomer]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -248,7 +285,48 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="pe-app-nav border-b-2 border-[#EA580C] sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex items-center justify-between h-14 gap-2">
+          <div ref={barRef} className="relative overflow-x-hidden">
+            {/* Hidden full desktop cluster — width drives hamburger vs inline links. */}
+            <div
+              ref={measureRef}
+              aria-hidden
+              className="absolute left-0 top-0 flex w-max items-center gap-2 h-14 opacity-0 pointer-events-none select-none"
+            >
+              <span className="flex items-center bg-white rounded-md px-1.5 py-0.5 shrink-0">
+                <img src="/Proposals_Logo.jpg" alt="" className="h-9 w-auto object-contain" />
+              </span>
+              <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
+                {NAV.map((n) => (
+                  <span
+                    key={n.to}
+                    className="inline-flex items-center px-2 py-1 text-xs font-medium whitespace-nowrap"
+                  >
+                    {n.label}
+                  </span>
+                ))}
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium whitespace-nowrap">
+                  Help ▾
+                </span>
+              </div>
+              {activeCustomer && (
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full max-w-[160px] 2xl:max-w-[200px] shrink-0">
+                  <span className="truncate font-medium">{activeCustomer.master.name}</span>
+                </span>
+              )}
+              {hasToken && <ThemeToggle forceCompact={false} />}
+              {hasToken && userName && (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium max-w-[180px] xl:max-w-[240px] shrink-0">
+                  <span className="truncate">{userName}</span>
+                </span>
+              )}
+              {hasToken && (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0">
+                  Logout
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between h-14 gap-2">
 
             {/* Wordmark sits on white so the navy lettering stays readable on the bar. */}
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -264,9 +342,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
 
-            {/* Desktop nav from laptop width. Tighter padding keeps the seven links in the bar. */}
-            <div className="hidden lg:flex items-center flex-1 justify-center min-w-0">
-              <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto">
+            {!compactNav && (
+            <div className="flex items-center flex-1 justify-center min-w-0">
+              <div className="flex items-center gap-1.5 flex-nowrap">
                 {NAV.map((n) => (
                   <Link
                     key={n.to}
@@ -280,7 +358,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Help dropdown — outside scroll container so panel is not clipped */}
+              {/* Help dropdown — outside the link row so the panel is not clipped */}
               <div ref={helpRef} className="relative flex-shrink-0 ml-1.5">
                 <button
                   type="button"
@@ -324,13 +402,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </div>
+            )}
 
             <div className="flex items-center gap-2">
               {/* Active customer pill — desktop only (routes to Dashboard) */}
-              {activeCustomer && (
+              {activeCustomer && !compactNav && (
                 <Link
                   to="/dashboard"
-                  className="hidden lg:flex items-center gap-1.5 text-xs text-white/90 bg-white/10 hover:bg-white/15 border border-white/20 px-2.5 py-1 rounded-full transition-colors max-w-[160px] 2xl:max-w-[200px]"
+                  className="flex items-center gap-1.5 text-xs text-white/90 bg-white/10 hover:bg-white/15 border border-white/20 px-2.5 py-1 rounded-full transition-colors max-w-[160px] 2xl:max-w-[200px]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-[#0A9E87] inline-block flex-shrink-0" />
@@ -339,10 +418,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Active customer — compact, when the full link row is hidden */}
-              {activeCustomer && (
+              {activeCustomer && compactNav && (
                 <Link
                   to="/dashboard"
-                  className="lg:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full max-w-[min(42vw,11rem)] sm:max-w-[12rem]"
+                  className="flex items-center gap-1 text-[11px] text-white/90 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full max-w-[min(42vw,11rem)] sm:max-w-[12rem]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-[#0A9E87] inline-block flex-shrink-0" />
@@ -350,15 +429,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )}
 
-              {hasToken && (
-                <div className="hidden lg:flex">
+              {hasToken && !compactNav && (
+                <div className="flex">
                   <ThemeToggle />
                 </div>
               )}
 
               {/* Logout button — desktop only */}
-              {hasToken && (
-                <div className="hidden lg:flex items-center gap-2">
+              {hasToken && !compactNav && (
+                <div className="flex items-center gap-2">
                   {userName && (
                     <span
                       className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium text-white/90 bg-white/10 border border-white/20 max-w-[180px] xl:max-w-[240px]"
@@ -377,32 +456,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
+              {compactNav && (
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={menuOpen}
-                className="lg:hidden flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 touch-manipulation"
+                className="flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 touch-manipulation"
               >
                 <span className={`pe-nav-icon block w-5 h-0.5 transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`pe-nav-icon block w-5 h-0.5 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
                 <span className={`pe-nav-icon block w-5 h-0.5 transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
               </button>
+              )}
             </div>
+          </div>
           </div>
         </div>
 
-        {/* ── Tablet / phone menu drawer — scrollable, touch-friendly (iPad-safe) ── */}
-        {menuOpen && (
+        {/* ── Tablet / phone / narrow-laptop menu drawer ── */}
+        {compactNav && menuOpen && (
           <>
             <button
               type="button"
               aria-label="Close menu"
-              className="lg:hidden fixed inset-0 z-10 bg-black/40 touch-manipulation"
+              className="fixed inset-0 z-10 bg-black/40 touch-manipulation"
               onClick={() => setMenuOpen(false)}
             />
             <div
-              className="lg:hidden relative z-20 border-t border-white/15"
+              className="relative z-20 border-t border-white/15"
               style={{ background: '#0d1b3aF2' }}
             >
             <nav
