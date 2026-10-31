@@ -13,7 +13,7 @@ export const PRODUCT_ANNOUNCEMENTS: ProductAnnouncementDef[] = [
   },
   {
     id: 'ask-zenith',
-    text: 'Ask Zenith — tap Ask Zenith in the header for a floating window (phone: Ask tab); on Zenith press / or A to open it.',
+    text: 'Ask Zenith — tap Ask Zenith in the header for a draggable floating window over the page you are on (phone: Ask tab). Drag the title, resize the corner, Esc to close.',
     showNewBadge: true,
   },
   {

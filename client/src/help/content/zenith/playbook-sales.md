@@ -12,7 +12,7 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 ## 2. Scan ribbons, Ask, and KPIs (~3 min)
 
 1. Skim **Solar News** — optional industry context; click a headline to read externally.
-2. Try **Ask Zenith** for a quick question (e.g. pipeline by stage or support tickets) or a task jump (**New Customer**, **Open My Day**) — same tasks as **Ctrl+K** / **⌘K** ([Ask Zenith](#ask-zenith-natural-language)).
+2. Tap **Ask Zenith** in the header (or **/** / **A**) — on laptop the window **floats over Zenith** so KPIs stay visible behind it. Try a quick question (e.g. pipeline by stage or support tickets) or a task jump (**New Customer**, **Open My Day**) — same tasks as **Ctrl+K** / **⌘K** ([Ask Zenith](#ask-zenith-natural-language)).
 3. On the **KPI strip**, note pipeline value, capacity, and any red trend badges ([KPI strip](#kpi-strip-and-year-on-year)).
 4. Read **AI Insights** under the tiles — click a line to jump to **The Board**, funnel, or **Your Focus** ([AI Insights](#ai-insights-ticker)).
 5. Optionally expand **The Board** (starts collapsed) for this period’s ranking ([The Board](#the-board-leaderboard)).

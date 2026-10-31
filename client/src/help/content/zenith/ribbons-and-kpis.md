@@ -1,6 +1,6 @@
 # Ribbons and KPIs
 
-Below the sticky command bar on **desktop**: **Solar News**, then the **KPI strip**, then **AI Insights**, then **The Board** (Sales / Management / Admin), then the rest of the overview (Things needing attention, Hit List, forecast, etc.). **Ask Zenith** opens as a **floating window** from the header button (or **/** / **A**).
+Below the sticky command bar on **desktop**: **Solar News**, then the **KPI strip**, then **AI Insights**, then **The Board** (Sales / Management / Admin), then the rest of the overview (Things needing attention, Hit List, forecast, etc.). **Ask Zenith** is **not** in this page stack — it opens as a **draggable floating window** from the header button (or **/** / **A**). See [Ask Zenith](#ask-zenith-natural-language).
 
 On **phones / narrow** layouts, **Solar News** and **AI Insights** appear only on the **Today** (or **KPIs**) tab — not on Ask, Pipeline, Charts, or More. See [Mobile navigation](#mobile-navigation-and-layout-zenith).
 

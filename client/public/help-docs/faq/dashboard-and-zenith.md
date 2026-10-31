@@ -13,7 +13,16 @@ The **classic Dashboard** is your in-menu analytics home: FY filters, role-speci
 **Zenith ✦** is the full-screen **command center** (Dashboard menu → **Zenith ✦**). Same **FY / Quarter / Month** rules as the Dashboard, plus **Ask Zenith**, Hit List, AI Insights, **Quick Actions** drawers, and optional offline PWA. Overview: [Zenith command center](/help/zenith#zenith-command-center).
 
 ### What is Ask Zenith?
-The header **Ask Zenith** button opens a **floating window** (on a phone on Zenith, the **Ask** tab). Ask answers **analytics** questions with an insight plus a chart or table, **how-to** questions from this Help (for example **Where do I add the Panel and Inverter brand in CRM?**), and **tasks** (New Customer, My Day, pending subsidy, search, etc.). Tasks match the **Ctrl+K** / **⌘K** palette. Guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
+The header **Ask Zenith** button opens a **draggable floating window** over the page you are on (on a phone on Zenith, the **Ask** tab). Ask answers **analytics** questions with an insight plus a chart or table, **how-to** questions from this Help (for example **Where do I add the Panel and Inverter brand in CRM?**), and **tasks** (New Customer, My Day, pending subsidy, search, etc.). Tasks match the **Ctrl+K** / **⌘K** palette. Guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
+
+### Can I keep working on Projects while Ask Zenith is open?
+**Yes on laptop / desktop.** The window floats **on top** of the current page with **no** dark overlay — you can still see and use Projects, Customers, or Zenith behind it. Drag the title bar to move it aside. On a **phone** on Zenith, Ask is its own **Ask** tab.
+
+### How do I move or resize Ask Zenith?
+**Drag the title bar** to move. **Drag the bottom-right corner** to resize. **Double-click the title** to reset. **Esc** or the title-bar **×** closes the window; **Clear** only clears the current answer. Position is remembered for this browser tab. Guide: [Ask Zenith → Floating window](/help/zenith#floating-window-laptop-desktop).
+
+### Why don’t Ask numbers match the Zenith date filters?
+Ask uses the Zenith command-bar **FY / Quarter / Month** **only while you are on the Zenith page**. From Projects or other screens, say the period in the question (**this quarter**, **last FY**, **FY 2024-25**) or the answer is unscoped. Details: [Ask Zenith](/help/zenith#ask-zenith-natural-language).
 
 ### What are the Dashboard filters (FY, Quarter, Month)?
 **Financial Year** is always available; **Quarter** and **Month** unlock when **exactly one** FY is selected. Tiles and most charts respect these filters. Details: [Dashboard → Filters](/help/dashboard#dashboard-filters) · [Year-on-Year KPIs](/help/dashboard#year-on-year-kpis).

@@ -15,6 +15,8 @@ The navigation bar is located at the top of every page and contains:
   - Main menu items (role-based visibility)
 
 - **Right Side**:
+  - **Ask Zenith** button (Sales, Operations, Finance, Management, Admin) — opens a **floating Ask window** on laptop; on a phone on Zenith, the **Ask** tab
+  - **My Day** (☀) — personal Tasks, Journal, and Reminders
   - Help dropdown menu (visible to all users)
   - Your name and role badge
   - User actions menu (Change Password, Logout)
@@ -42,7 +44,7 @@ Menu items are displayed based on your user role:
 
 ### Help Menu
 
-The **Help** control is in the top navigation bar (next to Ask / My Day — **not** your name). On phones it is inside the hamburger menu.
+The **Help** control is in the top navigation bar (next to **Ask Zenith** / **My Day** — **not** your name). On phones it is inside the hamburger menu.
 
 - **Help (?)**: Opens context-sensitive help documentation
   - Automatically shows relevant help based on your current page
@@ -277,7 +279,7 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 - **Create Ticket**: From the Support Tickets page or project detail
 - **View Ticket**: Click ticket number or View button
 - **Add Follow-up**: Add activity notes with a next follow-up date
-- **Close Ticket**: Mark ticket as resolved
+- **Close Ticket**: Open the ticket, enter a resolution note, then **Save and close**
 - **Filter Tickets**: Use KPI cards, chart slices, source chips, or search
 
 ### Support Tickets in Project Details
@@ -285,7 +287,7 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 - **Support Tickets Section**:
   - On project detail (near remarks / documents)
   - **Cards on phones**, **table on desktop**; same **Ticket Detail Drawer** as the dashboard
-  - **Create Ticket**; **View ticket**; **Close** / **Delete** (Admin) when allowed
+  - **Create Ticket**; **View ticket** to add follow-ups or close with a resolution note; **Delete** (Admin) when allowed
 
 ## Filters and Search
 

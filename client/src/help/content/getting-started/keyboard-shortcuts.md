@@ -10,7 +10,7 @@ Press **Ctrl+K** (Windows/Linux) or **⌘K** (Mac) from **any** CRM page. Type t
 
 The same task set also works from **Ask Zenith** (type the phrase and press Ask). Analytics questions (charts/tables) are Ask-only — see [Ask Zenith](/help/zenith#ask-zenith-natural-language).
 
-From the palette you can also choose **Ask Zenith…** (opens the floating Ask window) or type a question and pick **Ask Zenith: “…”** to run it. On a phone on Zenith, those still open the **Ask** tab.
+From the palette you can also choose **Ask Zenith…** (opens the floating Ask window on laptop) or type a question and pick **Ask Zenith: “…”** to run it. On a phone on Zenith, those still open the **Ask** tab. The header **Ask Zenith** button opens the same window from **any** CRM page.
 
 ### What you can run from the palette
 
@@ -36,12 +36,13 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 | Ctrl+Shift+P | ⌘⇧P | **Projects** (same roles as Customers) |
 | Ctrl+Shift+K | ⌘⇧K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | Ctrl+Shift+Z | ⌘⇧Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| **/** or **A** | **/** or **A** | **Open Ask Zenith** — on the **Zenith** page, when focus is not already in a field (laptop: floating window; phone: Ask tab) |
+| **/** or **A** | **/** or **A** | **Open Ask Zenith** — on the **Zenith** page, when focus is not already in a field (laptop: floating window; phone: Ask tab). From other pages, use the header **Ask Zenith** button. |
+| **Esc** | **Esc** | **Close Ask Zenith** when the floating window is open (same as title-bar **×**). On a **Help** page, **Esc** returns to the Dashboard. |
 | Ctrl+Shift+M | ⌘⇧M | **My Day** — personal Tasks, Journal & Reminders ([details](/help/zenith#my-day-personal-productivity-drawer)) |
 | Ctrl+Shift+N | ⌘⇧N | **New customer** — opens the create form (Sales, Management, Admin) |
 | Ctrl+Shift+E | ⌘⇧E | **New project** — opens the new-project screen (Admin, Sales) |
 
-On a **Help** page, **Esc** returns you to the **Dashboard**.
+On a **Help** page, **Esc** returns you to the **Dashboard**. When the **Ask Zenith** floating window is open, **Esc** closes that window first.
 
 ## My Day shortcut
 

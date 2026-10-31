@@ -2,7 +2,7 @@
 
 Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, and **Admin**. Layout and panels change with your role; filters and KPI definitions stay consistent with the [classic Dashboard](/help/dashboard).
 
-**Ask Zenith** (header **Ask Zenith** button, or **/** / **A** on Zenith) is available to all of these roles: analytics answers stay role-scoped; task phrases match the global **Ctrl+K** / **⌘K** palette. [Ask Zenith](#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
+**Ask Zenith** (header **Ask Zenith** button on **any** page, or **/** / **A** on Zenith) is available to all of these roles: analytics answers stay role-scoped; task phrases match the global **Ctrl+K** / **⌘K** palette. [Ask Zenith](#ask-zenith-natural-language) · [Command palette](/help/getting-started#command-palette-anywhere).
 
 ## At a glance
 

@@ -31,8 +31,14 @@
 - Wait until the command bar shows **Live** (needs connectivity)
 - If using the CRM as an **installed app (PWA)**, open Zenith **online** with your usual filters before going offline
 - Offline mode may show the **last successful load**; some drawer edits **queue** until **Sync**
-- **My Day**, **Solar News**, and **Open in Projects →** need a live connection
+- **My Day**, **Solar News**, **Ask Zenith**, and **Open in Projects →** need a live connection
 - Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-and-limits)
+
+### Ask Zenith will not open or stays disabled
+- Confirm the command bar (or network) is **Live** — Ask needs the CRM API
+- On **laptop**, tap **Ask Zenith** in the header from any page; on a **phone** on Zenith, use the **Ask** tab
+- If the window is off-screen, **double-click the title bar** after reopening, or close the tab and open Ask again (position is stored for this tab only)
+- Full guide: [Ask Zenith](/help/zenith#ask-zenith-natural-language)
 
 ### Help content looks wrong or won't load
 - Refresh and open Help again
