@@ -52,6 +52,7 @@ import {
   ROLES_VIEW_ONLY_PE,
 } from '../customers/customerHelpers';
 import { MapCoordinatesBadge, RoofLayoutSavedBadge } from '../customers/CustomerBadges';
+import { ActiveCustomerBanner } from '../components/ActiveCustomerBanner';
 import { ProjectCard } from '../customers/ProjectCard';
 import { ProjectPickerModal } from '../customers/ProjectPickerModal';
 import { ProjectConflictModal } from '../customers/ProjectConflictModal';
@@ -721,6 +722,8 @@ export default function Customers() {
         </div>
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+
+          <ActiveCustomerBanner />
 
           {/* Stats strip */}
           <div className="mb-6 grid grid-cols-2 sm:grid-cols-5 border border-secondary-200 rounded-xl overflow-hidden divide-x divide-y sm:divide-y-0 divide-secondary-200">

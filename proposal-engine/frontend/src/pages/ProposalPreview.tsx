@@ -32,6 +32,7 @@ import { CustomSectionsBeforeBoq } from '../components/CustomSectionsBeforeBoq';
 import { exportToPdf } from '../proposal/exportPdf';
 import { exportToPpt } from '../proposal/exportPpt';
 import { ProposalToolbar, type ProposalExportKind } from '../proposal/ProposalToolbar';
+import { ActiveCustomerBanner } from '../components/ActiveCustomerBanner';
 import {
   mergeProposalEditableInnerHtml,
   extractMergedProposalTextOverrides,
@@ -1246,8 +1247,9 @@ export default function ProposalPreview() {
           </div>
         </div>
         {proposal && (
-          <div className="border-b border-slate-200 bg-white dark:border-white/10 dark:bg-[#14141C] px-4 sm:px-6 md:px-8 py-2.5">
+          <div className="print-hide border-b border-slate-200 bg-white dark:border-white/10 dark:bg-[#14141C] px-4 sm:px-6 md:px-8 py-2.5">
             {renderToolbar()}
+            <ActiveCustomerBanner className="mt-2.5 mb-0" />
           </div>
         )}
 
