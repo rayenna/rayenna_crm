@@ -469,6 +469,19 @@
 [data-theme='dark'] .pe-roi-empty strong {
   color: #e4e4e7;
 }
+[data-theme='dark'] .pe-roi-expand-link {
+  color: #7dd3fc;
+}
+[data-theme='dark'] .pe-roi-expand-link:hover {
+  color: #e0f2fe;
+}
+[data-theme='dark'] .pe-roi-row-recovered {
+  background-color: transparent;
+}
+[data-theme='dark'] .pe-roi-year-table tbody tr:hover,
+[data-theme='dark'] .pe-roi-row-recovered:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
 
 /* Costing / BOM category chips — filled bright + dark label (Light classes unchanged). */
 [data-theme='dark'] [data-pe-cat] {

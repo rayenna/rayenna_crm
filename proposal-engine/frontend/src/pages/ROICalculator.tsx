@@ -254,12 +254,16 @@ function YearlyTable({ rows }: { rows: YearlyRow[] }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-secondary-700 uppercase tracking-wide">Year-by-Year Breakdown</h3>
-        <button onClick={() => setExpanded((e) => !e)} className="text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors">
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="pe-roi-expand-link text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors"
+        >
           {expanded ? 'Show less' : 'Show all 25 years'}
         </button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
+        <table className="pe-roi-year-table w-full text-xs border-collapse">
           <thead>
             <tr className="border-b border-primary-100 bg-primary-50/60">
               {['Year', 'Generation (kWh)', 'Tariff (₹/kWh)', 'Savings (₹)', 'Cumulative (₹)', 'Status'].map((h) => (
@@ -269,7 +273,10 @@ function YearlyTable({ rows }: { rows: YearlyRow[] }) {
           </thead>
           <tbody>
             {visible.map((row) => (
-              <tr key={row.year} className={`border-b border-primary-100/60 transition-colors ${row.paybackReached ? 'bg-emerald-50/40' : ''} hover:bg-primary-50/40`}>
+              <tr
+                key={row.year}
+                className={`border-b border-primary-100/60 transition-colors ${row.paybackReached ? 'pe-roi-row-recovered bg-emerald-50/40' : ''} hover:bg-primary-50/40`}
+              >
                 <td className="px-3 py-2 text-secondary-700 font-semibold">{row.year}</td>
                 <td className="px-3 py-2 text-secondary-500 tabular-nums">{fmt(row.generation, 0)}</td>
                 <td className="px-3 py-2 text-secondary-500 tabular-nums">{fmt(row.tariffRate, 4)}</td>
