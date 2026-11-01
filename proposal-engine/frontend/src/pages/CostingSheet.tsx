@@ -567,13 +567,11 @@ export default function CostingSheet() {
                   <button
                     type="button"
                     onClick={() => setShowGst((v) => !v)}
-                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors min-h-[36px] ${
-                      showGst
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white text-secondary-600 border-secondary-300 hover:bg-secondary-50'
+                    className={`pe-gst-btn flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors min-h-[36px] ${
+                      showGst ? 'pe-gst-btn--on' : 'pe-gst-btn--off'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full inline-block ${showGst ? 'bg-amber-300' : 'bg-secondary-300'}`} />
+                    <span className={`w-2 h-2 rounded-full inline-block ${showGst ? 'pe-gst-dot--on' : 'pe-gst-dot--off'}`} />
                     GST {showGst ? 'ON' : 'OFF'}
                   </button>
 
@@ -736,8 +734,7 @@ export default function CostingSheet() {
                     data-testid="use-roof-layout"
                     onClick={handleApplyRoofLayout}
                     disabled={!canApply}
-                    className="text-xs font-semibold text-white px-3 py-2 rounded-lg min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                    style={{ background: '#c2410c' }}
+                    className="pe-use-roof-btn text-xs font-semibold px-3 py-2 rounded-lg min-h-[36px] disabled:cursor-not-allowed flex-shrink-0"
                   >
                     Use roof layout
                   </button>
@@ -853,6 +850,11 @@ export default function CostingSheet() {
                         setMarginPercent(Math.round(clamped * 1000) / 1000);
                       }}
                       className="w-16 text-sm font-bold text-right focus:outline-none tabular-nums"
+                      style={{
+                        backgroundColor: '#ffffff',
+                        color: theme === 'dark' ? '#000000' : '#78350f',
+                        WebkitTextFillColor: theme === 'dark' ? '#000000' : '#78350f',
+                      }}
                     />
                     <span className="text-xs font-semibold">%</span>
                   </div>
@@ -889,7 +891,7 @@ export default function CostingSheet() {
             <CategoryBreakdown items={liveItems} />
 
             {/* How to import — help panel */}
-            <div className="mt-8 bg-gradient-to-br from-primary-50/30 to-transparent dark:from-white/5 border-t border-primary-100 dark:border-white/10 rounded-xl p-4 sm:p-5">
+            <div className="pe-import-help mt-8 bg-gradient-to-br from-primary-50/30 to-transparent border-t border-primary-100 rounded-xl p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-secondary-600 mb-4">How to import from Excel</h3>
               <ol className="space-y-4">
 

@@ -313,9 +313,9 @@ function BomRowInput({
       {/* Auto badge */}
       <td className="px-3 py-2 w-16 text-center">
         {isAuto ? (
-          <span className="text-[10px] px-1.5 py-0.5 rounded border bg-primary-50 text-primary-600 border-primary-200 whitespace-nowrap font-medium">auto</span>
+          <span className="pe-source-auto text-[10px] px-1.5 py-0.5 rounded border bg-primary-50 text-primary-600 border-primary-200 whitespace-nowrap font-medium">auto</span>
         ) : (
-          <span className="text-[10px] px-1.5 py-0.5 rounded border bg-yellow-50 text-yellow-700 border-yellow-200 whitespace-nowrap font-medium">manual</span>
+          <span className="pe-source-manual text-[10px] px-1.5 py-0.5 rounded border bg-yellow-50 text-yellow-700 border-yellow-200 whitespace-nowrap font-medium">manual</span>
         )}
       </td>
 
@@ -714,10 +714,10 @@ export default function BOMSheet() {
                   <span
                     className={`text-xs px-3 py-1.5 rounded-full border font-semibold ${
                       source === 'overrides'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        ? 'pe-bom-status-saved bg-emerald-50 text-emerald-700 border-emerald-200'
                         : source === 'costing-sheet'
-                        ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        : 'bg-secondary-50 text-secondary-700 border-secondary-200'
+                        ? 'pe-bom-status-costing bg-yellow-50 text-yellow-700 border-yellow-200'
+                        : 'pe-bom-status-auto bg-secondary-50 text-secondary-700 border-secondary-200'
                     }`}
                   >
                     {source === 'overrides'
@@ -910,7 +910,7 @@ export default function BOMSheet() {
                   <button
                     type="button"
                     onClick={() => append({ ...EMPTY_ROW, category: 'others' })}
-                    className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 transition-colors px-4 py-2.5 rounded-xl hover:bg-primary-50 border border-primary-200 font-medium min-h-[44px] sm:min-h-0"
+                    className="pe-add-row-btn flex items-center gap-2 text-sm font-semibold transition-colors px-4 py-2.5 rounded-xl border min-h-[44px] sm:min-h-0"
                   >
                     <span className="text-lg leading-none">+</span>
                     Add Row (Others)

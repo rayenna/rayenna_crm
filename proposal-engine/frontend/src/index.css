@@ -123,7 +123,7 @@
  * Remap chrome surfaces in Dark Mode, stopping at the proposal document
  * and any .pe-force-light region so Light letterhead / share HTML stay as-is.
  */
-@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay, .pe-app-nav) {
+@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay, .pe-app-nav, .pe-margin-field, .pe-gst-btn) {
   .bg-white,
   .bg-white\/80,
   .bg-white\/90,
@@ -411,9 +411,21 @@
   border-color: #bae6fd;
 }
 [data-theme='dark'] .pe-btn-secondary {
-  background-color: rgba(255, 255, 255, 0.10);
+  background-color: #12121a;
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+[data-theme='dark'] .pe-btn-secondary:hover {
+  background-color: #1c1c28;
+}
+[data-theme='dark'] .pe-btn-secondary span {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-banner .pe-btn-secondary {
+  background-color: #12121a;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.38);
 }
 [data-theme='dark'] .pe-btn-ghost {
   color: rgba(255, 255, 255, 0.55);
@@ -476,6 +488,57 @@
 [data-theme='dark'] [data-pe-cat='installation']       { background-color: #60a5fa; }
 [data-theme='dark'] [data-pe-cat='others']             { background-color: #a1a1aa; }
 
+/* BOM Source column — auto/manual chips readable on dark rows. */
+[data-theme='dark'] .pe-source-auto {
+  background-color: #cbd5e1;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+[data-theme='dark'] .pe-source-manual {
+  background-color: #fbbf24;
+  color: #0f172a;
+  border-color: #fde68a;
+}
+
+/* BOM “Add Row (Others)” — filled blue CTA in Light and Dark. */
+.pe-add-row-btn {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #60a5fa;
+}
+.pe-add-row-btn:hover {
+  background-color: #1d4ed8;
+  color: #ffffff;
+  border-color: #93c5fd;
+}
+[data-theme='dark'] .pe-add-row-btn {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-color: #93c5fd;
+}
+[data-theme='dark'] .pe-add-row-btn:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #bfdbfe;
+}
+
+/* BOM banner status chips — solid fill so type reads on the gold bar. */
+[data-theme='dark'] .pe-bom-status-auto {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+[data-theme='dark'] .pe-bom-status-costing {
+  background-color: #fde68a;
+  color: #78350f;
+  border-color: #fbbf24;
+}
+[data-theme='dark'] .pe-bom-status-saved {
+  background-color: #6ee7b7;
+  color: #064e3b;
+  border-color: #a7f3d0;
+}
+
 /* BOM GST split cards — dark panels, bright type (Light unchanged). */
 [data-theme='dark'] .pe-gst-5 {
   background-color: #022c22;
@@ -533,33 +596,57 @@
   color: #f1f5f9;
 }
 
+/* Costing “How to import from Excel” — darker grey in Dark so chip/body type reads. */
+[data-theme='dark'] .pe-import-help {
+  background-color: #1a1a22;
+  background-image: none;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+[data-theme='dark'] .pe-import-help h3 {
+  color: #e4e4e7;
+}
+[data-theme='dark'] .pe-import-help li > div {
+  color: #d4d4d8;
+}
+[data-theme='dark'] .pe-import-help em {
+  color: #f4f4f5;
+}
+
+/* Margin % chip — same cream/amber look in Light and Dark.
+   !important + -webkit-text-fill-color beat the @scope input remap
+   (four :not() clauses) which otherwise paints --pe-text on white. */
 .pe-margin-field {
-  background-color: #fde68a;
+  color-scheme: light;
+  background-color: #fef3c7;
   border: 2px solid #d97706;
 }
 .pe-margin-field label,
 .pe-margin-field span {
-  color: #92400e;
+  color: #78350f;
 }
 .pe-margin-field input {
-  background-color: #fffbeb;
+  background-color: #ffffff;
   color: #78350f;
+  -webkit-text-fill-color: #78350f;
+  caret-color: #78350f;
   border: none;
-  border-radius: 0.375rem;
-  padding: 0.125rem 0.25rem;
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.375rem;
 }
 [data-theme='dark'] .pe-margin-field {
-  background-color: #fbbf24;
-  border-color: #fde68a;
+  background-color: #fef3c7;
+  border-color: #d97706;
 }
 [data-theme='dark'] .pe-margin-field label,
 [data-theme='dark'] .pe-margin-field span {
-  color: #0f172a;
+  color: #78350f;
 }
-[data-theme='dark'] .pe-margin-field input {
-  background-color: rgba(255, 255, 255, 0.55);
-  color: #0f172a;
-  border: none;
+[data-theme='dark'] .pe-margin-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  caret-color: #000000 !important;
+  border: none !important;
 }
 
 /* Costing / BOM column headers — dark bar, bright labels (Light unchanged). */
@@ -623,6 +710,54 @@
 /* Navy app bar stays white-on-navy in both themes (hamburger, logo plate). */
 .pe-nav-icon {
   background-color: #ffffff;
+}
+
+/* Costing GST toggle — same colors in Light and Dark. ON = bright green. */
+.pe-gst-btn--on {
+  background-color: #22c55e;
+  color: #052e16;
+  border-color: #86efac;
+}
+.pe-gst-btn--on:hover {
+  background-color: #16a34a;
+  color: #ffffff;
+  border-color: #4ade80;
+}
+.pe-gst-btn--off {
+  background-color: #b91c1c;
+  color: #ffffff;
+  border-color: #f87171;
+}
+.pe-gst-btn--off:hover {
+  background-color: #991b1b;
+}
+.pe-gst-dot--on {
+  background-color: #facc15;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.pe-gst-dot--off {
+  background-color: #9ca3af;
+}
+
+/* Costing “Use roof layout”: bright orange fill + dark type in both themes. */
+.pe-use-roof-btn {
+  background-color: #f97316;
+  color: #1c1917;
+}
+.pe-use-roof-btn:disabled {
+  opacity: 0.72;
+}
+
+/* Proposal page — use the full phone width; keep tablet/desktop gutters. */
+@media (max-width: 639px) {
+  .pe-proposal-page.pe-shell {
+    border-radius: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+  }
+  .pe-proposal-page #proposal-print-root {
+    border-radius: 0;
+  }
 }
 
 /* Proposal Project View — reflow on phone, tablet, and laptop (portrait + landscape).

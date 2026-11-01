@@ -285,12 +285,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className="pe-app-nav border-b-2 border-[#EA580C] sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div ref={barRef} className="relative overflow-x-hidden">
-            {/* Hidden full desktop cluster — width drives hamburger vs inline links. */}
+          <div ref={barRef} className="relative">
+            {/* Clip the measure cluster here so it cannot widen the page, but do not
+                clip the Help dropdown (overflow-x-hidden on this bar hid User Guide / Tips / About). */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
             <div
               ref={measureRef}
-              aria-hidden
-              className="absolute left-0 top-0 flex w-max items-center gap-2 h-14 opacity-0 pointer-events-none select-none"
+              className="flex w-max items-center gap-2 h-14 opacity-0 select-none"
             >
               <span className="flex items-center bg-white rounded-md px-1.5 py-0.5 shrink-0">
                 <img src="/Proposals_Logo.jpg" alt="" className="h-9 w-auto object-contain" />
@@ -325,6 +326,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </div>
+            </div>
 
             <div className="flex items-center justify-between h-14 gap-2">
 
@@ -358,7 +360,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Help dropdown — outside the link row so the panel is not clipped */}
+              {/* Help dropdown — must not sit inside an overflow-hidden bar */}
               <div ref={helpRef} className="relative flex-shrink-0 ml-1.5">
                 <button
                   type="button"
@@ -373,7 +375,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} aria-hidden>▾</span>
                 </button>
                 {helpOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white dark:bg-[#14141C] rounded-lg border border-secondary-200 dark:border-white/10 overflow-hidden z-50" role="menu">
+                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white dark:bg-[#14141C] rounded-lg border border-secondary-200 dark:border-white/10 overflow-hidden z-[60] shadow-lg" role="menu">
                     <Link
                       to="/help"
                       role="menuitem"
@@ -566,7 +568,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         )}
       </nav>
 
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+      <main
+        className={`max-w-7xl mx-auto sm:px-4 md:px-6 lg:px-8 ${
+          pathname === '/proposal' ? 'px-0 py-2 sm:py-6' : 'px-2 py-4 sm:py-6'
+        }`}
+      >
         {children}
       </main>
 

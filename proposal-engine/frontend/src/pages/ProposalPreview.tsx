@@ -1236,7 +1236,7 @@ export default function ProposalPreview() {
           className="mb-4"
         />
       )}
-      <div className={`print-hide ${pageShell}`}>
+      <div className={`print-hide pe-proposal-page ${pageShell}`}>
         <div className={pageBanner}>
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">Proposal</h1>
@@ -1251,7 +1251,7 @@ export default function ProposalPreview() {
           </div>
         )}
 
-        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+        <div className={`${proposal ? 'px-0 sm:px-6 md:px-8 py-3 sm:py-8' : 'px-4 sm:px-6 md:px-8 py-6 sm:py-8'}`}>
           {!proposal ? (
             // key = activeCustomerId forces a full remount whenever the active
             // customer changes, ensuring useState initialises from the new customer.
@@ -1264,7 +1264,7 @@ export default function ProposalPreview() {
             <div
               ref={printRef}
               id="proposal-print-root"
-              className={`bg-white rounded-2xl border shadow-sm min-w-0 max-w-full overflow-hidden print:overflow-visible transition-all ${
+              className={`bg-white rounded-none sm:rounded-2xl border shadow-sm min-w-0 max-w-full overflow-hidden print:overflow-visible transition-all ${
                 isEditing
                   ? 'border-amber-300 ring-2 ring-amber-200'
                   : 'border-primary-100'
