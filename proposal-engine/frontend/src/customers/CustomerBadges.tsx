@@ -13,6 +13,17 @@ import type { PeProjectArtifacts } from './types';
 const PE_PILL_BADGE =
   'inline-flex items-center gap-0.5 max-w-full rounded-full border font-semibold whitespace-nowrap shrink-0 text-[10px] px-2 py-0.5 leading-snug';
 
+/** Currently selected project on this device — Light stays navy-on-gray; Dark uses pe-badge-active. */
+export function ActiveCustomerBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`${PE_PILL_BADGE} pe-badge-active bg-primary-100 text-primary-700 border-primary-200 ${className}`}
+    >
+      Active
+    </span>
+  );
+}
+
 /** Customer Master has Google Map lat/lng — ready for AI Roof Layout satellite pin. */
 export function MapCoordinatesBadge({ className = '' }: { className?: string }) {
   return (

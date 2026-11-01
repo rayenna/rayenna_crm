@@ -391,9 +391,9 @@
 
 /* Status chips that must stay high-contrast in Dark Mode (unlayered, beats @scope remaps). */
 [data-theme='dark'] .pe-badge-active {
-  background-color: #fbbf24;
+  background-color: #e2e8f0;
   color: #0f172a;
-  border-color: #fde68a;
+  border-color: #94a3b8;
 }
 [data-theme='dark'] .pe-badge-not-started {
   background-color: rgba(255, 255, 255, 0.10);

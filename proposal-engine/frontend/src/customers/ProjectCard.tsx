@@ -8,6 +8,7 @@ import {
   MetaLine,
 } from '../components/ui/chrome';
 import {
+  ActiveCustomerBadge,
   MapCoordinatesBadge,
   ProposalReadinessBadgeFromPeStatus,
   RoofLayoutSavedBadge,
@@ -60,11 +61,7 @@ export function ProjectCard({
           View only
         </span>
       )}
-      {isActive && (
-        <span className="inline-flex max-w-full items-center rounded-full border border-primary-200 bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700 shrink-0">
-          Active
-        </span>
-      )}
+      {isActive && <ActiveCustomerBadge />}
       <ProposalReadinessBadgeFromPeStatus peStatus={project.peStatus} />
       {project.hasMapCoordinates && <MapCoordinatesBadge />}
       {peArtifacts.hasRoofLayout && <RoofLayoutSavedBadge />}

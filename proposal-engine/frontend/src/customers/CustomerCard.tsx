@@ -3,6 +3,7 @@ import { btnPrimary, IconBolt, IconPin, IconTrash, IconUser, MetaLine } from '..
 import { artifactSummary } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import {
+  ActiveCustomerBadge,
   ProposalReadinessBadge,
   ArtifactDots,
   MapCoordinatesBadge,
@@ -76,11 +77,7 @@ export function CustomerCard({
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5 max-w-full min-w-0">
-          {isActive && (
-            <span className="inline-flex shrink-0 items-center rounded-full border border-primary-200 bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700">
-              Active
-            </span>
-          )}
+          {isActive && <ActiveCustomerBadge />}
           <ProposalReadinessBadge record={record} />
           {showMapCoordinates && <MapCoordinatesBadge />}
           {hasSavedRoofLayout(record) && <RoofLayoutSavedBadge />}
