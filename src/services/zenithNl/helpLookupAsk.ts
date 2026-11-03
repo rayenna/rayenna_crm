@@ -46,8 +46,31 @@ export function looksLikeHelpQuestion(question: string): boolean {
 }
 
 function isAnalyticsQuestion(q: string): boolean {
-  return /\b(how\s+many|how\s+much|who\s+should\s+i\s+call|pipeline\s+stall|weighted\s+pipeline|revenue\s+by|profit\s+summary|unpaid\s+invoices|capacity\s+sold|list\s+(the\s+)?(lost\s+)?(deals?|projects?)|show\s+(me\s+)?(my\s+)?(open|ageing|aging|pipeline|stalled)|which\s+(lead\s+sources|panel\s+brands?|inverter\s+brands?|banks)\s+(sold|drove|are|financing)|sales\s+review\s+(achievement|forecast|kpis?)|funnel\s+velocity\s+(sla|win|median)|delivery\s+control\s+(blocker|kpi)|collections\s+outstanding|thin\s+margin|missing\s+cost|sla\s+red)\b/.test(
-    q,
+  // Do not use a single trailing \b over the whole alternation — it breaks
+  // "pipeline stalling" (stall + \b fails between "stall" and "ing").
+  return (
+    /\b(how\s+many|how\s+much)\b/.test(q) ||
+    /\bwho\s+should\s+i\s+call\b/.test(q) ||
+    /\bpipeline\s+stall(?:ing|ed)?\b/.test(q) ||
+    /\bstalled\s+pipeline\b/.test(q) ||
+    /\bwhy\s+is\s+(my\s+|the\s+)?pipeline\b/.test(q) ||
+    /\bweighted\s+pipeline\b/.test(q) ||
+    /\brevenue\s+by\b/.test(q) ||
+    /\bprofit\s+summary\b/.test(q) ||
+    /\bunpaid\s+invoices\b/.test(q) ||
+    /\bcapacity\s+sold\b/.test(q) ||
+    /\blist\s+(the\s+)?(lost\s+)?(deals?|projects?)\b/.test(q) ||
+    /\bshow\s+(me\s+)?(my\s+)?(open|ageing|aging|pipeline|stalled)\b/.test(q) ||
+    /\bwhich\s+(lead\s+sources|panel\s+brands?|inverter\s+brands?|banks)\s+(sold|drove|are|financing)\b/.test(
+      q,
+    ) ||
+    /\bsales\s+review\s+(achievement|forecast|kpis?)\b/.test(q) ||
+    /\bfunnel\s+velocity\s+(sla|win|median)\b/.test(q) ||
+    /\bdelivery\s+control\s+(blocker|kpi)\b/.test(q) ||
+    /\bcollections\s+outstanding\b/.test(q) ||
+    /\bthin\s+margin\b/.test(q) ||
+    /\bmissing\s+cost\b/.test(q) ||
+    /\bsla\s+red\b/.test(q)
   );
 }
 

@@ -36,6 +36,7 @@ describe('Help corpus for Ask', () => {
   it('does not steal analytics or Open Help', () => {
     expect(matchHelpLookupIntent('How many projects used Adani panels?', UserRole.ADMIN)).toBeNull();
     expect(matchHelpLookupIntent("What's my weighted pipeline?", UserRole.ADMIN)).toBeNull();
+    expect(matchHelpLookupIntent('Why is my pipeline stalling?', UserRole.ADMIN)).toBeNull();
     expect(matchHelpLookupIntent('Open Help', UserRole.ADMIN)).toBeNull();
     expect(matchAskActionIntent('Open Help', UserRole.ADMIN)?.action).toBe('go_help');
     expect(

@@ -107,6 +107,7 @@ export function matchPipelineHealthIntent(
     /\b(give|show|run)\s+(me\s+)?(a\s+)?pipeline\s+analys/.test(q);
   const hasStalled =
     /\bstalled\b/.test(q) ||
+    /\bstalling\b/.test(q) ||
     /\bpipeline\s+(that\s+is\s+)?stuck\b/.test(q) ||
     /\bstuck\s+pipeline\b/.test(q);
   const hasAgeing =

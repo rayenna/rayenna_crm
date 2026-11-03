@@ -4,6 +4,12 @@ import { matchExactChipIntent } from './chipIntents';
 import { matchPipelineHealthIntent } from './pipelineHealthAsk';
 
 describe('matchPipelineHealthIntent', () => {
+  it('matches why is my pipeline stalling', () => {
+    const intent = matchPipelineHealthIntent('Why is my pipeline stalling?', UserRole.ADMIN);
+    expect(intent?.metric).toBe('pipeline_health');
+    expect(intent?.filters?.detailSlice).toBe('stalled');
+  });
+
   it('matches stalled pipeline (including typo phrasing)', () => {
     const intent = matchPipelineHealthIntent('Show my Stalled Pipeline', UserRole.SALES);
     expect(intent?.metric).toBe('pipeline_health');

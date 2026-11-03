@@ -2643,10 +2643,15 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
   // Reports pack numbers before Help/navigation so “Sales Review achievement” answers instead of opening the page.
   const reportIntentEarly = matchReportAskIntent(question, input.role);
 
+  // Exact analytics chips beat Help so “Why is my pipeline stalling?” is Deal Health, not FAQ search.
+  const exactChipEarly = matchExactChipIntent(question, input.role);
+  const analyticsChipEarly =
+    exactChipEarly && exactChipEarly.metric !== 'help_lookup' ? exactChipEarly : null;
+
   // Help how-tos before navigation actions so “How do I create a ticket?” answers instead of jumping.
   // Bare pack names (“Sales Review”) stay Go-to, not Help — Help still answers “What is Sales Review?”.
   const helpIntentEarly =
-    reportIntentEarly || isReportNavigateCommand(question)
+    reportIntentEarly || analyticsChipEarly || isReportNavigateCommand(question)
       ? null
       : matchHelpLookupIntent(question, input.role);
 

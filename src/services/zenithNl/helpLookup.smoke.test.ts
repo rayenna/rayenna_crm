@@ -71,6 +71,8 @@ const ANALYTICS_CONTROL = [
   'How many projects used Adani panels?',
   "What's my weighted pipeline?",
   'Who should I call today?',
+  'Why is my pipeline stalling?',
+  'Show my stalled pipeline',
   'Show open support tickets',
   'List pending subsidy projects',
   'Which panel brands sold most?',
