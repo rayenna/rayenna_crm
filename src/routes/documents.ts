@@ -86,6 +86,66 @@ function getCloudinaryDeliveryUrl(
   return cloudinary.url(publicId, options);
 }
 
+/**
+ * RFC 5987 Content-Disposition. Avoid encodeURIComponent-only `filename=` —
+ * browsers may save literal `%20` names and drop the real extension.
+ */
+function buildContentDisposition(
+  disposition: 'inline' | 'attachment',
+  fileName: string
+): string {
+  const safe = String(fileName || 'download')
+    .replace(/[\r\n"]/g, '_')
+    .replace(/[^\x20-\x7E]/g, '_');
+  const encoded = encodeURIComponent(fileName || 'download').replace(
+    /['()]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+  return `${disposition}; filename="${safe}"; filename*=UTF-8''${encoded}`;
+}
+
+/** Proxy Cloudinary bytes with correct MIME + disposition (needed for raw PDFs). */
+async function proxyCloudinaryFile(
+  res: Response,
+  fileUrl: string,
+  opts: {
+    contentType: string;
+    disposition: 'inline' | 'attachment';
+    fileName: string;
+  }
+): Promise<void> {
+  const axiosResponse = await axios.get(fileUrl, {
+    responseType: 'stream',
+    validateStatus: () => true,
+  });
+
+  if (axiosResponse.status < 200 || axiosResponse.status >= 300) {
+    console.error('Cloudinary delivery failed:', {
+      status: axiosResponse.status,
+      fileUrl,
+    });
+    // Drain error body so the socket can close cleanly
+    axiosResponse.data.resume?.();
+    res.status(404).json({ error: 'File not found in Cloudinary' });
+    return;
+  }
+
+  res.setHeader('Content-Type', opts.contentType || 'application/octet-stream');
+  res.setHeader(
+    'Content-Disposition',
+    buildContentDisposition(opts.disposition, opts.fileName)
+  );
+  const contentLength = axiosResponse.headers['content-length'];
+  if (contentLength != null && contentLength !== false) {
+    res.setHeader('Content-Length', String(contentLength));
+  }
+  axiosResponse.data.pipe(res);
+  axiosResponse.data.on('error', (err: Error) => {
+    console.error('Error proxying Cloudinary file:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Download failed' });
+  });
+}
+
 // Configure multer storage - use memory storage for Cloudinary (upload_stream), disk storage for local
 let storage: multer.StorageEngine;
 
@@ -536,13 +596,20 @@ router.get(
 
       const isDownload = req.query.download === 'true';
 
-      // Cloudinary-backed documents: redirect; browser talks directly to Cloudinary.
-      if (
-        useCloudinary &&
-        (document.filePath.startsWith('http') ||
-          document.filePath.startsWith('v') ||
-          document.filePath.startsWith('rayenna_crm'))
-      ) {
+      const isCloudinaryStored =
+        document.filePath.startsWith('http') ||
+        document.filePath.startsWith('v') ||
+        document.filePath.startsWith('rayenna_crm') ||
+        document.cloudinaryResourceType != null;
+
+      // Cloudinary-backed documents: redirect or proxy; browser talks to Cloudinary (or via us for attachment).
+      if (isCloudinaryStored) {
+        if (!useCloudinary) {
+          return res.status(503).json({
+            error:
+              'This file is stored in Cloudinary, but Cloudinary is not configured on this server. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env (same values as the Render CRM API) and restart the API.',
+          });
+        }
         let publicId: string = document.filePath;
         let version: number | undefined;
 
@@ -594,42 +661,43 @@ router.get(
           }
         }
 
-        // Use stored Cloudinary resource type when available; only fall back to path when missing.
-        let resourceType: 'image' | 'raw' | 'video' = 'image';
-        if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
+        // Prefer stored resource type; infer from MIME / URL. Default raw — PDFs are raw, not image.
+        let resourceType: 'image' | 'raw' | 'video' = 'raw';
+        if (
+          document.cloudinaryResourceType === 'image' ||
+          document.cloudinaryResourceType === 'raw' ||
+          document.cloudinaryResourceType === 'video'
+        ) {
           resourceType = document.cloudinaryResourceType;
+        } else if (document.fileType?.startsWith('image/')) {
+          resourceType = 'image';
+        } else if (document.fileType?.startsWith('video/')) {
+          resourceType = 'video';
         } else if (stored.startsWith('http')) {
           const pathLower = new URL(stored).pathname.toLowerCase();
           if (pathLower.includes('/raw/')) resourceType = 'raw';
           else if (pathLower.includes('/video/')) resourceType = 'video';
+          else if (pathLower.includes('/image/')) resourceType = 'image';
         }
 
         const urlVersion = resourceType === 'raw' ? version : undefined;
         const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion);
+        const contentType = document.fileType || 'application/octet-stream';
 
-        // For explicit download, proxy the file so we can set Content-Disposition with correct filename/extension.
-        if (isDownload) {
-          const axiosResponse = await axios.get(fileUrl, { responseType: 'stream' });
-          res.setHeader(
-            'Content-Type',
-            document.fileType || 'application/octet-stream'
-          );
-          res.setHeader(
-            'Content-Disposition',
-            `attachment; filename="${encodeURIComponent(document.fileName)}"`
-          );
-          const contentLength = axiosResponse.headers['content-length'];
-          if (contentLength != null && contentLength !== false) {
-            res.setHeader('Content-Length', String(contentLength));
-          }
-          axiosResponse.data.pipe(res);
-          axiosResponse.data.on('error', (err: Error) => {
-            console.error('Error proxying Cloudinary download:', err);
-            if (!res.headersSent) res.status(500).json({ error: 'Download failed' });
+        // Raw Cloudinary assets (PDFs, Office, etc.) are served as application/octet-stream
+        // with no filename extension in the URL. Redirecting makes browsers save an
+        // unopenable file. Always proxy raw (and any explicit download) with our MIME + name.
+        const mustProxy = isDownload || resourceType === 'raw';
+        if (mustProxy) {
+          await proxyCloudinaryFile(res, fileUrl, {
+            contentType,
+            disposition: isDownload ? 'attachment' : 'inline',
+            fileName: document.fileName,
           });
           return;
         }
 
+        // Images / videos: browser can view Cloudinary delivery URLs directly.
         return res.redirect(fileUrl);
       }
 
@@ -648,9 +716,10 @@ router.get(
         res.setHeader('Content-Type', contentType);
         res.setHeader(
           'Content-Disposition',
-          isDownload
-            ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
-            : `inline; filename="${encodeURIComponent(document.fileName)}"`
+          buildContentDisposition(
+            isDownload ? 'attachment' : 'inline',
+            document.fileName
+          )
         );
         res.setHeader('Content-Length', document.fileSize);
 

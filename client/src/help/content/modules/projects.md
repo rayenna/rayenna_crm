@@ -160,7 +160,7 @@ The detail page also shows:
 - **Payment Tracking** (status, amounts, balance)
 - **Remarks** (versioned history)
 - **Support / Service Tickets** (create, view, manage)
-- **Key Artifacts** (view, download, manage documents)
+- **Key Artifacts** (view, download, manage documents — View opens in a new tab)
 
 From here you can **Edit** the project (within your role’s permissions), open **Proposals** when it is shown ([Proposal Engine](#proposal-engine)), or use **Back** to return to the Projects list.
 

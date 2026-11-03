@@ -16,7 +16,7 @@
 ## Where to find artifacts
 
 1. Open a **project** (list row or project number).  
-2. **Project detail** — **Key Artifacts** section lists uploaded files (view / download).  
+2. **Project detail** — **Key Artifacts** section lists uploaded files (**View** opens in a new tab; **Download** saves the file).  
 3. **Edit project** — scroll to **File Uploads** / Key Artifacts to add files.
 
 Use the **Has Artifacts** filter on the **Projects** list to find projects with uploads.
@@ -41,7 +41,12 @@ Use the **Has Artifacts** filter on the **Projects** list to find projects with 
 
 ## View and download
 
-On **project detail**, each artifact shows category, description, and download. Anyone who can open the project can view artifacts; only permitted roles can upload (see table above).
+On **project detail**, each artifact shows category, description, and an **Actions** pair:
+
+- **View** (eye) — opens the file in a new tab (PDFs and images usually display in the browser)
+- **Download** (arrow) — saves the file with the original filename
+
+Anyone who can open the project can view and download artifacts; only permitted roles can upload (see table above).
 
 ## Best practices
 

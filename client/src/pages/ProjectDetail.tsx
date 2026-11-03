@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import HealthDetail from '../components/zenith/HealthDetail'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FaProjectDiagram } from 'react-icons/fa'
-import { ArrowLeft, Edit3, FileText, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Edit3, Eye, FileText, Trash2 } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { ProjectDetailSkeleton } from '../components/projects/ProjectDetailSkeleton'
 import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
@@ -1211,7 +1211,7 @@ const ProjectDetail = () => {
                     <th className="w-16 border-l-4 border-l-[color:var(--accent-blue)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Sl No.</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">File Name</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Description</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">View/Download</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Actions</th>
                     <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Delete</th>
                   </tr>
                 </thead>
@@ -1229,7 +1229,7 @@ const ProjectDetail = () => {
                 // Sales users can only view/download documents from their own projects
                 const salesHasProjectAccess = isSales && project.salespersonId === user?.id
                 const canDelete = isAdmin || (isUploader && !isProposalPDF)
-                // View/Download: Admin, Management, Operations, Finance, or Sales (only their projects), or uploader
+                // View + Download: Admin, Management, Operations, Finance, or Sales (only their projects), or uploader
                 const canView = isAdmin || isManagement || isOperations || isFinance || salesHasProjectAccess || isUploader
 
                 return (
@@ -1252,9 +1252,7 @@ const ProjectDetail = () => {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
-                      {canView && (
-                        <DocumentDownloadButton documentId={doc.id} />
-                      )}
+                      {canView ? <DocumentActions documentId={doc.id} /> : null}
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       {canDelete && (
@@ -1286,66 +1284,70 @@ const ProjectDetail = () => {
   )
 }
 
-// Document Download Button Component (View/Download - opens download with correct filename)
-const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
+/** View (inline) + Download (attachment) via existing signed-url tickets. */
+const DocumentActions = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
-  const [downloading, setDownloading] = useState(false)
+  const [busy, setBusy] = useState<'view' | 'download' | null>(null)
 
-  const handleDownload = async () => {
+  const openSigned = async (mode: 'view' | 'download') => {
     if (!token) {
       toast.error('Authentication required')
       return
     }
+    if (busy) return
 
-    setDownloading(true)
+    setBusy(mode)
     try {
       const response = await axiosInstance.get<{ url: string }>(
         `/api/documents/${documentId}/signed-url`,
         {
-          params: { download: true },
+          params: mode === 'download' ? { download: true } : undefined,
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       )
 
       const url = response.data?.url
       if (!url) {
-        toast.error('Failed to generate download link')
-        setDownloading(false)
+        toast.error(mode === 'download' ? 'Failed to generate download link' : 'Failed to open file')
         return
       }
 
-      window.open(url, '_blank')
+      window.open(url, '_blank', 'noopener,noreferrer')
     } catch (error: unknown) {
       toast.error(getFriendlyApiErrorMessage(error))
     } finally {
-      setDownloading(false)
+      setBusy(null)
     }
   }
 
+  const btnCls =
+    'inline-flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-lg text-[color:var(--accent-teal)] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50'
+
   return (
-    <button
-      onClick={handleDownload}
-      disabled={downloading}
-      className="text-[color:var(--accent-teal)] hover:opacity-75 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
-      title="View/Download file"
-    >
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
+    <div className="inline-flex items-center justify-center gap-0.5">
+      <button
+        type="button"
+        onClick={() => void openSigned('view')}
+        disabled={busy != null}
+        className={btnCls}
+        title="View file"
+        aria-label="View file"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-        />
-      </svg>
-    </button>
+        <Eye className="h-5 w-5" strokeWidth={2} aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => void openSigned('download')}
+        disabled={busy != null}
+        className={btnCls}
+        title="Download file"
+        aria-label="Download file"
+      >
+        <Download className="h-5 w-5" strokeWidth={2} aria-hidden />
+      </button>
+    </div>
   )
 }
 
