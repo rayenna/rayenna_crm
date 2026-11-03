@@ -87,4 +87,50 @@ describe('buildPreflightContext + runProposalPreflight (CRM capacity)', () => {
     const result = runProposalPreflight({ ...ctx!, crmSystemSizeKw: null });
     expect(result.findings.find((f) => f.id === 'roi_not_integer_kw')).toBeTruthy();
   });
+
+  it('uses proposal snapshot when local costing/BOM blobs are light (empty items/rows)', () => {
+    const full = customerWithStaleRoi(3, 3);
+    const light: typeof full = {
+      ...full,
+      costing: full.costing
+        ? { ...full.costing, items: [], itemCount: 1 }
+        : null,
+      bom: full.bom ? { ...full.bom, rows: [], rowCount: 1 } : null,
+    };
+    const withoutSnap = buildPreflightContext(light, { includeRoofLayout: false });
+    expect(withoutSnap).not.toBeNull();
+    expect(runProposalPreflight(withoutSnap!).findings.map((f) => f.id)).toEqual(
+      expect.arrayContaining(['missing_costing', 'missing_bom']),
+    );
+
+    const withSnap = buildPreflightContext(light, {
+      includeRoofLayout: false,
+      proposalSnapshot: {
+        sheet: {
+          id: 'snap',
+          name: full.costing!.sheetName,
+          description: '',
+          savedAt: full.costing!.savedAt,
+          items: full.costing!.items,
+          showGst: full.costing!.showGst,
+          marginPercent: full.costing!.marginPercent,
+          grandTotal: full.costing!.grandTotal,
+          totalGst: full.costing!.totalGst,
+          systemSizeKw: full.costing!.systemSizeKw,
+        },
+        bom: full.bom!.rows.map((r) => ({
+          category: r.category,
+          itemName: r.itemName,
+          quantity: r.quantity,
+          specification: r.specification ?? '',
+        })),
+        roi: full.roi!.result as any,
+      },
+    });
+    expect(withSnap).not.toBeNull();
+    const ids = runProposalPreflight(withSnap!).findings.map((f) => f.id);
+    expect(ids).not.toContain('missing_costing');
+    expect(ids).not.toContain('missing_bom');
+    expect(ids).not.toContain('missing_roi');
+  });
 });

@@ -81,3 +81,17 @@ export async function hydrateProposalIfNeeded(record: CustomerRecord): Promise<C
   }).proposal;
   return persist({ ...record, proposal });
 }
+
+/**
+ * Project detail returns light costing/BOM (counts only). Pre-flight and exports
+ * need full line items — pull them before checking for "missing" artifacts.
+ */
+export async function hydrateArtifactsForPreflight(
+  record: CustomerRecord,
+): Promise<CustomerRecord> {
+  let next = record;
+  next = await hydrateCostingIfNeeded(next);
+  next = await hydrateBomIfNeeded(next);
+  next = await hydrateRoiIfNeeded(next);
+  return next;
+}

@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import type { PreflightFinding, SystemSizeSource } from '../../lib/preflight/types';
 
+export type PreflightActionLabel = 'Generate' | 'Share' | 'PDF' | 'DOCX' | 'PPT';
+
 export interface PreFlightModalProps {
   open: boolean;
-  actionLabel: 'Generate' | 'Share';
+  actionLabel: PreflightActionLabel;
   findings: PreflightFinding[];
   /** Finding ids currently selected (all by default). */
   selectedIds: Set<string>;

@@ -11,7 +11,10 @@ import {
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
 import { fetchProjectWithArtifacts } from '../lib/api/projectDetail';
-import { hydrateProposalIfNeeded } from '../lib/hydrateWorkArtifacts';
+import {
+  hydrateArtifactsForPreflight,
+  hydrateProposalIfNeeded,
+} from '../lib/hydrateWorkArtifacts';
 import type {
   CostingArtifact,
   BomArtifact,
@@ -68,7 +71,10 @@ import {
   exportToDocx,
 } from '../proposal/ProposalDocumentBlocks';
 import { ProposalShareModal } from '../proposal/ProposalShareModal';
-import { PreFlightModal } from '../components/preflight/PreFlightModal';
+import {
+  PreFlightModal,
+  type PreflightActionLabel,
+} from '../components/preflight/PreFlightModal';
 import { buildPreflightContext } from '../lib/preflight/buildPreflightContext';
 import { runProposalPreflight } from '../lib/preflight/runProposalPreflight';
 import { applyPreflightFixes } from '../lib/preflight/applyPreflightFixes';
@@ -93,7 +99,33 @@ type PreflightPendingAction =
       customer: CustomerDetails;
       options: { includeRoofLayout: boolean; systemSizeKwOverride?: number | null };
     }
-  | { kind: 'share'; systemSizeKwOverride?: number | null };
+  | { kind: 'share'; systemSizeKwOverride?: number | null }
+  | {
+      kind: 'export';
+      exportKind: ProposalExportKind;
+      systemSizeKwOverride?: number | null;
+    };
+
+function preflightLabelFor(pending: PreflightPendingAction): PreflightActionLabel {
+  if (pending.kind === 'generate') return 'Generate';
+  if (pending.kind === 'share') return 'Share';
+  if (pending.exportKind === 'pdf') return 'PDF';
+  if (pending.exportKind === 'docx') return 'DOCX';
+  return 'PPT';
+}
+
+function withPreflightSizeOverride(
+  pending: PreflightPendingAction,
+  override: number | null | undefined,
+): PreflightPendingAction {
+  if (pending.kind === 'generate') {
+    return {
+      ...pending,
+      options: { ...pending.options, systemSizeKwOverride: override ?? undefined },
+    };
+  }
+  return { ...pending, systemSizeKwOverride: override ?? undefined };
+}
 /** Snapshot when user clicks Regenerate — proposal artifact is cleared but UI content is kept. */
 type RegeneratePreserve = {
   customSections: ProposalCustomSectionBeforeBoq[];
@@ -152,7 +184,7 @@ export default function ProposalPreview() {
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [preflightFindings, setPreflightFindings] = useState<PreflightFinding[]>([]);
   const [preflightSelectedIds, setPreflightSelectedIds] = useState<Set<string>>(new Set());
-  const [preflightActionLabel, setPreflightActionLabel] = useState<'Generate' | 'Share'>('Generate');
+  const [preflightActionLabel, setPreflightActionLabel] = useState<PreflightActionLabel>('Generate');
   const [preflightApplying, setPreflightApplying] = useState(false);
   const [preflightSystemSizeSource, setPreflightSystemSizeSource] =
     useState<SystemSizeSource>('crm');
@@ -613,19 +645,35 @@ export default function ProposalPreview() {
       preflightSizeOverrideRef.current = null;
       return;
     }
+    if (pending.kind === 'export') {
+      await executeExport(pending.exportKind);
+      preflightSizeOverrideRef.current = null;
+      return;
+    }
     await executeCreateShare();
     preflightSizeOverrideRef.current = null;
   };
 
   const requestPreflightThenRun = async (pending: PreflightPendingAction) => {
+    let ac = getActiveCustomer();
+    if (ac) {
+      ac = await hydrateArtifactsForPreflight(ac);
+    }
     const includeRoof =
       pending.kind === 'generate'
         ? pending.options.includeRoofLayout
-        : includeRoofLayout || !!getActiveCustomer()?.proposal?.includeRoofLayout;
-    const ctx = buildPreflightContext(getActiveCustomer(), { includeRoofLayout: includeRoof });
+        : includeRoofLayout || !!ac?.proposal?.includeRoofLayout;
+    const ctx = buildPreflightContext(ac, {
+      includeRoofLayout: includeRoof,
+      proposalSnapshot:
+        pending.kind === 'generate'
+          ? null
+          : proposal
+            ? { sheet: proposal.sheet, bom: proposal.bom, roi: proposal.roi }
+            : null,
+    });
     if (!ctx) {
-      if (pending.kind === 'generate') await executeGenerate(pending.customer, pending.options);
-      else await executeCreateShare();
+      await runPendingPreflightAction(pending);
       return;
     }
     const result = runProposalPreflight({
@@ -640,7 +688,7 @@ export default function ProposalPreview() {
     setPreflightFindings(result.findings);
     setPreflightSelectedIds(new Set(result.findings.map((f) => f.id)));
     setPreflightSystemSizeSource('crm');
-    setPreflightActionLabel(pending.kind === 'generate' ? 'Generate' : 'Share');
+    setPreflightActionLabel(preflightLabelFor(pending));
     setPreflightOpen(true);
   };
 
@@ -863,44 +911,55 @@ export default function ProposalPreview() {
     return liveOverrides && Object.keys(liveOverrides).length > 0 ? liveOverrides : savedOverrides;
   };
 
+  const executeExport = async (kind: ProposalExportKind) => {
+    if (kind === 'pdf') {
+      if (!proposal) return;
+      exportToPdf('proposal-print-root');
+      return;
+    }
+    const p = proposalForExport();
+    if (!p) return;
+    setExporting(kind);
+    try {
+      if (kind === 'docx') {
+        await exportToDocx(
+          p,
+          bomComments,
+          currentTextOverrides(),
+          printRef.current ?? undefined,
+          includeRoofLayout ? roofLayout : null,
+          normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
+        );
+      } else {
+        await exportToPpt(p, {
+          bomComments,
+          textOverrides: currentTextOverrides(),
+          container: printRef.current ?? undefined,
+          roofLayout: includeRoofLayout ? roofLayout : null,
+          customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
+        });
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const handleExportPdf = () => {
     if (!proposal) return;
-    exportToPdf('proposal-print-root');
+    preflightSizeOverrideRef.current = null;
+    void requestPreflightThenRun({ kind: 'export', exportKind: 'pdf' });
   };
 
-  const handleExportDocx = async () => {
-    const p = proposalForExport();
-    if (!p) return;
-    setExporting('docx');
-    try {
-      await exportToDocx(
-        p,
-        bomComments,
-        currentTextOverrides(),
-        printRef.current ?? undefined,
-        includeRoofLayout ? roofLayout : null,
-        normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
-      );
-    } finally {
-      setExporting(null);
-    }
+  const handleExportDocx = () => {
+    if (!proposalForExport()) return;
+    preflightSizeOverrideRef.current = null;
+    void requestPreflightThenRun({ kind: 'export', exportKind: 'docx' });
   };
 
-  const handleExportPpt = async () => {
-    const p = proposalForExport();
-    if (!p) return;
-    setExporting('ppt');
-    try {
-      await exportToPpt(p, {
-        bomComments,
-        textOverrides: currentTextOverrides(),
-        container: printRef.current ?? undefined,
-        roofLayout: includeRoofLayout ? roofLayout : null,
-        customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
-      });
-    } finally {
-      setExporting(null);
-    }
+  const handleExportPpt = () => {
+    if (!proposalForExport()) return;
+    preflightSizeOverrideRef.current = null;
+    void requestPreflightThenRun({ kind: 'export', exportKind: 'ppt' });
   };
 
   const handleOpenShareModal = () => {
@@ -1010,14 +1069,7 @@ export default function ProposalPreview() {
     }
     const chosen = resolveSizeOverrideFromChoice();
     if (chosen != null) preflightSizeOverrideRef.current = chosen;
-    const withOverride: PreflightPendingAction =
-      pending.kind === 'generate'
-        ? {
-            ...pending,
-            options: { ...pending.options, systemSizeKwOverride: chosen },
-          }
-        : { ...pending, systemSizeKwOverride: chosen };
-    await runPendingPreflightAction(withOverride);
+    await runPendingPreflightAction(withPreflightSizeOverride(pending, chosen));
   };
 
   const handlePreflightToggle = (id: string) => {
@@ -1165,23 +1217,27 @@ export default function ProposalPreview() {
         }
       }
 
+      let latest = getActiveCustomer() ?? activeCustomer;
+      latest = await hydrateArtifactsForPreflight(latest);
       const includeRoof =
         pending.kind === 'generate'
           ? pending.options.includeRoofLayout
-          : includeRoofLayout || !!getActiveCustomer()?.proposal?.includeRoofLayout;
-      const ctx = buildPreflightContext(getActiveCustomer(), { includeRoofLayout: includeRoof });
+          : includeRoofLayout || !!latest.proposal?.includeRoofLayout;
+      const ctx = buildPreflightContext(latest, {
+        includeRoofLayout: includeRoof,
+        proposalSnapshot:
+          pending.kind === 'generate'
+            ? null
+            : proposal
+              ? { sheet: proposal.sheet, bom: proposal.bom, roi: proposal.roi }
+              : null,
+      });
+      const overridden = withPreflightSizeOverride(
+        pending,
+        preflightSizeOverrideRef.current,
+      );
       if (!ctx) {
-        await runPendingPreflightAction({
-          ...(pending.kind === 'generate'
-            ? {
-                ...pending,
-                options: {
-                  ...pending.options,
-                  systemSizeKwOverride: preflightSizeOverrideRef.current,
-                },
-              }
-            : { ...pending, systemSizeKwOverride: preflightSizeOverrideRef.current }),
-        });
+        await runPendingPreflightAction(overridden);
         return;
       }
       const next = runProposalPreflight({
@@ -1189,17 +1245,7 @@ export default function ProposalPreview() {
         suppressSizeMismatch: preflightSizeOverrideRef.current != null,
       });
       if (next.findings.length === 0) {
-        await runPendingPreflightAction({
-          ...(pending.kind === 'generate'
-            ? {
-                ...pending,
-                options: {
-                  ...pending.options,
-                  systemSizeKwOverride: preflightSizeOverrideRef.current,
-                },
-              }
-            : { ...pending, systemSizeKwOverride: preflightSizeOverrideRef.current }),
-        });
+        await runPendingPreflightAction(overridden);
         return;
       }
       setPreflightFindings(next.findings);
@@ -1218,8 +1264,8 @@ export default function ProposalPreview() {
       onEdit={handleStartEdit}
       onCancel={handleCancelEdit}
       onExportPdf={handleExportPdf}
-      onExportDocx={() => void handleExportDocx()}
-      onExportPpt={() => void handleExportPpt()}
+      onExportDocx={handleExportDocx}
+      onExportPpt={handleExportPpt}
       onShare={handleOpenShareModal}
       onRegenerate={handleRegenerate}
       onSave={() => void handleSave()}
