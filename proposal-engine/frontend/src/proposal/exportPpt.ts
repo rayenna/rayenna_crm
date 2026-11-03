@@ -16,6 +16,7 @@ import {
   TERMS_AND_CONDITIONS,
   WARRANTY_TERMS,
 } from './proposalCopy';
+import { proposalDisplayCapacityKw } from './proposalAssembly';
 import { proposalForHeading } from './systemTypeLabel';
 import type { ProposalData, TextOverrides } from './types';
 
@@ -68,8 +69,7 @@ export function commercialsFromProposal(p: ProposalData): {
   const grandRounded = Math.round(grandTotal);
   const subsidyAmt = p.roi?.inputs?.subsidyAmount ?? 0;
   const showSubsidy = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
-  const sizeKw =
-    p.systemSizeKw > 0 ? p.systemSizeKw : (p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0);
+  const sizeKw = proposalDisplayCapacityKw(p) || (p.sheet?.systemSizeKw ?? 0);
   if (p.sheet) {
     const sheetGst =
       p.sheet.totalGst != null && p.sheet.totalGst > 0
@@ -266,7 +266,8 @@ export async function exportToPpt(
 ): Promise<void> {
   const overrides = options?.textOverrides;
   const images = await loadImages(options?.container);
-  const heading = proposalForHeading(p.systemSizeKw, p.systemType);
+  const capacityKw = proposalDisplayCapacityKw(p);
+  const heading = proposalForHeading(capacityKw, p.systemType);
   const dateStr = new Date(p.generatedAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'long',
@@ -454,7 +455,7 @@ export async function exportToPpt(
     const p1 = ov(
       overrides,
       'exec-summary-p1',
-      `Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of a ${p.systemSizeKw > 0 ? `${p.systemSizeKw} kW ` : ''}${proposalForHeading(0, p.systemType).replace(' Solar Power Plant', '')} Solar Photovoltaic Power Plant at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.`,
+      `Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of a ${capacityKw > 0 ? `${capacityKw} kW ` : ''}${proposalForHeading(0, p.systemType).replace(' Solar Power Plant', '')} Solar Photovoltaic Power Plant at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.`,
     );
     const p2 = ov(
       overrides,
@@ -484,7 +485,7 @@ export async function exportToPpt(
 
     const cost = p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
     const cards = [
-      p.systemSizeKw > 0 ? { label: 'System Capacity', value: `${p.systemSizeKw} kW` } : null,
+      capacityKw > 0 ? { label: 'System Capacity', value: `${capacityKw} kW` } : null,
       cost > 0 ? { label: 'Project Investment', value: fmtINR(cost) } : null,
       p.roi ? { label: 'Payback Period', value: `${p.roi.paybackYears.toFixed(1)} yrs` } : null,
       p.roi ? { label: '25-Year Savings', value: fmtINR(p.roi.totalSavings25Years) } : null,
@@ -832,7 +833,7 @@ export async function exportToPpt(
       ['Roof area', `${Number(layout.roof_area_m2).toFixed(1)} m²`],
       ['Usable area', `${Number(layout.usable_area_m2).toFixed(1)} m²`],
       ['Panel count', String(layout.panel_count)],
-      ...(p.systemSizeKw > 0 ? [['System size', `${p.systemSizeKw} kW`]] : []),
+      ...(capacityKw > 0 ? [['System size', `${capacityKw} kW`]] : []),
     ];
     stats.forEach((row, i) => {
       const y = 1.2 + i * 1.15;

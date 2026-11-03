@@ -185,6 +185,63 @@ export function cloneProposalForStorage(p: ProposalData): ProposalData {
   return JSON.parse(JSON.stringify(p)) as ProposalData;
 }
 
+/** Same capacity preference as on-screen proposal (ROI → proposal → autofill). */
+export function proposalDisplayCapacityKw(p: ProposalData): number {
+  if ((p.roi?.inputs.systemSizeKw ?? 0) > 0) return Number(p.roi!.inputs.systemSizeKw);
+  if ((p.systemSizeKw ?? 0) > 0) return Number(p.systemSizeKw);
+  if ((p.roiAutofill?.systemSizeKw ?? 0) > 0) return Number(p.roiAutofill!.systemSizeKw);
+  return 0;
+}
+
+/**
+ * Apply a pre-flight capacity choice onto the live proposal document.
+ * Updates every field consumers read for the five on-doc capacity mentions
+ * (cover heading, exec summary, SYSTEM CAPACITY card, financial benefits, scope/commercials).
+ * Used for PDF, DOCX, PPT, and share-link exports after pre-flight Apply / Ignore & proceed.
+ */
+export function withProposalSystemSizeKw(p: ProposalData, kw: number): ProposalData {
+  if (!(kw > 0) || !Number.isFinite(kw)) return p;
+  return {
+    ...p,
+    systemSizeKw: kw,
+    roi: p.roi
+      ? {
+          ...p.roi,
+          inputs: { ...p.roi.inputs, systemSizeKw: kw },
+        }
+      : p.roi,
+    roiAutofill: p.roiAutofill
+      ? { ...p.roiAutofill, systemSizeKw: kw }
+      : p.roiAutofill,
+  };
+}
+
+/** Rewrite “3 kW” → “3.1 kW” (etc.) in saved inline edits without touching unrelated numbers. */
+export function rewriteCapacityMentions(text: string, fromKw: number, toKw: number): string {
+  if (!(fromKw > 0) || !(toKw > 0) || Math.abs(fromKw - toKw) < 0.0001) return text;
+  const from = String(fromKw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`\\b${from}\\s*kW\\b`, 'gi'), `${toKw} kW`);
+}
+
+export function rewriteCapacityInOverrides(
+  map: Record<string, string | undefined>,
+  fromKw: number,
+  toKw: number,
+): Record<string, string | undefined> {
+  let changed = false;
+  const next: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(map)) {
+    if (value == null || value === '') {
+      next[key] = value;
+      continue;
+    }
+    const rewritten = rewriteCapacityMentions(value, fromKw, toKw);
+    if (rewritten !== value) changed = true;
+    next[key] = rewritten;
+  }
+  return changed ? next : map;
+}
+
 export function parseStoredProposalView(raw: unknown): ProposalData | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Partial<ProposalData>;

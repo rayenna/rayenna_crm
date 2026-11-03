@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { genRef, buildProposal, rehydrateProposalData } from './proposalAssembly';
+import {
+  genRef,
+  buildProposal,
+  rehydrateProposalData,
+  withProposalSystemSizeKw,
+  rewriteCapacityMentions,
+  proposalDisplayCapacityKw,
+} from './proposalAssembly';
 import { fmtINR, fmtINRFull } from './format';
 import type { CustomerDetails, ROIResult } from './types';
 
@@ -78,6 +85,25 @@ describe('buildProposal system capacity', () => {
       { systemSizeKwOverride: 11 },
     );
     expect(p.systemSizeKw).toBe(11);
+  });
+
+  it('withProposalSystemSizeKw patches heading + ROI + autofill capacity fields', () => {
+    const base = buildProposal(
+      customer,
+      null,
+      [],
+      staleRoi,
+      { source: 'costing-sheet', sourceName: 'x', savedAt: '', systemSizeKw: 3, grandTotal: 210000 },
+      { crmSystemSizeKw: 3 },
+    );
+    const next = withProposalSystemSizeKw(base, 3.1);
+    expect(next.systemSizeKw).toBe(3.1);
+    expect(next.roi?.inputs.systemSizeKw).toBe(3.1);
+    expect(next.roiAutofill?.systemSizeKw).toBe(3.1);
+    expect(proposalDisplayCapacityKw(next)).toBe(3.1);
+    expect(rewriteCapacityMentions('a 3 kW On-Grid plant (not 3.15 kW)', 3, 3.1)).toBe(
+      'a 3.1 kW On-Grid plant (not 3.15 kW)',
+    );
   });
 
   it('falls back to autofill when CRM is missing', () => {

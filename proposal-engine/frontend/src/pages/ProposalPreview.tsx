@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { pageBanner, pageShell } from '../components/ui/chrome';
 import {
@@ -47,6 +48,8 @@ import {
   cloneProposalForStorage,
   parseStoredProposalView,
   readWipStorage,
+  withProposalSystemSizeKw,
+  rewriteCapacityInOverrides,
 } from '../proposal/proposalAssembly';
 import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, CLIENT_SCOPE, TERMS_AND_CONDITIONS, SERVICE_DETAILS, PAYMENT_TERMS, WARRANTY_TERMS, DELIVERY_TERMS } from '../proposal/proposalCopy';
 import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types';
@@ -191,6 +194,7 @@ export default function ProposalPreview() {
   const preflightPendingRef = useRef<PreflightPendingAction | null>(null);
   /** Capacity chosen in pre-flight for this generate/share run. */
   const preflightSizeOverrideRef = useRef<number | null>(null);
+  const shareHtmlCacheRef = useRef<{ at: number; html: string } | null>(null);
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -628,6 +632,66 @@ export default function ProposalPreview() {
       : choiceFinding.sizeChoice.costingKw;
   };
 
+  /**
+   * Push a pre-flight capacity choice into the live proposal document (all five capacity mentions)
+   * and persist proposalView so PDF/DOCX/PPT/share/read-back use the chosen kW.
+   */
+  const applySystemSizeOverrideToLiveProposal = async (
+    kw: number | null | undefined,
+  ): Promise<ProposalData | null> => {
+    if (kw == null || !(kw > 0) || !Number.isFinite(kw)) return proposal;
+
+    let next: ProposalData | null = null;
+    let fromKw = 0;
+    flushSync(() => {
+      setProposal((prev) => {
+        if (!prev) return prev;
+        fromKw =
+          (prev.roi?.inputs.systemSizeKw ?? 0) > 0
+            ? Number(prev.roi!.inputs.systemSizeKw)
+            : Number(prev.systemSizeKw) || Number(prev.roiAutofill?.systemSizeKw) || 0;
+        next = withProposalSystemSizeKw(prev, kw);
+        return next;
+      });
+      if (fromKw > 0 && Math.abs(fromKw - kw) > 0.0001) {
+        setDisplayTextOverrides((prev) => rewriteCapacityInOverrides(prev, fromKw, kw));
+      }
+      setDocRevision((n) => n + 1);
+    });
+
+    if (!next) return proposal;
+    shareHtmlCacheRef.current = null;
+
+    const activeCustomer = getActiveCustomer();
+    if (activeCustomer?.proposal) {
+      const existingOverrides = activeCustomer.proposal.textOverrides ?? {};
+      const textOverrides =
+        fromKw > 0 && Math.abs(fromKw - kw) > 0.0001
+          ? rewriteCapacityInOverrides(existingOverrides, fromKw, kw)
+          : existingOverrides;
+      const proposalArtifact: ProposalArtifact = {
+        ...activeCustomer.proposal,
+        summary: execSummary(next).slice(0, 200),
+        textOverrides: Object.keys(textOverrides).length > 0 ? textOverrides : undefined,
+        proposalView: cloneProposalForStorage(next),
+      };
+      const result = await saveProjectArtifacts(
+        activeCustomer.id,
+        { proposal: proposalArtifact },
+        { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
+      );
+      if (!result.ok) {
+        setSyncError(result.errorMessage ?? 'Server sync failed while updating proposal capacity');
+      }
+    }
+
+    // Two frames so PDF / share DOM capture sees the flushed React tree.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    return next;
+  };
+
   const runPendingPreflightAction = async (pending: PreflightPendingAction) => {
     const override =
       pending.kind === 'generate'
@@ -645,11 +709,14 @@ export default function ProposalPreview() {
       preflightSizeOverrideRef.current = null;
       return;
     }
+    // Capacity choice must hit every export path: PDF (DOM), DOCX/PPT (data), Share link (DOM).
+    const patched = await applySystemSizeOverrideToLiveProposal(override);
     if (pending.kind === 'export') {
-      await executeExport(pending.exportKind);
+      await executeExport(pending.exportKind, patched);
       preflightSizeOverrideRef.current = null;
       return;
     }
+    shareHtmlCacheRef.current = null;
     await executeCreateShare();
     preflightSizeOverrideRef.current = null;
   };
@@ -911,14 +978,21 @@ export default function ProposalPreview() {
     return liveOverrides && Object.keys(liveOverrides).length > 0 ? liveOverrides : savedOverrides;
   };
 
-  const executeExport = async (kind: ProposalExportKind) => {
+  const executeExport = async (
+    kind: ProposalExportKind,
+    proposalOverride?: ProposalData | null,
+  ) => {
+    const base = proposalOverride ?? proposal;
     if (kind === 'pdf') {
-      if (!proposal) return;
+      if (!base) return;
       exportToPdf('proposal-print-root');
       return;
     }
-    const p = proposalForExport();
-    if (!p) return;
+    if (!base) return;
+    const p = {
+      ...base,
+      systemType: crmSystemType !== undefined ? crmSystemType : base.systemType,
+    };
     setExporting(kind);
     try {
       if (kind === 'docx') {
@@ -972,8 +1046,6 @@ export default function ProposalPreview() {
     setShareUseCustomValidity(false);
     setShareExpiryDate('');
   };
-
-  const shareHtmlCacheRef = useRef<{ at: number; html: string } | null>(null);
 
   const handleCreateShare = async () => {
     if (!canWrite) return;
@@ -1149,6 +1221,12 @@ export default function ProposalPreview() {
         preflightSizeOverrideRef.current = chosenKw;
       }
 
+      // Push capacity onto the live proposal document immediately (cover, exec summary,
+      // SYSTEM CAPACITY, financial benefits, scope/commercials) — not only ROI store.
+      const livePatched = await applySystemSizeOverrideToLiveProposal(
+        preflightSizeOverrideRef.current,
+      );
+
       const now = new Date().toISOString();
       const patch: {
         costing?: CostingArtifact | null;
@@ -1223,13 +1301,18 @@ export default function ProposalPreview() {
         pending.kind === 'generate'
           ? pending.options.includeRoofLayout
           : includeRoofLayout || !!latest.proposal?.includeRoofLayout;
+      const snapshotSource = livePatched ?? proposal;
       const ctx = buildPreflightContext(latest, {
         includeRoofLayout: includeRoof,
         proposalSnapshot:
           pending.kind === 'generate'
             ? null
-            : proposal
-              ? { sheet: proposal.sheet, bom: proposal.bom, roi: proposal.roi }
+            : snapshotSource
+              ? {
+                  sheet: snapshotSource.sheet,
+                  bom: snapshotSource.bom,
+                  roi: snapshotSource.roi,
+                }
               : null,
       });
       const overridden = withPreflightSizeOverride(

@@ -22,6 +22,7 @@ import {
   savingsText,
   scopeText,
 } from './proposalCopy';
+import { proposalDisplayCapacityKw } from './proposalAssembly';
 import { proposalForHeading } from './systemTypeLabel';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
 
@@ -173,7 +174,7 @@ export function buildDocx(
     ...(p.customer.email        ? [new Paragraph({ children: [new TextRun({ text: `Email: ${formatEmailForDisplay(p.customer.email)}`, size: 22, color: '374151' })], spacing: { after: 200 } })] : []),
     new Paragraph({
       children: [
-        new TextRun({ text: `Proposal For: ${proposalForHeading(p.systemSizeKw, p.systemType)}`, bold: true, size: 28, color: navy }),
+        new TextRun({ text: `Proposal For: ${proposalForHeading(proposalDisplayCapacityKw(p), p.systemType)}`, bold: true, size: 28, color: navy }),
       ],
       spacing: { after: 400 },
     }),
@@ -513,9 +514,7 @@ export function buildDocx(
     const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
     const showSubsidy  = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
     const hasSheet     = !!p.sheet;
-    const sizeKw       = p.systemSizeKw > 0
-      ? p.systemSizeKw
-      : (p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0);
+    const sizeKw = proposalDisplayCapacityKw(p) || (p.sheet?.systemSizeKw ?? 0);
 
     let gstAmount: number;
     let preGst: number;
