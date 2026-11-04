@@ -32,14 +32,18 @@ import {
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
 import { normalizeCustomSectionsBeforeBoq, stripPeManagedSectionsFromDocHtml } from '../lib/proposalCustomSections';
-import { CustomSectionsBeforeBoq } from '../components/CustomSectionsBeforeBoq';
+import {
+  CustomSectionsBeforeBoq,
+  type CustomSectionsBeforeBoqHandle,
+} from '../components/CustomSectionsBeforeBoq';
+import { restoreProposalDocumentFields } from '../lib/proposalDocumentPersist';
 import { exportToPdf } from '../proposal/exportPdf';
 import { exportToPpt } from '../proposal/exportPpt';
 import { ProposalToolbar, type ProposalExportKind } from '../proposal/ProposalToolbar';
 import { ActiveCustomerBanner } from '../components/ActiveCustomerBanner';
 import {
-  mergeProposalEditableInnerHtml,
   extractMergedProposalTextOverrides,
+  snapshotProposalEditableDom,
 } from '../proposal/proposalEditableHtml';
 import {
   buildProposal,
@@ -56,6 +60,7 @@ import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types
 import { proposalForHeading } from '../proposal/systemTypeLabel';
 import {
   ProposalTextOverridesContext,
+  ProposalEditingContext,
   Divider,
   ExecutiveSummaryBlock,
   AboutRayennaBlock,
@@ -167,6 +172,11 @@ export default function ProposalPreview() {
   /** Split so nested rich editors (custom sections) are not inside a parent contentEditable — paste/images break otherwise. */
   const docBodyTopRef                         = useRef<HTMLDivElement>(null);
   const docBodyBottomRef                      = useRef<HTMLDivElement>(null);
+  /** Incremental capture while editing — survives contentEditable DOM resets on re-render. */
+  const liveOverridesRef = useRef<Record<string, string | undefined>>({});
+  /** Bumped on successful Save so in-flight hydrates cannot clobber fresher edits. */
+  const proposalSaveEpochRef = useRef(0);
+  const isEditingRef = useRef(false);
 
   const [shareModalOpen, setShareModalOpen]         = useState(false);
   const [shareLink, setShareLink]                   = useState<string | null>(null);
@@ -179,6 +189,7 @@ export default function ProposalPreview() {
   const [shareLinkCopied, setShareLinkCopied]      = useState(false);
   const [displayTextOverrides, setDisplayTextOverrides] = useState<Record<string, string | undefined>>({});
   const [customSectionsBeforeBoq, setCustomSectionsBeforeBoq] = useState<ProposalCustomSectionBeforeBoq[]>([]);
+  const customSectionsRef = useRef<CustomSectionsBeforeBoqHandle>(null);
   const regeneratePreserveRef = useRef<RegeneratePreserve | null>(null);
   const [roofLayoutToggleBusy, setRoofLayoutToggleBusy] = useState(false);
   const [roofLayoutAvailability, setRoofLayoutAvailability] =
@@ -231,6 +242,7 @@ export default function ProposalPreview() {
   // Restore generated proposal + BOQ notes + saved text overrides when opening this page or switching customers.
   useEffect(() => {
     let cancelled = false;
+    const epochAtStart = proposalSaveEpochRef.current;
     const clearProposalUi = () => {
       setProposal(null);
       setDisplayTextOverrides({});
@@ -244,10 +256,21 @@ export default function ProposalPreview() {
         if (!cancelled) clearProposalUi();
         return;
       }
-      if (ac.proposal?.refNumber && !ac.proposal.proposalView && !ac.proposal.editedHtml && ac.master.crmProjectId) {
-        ac = await hydrateProposalIfNeeded(ac);
+      if (ac.master.crmProjectId) {
+        // Always refresh full proposal from server — Dashboard light GET must not win.
+        // Abort persist if Save completed (or Edit started) while GET was in flight —
+        // otherwise hydrate can write a stale server blob over the just-saved document.
+        ac = await hydrateProposalIfNeeded(ac, {
+          force: true,
+          skipPersistIf: () =>
+            proposalSaveEpochRef.current !== epochAtStart || isEditingRef.current,
+        });
       }
       if (cancelled) return;
+      // Save completed while hydrate was in flight — trust local store, do not paint stale GET.
+      if (proposalSaveEpochRef.current !== epochAtStart || isEditingRef.current) {
+        ac = getActiveCustomer() ?? ac;
+      }
       const saved = ac.proposal;
       if (!saved?.refNumber?.trim() || !saved.generatedAt?.trim()) {
         clearProposalUi();
@@ -280,9 +303,13 @@ export default function ProposalPreview() {
         );
       }
 
-      setBomComments(saved.bomComments ?? {});
-      setDisplayTextOverrides(saved.textOverrides ?? {});
-      setCustomSectionsBeforeBoq(normalizeCustomSectionsBeforeBoq(saved.customSectionsBeforeBoq));
+      if (isEditingRef.current) return;
+      // Full document restore: body HTML → overrides, plus BOM notes + custom sections.
+      const doc = restoreProposalDocumentFields(saved);
+      setBomComments(doc.bomComments);
+      setDisplayTextOverrides(doc.textOverrides);
+      liveOverridesRef.current = { ...doc.textOverrides };
+      setCustomSectionsBeforeBoq(doc.customSectionsBeforeBoq);
       setIsEditing(false);
       setIncludeRoofLayout(!!saved.includeRoofLayout);
     })();
@@ -433,91 +460,128 @@ export default function ProposalPreview() {
     }
   };
 
+  const captureLiveTextOverrides = (): Record<string, string | undefined> => {
+    const snap = snapshotProposalEditableDom(docBodyTopRef.current, docBodyBottomRef.current);
+    const fromLiveRef = liveOverridesRef.current;
+    const prevSaved = getActiveCustomer()?.proposal?.textOverrides ?? {};
+    // Live DOM is source of truth at capture time — never let stale React state win.
+    return {
+      ...prevSaved,
+      ...displayTextOverrides,
+      ...fromLiveRef,
+      ...snap.textOverrides,
+    };
+  };
+
   // ── Unified save: comments + inline edits + textOverrides + all 4 artifacts ──
   const handleSave = async () => {
     if (!canWrite) return;
     if (!proposal) return;
+
+    // CRITICAL: snapshot the ENTIRE document before any setState.
+    // Body HTML first (before custom-section flush can schedule a re-render),
+    // then flush custom editors, then BOM notes from React state.
+    const bomCommentsSnapshot = { ...bomComments };
+    const domSnap = snapshotProposalEditableDom(docBodyTopRef.current, docBodyBottomRef.current);
+    const cleanedHtml = stripPeManagedSectionsFromDocHtml(domSnap.html);
+    const editedHtml = cleanedHtml.trim() === '' ? undefined : cleanedHtml;
+    // DOM snapshot last: displayTextOverrides is often still pre-edit stock copy.
+    const textOverrides: Record<string, string | undefined> = {
+      ...(getActiveCustomer()?.proposal?.textOverrides ?? {}),
+      ...displayTextOverrides,
+      ...liveOverridesRef.current,
+      ...domSnap.textOverrides,
+    };
+    const textOverridesMaybeEmpty =
+      Object.keys(textOverrides).length > 0 ? textOverrides : undefined;
+    const customSectionsSnapshot = normalizeCustomSectionsBeforeBoq(
+      customSectionsRef.current?.flush() ?? customSectionsBeforeBoq,
+    );
+    const includeRoofSnap = includeRoofLayout;
+    const roofLayoutSnap = roofLayout;
+    liveOverridesRef.current = { ...(textOverridesMaybeEmpty ?? {}) };
+
+    // Do not write displayTextOverrides yet — while isEditing, tagged nodes are
+    // frozen to the edit-start seed; updating overrides would make React paint
+    // that seed over the live DOM. Snapshot vars above are the save payload.
     setSaveStatus('saving');
     setSyncError(null);
 
-    // 1. Capture current edited HTML and extract per-section text overrides
-    const editedHtml = (() => {
-      const merged = mergeProposalEditableInnerHtml(docBodyTopRef.current, docBodyBottomRef.current);
-      const cleaned = stripPeManagedSectionsFromDocHtml(merged);
-      return cleaned.trim() === '' ? undefined : cleaned;
-    })();
-    const textOverrides = extractMergedProposalTextOverrides(
-      docBodyTopRef.current,
-      docBodyBottomRef.current,
-    );
-    const textOverridesMaybeEmpty =
-      Object.keys(textOverrides).length > 0 ? textOverrides : undefined;
-    const customSectionsSnapshot = normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq);
+    // Persist BOM comments
+    persistComments(bomCommentsSnapshot);
 
-    // 2. Persist BOM comments
-    persistComments(bomComments);
-
-    // 3. Save all 4 artifacts locally; sync proposal only (costing/BOM/ROI sync on their pages).
     const activeCustomer = getActiveCustomer();
-    if (activeCustomer) {
-      const sheet = proposal.sheet;
-      const bom   = proposal.bom;
-      const roi: ROIResult | null = readWipStorage(getWipKeysForCurrentUser().roiResult);
-      const now   = new Date().toISOString();
-
-      const costingArtifact: CostingArtifact | null = sheet ? {
-        sheetName:     sheet.name,
-        savedAt:       sheet.savedAt,
-        items:         sheet.items,
-        showGst:       sheet.showGst,
-        marginPercent: sheet.marginPercent,
-        grandTotal:    sheet.grandTotal,
-        totalGst:      sheet.totalGst ?? 0,
-        systemSizeKw:  sheet.systemSizeKw,
-      } : null;
-
-      const bomArtifact: BomArtifact | null = bom.length > 0 ? { savedAt: now, rows: bom } : null;
-      const roiArtifact: RoiArtifact | null = roi ? { savedAt: now, result: roi as any } : null;
-
-      const proposalArtifact: ProposalArtifact = {
-        refNumber:   proposal.refNumber,
-        generatedAt: proposal.generatedAt,
-        summary:     execSummary(proposal).slice(0, 200),
-        bomComments,
-        editedHtml,
-        textOverrides: textOverridesMaybeEmpty,
-        customSectionsBeforeBoq: customSectionsSnapshot,
-        proposalView: cloneProposalForStorage(proposal),
-        includeRoofLayout,
-        roofLayout: includeRoofLayout ? (roofLayout ?? null) : null,
-      };
-
-      const result = await saveProjectArtifacts(
-        activeCustomer.id,
-        {
-          costing: costingArtifact,
-          bom: bomArtifact,
-          roi: roiArtifact,
-          proposal: proposalArtifact,
-        },
-        { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
-      );
-
-      if (!result.ok) {
-        setSyncError(result.errorMessage ?? 'Server sync failed');
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 4000);
-        return;
-      }
-
-      setCustomSectionsBeforeBoq(customSectionsSnapshot);
-      setSavedToCustomer(activeCustomer.master.name);
+    if (!activeCustomer) {
+      setSyncError('No active project — open a customer before saving.');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 4000);
+      return;
     }
 
-    // 4. Exit edit mode
+    const sheet = proposal.sheet;
+    const bom = proposal.bom;
+    const roi: ROIResult | null = readWipStorage(getWipKeysForCurrentUser().roiResult);
+    const now = new Date().toISOString();
+
+    const costingArtifact: CostingArtifact | null = sheet
+      ? {
+          sheetName: sheet.name,
+          savedAt: sheet.savedAt,
+          items: sheet.items,
+          showGst: sheet.showGst,
+          marginPercent: sheet.marginPercent,
+          grandTotal: sheet.grandTotal,
+          totalGst: sheet.totalGst ?? 0,
+          systemSizeKw: sheet.systemSizeKw,
+        }
+      : null;
+
+    const bomArtifact: BomArtifact | null = bom.length > 0 ? { savedAt: now, rows: bom } : null;
+    const roiArtifact: RoiArtifact | null = roi ? { savedAt: now, result: roi as any } : null;
+
+    const proposalArtifact: ProposalArtifact = {
+      refNumber: proposal.refNumber,
+      generatedAt: proposal.generatedAt,
+      summary: execSummary(proposal).slice(0, 200),
+      bomComments: bomCommentsSnapshot,
+      editedHtml,
+      textOverrides: textOverridesMaybeEmpty,
+      customSectionsBeforeBoq: customSectionsSnapshot,
+      proposalView: cloneProposalForStorage(proposal),
+      includeRoofLayout: includeRoofSnap,
+      roofLayout: includeRoofSnap ? (roofLayoutSnap ?? null) : null,
+    };
+
+    const result = await saveProjectArtifacts(
+      activeCustomer.id,
+      {
+        costing: costingArtifact,
+        bom: bomArtifact,
+        roi: roiArtifact,
+        proposal: proposalArtifact,
+      },
+      { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
+    );
+
+    if (!result.ok) {
+      setSyncError(result.errorMessage ?? 'Server sync failed');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 4000);
+      return;
+    }
+
+    // Invalidate any in-flight page hydrate so it cannot paint pre-save server data.
+    proposalSaveEpochRef.current += 1;
     editSnapshotRef.current = null;
-    setIsEditing(false);
-    setDisplayTextOverrides(textOverrides ?? {});
+    isEditingRef.current = false;
+    flushSync(() => {
+      setDisplayTextOverrides(textOverridesMaybeEmpty ?? {});
+      setBomComments(bomCommentsSnapshot);
+      setCustomSectionsBeforeBoq(customSectionsSnapshot);
+      setDocRevision((n) => n + 1);
+      setIsEditing(false);
+    });
+    setSavedToCustomer(activeCustomer.master.name);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
@@ -531,6 +595,8 @@ export default function ProposalPreview() {
       ) as ProposalCustomSectionBeforeBoq[],
       textOverrides: { ...displayTextOverrides },
     };
+    liveOverridesRef.current = { ...displayTextOverrides };
+    isEditingRef.current = true;
     setIsEditing(true);
   };
 
@@ -543,10 +609,25 @@ export default function ProposalPreview() {
         JSON.parse(JSON.stringify(snap.customSections)) as ProposalCustomSectionBeforeBoq[],
       );
       setDisplayTextOverrides({ ...snap.textOverrides });
+      liveOverridesRef.current = { ...snap.textOverrides };
+    } else {
+      liveOverridesRef.current = {};
     }
     editSnapshotRef.current = null;
+    isEditingRef.current = false;
     setDocRevision((n) => n + 1);
     setIsEditing(false);
+  };
+
+  const handleEditableInput = () => {
+    const live = extractMergedProposalTextOverrides(
+      docBodyTopRef.current,
+      docBodyBottomRef.current,
+    );
+    if (Object.keys(live).length === 0) return;
+    // Ref only — never setState here. Updating displayTextOverrides while editing
+    // re-renders tagged nodes and React puts the pre-edit copy back into the DOM.
+    liveOverridesRef.current = { ...liveOverridesRef.current, ...live };
   };
 
   const handleSaveAndClose = async () => {
@@ -664,11 +745,16 @@ export default function ProposalPreview() {
 
     const activeCustomer = getActiveCustomer();
     if (activeCustomer?.proposal) {
-      const existingOverrides = activeCustomer.proposal.textOverrides ?? {};
+      const existingOverrides = {
+        ...(activeCustomer.proposal.textOverrides ?? {}),
+        ...captureLiveTextOverrides(),
+      };
       const textOverrides =
         fromKw > 0 && Math.abs(fromKw - kw) > 0.0001
           ? rewriteCapacityInOverrides(existingOverrides, fromKw, kw)
           : existingOverrides;
+      liveOverridesRef.current = { ...textOverrides };
+      setDisplayTextOverrides({ ...textOverrides });
       const proposalArtifact: ProposalArtifact = {
         ...activeCustomer.proposal,
         summary: execSummary(next).slice(0, 200),
@@ -969,13 +1055,8 @@ export default function ProposalPreview() {
   };
 
   const currentTextOverrides = () => {
-    const liveMerged = extractMergedProposalTextOverrides(
-      docBodyTopRef.current,
-      docBodyBottomRef.current,
-    );
-    const liveOverrides = Object.keys(liveMerged).length > 0 ? liveMerged : undefined;
-    const savedOverrides = getActiveCustomer()?.proposal?.textOverrides;
-    return liveOverrides && Object.keys(liveOverrides).length > 0 ? liveOverrides : savedOverrides;
+    const merged = captureLiveTextOverrides();
+    return Object.keys(merged).length > 0 ? merged : undefined;
   };
 
   const executeExport = async (
@@ -983,6 +1064,14 @@ export default function ProposalPreview() {
     proposalOverride?: ProposalData | null,
   ) => {
     const base = proposalOverride ?? proposal;
+    // Flush live custom-section DOM so export matches what is on screen.
+    const sectionsForExport = normalizeCustomSectionsBeforeBoq(
+      customSectionsRef.current?.flush() ?? customSectionsBeforeBoq,
+    );
+    if (sectionsForExport !== customSectionsBeforeBoq) {
+      setCustomSectionsBeforeBoq(sectionsForExport);
+    }
+    const overridesForExport = currentTextOverrides();
     if (kind === 'pdf') {
       if (!base) return;
       exportToPdf('proposal-print-root');
@@ -999,18 +1088,18 @@ export default function ProposalPreview() {
         await exportToDocx(
           p,
           bomComments,
-          currentTextOverrides(),
+          overridesForExport,
           printRef.current ?? undefined,
           includeRoofLayout ? roofLayout : null,
-          normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
+          sectionsForExport,
         );
       } else {
         await exportToPpt(p, {
           bomComments,
-          textOverrides: currentTextOverrides(),
+          textOverrides: overridesForExport,
           container: printRef.current ?? undefined,
           roofLayout: includeRoofLayout ? roofLayout : null,
-          customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
+          customSectionsBeforeBoq: sectionsForExport,
         });
       }
     } finally {
@@ -1407,7 +1496,7 @@ export default function ProposalPreview() {
                   <div className="flex items-center gap-2">
                     <span>✏️</span>
                     <span>
-                      Edit mode — click proposal text to edit inline, use the extra blocks above the <strong>Bill of Quantities</strong> (titles and rich text), and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
+                      Edit mode — click any blue-outlined text to edit (About, Scope, Process, lists, account details, BOQ notes, custom sections, and more). Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
                     </span>
                   </div>
                   <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
@@ -1491,15 +1580,15 @@ export default function ProposalPreview() {
                 </div>
               </div>
 
-              {/* Two contentEditable regions: nested editors inside a parent contentEditable break image paste/insert in browsers. */}
+              {/* Document body: each tagged section is its own contentEditable while editing.
+                  Do NOT put contentEditable on these wrappers — React + parent editing host
+                  was snapping typed text back to the pre-edit copy on every Save re-render. */}
               <div className="px-3 sm:px-6 md:px-8 py-6 sm:py-8 min-w-0">
+                <ProposalEditingContext.Provider value={canWrite && isEditing}>
                 <ProposalTextOverridesContext.Provider key={docRevision} value={displayTextOverrides}>
                 <div
                   ref={docBodyTopRef}
-                  contentEditable={canWrite && isEditing}
-                  suppressContentEditableWarning
-                  spellCheck={canWrite && isEditing}
-                  style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+                  onInput={handleEditableInput}
                 >
                 {/* Saved-to-customer confirmation */}
                 {savedToCustomer && (
@@ -1668,16 +1757,14 @@ export default function ProposalPreview() {
                 <ScopeOfWorkBlock proposal={proposal} />
                 </div>
                 <CustomSectionsBeforeBoq
+                  ref={customSectionsRef}
                   sections={customSectionsBeforeBoq}
                   onChange={setCustomSectionsBeforeBoq}
                   readOnly={!canWrite || !isEditing}
                 />
                 <div
                   ref={docBodyBottomRef}
-                  contentEditable={canWrite && isEditing}
-                  suppressContentEditableWarning
-                  spellCheck={canWrite && isEditing}
-                  style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+                  onInput={handleEditableInput}
                 >
                 {proposal.bom.length > 0 && (
                   <>
@@ -1725,6 +1812,7 @@ export default function ProposalPreview() {
                 <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
                 </div>
                 </ProposalTextOverridesContext.Provider>
+                </ProposalEditingContext.Provider>
               </div>
             </div>
           )}

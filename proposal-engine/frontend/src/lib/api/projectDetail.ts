@@ -278,10 +278,113 @@ export function applyProposalEngineProjectDetail(
     bom: fromApi.bom ?? existing.bom,
     roi: fromApi.roi ?? existing.roi,
     roofLayout,
-    proposal: fromApi.proposal ?? existing.proposal,
+    // Light GET /projects/:id omits proposal document fields — never wipe local/full edits.
+    proposal: mergeProposalArtifactPreservingDocumentFields(existing.proposal, fromApi.proposal),
   };
   return {
     ...merged,
     status: deriveProposalStatusFromArtifacts(merged),
+  };
+}
+
+function proposalApiLooksLight(fromApi: ProposalArtifact): boolean {
+  return (
+    fromApi.proposalView == null &&
+    fromApi.editedHtml == null &&
+    fromApi.textOverrides == null &&
+    fromApi.customSectionsBeforeBoq == null &&
+    fromApi.bomComments == null
+  );
+}
+
+function mergeLightProposalMeta(
+  existing: ProposalArtifact,
+  fromApi: ProposalArtifact,
+): ProposalArtifact {
+  return {
+    ...existing,
+    refNumber: fromApi.refNumber || existing.refNumber,
+    generatedAt: fromApi.generatedAt || existing.generatedAt,
+    summary: fromApi.summary || existing.summary,
+    includeRoofLayout: fromApi.includeRoofLayout,
+    roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
+    crmDocumentUrl: fromApi.crmDocumentUrl ?? existing.crmDocumentUrl,
+    crmArtifactId: fromApi.crmArtifactId ?? existing.crmArtifactId,
+  };
+}
+
+/**
+ * Project detail is light (ref/summary only). Full GET /proposal has document blobs.
+ * When the API omits document fields, keep whatever we already have locally so
+ * Edit → Save → reopen / export does not lose textOverrides, BOQ notes, or custom sections.
+ */
+export function mergeProposalArtifactPreservingDocumentFields(
+  existing: ProposalArtifact | null | undefined,
+  fromApi: ProposalArtifact | null,
+): ProposalArtifact | null {
+  if (!fromApi) return existing ?? null;
+  if (!existing) return fromApi;
+
+  if (proposalApiLooksLight(fromApi)) {
+    return mergeLightProposalMeta(existing, fromApi);
+  }
+
+  // Full server payload used by Dashboard merge / non-force hydrate.
+  // Per-key: prefer non-empty local (may be mid-save); fill gaps from server.
+  const mergedTextOverrides: Record<string, string | undefined> = {
+    ...(fromApi.textOverrides ?? {}),
+  };
+  for (const [k, v] of Object.entries(existing.textOverrides ?? {})) {
+    if (v != null && String(v).trim() !== '') mergedTextOverrides[k] = v;
+  }
+  const localBom = existing.bomComments;
+  const apiBom = fromApi.bomComments;
+  const bomComments =
+    localBom && Object.keys(localBom).length > 0
+      ? { ...(apiBom ?? {}), ...localBom }
+      : apiBom ?? localBom;
+  const localCustom = existing.customSectionsBeforeBoq;
+  const apiCustom = fromApi.customSectionsBeforeBoq;
+  const customSectionsBeforeBoq =
+    localCustom && localCustom.length > 0 ? localCustom : apiCustom ?? localCustom;
+
+  return {
+    ...existing,
+    ...fromApi,
+    bomComments,
+    editedHtml: existing.editedHtml?.trim()
+      ? existing.editedHtml
+      : fromApi.editedHtml ?? existing.editedHtml,
+    textOverrides:
+      Object.keys(mergedTextOverrides).length > 0 ? mergedTextOverrides : undefined,
+    customSectionsBeforeBoq,
+    proposalView: existing.proposalView ?? fromApi.proposalView,
+    roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
+  };
+}
+
+/**
+ * Proposal page force-hydrate: server document fields win so Save is what you see
+ * after reopen / other device. Light stubs still preserve local blobs.
+ */
+export function mergeProposalArtifactPreferringServerDocument(
+  existing: ProposalArtifact | null | undefined,
+  fromApi: ProposalArtifact | null,
+): ProposalArtifact | null {
+  if (!fromApi) return existing ?? null;
+  if (!existing) return fromApi;
+  if (proposalApiLooksLight(fromApi)) {
+    return mergeLightProposalMeta(existing, fromApi);
+  }
+  return {
+    ...existing,
+    ...fromApi,
+    bomComments: fromApi.bomComments ?? existing.bomComments,
+    editedHtml: fromApi.editedHtml ?? existing.editedHtml,
+    textOverrides: fromApi.textOverrides ?? existing.textOverrides,
+    customSectionsBeforeBoq:
+      fromApi.customSectionsBeforeBoq ?? existing.customSectionsBeforeBoq,
+    proposalView: fromApi.proposalView ?? existing.proposalView,
+    roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
   };
 }

@@ -417,29 +417,29 @@ export async function syncProjectProposal(
   projectId: string,
   artifact: ProposalArtifact,
 ): Promise<void> {
-  return debounceSync(`sync:proposal:${projectId}`, async () => {
-    try {
-      await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          refNumber: artifact.refNumber,
-          generatedAt: artifact.generatedAt,
-          bomComments: artifact.bomComments ?? null,
-          editedHtml: artifact.editedHtml ?? null,
-          textOverrides: artifact.textOverrides ?? null,
-          customSectionsBeforeBoq: artifact.customSectionsBeforeBoq ?? null,
-          proposalView: artifact.proposalView ?? null,
-          summary: artifact.summary ?? null,
-          includeRoofLayout: artifact.includeRoofLayout ?? false,
-        }),
-      });
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Failed to sync proposal artifact to CRM backend:', err);
-      } else {
-        void captureSyncError(err, { sync: 'proposal' });
-      }
-      throw err;
+  // No debounce: Edit → Save must hit the server before Dashboard/export/share
+  // or a later light GET + hydrate can miss textOverrides / BOQ notes.
+  try {
+    await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        refNumber: artifact.refNumber,
+        generatedAt: artifact.generatedAt,
+        bomComments: artifact.bomComments ?? null,
+        editedHtml: artifact.editedHtml ?? null,
+        textOverrides: artifact.textOverrides ?? null,
+        customSectionsBeforeBoq: artifact.customSectionsBeforeBoq ?? null,
+        proposalView: artifact.proposalView ?? null,
+        summary: artifact.summary ?? null,
+        includeRoofLayout: artifact.includeRoofLayout ?? false,
+      }),
+    });
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.error('Failed to sync proposal artifact to CRM backend:', err);
+    } else {
+      void captureSyncError(err, { sync: 'proposal' });
     }
-  });
+    throw err;
+  }
 }

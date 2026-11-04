@@ -25,6 +25,118 @@ function readStorage<T>(key: string): T | null {
 
 export const ProposalTextOverridesContext = React.createContext<Record<string, string | undefined>>({});
 
+/** True while Proposal Edit mode is on — tagged sections become uncontrolled contentEditables. */
+export const ProposalEditingContext = React.createContext(false);
+
+function plainTextFromNode(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(plainTextFromNode).join('');
+  return '';
+}
+
+/**
+ * Uncontrolled while editing: React must NOT own the text node.
+ * Seed once on Edit enter via layout effect; Save reads live DOM (data-docx-section).
+ * Read-only mode renders normal React children from overrides.
+ */
+function useUncontrolledDocSection(text: string, isEditing: boolean) {
+  const ref = React.useRef<HTMLElement | null>(null);
+  const seededRef = React.useRef(false);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (isEditing) {
+      if (!seededRef.current) {
+        el.innerText = text;
+        seededRef.current = true;
+      }
+      return;
+    }
+    seededRef.current = false;
+  }, [isEditing, text]);
+
+  return {
+    ref,
+    contentEditable: isEditing,
+    /** While editing, pass no children so React cannot snap text back. */
+    children: isEditing ? null : text,
+  };
+}
+
+type EditableTag = 'p' | 'div' | 'span' | 'h2' | 'h3';
+
+/** Any narrative field — uncontrolled while Edit is on so Save cannot snap text back. */
+function EditableText({
+  sectionKey,
+  as: Tag = 'p',
+  className,
+  style,
+  children,
+}: {
+  sectionKey: string;
+  as?: EditableTag;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
+  const o = map[sectionKey];
+  const text = o != null && o !== '' ? o : plainTextFromNode(children);
+  const edit = useUncontrolledDocSection(text, isEditing);
+  return (
+    <Tag
+      ref={edit.ref as React.RefObject<HTMLElement & HTMLParagraphElement>}
+      data-docx-section={sectionKey}
+      className={className}
+      contentEditable={edit.contentEditable}
+      suppressContentEditableWarning
+      spellCheck={isEditing}
+      style={{
+        ...style,
+        ...(isEditing
+          ? {
+              outline: 'none',
+              cursor: 'text',
+              boxShadow: 'inset 0 0 0 1px rgba(14, 165, 233, 0.35)',
+              borderRadius: 4,
+            }
+          : null),
+      }}
+    >
+      {edit.children}
+    </Tag>
+  );
+}
+
+function EditableListItemText({ text, isEditing }: { text: string; isEditing: boolean }) {
+  const edit = useUncontrolledDocSection(text, isEditing);
+  return (
+    <span
+      ref={edit.ref as React.RefObject<HTMLSpanElement>}
+      data-docx-list-text
+      className="leading-relaxed flex-1 min-w-0"
+      contentEditable={edit.contentEditable}
+      suppressContentEditableWarning
+      spellCheck={isEditing}
+      style={
+        isEditing
+          ? {
+              outline: 'none',
+              cursor: 'text',
+              boxShadow: 'inset 0 0 0 1px rgba(14, 165, 233, 0.35)',
+              borderRadius: 4,
+            }
+          : undefined
+      }
+    >
+      {edit.children}
+    </span>
+  );
+}
+
 function OverriddenParagraph({
   sectionKey,
   className,
@@ -34,12 +146,10 @@ function OverriddenParagraph({
   className?: string;
   children: React.ReactNode;
 }) {
-  const map = React.useContext(ProposalTextOverridesContext);
-  const o = map[sectionKey];
   return (
-    <p data-docx-section={sectionKey} className={className}>
-      {o != null && o !== '' ? o : children}
-    </p>
+    <EditableText sectionKey={sectionKey} as="p" className={className}>
+      {children}
+    </EditableText>
   );
 }
 
@@ -52,12 +162,10 @@ function OverriddenDiv({
   className?: string;
   children: React.ReactNode;
 }) {
-  const map = React.useContext(ProposalTextOverridesContext);
-  const o = map[sectionKey];
   return (
-    <div data-docx-section={sectionKey} className={className}>
-      {o != null && o !== '' ? o : children}
-    </div>
+    <EditableText sectionKey={sectionKey} as="div" className={className}>
+      {children}
+    </EditableText>
   );
 }
 
@@ -227,8 +335,10 @@ export function SectionBlock({ title, content }: { title: string; content: strin
   const meta = SECTION_META[title] ?? { icon: '📌', accent: '#0d1b3a' };
   const sectionKey = `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
   const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
   const o = map[sectionKey];
-  const body = o != null && o !== '' ? o : content;
+  const text = o != null && o !== '' ? o : content;
+  const edit = useUncontrolledDocSection(text, isEditing);
   return (
     <div className="mb-8 pdf-section" data-pdf-section={sectionKey}>
       <div className="flex items-center gap-3 mb-4">
@@ -241,7 +351,17 @@ export function SectionBlock({ title, content }: { title: string; content: strin
           {title}
         </h2>
       </div>
-      <div data-docx-section={sectionKey} className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7">{body}</div>
+      <div
+        ref={edit.ref as React.RefObject<HTMLDivElement>}
+        data-docx-section={sectionKey}
+        className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7"
+        contentEditable={edit.contentEditable}
+        suppressContentEditableWarning
+        spellCheck={isEditing}
+        style={isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+      >
+        {edit.children}
+      </div>
     </div>
   );
 }
@@ -294,31 +414,43 @@ export function EnvironmentalImpactBlock({ proposal }: { proposal: ProposalData 
         </h2>
       </div>
 
-      {/* Intro sentence */}
-      <p className="text-sm text-secondary-700 leading-relaxed mb-5">
-        By harnessing solar energy, <span className="font-semibold text-secondary-800">{name}</span> will
-        make a meaningful contribution to environmental sustainability — reducing carbon emissions,
-        conserving natural resources, and supporting India's clean energy goals.
-      </p>
+      <EditableText
+        sectionKey="env-intro"
+        as="p"
+        className="text-sm text-secondary-700 leading-relaxed mb-5"
+      >
+        {`By harnessing solar energy, ${name} will make a meaningful contribution to environmental sustainability — reducing carbon emissions, conserving natural resources, and supporting India's clean energy goals.`}
+      </EditableText>
 
-      {/* Bullet cards — 2×2 grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {bullets.map((b) => (
+        {bullets.map((b, i) => (
           <div
             key={b.title}
             className="rounded-xl border p-4 flex gap-3"
             style={{ background: b.bg, borderColor: b.border }}
           >
-            {/* Icon circle */}
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0 mt-0.5"
               style={{ background: b.iconBg }}
             >
               {b.icon}
             </div>
-            <div>
-              <p className="text-sm font-extrabold mb-1" style={{ color: accent }}>{b.title}</p>
-              <p className="text-xs text-secondary-600 leading-relaxed">{b.body}</p>
+            <div className="min-w-0 flex-1">
+              <EditableText
+                sectionKey={`env-bullet-${i}-title`}
+                as="p"
+                className="text-sm font-extrabold mb-1"
+                style={{ color: accent }}
+              >
+                {b.title}
+              </EditableText>
+              <EditableText
+                sectionKey={`env-bullet-${i}-body`}
+                as="p"
+                className="text-xs text-secondary-600 leading-relaxed"
+              >
+                {b.body}
+              </EditableText>
             </div>
           </div>
         ))}
@@ -441,7 +573,13 @@ export function AboutRayennaBlock() {
               className="flex items-start gap-3 px-4 py-3 border-b border-sky-100 last:border-b-0"
             >
               <span className="text-base flex-shrink-0 mt-0.5">{h.icon}</span>
-              <p className="text-xs text-secondary-700 leading-relaxed">{h.text}</p>
+              <EditableText
+                sectionKey={`about-highlight-${i}`}
+                as="p"
+                className="text-xs text-secondary-700 leading-relaxed"
+              >
+                {h.text}
+              </EditableText>
             </div>
           ))}
         </div>
@@ -487,17 +625,30 @@ export function WhatWeOfferBlock() {
 
       {/* 3 service cards — 1 / 2 / 3 so tablet portrait does not crush titles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
-        {OUR_SERVICES.map((s) => (
+        {OUR_SERVICES.map((s, i) => (
           <div
             key={s.title}
             className="rounded-xl border p-4 flex flex-col gap-2"
             style={{ borderColor: '#a5f3fc', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' }}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-xl">{s.icon}</span>
-              <span className="text-sm font-extrabold uppercase tracking-wide" style={{ color: accent }}>{s.title}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xl flex-shrink-0">{s.icon}</span>
+              <EditableText
+                sectionKey={`offer-service-${i}-title`}
+                as="span"
+                className="text-sm font-extrabold uppercase tracking-wide min-w-0"
+                style={{ color: accent }}
+              >
+                {s.title}
+              </EditableText>
             </div>
-            <p className="text-xs text-secondary-600 leading-relaxed">{s.desc}</p>
+            <EditableText
+              sectionKey={`offer-service-${i}-desc`}
+              as="p"
+              className="text-xs text-secondary-600 leading-relaxed"
+            >
+              {s.desc}
+            </EditableText>
           </div>
         ))}
       </div>
@@ -532,7 +683,6 @@ export function OurProcessBlock() {
             className="min-w-0 max-w-full rounded-xl border p-3.5 flex flex-col gap-1.5 relative"
             style={{ borderColor: `${stepColors[idx]}40`, background: `${stepColors[idx]}08` }}
           >
-            {/* Step number badge */}
             <div
               className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-extrabold mb-1 flex-shrink-0"
               style={{ background: stepColors[idx] }}
@@ -541,9 +691,22 @@ export function OurProcessBlock() {
             </div>
             <div className="flex items-start gap-1.5 min-w-0">
               <span className="text-base flex-shrink-0">{step.icon}</span>
-              <span className="text-xs font-extrabold uppercase tracking-wide break-words min-w-0" style={{ color: stepColors[idx] }}>{step.title}</span>
+              <EditableText
+                sectionKey={`process-step-${idx}-title`}
+                as="span"
+                className="text-xs font-extrabold uppercase tracking-wide break-words min-w-0"
+                style={{ color: stepColors[idx] }}
+              >
+                {step.title}
+              </EditableText>
             </div>
-            <p className="text-xs text-secondary-600 leading-relaxed break-words">{step.desc}</p>
+            <EditableText
+              sectionKey={`process-step-${idx}-desc`}
+              as="p"
+              className="text-xs text-secondary-600 leading-relaxed break-words"
+            >
+              {step.desc}
+            </EditableText>
           </div>
         ))}
       </div>
@@ -583,12 +746,16 @@ export function RoofLayoutBlock({ layout, systemSizeKw }: { layout: AiRoofLayout
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start">
         <div className="space-y-3">
-          <p className="text-sm text-secondary-700 leading-relaxed">
+          <EditableText
+            sectionKey="roof-layout-disclaimer"
+            as="p"
+            className="text-sm text-secondary-700 leading-relaxed"
+          >
             This layout has been automatically generated using satellite imagery and project-specific inputs. It is
             merely a rough conceptual representation intended for preliminary visualization purposes only. For accurate
             project scope, specifications and deliverables; please refer to the detailed Bill of Quantities provided
             below.
-          </p>
+          </EditableText>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
               <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">Roof area</dt>
@@ -648,6 +815,63 @@ export function RoofLayoutBlock({ layout, systemSizeKw }: { layout: AiRoofLayout
   );
 }
 
+function ScopeSectionCard({
+  section,
+  index,
+}: {
+  section: (typeof SCOPE_SECTIONS)[number];
+  index: number;
+}) {
+  const scopeKey = `scope-section-${index}`;
+  const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
+  const o = map[scopeKey];
+  const lines =
+    o != null && o.trim() !== ''
+      ? o.split('\n').map((t) => t.trim()).filter(Boolean)
+      : section.items;
+  const seedItemsRef = React.useRef(lines);
+  const wasEditingRef = React.useRef(false);
+  if (isEditing && !wasEditingRef.current) {
+    seedItemsRef.current = lines;
+  }
+  if (!isEditing) {
+    seedItemsRef.current = lines;
+  }
+  wasEditingRef.current = isEditing;
+  const displayItems = isEditing ? seedItemsRef.current : lines;
+
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{ background: section.bg, borderColor: section.border }}
+    >
+      <div className="flex items-center gap-2 mb-3 min-w-0">
+        <span className="text-xl flex-shrink-0">{section.icon}</span>
+        <EditableText
+          sectionKey={`scope-section-${index}-title`}
+          as="h3"
+          className="text-sm font-bold min-w-0"
+          style={{ color: section.accent }}
+        >
+          {section.title}
+        </EditableText>
+      </div>
+      <ul data-docx-section={scopeKey} className="space-y-1.5">
+        {displayItems.map((item, i) => (
+          <li key={i} className="flex items-start gap-2 text-xs text-secondary-700">
+            <span
+              className="mt-0.5 flex-shrink-0 w-1.5 h-1.5 rounded-full inline-block"
+              style={{ background: section.accent, marginTop: '5px' }}
+            />
+            <EditableListItemText text={item} isEditing={isEditing} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
   const sz = (proposal.roi?.inputs.systemSizeKw ?? 0) > 0
     ? proposal.roi!.inputs.systemSizeKw
@@ -661,30 +885,11 @@ export function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Scope of Work</h2>
       </div>
       <OverriddenParagraph sectionKey="scope-intro" className="text-sm text-secondary-500 mb-5 pl-7">
-        The scope of work for the {sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas:
+        {`The scope of work for the ${sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas:`}
       </OverriddenParagraph>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {SCOPE_SECTIONS.map((s) => (
-          <div
-            key={s.title}
-            className="rounded-xl border p-4"
-            style={{ background: s.bg, borderColor: s.border }}
-          >
-            {/* Card header */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">{s.icon}</span>
-              <h3 className="text-sm font-bold" style={{ color: s.accent }}>{s.title}</h3>
-            </div>
-            {/* Bullet list */}
-            <ul className="space-y-1.5">
-              {s.items.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-secondary-700">
-                  <span className="mt-0.5 flex-shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ background: s.accent, marginTop: '5px' }} />
-                  <span className="leading-relaxed">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {SCOPE_SECTIONS.map((s, si) => (
+          <ScopeSectionCard key={s.title} section={s} index={si} />
         ))}
       </div>
     </div>
@@ -745,23 +950,17 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
         ];
         return (
           <div className="mb-6">
-            {/* Hero statement */}
             <div
               className="rounded-xl px-5 py-4 mb-4"
               style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #1e3a5f 60%, #0f4c2a 100%)' }}
             >
-              <p className="text-white text-sm font-light leading-relaxed">
-                The proposed{' '}
-                <span className="font-extrabold text-yellow-300 text-base">{sizeKw} kW</span>
-                {' '}On-Grid Solar Power Plant is projected to generate{' '}
-                <span className="font-bold text-emerald-300">{roi.annualGeneration.toLocaleString('en-IN')} kWh</span>
-                {' '}of clean electricity in Year 1, delivering annual savings of{' '}
-                <span className="font-bold text-emerald-300">{fmtINR(roi.annualSavings)}</span>.
-                {' '}Over 25 years, cumulative savings are estimated at{' '}
-                <span className="font-extrabold text-yellow-300 text-base">{fmtINR(roi.totalSavings25Years)}</span>
-                {' '}— an ROI of{' '}
-                <span className="font-extrabold text-yellow-300">{roi.roiPercent.toFixed(1)}%</span>.
-              </p>
+              <EditableText
+                sectionKey="financial-hero"
+                as="p"
+                className="text-white text-sm font-light leading-relaxed"
+              >
+                {`The proposed ${sizeKw} kW On-Grid Solar Power Plant is projected to generate ${roi.annualGeneration.toLocaleString('en-IN')} kWh of clean electricity in Year 1, delivering annual savings of ${fmtINR(roi.annualSavings)}. Over 25 years, cumulative savings are estimated at ${fmtINR(roi.totalSavings25Years)} — an ROI of ${roi.roiPercent.toFixed(1)}%.`}
+              </EditableText>
             </div>
 
             {/* 4 highlight stat pills */}
@@ -1352,18 +1551,28 @@ export function ListBlock({ title, items }: { title: string; items: string[] }) 
   const meta = LIST_META[title] ?? { icon: '📌', accent: '#0d1b3a', bg: '#f8fafc', border: '#e2e8f0' };
   const sectionKey = `list-${title.toLowerCase().replace(/\s+/g, '-')}`;
   const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
   const o = map[sectionKey];
   const lines = o != null && o.trim() !== '' ? o.split('\n').map((s) => s.trim()).filter(Boolean) : null;
-  const displayItems = lines && lines.length > 0 ? lines : items;
+  const resolvedItems = lines && lines.length > 0 ? lines : items;
+  // Freeze item list for the edit session so React does not remount rows mid-edit.
+  const seedItemsRef = React.useRef(resolvedItems);
+  const wasEditingRef = React.useRef(false);
+  if (isEditing && !wasEditingRef.current) {
+    seedItemsRef.current = resolvedItems;
+  }
+  if (!isEditing) {
+    seedItemsRef.current = resolvedItems;
+  }
+  wasEditingRef.current = isEditing;
+  const displayItems = isEditing ? seedItemsRef.current : resolvedItems;
   return (
     <div className="mb-8 pdf-section">
-      {/* Section header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: meta.accent, height: '28px' }} />
         <span className="text-lg leading-none">{meta.icon}</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: meta.accent }}>{title}</h2>
       </div>
-      {/* Items */}
       <div
         data-docx-section={sectionKey}
         className="rounded-xl border overflow-hidden"
@@ -1382,7 +1591,7 @@ export function ListBlock({ title, items }: { title: string; items: string[] }) 
             >
               {i + 1}
             </span>
-            <span data-docx-list-text className="leading-relaxed">{item}</span>
+            <EditableListItemText text={item} isEditing={isEditing} />
           </div>
         ))}
       </div>
@@ -1392,11 +1601,11 @@ export function ListBlock({ title, items }: { title: string; items: string[] }) 
 
 export function AccountDetailsBlock() {
   const rows = [
-    { label: 'Name',           value: 'Rayenna Energy Private Limited' },
-    { label: 'Type',           value: 'Current Account'                },
-    { label: 'Bank',           value: 'Axis Bank Limited'              },
-    { label: 'Account Number', value: '924020063493172'                },
-    { label: 'IFSC Code',      value: 'UTIB0000827'                    },
+    { label: 'Name',           value: 'Rayenna Energy Private Limited', key: 'account-name' },
+    { label: 'Type',           value: 'Current Account',                key: 'account-type' },
+    { label: 'Bank',           value: 'Axis Bank Limited',              key: 'account-bank' },
+    { label: 'Account Number', value: '924020063493172',                key: 'account-number' },
+    { label: 'IFSC Code',      value: 'UTIB0000827',                    key: 'account-ifsc' },
   ];
   return (
     <div className="mb-8 pdf-section">
@@ -1406,14 +1615,21 @@ export function AccountDetailsBlock() {
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0d1b3a' }}>Account Details</h2>
       </div>
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#c7d2fe', background: '#f0f4ff' }}>
-        {rows.map(({ label, value }, i) => (
+        {rows.map(({ label, value, key }, i) => (
           <div
-            key={i}
+            key={key}
             className="flex items-start gap-3 px-4 py-2.5 text-sm border-b last:border-b-0"
             style={{ borderColor: '#c7d2fe60', background: i % 2 === 0 ? '#e0e7ff40' : 'white' }}
           >
             <span className="w-28 sm:w-36 flex-shrink-0 text-secondary-500 font-medium text-xs uppercase tracking-wide pt-0.5">{label}</span>
-            <span className="font-bold tabular-nums min-w-0 break-all" style={{ color: '#0d1b3a' }}>{value}</span>
+            <EditableText
+              sectionKey={key}
+              as="span"
+              className="font-bold tabular-nums min-w-0 break-all"
+              style={{ color: '#0d1b3a' }}
+            >
+              {value}
+            </EditableText>
           </div>
         ))}
       </div>

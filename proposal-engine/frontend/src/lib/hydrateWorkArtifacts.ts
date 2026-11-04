@@ -10,6 +10,8 @@ import {
   fetchProjectProposalArtifact,
   fetchProjectRoiResult,
   mapApiArtifactsToRecord,
+  mergeProposalArtifactPreservingDocumentFields,
+  mergeProposalArtifactPreferringServerDocument,
 } from './api/projectDetail';
 
 function withStatus(record: CustomerRecord): CustomerRecord {
@@ -67,19 +69,56 @@ export async function hydrateRoiIfNeeded(record: CustomerRecord): Promise<Custom
   return persist({ ...record, roi });
 }
 
-export async function hydrateProposalIfNeeded(record: CustomerRecord): Promise<CustomerRecord> {
+/** True when local proposal is a light stub (meta only) and needs GET /proposal. */
+export function proposalNeedsFullHydrate(record: CustomerRecord): boolean {
+  const p = record.proposal;
+  if (!p?.refNumber?.trim()) return false;
+  if (p.proposalView || p.editedHtml) return false;
+  if (p.textOverrides && Object.keys(p.textOverrides).length > 0) return false;
+  if ((p.customSectionsBeforeBoq?.length ?? 0) > 0) return false;
+  if (p.bomComments && Object.keys(p.bomComments).length > 0) return false;
+  return true;
+}
+
+/**
+ * Pull the full proposal artifact from the server.
+ * @param force When true (Proposal page open), always GET /proposal so Dashboard
+ *   light reloads cannot leave us on a stub that skipped hydrate because proposalView existed.
+ * @param skipPersistIf When true after the GET returns (e.g. user Saved mid-flight),
+ *   do not write the response into the store — return the latest local record instead.
+ */
+export async function hydrateProposalIfNeeded(
+  record: CustomerRecord,
+  options?: { force?: boolean; skipPersistIf?: () => boolean },
+): Promise<CustomerRecord> {
   const projectId = record.master.crmProjectId?.trim();
   if (!projectId) return record;
-  if (record.proposal?.proposalView || record.proposal?.editedHtml) return record;
+  if (!options?.force && !proposalNeedsFullHydrate(record)) return record;
   const row = await fetchProjectProposalArtifact(projectId);
   if (!row) return record;
-  const proposal = mapApiArtifactsToRecord({
+  // Save may have completed while we awaited — never clobber that with this GET.
+  if (options?.skipPersistIf?.()) {
+    return getCustomer(record.id) ?? record;
+  }
+  const fromServer = mapApiArtifactsToRecord({
     costing: null,
     bom: null,
     roi: null,
     proposal: row,
   }).proposal;
-  return persist({ ...record, proposal });
+  if (!fromServer) return record;
+  // Re-read after await: local Edit→Save may have upserted a newer proposal blob.
+  const latest = getCustomer(record.id) ?? record;
+  if (options?.skipPersistIf?.()) {
+    return latest;
+  }
+  // Force open (Proposal page): server document is authoritative (cross-device).
+  // Save-in-flight races are handled by skipPersistIf above — do not local-win here
+  // or a stale localStorage blob will hide a successful PUT forever.
+  const proposal = options?.force
+    ? mergeProposalArtifactPreferringServerDocument(latest.proposal, fromServer)
+    : mergeProposalArtifactPreservingDocumentFields(latest.proposal, fromServer);
+  return persist({ ...latest, proposal });
 }
 
 /**

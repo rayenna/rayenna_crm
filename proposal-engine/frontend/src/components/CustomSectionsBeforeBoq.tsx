@@ -4,6 +4,8 @@ import {
   useState,
   useEffect,
   useCallback,
+  forwardRef,
+  useImperativeHandle,
   type ClipboardEvent,
   type ChangeEvent,
   type MouseEvent as ReactMouseEvent,
@@ -1352,10 +1354,13 @@ function CustomBodyEditor({
   html,
   readOnly,
   onCommit,
+  sectionId,
 }: {
   html: string;
   readOnly: boolean;
   onCommit: (next: string) => void;
+  /** Used by parent Save flush to read live DOM before blur. */
+  sectionId: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -1916,6 +1921,7 @@ function CustomBodyEditor({
 
       <div
         ref={ref}
+        data-pe-custom-body={sectionId}
         className="min-h-[140px] bg-white px-3 py-2.5 text-sm text-secondary-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:border [&_img]:border-secondary-200 [&_img.pe-img-wrap-l]:float-left [&_img.pe-img-wrap-r]:float-right [&_img.pe-img-wrap-l]:mr-3 [&_img.pe-img-wrap-r]:ml-3 [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
         contentEditable
         suppressContentEditableWarning
@@ -1993,8 +1999,42 @@ type Props = {
   readOnly: boolean;
 };
 
-export function CustomSectionsBeforeBoq({ sections, onChange, readOnly }: Props) {
+/** Imperative flush so Proposal Save can commit unblurred custom-section editors. */
+export type CustomSectionsBeforeBoqHandle = {
+  flush: () => ProposalCustomSectionBeforeBoq[];
+};
+
+export const CustomSectionsBeforeBoq = forwardRef<CustomSectionsBeforeBoqHandle, Props>(
+  function CustomSectionsBeforeBoq({ sections, onChange, readOnly }, ref) {
   const [mediaPanelOpen, setMediaPanelOpen] = useState<Record<string, boolean>>({});
+  const sectionsRef = useRef(sections);
+  const onChangeRef = useRef(onChange);
+  sectionsRef.current = sections;
+  onChangeRef.current = onChange;
+
+  useImperativeHandle(ref, () => ({
+    flush: () => {
+      // Commit every custom section from live DOM (title inputs + body editors)
+      // so Save/export capture work that has not blurred yet.
+      const next = sectionsRef.current.map((s) => {
+        const titleEl = document.querySelector(
+          `[data-pe-custom-title="${CSS.escape(s.id)}"]`,
+        ) as HTMLInputElement | null;
+        const bodyEl = document.querySelector(
+          `[data-pe-custom-body="${CSS.escape(s.id)}"]`,
+        ) as HTMLElement | null;
+        return {
+          ...s,
+          title: titleEl ? titleEl.value : s.title,
+          bodyHtml: bodyEl
+            ? sanitizeProposalCustomBodyHtml(bodyEl.innerHTML)
+            : s.bodyHtml,
+        };
+      });
+      onChangeRef.current(next);
+      return next;
+    },
+  }));
 
   const updateAt = (index: number, patch: Partial<ProposalCustomSectionBeforeBoq>) => {
     const next = sections.map((s, i) => (i === index ? { ...s, ...patch } : s));
@@ -2072,6 +2112,7 @@ export function CustomSectionsBeforeBoq({ sections, onChange, readOnly }: Props)
                   ) : (
                     <input
                       type="text"
+                      data-pe-custom-title={s.id}
                       value={s.title}
                       onChange={(e) => updateAt(index, { title: e.target.value })}
                       className="w-full text-base font-extrabold uppercase tracking-widest bg-transparent border-b-2 border-secondary-200 pb-1 outline-none focus:border-primary-500 placeholder:text-secondary-400 placeholder:font-semibold"
@@ -2111,6 +2152,7 @@ export function CustomSectionsBeforeBoq({ sections, onChange, readOnly }: Props)
             </div>
 
             <CustomBodyEditor
+              sectionId={s.id}
               html={s.bodyHtml}
               readOnly={readOnly}
               onCommit={(bodyHtml) => updateAt(index, { bodyHtml })}
@@ -2216,4 +2258,4 @@ export function CustomSectionsBeforeBoq({ sections, onChange, readOnly }: Props)
       )}
     </div>
   );
-}
+});

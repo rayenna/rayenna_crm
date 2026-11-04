@@ -61,6 +61,8 @@ function Action({
   disabled,
   busy,
   variant = 'cancel',
+  /** Keep focus in contentEditable so click does not blur/wipe before Save reads the DOM. */
+  preserveEditorFocus,
 }: {
   label: string;
   title?: string;
@@ -68,6 +70,7 @@ function Action({
   disabled?: boolean;
   busy?: boolean;
   variant?: ActionVariant;
+  preserveEditorFocus?: boolean;
 }) {
   const cls =
     variant === 'edit'
@@ -105,7 +108,14 @@ function Action({
     variant === 'export-docx' ||
     variant === 'export-ppt';
   return (
-    <button type="button" onClick={onClick} disabled={disabled} title={title} className={cls}>
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseDown={preserveEditorFocus ? (e) => e.preventDefault() : undefined}
+      disabled={disabled}
+      title={title}
+      className={cls}
+    >
       {busy ? <Spinner light={spinnerLight} /> : null}
       {label}
     </button>
@@ -210,6 +220,7 @@ export function ProposalToolbar({
             disabled={locked}
             busy={saveStatus === 'saving'}
             variant={saveVariant}
+            preserveEditorFocus
           />
           <Action
             label="Save & Close"
@@ -217,6 +228,7 @@ export function ProposalToolbar({
             onClick={onSaveAndClose}
             disabled={locked}
             variant="navy"
+            preserveEditorFocus
           />
         </div>
       )}

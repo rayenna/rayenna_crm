@@ -24,6 +24,15 @@ export function extractTextOverrides(root: HTMLElement): Record<string, string> 
   return overrides;
 }
 
+/** Parse overrides from an HTML snapshot string (safe after React remounts wipe live DOM). */
+export function extractTextOverridesFromHtml(html: string): Record<string, string> {
+  if (!html.trim()) return {};
+  const doc = new DOMParser().parseFromString(`<div id="pe-root">${html}</div>`, 'text/html');
+  const root = doc.getElementById('pe-root');
+  if (!root) return {};
+  return extractTextOverrides(root);
+}
+
 export function mergeProposalEditableInnerHtml(top: HTMLElement | null, bottom: HTMLElement | null): string {
   return `${top?.innerHTML ?? ''}${bottom?.innerHTML ?? ''}`;
 }
@@ -35,5 +44,17 @@ export function extractMergedProposalTextOverrides(
   return {
     ...(top ? extractTextOverrides(top) : {}),
     ...(bottom ? extractTextOverrides(bottom) : {}),
+  };
+}
+
+/** Snapshot live editable roots before any setState — React remounts can wipe contentEditable. */
+export function snapshotProposalEditableDom(
+  top: HTMLElement | null,
+  bottom: HTMLElement | null,
+): { html: string; textOverrides: Record<string, string> } {
+  const html = mergeProposalEditableInnerHtml(top, bottom);
+  return {
+    html,
+    textOverrides: extractTextOverridesFromHtml(html),
   };
 }
