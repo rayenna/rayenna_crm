@@ -10,6 +10,7 @@ import {
   type CommissioningBucketId,
   type PipelineAgeBucketId,
 } from './zenithInsightCharts'
+import { capacityBandForKw } from './zenithRoofCapacityChartData'
 
 /**
  * Normalize en/em dashes and collapse whitespace so donut/chart labels match explorer `customer_segment` (customer type label)
@@ -101,6 +102,12 @@ export function buildFilterLabel(
       ? `FY ${opts.lifecycleMetricFy} · Inverter — ${value}`
       : `Inverter — ${value}`
   }
+  if (dimension === 'roof_type') {
+    return `Roof — ${value}`
+  }
+  if (dimension === 'capacity_band') {
+    return `Capacity — ${value}`
+  }
   if (dimension === 'pipeline_age') {
     return buildPipelineAgeFilterLabel(value as PipelineAgeBucketId)
   }
@@ -121,6 +128,8 @@ export function buildFilterLabel(
     payment_status: '',
     panel_brand: `Panel — ${value}`,
     inverter_brand: `Inverter — ${value}`,
+    roof_type: `Roof — ${value}`,
+    capacity_band: `Capacity — ${value}`,
     pipeline_age: buildPipelineAgeFilterLabel(value as PipelineAgeBucketId),
     commissioning_timeline: buildCommissioningFilterLabel(value as CommissioningBucketId),
     outstanding_sales: buildOutstandingSalesFilterLabel(value),
@@ -205,6 +214,10 @@ export function filterProjectsByChartSlice(
         return (p.inverter_brand || '') === value
       })
     }
+    case 'roof_type':
+      return all.filter((p) => (p.roof_type?.trim() || '') === value)
+    case 'capacity_band':
+      return all.filter((p) => capacityBandForKw(p.system_capacity_kw) === value)
     case 'pipeline_age':
       return filterPipelineAgeBucket(all, value as PipelineAgeBucketId)
     case 'commissioning_timeline':

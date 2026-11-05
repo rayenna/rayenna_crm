@@ -22,7 +22,12 @@ export function chartResetGroupForDrill(
         ? ZENITH_CHART_GROUP.FIN_EXPLORE
         : ZENITH_CHART_GROUP.OPS_EXPLORE
   }
-  if (dimension === 'panel_brand' || dimension === 'inverter_brand') {
+  if (
+    dimension === 'panel_brand' ||
+    dimension === 'inverter_brand' ||
+    dimension === 'roof_type' ||
+    dimension === 'capacity_band'
+  ) {
     return scope === 'exec' ? ZENITH_CHART_GROUP.EXEC_LIFECYCLE : ZENITH_CHART_GROUP.OPS_EXPLORE
   }
   return scope === 'exec'

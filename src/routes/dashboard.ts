@@ -385,6 +385,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       type: true,
       year: true,
       systemCapacity: true,
+      roofType: true,
       panelBrand: true,
       inverterBrand: true,
       paymentStatus: true,
@@ -448,6 +449,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     payment_status: p.paymentStatus ?? 'PENDING',
     panel_brand: p.panelBrand?.trim() ? p.panelBrand.trim() : null,
     inverter_brand: p.inverterBrand?.trim() ? p.inverterBrand.trim() : null,
+    roof_type: p.roofType?.trim() ? p.roofType.trim() : null,
     system_capacity_kw:
       p.systemCapacity != null && Number(p.systemCapacity) > 0 ? Number(p.systemCapacity) : null,
   }));

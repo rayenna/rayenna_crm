@@ -34,6 +34,7 @@ import ZenithInsightChartsRow from './ZenithInsightChartsRow'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
+import { getLeadSourceColor } from '../dashboard/leadSourceColors'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
@@ -471,7 +472,6 @@ export default function ZenithFinanceBody({
                       />
                       <Bar
                         dataKey="revenue"
-                        fill={chartColors.gold}
                         radius={[0, 4, 4, 0]}
                         cursor="pointer"
                         onClick={(_row: unknown, index: number) => {
@@ -479,10 +479,10 @@ export default function ZenithFinanceBody({
                           if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'revenue' })
                         }}
                       >
-                        {leadChart.map((_, i) => (
+                        {leadChart.map((row, i) => (
                           <Cell
                             key={`ls-${i}`}
-                            fill={chartColors.gold}
+                            fill={getLeadSourceColor(row.name, i)}
                             style={{ transition: 'filter 0.15s' }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.filter = 'brightness(1.3)'

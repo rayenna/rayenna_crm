@@ -45,6 +45,8 @@ export type ZenithExplorerProject = {
   panel_brand?: string | null
   /** Project Lifecycle — inverter brand when entered. */
   inverter_brand?: string | null
+  /** Sales & Commercial roof type when entered (Zenith roof-type chart). */
+  roof_type?: string | null
   /** Installed system size (kW), whole number when set. */
   system_capacity_kw?: number | null
 }
@@ -60,6 +62,8 @@ export type ZenithChartDrilldownDimension =
   | 'payment_status'
   | 'panel_brand'
   | 'inverter_brand'
+  | 'roof_type'
+  | 'capacity_band'
   | 'pipeline_age'
   | 'commissioning_timeline'
   | 'outstanding_sales'

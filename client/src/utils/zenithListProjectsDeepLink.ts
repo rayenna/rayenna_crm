@@ -6,6 +6,7 @@ import type { DrilldownOpts } from './zenithChartDrilldown'
 import { buildProjectsUrl } from './dashboardTileLinks'
 import { getPeriodRange, type LeaderboardPeriod } from './leaderboardUtils'
 import type { ForecastBand, ForecastBreakdownDimension } from './revenueForecast'
+import { capacityBandRange } from './zenithRoofCapacityChartData'
 
 const FORECAST_OPEN_STATUS_STRINGS: string[] = [
   ProjectStatus.LEAD,
@@ -208,6 +209,19 @@ export function buildZenithDrawerListProjectsHref(
       return buildProjectsUrl(
         { inverterBrand: value, lifecycleSpecsComplete: true },
         fy,
+      )
+    }
+    case 'roof_type':
+      return buildProjectsUrl({ roofType: value }, dateFilter)
+    case 'capacity_band': {
+      const band = capacityBandRange(value)
+      if (!band) return null
+      return buildProjectsUrl(
+        {
+          capacityMin: band.min,
+          ...(band.max != null ? { capacityMax: band.max } : {}),
+        },
+        dateFilter,
       )
     }
     default:

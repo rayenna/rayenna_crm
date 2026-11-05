@@ -85,7 +85,12 @@ import {
 } from '../../utils/zenithListProjectsDeepLink'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
+import {
+  buildZenithCapacityBandBarRows,
+  buildZenithRoofTypeBarRows,
+} from '../../utils/zenithRoofCapacityChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
+import ZenithRoofCapacityBarCharts from './ZenithRoofCapacityBarCharts'
 import ZenithInsightChartsRow from './ZenithInsightChartsRow'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
@@ -510,6 +515,14 @@ export default function ZenithExecutiveBody({
     () => buildZenithLifecycleBrandBarRows(explorerProjects, 'inverter'),
     [explorerProjects],
   )
+  const roofTypeBarRows = useMemo(
+    () => buildZenithRoofTypeBarRows(explorerProjects),
+    [explorerProjects],
+  )
+  const capacityBandBarRows = useMemo(
+    () => buildZenithCapacityBandBarRows(explorerProjects),
+    [explorerProjects],
+  )
 
   /** Matches Projects by inverter brand plot height; bottom lifecycle pair uses its own paired height. */
   const exploreChartHeight = useMemo(
@@ -523,6 +536,14 @@ export default function ZenithExecutiveBody({
   )
   const onInverterBrandBarClick = useCallback(
     (brandLabel: string) => drill('inverter_brand', brandLabel),
+    [drill],
+  )
+  const onRoofTypeBarClick = useCallback(
+    (label: string) => drill('roof_type', label),
+    [drill],
+  )
+  const onCapacityBandBarClick = useCallback(
+    (label: string) => drill('capacity_band', label),
     [drill],
   )
 
@@ -1020,7 +1041,7 @@ export default function ZenithExecutiveBody({
         </div>
 
         {showZenithLifecycleBrandChartRole(role) ? (
-          <div id="zenith-charts-row-lifecycle" className="scroll-mt-24 mt-3 lg:mt-4 w-full min-w-0">
+          <div id="zenith-charts-row-lifecycle" className="scroll-mt-24 mt-3 lg:mt-4 w-full min-w-0 space-y-3 sm:space-y-4">
             <ZenithLifecycleBrandBarCharts
               panelRows={panelBrandBarRows}
               inverterRows={inverterBrandBarRows}
@@ -1028,6 +1049,14 @@ export default function ZenithExecutiveBody({
               chartGroup={ZENITH_CHART_GROUP.EXEC_LIFECYCLE}
               onPanelBrandClick={onPanelBrandBarClick}
               onInverterBrandClick={onInverterBrandBarClick}
+            />
+            <ZenithRoofCapacityBarCharts
+              roofRows={roofTypeBarRows}
+              capacityRows={capacityBandBarRows}
+              chartHeight={ZENITH_CHART_HEIGHT_FLOOR}
+              chartGroup={ZENITH_CHART_GROUP.EXEC_LIFECYCLE}
+              onRoofTypeClick={onRoofTypeBarClick}
+              onCapacityBandClick={onCapacityBandBarClick}
             />
           </div>
         ) : null}
