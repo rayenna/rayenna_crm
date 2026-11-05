@@ -8,6 +8,7 @@ import {
   parseRoofLayoutGeometry,
   type ParsedRoofLayoutGeometry,
 } from '../types/roofLayoutGeometry';
+import { buildSeedRoofLayoutGeometry } from '../utils/seedRoofLayoutGeometry';
 import { getKeralaMapGpsWarning } from '../utils/mapGpsValidation';
 import prisma from '../prisma';
 import { Prisma, UserRole } from '@prisma/client';
@@ -186,6 +187,17 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       });
     }
 
+    // Persist seed outline immediately so another device can hydrate an editable
+    // polygon even if the generating browser never clicks Save. Full panel packing
+    // + proposal JPEG still come from the client auto-save / Save to Proposal path.
+    const seedGeometry = buildSeedRoofLayoutGeometry({
+      roofPolygon: result.roofPolygonCoords,
+    });
+    const geometryJson = seedGeometry
+      ? (seedGeometry as object)
+      : Prisma.DbNull;
+
+    const generatedAt = new Date();
     await prisma.projectRoofLayout.upsert({
       where: { projectId },
       create: {
@@ -198,6 +210,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         source: 'AI',
         layoutImage3dUrl: null,
         prefer3dForProposal: false,
+        savedAt: generatedAt,
+        ...(seedGeometry ? { geometryJson: seedGeometry as object } : {}),
       },
       update: {
         roofAreaM2: result.roofAreaM2,
@@ -208,7 +222,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         source: 'AI',
         layoutImage3dUrl: null,
         prefer3dForProposal: false,
-        geometryJson: Prisma.DbNull,
+        geometryJson,
+        savedAt: generatedAt,
       },
     });
 
@@ -221,6 +236,7 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       resolved_latitude: Number(latitude),
       resolved_longitude: Number(longitude),
       roof_polygon_coordinates: result.roofPolygonCoords,
+      ...(seedGeometry ? { geometry: seedGeometry } : {}),
     });
   } catch (err) {
     console.error('Failed to generate AI roof layout:', err);
@@ -311,6 +327,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
       'utf8',
     );
 
+    const savedAt = new Date();
     await prisma.projectRoofLayout.upsert({
       where: { projectId },
       create: {
@@ -322,6 +339,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         satelliteImageUrl,
         source: 'MANUAL',
         prefer3dForProposal: false,
+        savedAt,
         ...(geometryJson != null ? { geometryJson } : {}),
       },
       update: {
@@ -332,12 +350,14 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         ...(satelliteImageUrl != null ? { satelliteImageUrl } : {}),
         source: 'MANUAL',
         prefer3dForProposal: false,
+        savedAt,
         ...(geometryJson != null ? { geometryJson } : {}),
       },
     });
 
     return res.json({
       layout_image_url: clientLayoutUrl(layoutImageUrl) || layoutImageUrl,
+      savedAt: savedAt.toISOString(),
       ...(satelliteImageUrl
         ? { satellite_image_url: clientLayoutUrl(satelliteImageUrl) || satelliteImageUrl }
         : {}),
@@ -406,10 +426,12 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
 
     const prefer = set_prefer_for_proposal === true;
 
+    const savedAt = new Date();
     await prisma.projectRoofLayout.update({
       where: { projectId },
       data: {
         layoutImage3dUrl: layout3dUrl,
+        savedAt,
         ...(prefer ? { prefer3dForProposal: true } : {}),
         ...(Number.isFinite(Number(roof_area_m2)) ||
         Number.isFinite(Number(usable_area_m2)) ||
@@ -426,6 +448,7 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
     return res.json({
       layout_image_3d_url: clientLayoutUrl(layout3dUrl) || layout3dUrl,
       prefer_3d_for_proposal: prefer ? true : existing.prefer3dForProposal,
+      savedAt: savedAt.toISOString(),
     });
   } catch (err) {
     console.error('Failed to save 3D roof layout image:', err);
