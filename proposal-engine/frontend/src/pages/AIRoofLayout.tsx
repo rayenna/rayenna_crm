@@ -43,6 +43,7 @@ import {
   exportSitePlanPdfFromLayout,
 } from '../lib/roofLayout/roofLayoutSaveExport';
 import { saveRoofLayoutViaPipeline } from '../lib/projectSaveRoofLayout';
+import { shouldAutoPersistGeneratedLayout } from '../lib/roofLayout/shouldAutoPersistGeneratedLayout';
 import { fingerprintRoofLayoutEditorState } from '../lib/roofLayout/roofLayoutGeometryFingerprint';
 import type { RoofLayoutKeepout, RoofLayoutPoint } from '../lib/roofLayout/roofLayoutTypes';
 import {
@@ -181,6 +182,9 @@ export default function AIRoofLayout() {
   const satelliteEditorUrlRef = useRef<string | null>(null);
   /** Bumped on Regenerate so in-flight hydrate cannot overwrite the new draft with saved geometry. */
   const layoutHydrateGenerationRef = useRef(0);
+  /** After Generate/Re-Generate, auto-persist once the seeded polygon + panels are ready. */
+  const pendingAutoPersistAfterGenerateRef = useRef(false);
+  const autoPersistInFlightRef = useRef(false);
 
   // Konva shapes are rendered inside a container that's scaled via CSS `transform: scale(${zoom})`.
   // To keep the polygon outline and draggable points visible on mobile (especially when zoomed out),
@@ -690,6 +694,7 @@ export default function AIRoofLayout() {
     setDeleting(true);
     setError(null);
     layoutHydrateGenerationRef.current += 1;
+    pendingAutoPersistAfterGenerateRef.current = false;
 
     const crmProjectId = String(activeProject.master.crmProjectId);
 
@@ -764,12 +769,139 @@ export default function AIRoofLayout() {
       setProposalImageSource('2d');
       setBgImageUrl(outcome.bgImageUrl);
       satelliteEditorUrlRef.current = outcome.satelliteEditorBaseUrl;
+      // Keep list/dashboard badges current immediately; full geometry/JPEG follows via auto-persist.
+      persistRoofLayoutToActiveCustomer({
+        roof_area_m2: outcome.result.roof_area_m2,
+        usable_area_m2: outcome.result.usable_area_m2,
+        panel_count: outcome.result.panel_count,
+        layout_image_url: outcome.result.layout_image_url,
+        prefer_3d_for_proposal: false,
+      });
+      pendingAutoPersistAfterGenerateRef.current = true;
     } finally {
       setLoading(false);
     }
   };
 
   const switchTo2dForCapture = () => flushSync(() => setRoofViewTab('2d'));
+
+  // Generate already writes metrics + seed geometry + images to Neon/Cloudinary.
+  // Once Konva has packed panels, auto-Save so editable geometry + proposal JPEG
+  // survive across devices without requiring a manual click.
+  useEffect(() => {
+    if (
+      !shouldAutoPersistGeneratedLayout({
+        pending: pendingAutoPersistAfterGenerateRef.current,
+        loading,
+        saving: savingToProposal || autoPersistInFlightRef.current,
+        layoutMode,
+        hasImageSize: !!imageSize,
+        polygonReady: isPolygonSummaryReady && !!polygon && polygon.length >= 3,
+        panelCount: allPanelsFlat.length,
+      })
+    ) {
+      return;
+    }
+    if (!activeProject?.id || !activeProject?.master?.crmProjectId || !result) return;
+
+    let cancelled = false;
+    const crmProjectId = String(activeProject.master.crmProjectId);
+    const recordId = activeProject.id;
+
+    const run = async () => {
+      pendingAutoPersistAfterGenerateRef.current = false;
+      autoPersistInFlightRef.current = true;
+      setSavingToProposal(true);
+      setError(null);
+      try {
+        const saved = await saveRoofLayoutViaPipeline(recordId, {
+          crmProjectId,
+          layoutMode: 'editing',
+          captureRefs,
+          stageRef,
+          solar3dRef,
+          result,
+          facets,
+          activePolygon: polygon,
+          allPanelsFlat,
+          imageSize: imageSize!,
+          keepouts,
+          panelOrientation,
+          panelSpacingMultiplier,
+          effectiveWattage,
+          resolvedModule,
+          edgeSetbackM,
+          metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
+          roofViewTab: '2d',
+          proposalImageSource: '2d',
+          last3dPngDataUrl: null,
+          switchTo2dForCapture: roofViewTab === '3d' ? switchTo2dForCapture : undefined,
+        });
+        if (cancelled) return;
+        if (!saved.ok) {
+          // Seed geometry from Generate remains on the server; surface soft warning.
+          setError(
+            saved.error ||
+              'Layout generated, but auto-save of editable panels failed. Click Save to Proposal.',
+          );
+          pendingAutoPersistAfterGenerateRef.current = true;
+          return;
+        }
+        setResult((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            source: 'MANUAL' as const,
+            layout_image_url: saved.layout_image_url,
+            prefer_3d_for_proposal: saved.prefer_3d_for_proposal,
+          };
+        });
+        setLastSavedProjectId(crmProjectId);
+        setLoadedSavedAt(new Date().toISOString());
+        const savedFingerprint = fingerprintRoofLayoutEditorState({
+          facets,
+          keepouts,
+          panelOrientation,
+          panelSpacingMultiplier,
+          panelWatts: effectiveWattage,
+          imageSize: imageSize!,
+          metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
+          edgeSetbackM,
+          resolvedModule,
+        });
+        if (savedFingerprint) setSavedLayoutFingerprint(savedFingerprint);
+        const sat = satelliteEditorUrlRef.current;
+        if (sat) setBgImageUrl(sat);
+      } catch (e) {
+        if (!cancelled) {
+          setError('Layout generated, but auto-save failed. Click Save to Proposal.');
+          pendingAutoPersistAfterGenerateRef.current = true;
+          if (import.meta.env.DEV) console.error('Auto-persist after generate failed:', e);
+        }
+      } finally {
+        autoPersistInFlightRef.current = false;
+        setSavingToProposal(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally keyed to readiness signals after Generate, not every facet drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-persist once after generate
+  }, [
+    loading,
+    savingToProposal,
+    layoutMode,
+    imageSize,
+    isPolygonSummaryReady,
+    polygon,
+    allPanelsFlat.length,
+    activeProject?.id,
+    activeProject?.master?.crmProjectId,
+    result?.layout_image_url,
+  ]);
 
   const handleSaveForProposal = async () => {
     if (!activeProject?.id || !activeProject?.master?.crmProjectId) {
