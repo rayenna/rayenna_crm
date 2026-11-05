@@ -192,9 +192,28 @@ model User {
   peRemovedProjects PERemovedProject[] @relation("PERemovedProjectRemovedBy")
   peSelectedProjects PESelectedProject[] @relation("PESelectedProjectSelectedBy")
   peCostingTemplates PECostingTemplate[] @relation("PECostingTemplateCreatedBy")
+  chartBuilderChartsCreated ChartBuilderChart[] @relation("ChartBuilderCreatedBy")
+  chartBuilderChartsUpdated ChartBuilderChart[] @relation("ChartBuilderUpdatedBy")
 
   @@index([resetToken])
   @@map("users")
+}
+
+// Shared Chart Builder library (Admin / Management).
+model ChartBuilderChart {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  spec        Json
+  createdById String
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation("ChartBuilderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?    @relation("ChartBuilderUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedAt])
+  @@map("chart_builder_charts")
 }
 
 model Lead {

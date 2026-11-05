@@ -46,6 +46,7 @@ const DeliveryControl = lazy(() => import('./pages/DeliveryControl'))
 const CollectionsCash = lazy(() => import('./pages/CollectionsCash'))
 const FunnelVelocity = lazy(() => import('./pages/FunnelVelocity'))
 const MarginMix = lazy(() => import('./pages/MarginMix'))
+const ChartBuilder = lazy(() => import('./pages/ChartBuilder'))
 
 function RedirectWithSearch({ to }: { to: string }) {
   const { search } = useLocation()
@@ -320,6 +321,16 @@ function App() {
                 <PrivateRoute roles={ROUTE_ROLES.marginMix}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><MarginMix /></Suspense>
+                </ErrorBoundary>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="reports/chart-builder"
+              element={
+                <PrivateRoute roles={ROUTE_ROLES.chartBuilder}>
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><ChartBuilder /></Suspense>
                 </ErrorBoundary>
                 </PrivateRoute>
               }

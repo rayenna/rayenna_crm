@@ -320,6 +320,7 @@ const server = app.listen(PORT, async () => {
     const supportTicketsRoutes = (await import('./routes/supportTickets')).default;
     const salesTeamPerformanceRoutes = (await import('./routes/salesTeamPerformance')).default;
     const reportsRoutes = (await import('./routes/reports')).default;
+    const chartBuilderRoutes = (await import('./routes/chartBuilder')).default;
     const remarksRoutes = (await import('./routes/remarks')).default;
     const adminAuditRoutes = (await import('./routes/adminAudit')).default;
     const solarHubAdminRoutes = (await import('./routes/solarHubAdmin')).default;
@@ -357,6 +358,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/support-tickets', supportTicketsRoutes);
     apiRouter.use('/sales-team-performance', salesTeamPerformanceRoutes);
     apiRouter.use('/reports', reportsRoutes);
+    apiRouter.use('/reports/chart-builder', chartBuilderRoutes);
     apiRouter.use('/remarks', remarksRoutes);
     apiRouter.use('/admin/audit', adminAuditRoutes);
     apiRouter.use('/admin/solar-hub', solarHubAdminRoutes);

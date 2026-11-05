@@ -1,6 +1,6 @@
 # Reports
 
-**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, and **Lost Deals**.
+**Reports** (`/reports`) is a growing library of weekly-call and review packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, **Lost Deals**, and **Chart Builder**.
 
 | Report | Who | Use it for |
 | :-- | :-- | :-- |
@@ -10,6 +10,7 @@
 | **Collections & Cash** | Admin, Management, Finance, Sales (own book) | Confirmed orders only — staged collections, aging, loan-stuck, subsidy in flight |
 | **Margin & Mix** | Admin, Management, Finance | Won-book GP, missing cost, PE vs CRM, mix by seller / segment / system / kW |
 | **Lost Deals** | Admin, Management | Lost count / ₹, win rates, reason mix, All sellers filter, Export |
+| **Chart Builder** | Admin, Management | Design custom project charts and save them to a shared library |
 
 Open **Reports** from the top menu, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack). Press **?** on a pack to land on that pack’s section here.
 
@@ -222,3 +223,14 @@ On **laptop / full screen**, click a column heading to **filter** and **sort**. 
 Open **Reports → Lost Deals** (`/reports/lost-deals`). **Admin** and **Management** only — Sales, Operations, and Finance do not see this pack.
 
 **All sellers** at the top scopes KPIs, charts, list, win rate, and Export. **Export** is Excel / PDF / PowerPoint with the same confirmation as other packs — there is no Print. Full layout and calculation notes: [Lost Deals analytics](#lost-deals-analytics).
+
+## Chart Builder
+
+Open **Reports → Chart Builder** (`/reports/chart-builder`). **Admin** and **Management** only.
+
+1. Start from a **starter template** (revenue by lead source, pipeline by stage, brands, roof type, capacity bands, loans by bank, etc.) or pick fields yourself.
+2. Choose a **dimension** (category), **measure** (count / order value / gross profit / capacity), **cohort** (revenue / pipeline / all non-Lost), and a **compatible chart type** (horizontal bar, column, or donut).
+3. Optionally filter by **FY** and **quarter**.
+4. **Save** to the shared library — every Admin / Management user sees the same saved charts on any device. Open, update, duplicate, or delete from the library panel.
+
+There is no Excel/PDF export for custom charts in v1 — use the browser print or a screenshot for handouts.

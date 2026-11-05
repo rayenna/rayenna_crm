@@ -253,7 +253,7 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
   {
     id: 'go_reports',
     label: 'Go to Reports',
-    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'funnel velocity', 'margin mix', 'lost deals', 'weekly'],
+    keywords: ['reports', 'sales review', 'delivery control', 'collections', 'funnel velocity', 'margin mix', 'lost deals', 'chart builder', 'weekly'],
     group: 'Go to',
     roles: ROUTE_ROLES.reports,
     href: '/reports',
@@ -305,6 +305,14 @@ export const COMMAND_PALETTE_ITEMS: CommandPaletteItem[] = [
     group: 'Go to',
     roles: ROUTE_ROLES.lostDeals,
     href: '/reports/lost-deals',
+  },
+  {
+    id: 'go_chart_builder',
+    label: 'Go to Chart Builder',
+    keywords: ['chart builder', 'custom chart', 'reports chart', 'build chart'],
+    group: 'Go to',
+    roles: ROUTE_ROLES.chartBuilder,
+    href: '/reports/chart-builder',
   },
   {
     id: 'go_support_tickets',

@@ -48,6 +48,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Collections & Cash', hash: 'collections-cash' },
     { label: 'Margin & Mix', hash: 'margin-mix' },
     { label: 'Lost Deals', hash: 'lost-deals-analytics' },
+    { label: 'Chart Builder', hash: 'chart-builder' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
@@ -139,6 +140,7 @@ export function getHelpHashForRoute(currentPath: string): string | null {
   if (currentPath.startsWith('/reports/delivery-control')) return 'delivery-control'
   if (currentPath.startsWith('/reports/collections-cash')) return 'collections-cash'
   if (currentPath.startsWith('/reports/margin-mix')) return 'margin-mix'
+  if (currentPath.startsWith('/reports/chart-builder')) return 'chart-builder'
   if (currentPath.startsWith('/reports/')) return 'reports'
   if (currentPath === '/users' || currentPath.startsWith('/users/')) return 'users'
   if (currentPath === '/audit-security' || currentPath.startsWith('/audit-security/')) {
@@ -295,6 +297,7 @@ const routeToContextLabel: Record<string, string> = {
   '/reports/funnel-velocity': 'Funnel Velocity',
   '/reports/margin-mix': 'Margin & Mix',
   '/reports/lost-deals': 'Lost Deals',
+  '/reports/chart-builder': 'Chart Builder',
   '/solar-hub': 'Solar Hub',
   '/users': 'Users',
   '/change-password': 'Change Password',
