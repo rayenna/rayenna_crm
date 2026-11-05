@@ -36,6 +36,18 @@ export const PROPOSAL_PRINT_CSS = `
     }
 
     tr[data-bom-header="true"] { page-break-after: avoid; }
+    /*
+     * Bill of Quantities always starts on a fresh page for client PDFs.
+     * Only break-before here — do not add break-after on the prior section
+     * (double breaks create blank pages in Chromium). The BOQ table itself
+     * still uses break-inside:auto above so tall tables paginate without blanks.
+     */
+    [data-pdf-section="bom"] {
+      break-before: page !important;
+      page-break-before: always !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
     /* Keep “N categories” + Bill of Quantities title with the table header row */
     caption.bom-boq-caption { break-inside:avoid; page-break-inside:avoid; break-after:avoid; page-break-after:avoid; }
     thead { display: table-header-group; }

@@ -18,4 +18,17 @@ describe('PROPOSAL_PRINT_CSS', () => {
       /\.pdf-process-steps[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)/,
     );
   });
+
+  it('forces Bill of Quantities onto a new page without an after-break on the prior section', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="bom"\][\s\S]*page-break-before:\s*always\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="bom"\][\s\S]*break-before:\s*page\s*!important/,
+    );
+    // Guard against the Chromium blank-page pattern: break-before + break-after pair
+    expect(PROPOSAL_PRINT_CSS).not.toMatch(
+      /\[data-pdf-section="bom"\][\s\S]*page-break-after:\s*always/,
+    );
+  });
 });
