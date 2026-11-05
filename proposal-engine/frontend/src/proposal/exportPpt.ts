@@ -16,6 +16,7 @@ import {
   TERMS_AND_CONDITIONS,
   WARRANTY_TERMS,
 } from './proposalCopy';
+import { renderCumulativeSavingsChartPng } from './cumulativeSavingsChart';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
 import { proposalForHeading } from './systemTypeLabel';
 import type { ProposalData, TextOverrides } from './types';
@@ -683,30 +684,30 @@ export async function exportToPpt(
     const lcoe = ov(
       overrides,
       'financial-p1',
-      `Levelised Cost of Energy: ₹${r.lcoe.toFixed(4)}/kWh versus the current grid tariff of ₹${r.inputs.tariff}/kWh.`,
+      `Levelised Cost of Energy (LCOE): At ₹${r.lcoe.toFixed(4)}/kWh, this system generates electricity at a fraction of the current grid tariff of ₹${r.inputs.tariff}/kWh — locking in energy cost savings that grow every year as tariffs escalate.`,
     );
     s.addText(lcoe, {
       x: 0.5,
-      y: 4.5,
+      y: 4.45,
       w: 12.3,
-      h: 0.7,
+      h: 0.75,
       fontFace: FONT,
-      fontSize: 13,
+      fontSize: 12,
       color: SLATE,
     });
     s.addText(
       ov(
         overrides,
         'financial-p2',
-        `With ${r.inputs.escalationPercent}% assumed annual tariff escalation, savings compound over the 25-year life of the plant.`,
+        `Tariff escalation advantage: With an assumed annual tariff escalation of ${r.inputs.escalationPercent}%, your savings increase every year — making solar an inflation-proof investment that delivers compounding returns over its 25-year operational life.`,
       ),
       {
         x: 0.5,
-        y: 5.2,
+        y: 5.25,
         w: 12.3,
-        h: 0.7,
+        h: 0.75,
         fontFace: FONT,
-        fontSize: 13,
+        fontSize: 12,
         color: MUTED,
       },
     );
@@ -715,49 +716,69 @@ export async function exportToPpt(
     const pickYears = [1, 5, 10, 15, 20, 25];
     const picked = pickYears
       .map((yr) => rows.find((row) => row.year === yr))
-      .filter((row): row is NonNullable<typeof rows[number]> => !!row);
-    if (picked.length > 0) {
+      .filter((row): row is NonNullable<(typeof rows)[number]> => !!row);
+    if (picked.length > 0 || rows.length > 0) {
       const s2 = newSlide();
       addSectionTitle(s2, '25-Year Savings Snapshot', 'Projection');
-      s2.addTable(
-        [
-          [
-            { text: 'Year', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
-            { text: 'Generation', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
-            { text: 'Annual Savings', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
-            { text: 'Cumulative', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
-          ],
-          ...picked.map((row, i) => [
-            {
-              text: String(row.year),
-              options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: NAVY, bold: true },
-            },
-            {
-              text: `${Math.round(row.generation).toLocaleString('en-IN')} kWh`,
-              options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: SLATE },
-            },
-            {
-              text: fmtINR(row.savings),
-              options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: SLATE },
-            },
-            {
-              text: fmtINR(row.cumulativeSavings),
-              options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: NAVY, bold: true },
-            },
-          ]),
-        ],
-        {
+
+      const chartDataUrl = renderCumulativeSavingsChartPng({
+        rows,
+        projectCost: r.inputs.projectCost,
+        width: 1278,
+        height: 420,
+      });
+      const tableY = chartDataUrl ? 4.55 : 1.2;
+      if (chartDataUrl) {
+        s2.addImage({
+          data: chartDataUrl,
           x: 0.5,
-          y: 1.2,
+          y: 1.1,
           w: 12.3,
-          colW: [2.2, 3.4, 3.35, 3.35],
-          border: { pt: 0.4, color: 'E2E8F0' },
-          fontFace: FONT,
-          fontSize: 13,
-          align: 'left',
-          valign: 'middle',
-        },
-      );
+          h: 3.25,
+        });
+      }
+
+      if (picked.length > 0) {
+        s2.addTable(
+          [
+            [
+              { text: 'Year', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+              { text: 'Generation', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+              { text: 'Annual Savings', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+              { text: 'Cumulative', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+            ],
+            ...picked.map((row, i) => [
+              {
+                text: String(row.year),
+                options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: NAVY, bold: true },
+              },
+              {
+                text: `${Math.round(row.generation).toLocaleString('en-IN')} kWh`,
+                options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: SLATE },
+              },
+              {
+                text: fmtINR(row.savings),
+                options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: SLATE },
+              },
+              {
+                text: fmtINR(row.cumulativeSavings),
+                options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: NAVY, bold: true },
+              },
+            ]),
+          ],
+          {
+            x: 0.5,
+            y: tableY,
+            w: 12.3,
+            colW: [2.2, 3.4, 3.35, 3.35],
+            border: { pt: 0.4, color: 'E2E8F0' },
+            fontFace: FONT,
+            fontSize: 12,
+            align: 'left',
+            valign: 'middle',
+          },
+        );
+      }
     }
   }
 
