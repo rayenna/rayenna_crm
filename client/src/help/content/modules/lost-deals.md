@@ -1,6 +1,6 @@
 # Lost Deals analytics
 
-**Lost Deals** (`/reports/lost-deals`) is the sixth **Reports** pack for **Admin** and **Management**. It shows lost count and value, win rates, reason mix, competition subtypes, and a working list of lost projects — built for phones as well as desktops. Open it from **Reports**. The old `/lost-deals` path still redirects here.
+**Lost Deals** (`/reports/lost-deals`) is a **Reports** pack for **Admin** and **Management**. It shows lost count and value, win rates, reason mix, competition subtypes, and a working list of lost projects — built for phones as well as desktops. Open it from **Reports**, or **Ctrl+K** / **⌘K** → **Go to Lost Deals**. The old `/lost-deals` path still redirects here.
 
 ## At a glance
 

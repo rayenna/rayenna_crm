@@ -16,14 +16,14 @@ Open **Reports** from the top menu, or **Ctrl+K** / **⌘K** → **Go to Reports
 
 ## Using a pack
 
-Most packs share the same chrome. **Lost Deals** is the exception noted below.
+Most weekly packs share the same chrome. **Lost Deals** and **Chart Builder** are different (see their sections).
 
 - **How to read this report** starts **collapsed** on Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, and Margin & Mix. Lost Deals uses **How to read this list** on the lost-projects list.
 - **Seller / ops / FY / quarter** pickers and **table filters** on those five packs stay when you open a project and come back, until you click **Clear filters**. Logout clears them. Lost Deals **All sellers** and FY / Quarter / Month reload the pack; list search and chart chips do not persist across a reload.
 - **Sales Review** has **Open** / **Closed** quick views on the deal list (Lead–Proposal vs Confirmed / Under Installation).
-- **Print** hides chrome for a call handout on the five weekly packs — **Lost Deals has no Print**.
-- **Export** (Excel / PDF / PowerPoint) is on **every** pack, including Lost Deals. It follows the pack picker (seller / ops / period; Lost Deals also follows FY / Quarter / Month). On-screen list filters stay in the browser.
-- **Tap a row** to open the project. **Ctrl+K** / **⌘K** → **Go to Reports** or a named pack.
+- **Print** hides chrome for a call handout on the five weekly packs — **Lost Deals** and **Chart Builder** have no Print.
+- **Export** (Excel / PDF / PowerPoint) is on the weekly packs **and Lost Deals**. It follows the pack picker (seller / ops / period; Lost Deals also follows FY / Quarter / Month). On-screen list filters stay in the browser. **Chart Builder** has no pack Export in v1.
+- **Tap a row** to open the project (where the pack has a deal list). **Ctrl+K** / **⌘K** → **Go to Reports**, a named pack, or **Go to Chart Builder**.
 
 ## Sales Review
 
@@ -226,11 +226,13 @@ Open **Reports → Lost Deals** (`/reports/lost-deals`). **Admin** and **Managem
 
 ## Chart Builder
 
-Open **Reports → Chart Builder** (`/reports/chart-builder`). **Admin** and **Management** only.
+Open **Reports → Chart Builder** (`/reports/chart-builder`), or **Ctrl+K** / **⌘K** → **Go to Chart Builder**. **Admin** and **Management** only — Sales, Operations, and Finance do not see this card.
 
-1. Start from a **starter template** (revenue by lead source, pipeline by stage, brands, roof type, capacity bands, loans by bank, etc.) or pick fields yourself.
+1. Start from a **starter template** (revenue by lead source, pipeline by stage, brands, roof type, capacity bands, loans by bank, capacity by FY, etc.) or pick fields yourself.
 2. Choose a **dimension** (category), **measure** (count / order value / gross profit / capacity), **cohort** (revenue / pipeline / all non-Lost), and a **compatible chart type** (horizontal bar, column, or donut).
-3. Optionally filter by **FY** and **quarter**.
-4. **Save** to the shared library — every Admin / Management user sees the same saved charts on any device. Open, update, duplicate, or delete from the library panel.
+3. Optionally filter by **FY** and **quarter** (quarter needs exactly one FY).
+4. **Save** to the **shared library** — charts are stored on the CRM server (Neon), not only in your browser. Every Admin / Management user sees the same saved charts after login on any device. Open, update, duplicate, or delete from the library panel.
 
-There is no Excel/PDF export for custom charts in v1 — use the browser print or a screenshot for handouts.
+There is no Excel/PDF export for custom charts in v1 — use the browser print dialog or a screenshot for handouts.
+
+→ [Permission matrix](/help/roles#permission-matrix) · [Lost Deals](#lost-deals-analytics)

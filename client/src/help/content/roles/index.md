@@ -29,6 +29,7 @@ Legend: **✓** full · **◐** partial / scoped · **👁** view only · **—*
 | Projects | ✓ | ◐ own | ◐ gated | ◐ pay | 👁 |
 | Reports (role-filtered packs) | ✓ | ◐ own | ✓ | ✓ | ✓ |
 | Lost Deals (Reports pack) | ✓ | — | — | — | ✓ |
+| Chart Builder (Reports) | ✓ | — | — | — | ✓ |
 | Support tickets | ✓ | ✓ | ✓ | — | ✓ |
 | Tally export | ✓ | — | — | ✓ | — |
 | Users / Audit & Security | ✓ | — | — | — | — |

@@ -40,6 +40,9 @@ Open **Solar Hub** → **Users**, **Maintenance**, or **Provisioning**. On phone
 ### What is the Lost Deals page?
 **Lost Deals** (Admin / Management) is a **Reports** pack. Use **All sellers** to scope KPIs, charts, list, and **Export** (Excel / PDF / PowerPoint — no Print). A gold **proposal icon** next to a name means a **PE Ready** proposal is still in Proposal Engine. On phones the list uses **cards** and charts sit in an **Insights** accordion. Search and chart chips filter the list only. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
+### What is Chart Builder?
+**Chart Builder** (Admin / Management) is under **Reports**. Pick a starter template or your own dimension, measure, cohort, and chart type; optionally filter by FY / quarter; **Save** to a **shared library** stored on the CRM server so every Admin / Management user sees the same charts after login on any device. No Excel/PDF export in v1 — use browser print or a screenshot. Guide: [Chart Builder](/help/modules#chart-builder).
+
 ## Support Tickets
 
 ### How do I create a support ticket?
@@ -54,10 +57,10 @@ Closing **requires a resolution note** (saved on the timeline). **Sales** closes
 ## Data and reports
 
 ### Where are the weekly Reports packs?
-Top menu → **Reports** (`/reports`), or **Ctrl+K** / **⌘K** → **Go to Reports**. Packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, **Lost Deals**. Press **?** on a pack for that pack’s guide. [Reports](/help/modules#reports).
+Top menu → **Reports** (`/reports`), or **Ctrl+K** / **⌘K** → **Go to Reports**. Packs: **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, **Lost Deals**, **Chart Builder**. Press **?** on a pack for that pack’s guide. [Reports](/help/modules#reports).
 
 ### Who can see which report?
-**Sales Review** and **Funnel Velocity** — Admin, Management, Sales (own book). **Delivery Control** — Admin, Management, Operations, Sales (own book). **Collections & Cash** — Admin, Management, Finance, Sales (own book). **Margin & Mix** — Admin, Management, Finance only. **Lost Deals** — Admin, Management only. [Permission matrix](/help/roles#permission-matrix).
+**Sales Review** and **Funnel Velocity** — Admin, Management, Sales (own book). **Delivery Control** — Admin, Management, Operations, Sales (own book). **Collections & Cash** — Admin, Management, Finance, Sales (own book). **Margin & Mix** — Admin, Management, Finance only. **Lost Deals** and **Chart Builder** — Admin, Management only. [Permission matrix](/help/roles#permission-matrix).
 
 ### Why did my report filters reset when I opened a deal?
 They should not on the five weekly packs. Seller/ops/FY/Qtr pickers and table filters stay until **Clear filters** (or logout). **Lost Deals** reloads when you change **All sellers** or FY / Quarter / Month; list search and chart chips do not persist across that reload. Tap the active **Open** / **Closed** quick view on Sales Review again to show every open deal.
@@ -69,7 +72,7 @@ They should not on the five weekly packs. Seller/ops/FY/Qtr pickers and table fi
 Median **days in the current stage** for open Lead / Survey / Proposal deals (not an average, and not created-date → close). Stage entered is used; if missing, created date is used and the row is flagged. [Funnel Velocity](/help/modules#funnel-velocity).
 
 ### How do I export data?
-Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff; **Reports** packs (including Lost Deals) export Excel / PDF / PowerPoint of the current seller/ops/period pack. [Permission matrix](/help/roles#permission-matrix) · [Reports](/help/modules#reports).
+Use export actions where your role allows — **Projects** and **Customers** exports are **Admin** only; **Tally Export** for Finance handoff; **Reports** packs (including Lost Deals) export Excel / PDF / PowerPoint of the current seller/ops/period pack. **Chart Builder** has no pack Export in v1. [Permission matrix](/help/roles#permission-matrix) · [Reports](/help/modules#reports).
 
 ### Where is Tally Export and who can use it?
 Top menu → **Tally Export** (**Finance** and **Admin**). Export Projects, Invoices, or Payments as Excel, CSV, or Tally XML with optional date filters. Guide: [Tally Export](/help/modules#tally-export-module).

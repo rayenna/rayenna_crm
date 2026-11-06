@@ -30,7 +30,7 @@ Menu items are displayed based on your user role:
 - **Customers**: Customer database and management
 - **Projects**: Project management and tracking
 - **Support Tickets**: Customer service ticket management (Admin, Sales, Operations, Management — not Finance)
-- **Reports**: Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix, and Lost Deals (role-filtered packs)
+- **Reports**: Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix, Lost Deals, and Chart Builder (role-filtered packs)
 - **Tally Export**: Financial data export (Finance and Admin only)
 - **Solar Hub**: Homeowner accounts, plant mapping, Help Center (Operations and Admin) — Users / Maintenance / Provisioning
 - **Users**: User management (Admin only)

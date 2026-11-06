@@ -11,7 +11,7 @@ This block covers **in-app Help**, **Tip of the Day**, and how **Zenith** fits i
 
 ## Tip of the Day (app-wide)
 
-- **Tip of the Day** is **not** Zenith-only: the modal can appear once per eligible day after login and covers **Dashboard**, **Zenith**, **Projects**, **Customers**, **Support Tickets**, **Proposal Engine**, **Audit & Security**, **Tally Export**, keyboard shortcuts, and more.
+- **Tip of the Day** is **not** Zenith-only: the modal can appear once per eligible day after login and covers **Dashboard**, **Zenith**, **Projects**, **Customers**, **Support Tickets**, **Reports** (including **Lost Deals** and **Chart Builder**), **Proposal Engine**, **Audit & Security**, **Tally Export**, keyboard shortcuts, and more.
 - Reopen anytime from the **Help** menu → **Tip of the Day** (adds `?showTip=1` so the tip can show on your **current** route, not only the Dashboard). Inside the modal: **Next tip** walks the full library in order; **Got it** dismisses until the next day; **Don’t show again** stops automatic tips until you clear site data for this app (note: this preference is stored in the browser, not synced across devices). **Esc** closes the modal while it is open.
 
 ## Zenith-heavy themes inside the tips
@@ -24,4 +24,4 @@ From **[Support Tickets](/help/modules#support-tickets-module)** in **Modules**:
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.
 
-For module basics (Customers, Projects, Proposal Engine, Support Tickets), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
+For module basics (Customers, Projects, Proposal Engine, Support Tickets, Reports), see [Modules](/help/modules) and [Getting Started](/help/getting-started).

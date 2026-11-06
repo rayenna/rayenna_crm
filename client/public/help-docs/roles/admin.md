@@ -94,7 +94,7 @@ See [Permission matrix](#permission-matrix) before elevating someone to Admin.
 4. Coordinate with Finance on **export** policy.  
 5. Point users to [Getting Started](/help/getting-started) and role guides for self-service.  
 6. **Solar Hub** — map Solis/Deye plants, provision accounts (mobile cards + Start here / Quick views), and (when FAQs in the repo change) **Solar Hub → Help → Reimport**. [Solar Hub staff lists](/help/modules#solar-hub-staff-lists) · [Plants](/help/modules#solar-hub-plants-and-generation).  
-7. **Reports** — weekly packs are on the top menu (Sales Review through Lost Deals). Review uncategorized losses on **Reports → Lost Deals**. [Reports](/help/modules#reports) · [Lost Deals](/help/modules#lost-deals-analytics).
+7. **Reports** — weekly packs plus **Lost Deals** and **Chart Builder** are on the top menu. Review uncategorized losses on **Reports → Lost Deals**; save shared custom charts in **Chart Builder**. [Reports](/help/modules#reports) · [Lost Deals](/help/modules#lost-deals-analytics) · [Chart Builder](/help/modules#chart-builder).
 
 ## Shortcuts
 
@@ -110,6 +110,7 @@ Admins have the widest shortcut set — same as other roles where applicable, pl
 ## Getting help
 
 - [Security](/help/security) — authoritative admin policies  
-- [Reports](/help/modules#reports) — weekly packs (all roles’ views)  
+- [Reports](/help/modules#reports) — weekly packs (all roles’ views) plus Lost Deals / Chart Builder (Admin / Management)  
+
 - [Training guide](/help/training) — onboarding facilitators  
 - Internal runbooks for deploy and Neon DB are outside Help — use your team’s ops docs for infrastructure

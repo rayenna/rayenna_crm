@@ -107,7 +107,7 @@ The top menu shows modules available to your role:
 - **Customers**: Customer database
 - **Projects**: Project management
 - **Support Tickets**: Customer service (if applicable)
-- **Reports**: Weekly packs (Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix, Lost Deals — what you see depends on role)
+- **Reports**: Weekly packs (Sales Review, Funnel Velocity, Delivery Control, Collections & Cash, Margin & Mix) plus **Lost Deals** and **Chart Builder** for Admin / Management — what you see depends on role
 - **Help**: Documentation and support
 
 **Note**: Menu items vary based on your user role. You'll only see features you have permission to access.

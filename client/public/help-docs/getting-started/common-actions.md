@@ -188,9 +188,9 @@ You can also run **Go to Proposal Engine** from the command palette (**Ctrl+K** 
 
 **Who can open**: Admin, Management, Operations, Finance, and Sales — **which pack** you see depends on role (Sales sees their own book).
 
-1. Top menu → **Reports**, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack).
-2. Open **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, or **Lost Deals** (Admin / Management).
-3. Weekly packs keep **How to read this report** collapsed. Table filters stay if you open a project and come back, until **Clear filters**. **Lost Deals** has no Print; **All sellers** and FY / Quarter / Month reload the pack. **Export** is on every pack.
+1. Top menu → **Reports**, or **Ctrl+K** / **⌘K** → **Go to Reports** (or a named pack / **Go to Chart Builder**).
+2. Open **Sales Review**, **Funnel Velocity**, **Delivery Control**, **Collections & Cash**, **Margin & Mix**, **Lost Deals**, or **Chart Builder** (Lost Deals and Chart Builder are Admin / Management).
+3. Weekly packs keep **How to read this report** collapsed. Table filters stay if you open a project and come back, until **Clear filters**. **Lost Deals** has no Print; **All sellers** and FY / Quarter / Month reload the pack. **Export** is on weekly packs and Lost Deals — not Chart Builder (v1). Saved Chart Builder charts are shared for Admin / Management on any device.
 
 Guide: [Reports](/help/modules#reports).
 
