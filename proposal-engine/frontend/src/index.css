@@ -246,6 +246,74 @@
   }
 }
 
+/* Dashboard “Do this next” coach — elevated dark panels, readable copy (Light unchanged). */
+[data-theme='dark'] .pe-coach {
+  background-color: #1c1c28;
+  border-color: rgba(129, 140, 248, 0.35);
+}
+[data-theme='dark'] .pe-coach-title {
+  color: #c7d2fe;
+}
+[data-theme='dark'] .pe-coach-subtitle,
+[data-theme='dark'] .pe-coach-detail {
+  color: #d4d4d8;
+}
+[data-theme='dark'] .pe-coach-hide,
+[data-theme='dark'] .pe-coach-meta {
+  color: #a1a1aa;
+}
+[data-theme='dark'] .pe-coach-hide:hover {
+  color: #f4f4f5;
+}
+[data-theme='dark'] .pe-coach-item {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme='dark'] .pe-coach-item-done {
+  background-color: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+[data-theme='dark'] .pe-coach-item-current {
+  background-color: rgba(99, 102, 241, 0.18);
+  border-color: rgba(165, 180, 252, 0.55);
+  box-shadow: none;
+}
+[data-theme='dark'] .pe-coach-label {
+  color: #f8fafc;
+}
+[data-theme='dark'] .pe-coach-badge-optional {
+  color: #a1a1aa;
+}
+[data-theme='dark'] .pe-coach-badge-next {
+  color: #c7d2fe;
+}
+[data-theme='dark'] .pe-coach-link {
+  color: #93c5fd;
+}
+[data-theme='dark'] .pe-coach-link:hover {
+  color: #bfdbfe;
+}
+[data-theme='dark'] .pe-coach-guide {
+  color: #a5b4fc;
+}
+[data-theme='dark'] .pe-coach-guide:hover {
+  color: #c7d2fe;
+}
+[data-theme='dark'] .pe-coach-cta {
+  background-color: #4f46e5;
+  color: #ffffff;
+}
+[data-theme='dark'] .pe-coach-cta:hover {
+  background-color: #6366f1;
+}
+[data-theme='dark'] .pe-coach-dismissed {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme='dark'] .pe-coach-dismissed p {
+  color: #d4d4d8;
+}
+
 /* About page cards — elevated dark panels, bright body copy (Light unchanged). */
 [data-theme='dark'] .pe-about-card {
   background-color: #1c1c28;
