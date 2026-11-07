@@ -15,7 +15,15 @@ import {
   TARIFF_BAND_MAX,
   TARIFF_BAND_MIN,
 } from '../roiAssumptions';
+import { helpPathForPreflightFinding } from '../helpContext';
 import type { PreflightContext, PreflightFinding, PreflightResult } from './types';
+
+function withHelp(finding: PreflightFinding): PreflightFinding {
+  return {
+    ...finding,
+    helpHref: finding.helpHref ?? helpPathForPreflightFinding(finding.id),
+  };
+}
 
 const INVERTER_KW_RE = /(\d+(?:\.\d+)?)\s*[Kk][Ww]\b/;
 
@@ -370,7 +378,8 @@ export function runProposalPreflight(ctx: PreflightContext): PreflightResult {
     }
   }
 
-  const errorCount = findings.filter((f) => f.severity === 'error').length;
-  const warningCount = findings.filter((f) => f.severity === 'warning').length;
-  return { findings, errorCount, warningCount };
+  const withHelpLinks = findings.map(withHelp);
+  const errorCount = withHelpLinks.filter((f) => f.severity === 'error').length;
+  const warningCount = withHelpLinks.filter((f) => f.severity === 'warning').length;
+  return { findings: withHelpLinks, errorCount, warningCount };
 }

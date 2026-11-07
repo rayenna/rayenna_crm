@@ -78,7 +78,7 @@ export const TIPS: string[] = [
   'The BOM XLSX export includes Item Name, Specification, Quantity, and GST % — useful for procurement teams.',
 
   // ── Workflow ─────────────────────────────────────────────────────────────────
-  'Press ? from any page to open the User Guide instantly.',
+  'Press ? from any page to open help for that screen (Costing, Proposal, Roof, …) — not just the top of the User Guide.',
 ]
 
 /**

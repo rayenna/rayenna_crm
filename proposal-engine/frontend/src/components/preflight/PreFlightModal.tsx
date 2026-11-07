@@ -198,15 +198,26 @@ export function PreFlightModal({
                       </fieldset>
                     )}
 
-                    {f.navigateTo && !isSizeChoice && (
-                      <Link
-                        to={f.navigateTo}
-                        onClick={onCancel}
-                        className="mt-2 inline-block text-xs font-semibold text-indigo-700 hover:underline"
-                      >
-                        Go to {f.navigateTo.replace('/', '')} →
-                      </Link>
-                    )}
+                    <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                      {f.navigateTo && !isSizeChoice && (
+                        <Link
+                          to={f.navigateTo}
+                          onClick={onCancel}
+                          className="text-xs font-semibold text-indigo-700 hover:underline"
+                        >
+                          Go to {f.navigateTo.replace('/', '')} →
+                        </Link>
+                      )}
+                      {f.helpHref && (
+                        <Link
+                          to={f.helpHref}
+                          onClick={onCancel}
+                          className="text-xs font-semibold text-indigo-700 hover:underline"
+                        >
+                          Why? Open guide →
+                        </Link>
+                      )}
+                    </span>
                   </span>
                 </div>
               </li>

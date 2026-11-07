@@ -21,6 +21,7 @@ import { loadProjectFromServer } from '../lib/projectLoadPipeline';
 import { getServerSyncStatus, clearServerSyncStatus } from '../lib/serverSyncStatus';
 import { ServerSyncBanner } from '../components/ServerSyncBanner';
 import { ProposalContinueBar } from '../components/ProposalContinue';
+import { DashboardCoach } from '../components/DashboardCoach';
 import {
   ARTIFACT_COLORS,
   IconBolt,
@@ -363,6 +364,13 @@ export default function Dashboard() {
               </Link>
             </div>
           )}
+
+          {activeCustomer ? (
+            <DashboardCoach
+              customer={activeCustomer}
+              onContinue={(path) => navigate(path)}
+            />
+          ) : null}
 
           {/* CRM Project status indicator for active customer */}
           {activeCustomer?.master.projectStage && (

@@ -10,6 +10,7 @@ import TipOfTheDay from './TipOfTheDay';
 import ThemeToggle from './ThemeToggle';
 import { useThemeContext } from '../theme/ThemeProvider';
 import { shouldUseCompactNav } from './layoutNav';
+import { helpLabelForRoute, helpPathForRoute } from '../lib/helpContext';
 
 const NAV = [
   { label: 'Customers',             to: '/customers' },
@@ -170,7 +171,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Press ? anywhere (outside inputs) to open Help
+  // Press ? anywhere (outside inputs) to open contextual Help for this page
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== '?') return;
@@ -178,11 +179,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       const isEditable = (e.target as HTMLElement).isContentEditable;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
       e.preventDefault();
-      navigate('/help');
+      navigate(helpPathForRoute(pathname));
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigate]);
+  }, [navigate, pathname]);
 
   const handleLogout = () => {
     clearToken();
@@ -375,14 +376,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} aria-hidden>▾</span>
                 </button>
                 {helpOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white dark:bg-[#14141C] rounded-lg border border-secondary-200 dark:border-white/10 overflow-hidden z-[60] shadow-lg" role="menu">
+                  <div className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-[#14141C] rounded-lg border border-secondary-200 dark:border-white/10 overflow-hidden z-[60] shadow-lg" role="menu">
                     <Link
-                      to="/help"
+                      to={helpPathForRoute(pathname)}
                       role="menuitem"
                       className="flex items-center px-4 py-2.5 text-sm text-secondary-700 dark:text-white/80 hover:bg-secondary-50 dark:hover:bg-white/10 transition-colors"
                       onClick={() => setHelpOpen(false)}
                     >
-                      <span className="font-medium">User Guide</span>
+                      <span className="font-medium">{helpLabelForRoute(pathname)}</span>
                     </Link>
                     <button
                       type="button"
@@ -512,12 +513,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="mt-2 pt-2 border-t border-white/20">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <Link
-                    to="/help"
+                    to={helpPathForRoute(pathname)}
                     className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-medium transition-colors touch-manipulation ${
                       pathname === '/help' ? DRAWER_ACTIVE : DRAWER_IDLE
                     }`}
                   >
-                    <span>User Guide</span>
+                    <span>{helpLabelForRoute(pathname)}</span>
                   </Link>
                   <button
                     onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}

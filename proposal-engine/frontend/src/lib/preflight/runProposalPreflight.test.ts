@@ -53,6 +53,19 @@ describe('runProposalPreflight', () => {
     expect(result.errorCount).toBe(0);
   });
 
+  it('attaches Help deep-links on findings', () => {
+    const result = runProposalPreflight(
+      baseCtx({
+        sheetItems: [],
+        sheetSystemSizeKw: null,
+        bomRows: [],
+        roi: null,
+      }),
+    );
+    const costing = result.findings.find((f) => f.id === 'missing_costing');
+    expect(costing?.helpHref).toBe('/help#costing');
+  });
+
   it('flags missing costing, bom, and roi', () => {
     const result = runProposalPreflight(
       baseCtx({

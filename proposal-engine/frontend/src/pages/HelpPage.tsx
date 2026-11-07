@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { TIPS } from '../data/tipOfTheDay';
 import { getActiveCustomer, getResolvedRoofLayout } from '../lib/customerStore';
+import { HELP_ANCHORS, helpAnchorFromHash } from '../lib/helpContext';
 import { nextProposalStep } from '../lib/proposalContinue';
 import { pageBanner } from '../components/ui/chrome';
 import { useThemeContext } from '../theme/ThemeProvider';
@@ -14,6 +15,8 @@ interface AccordionProps {
   accent: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** When true (hash deep-link), force the section open on mobile. */
+  forceOpen?: boolean;
 }
 
 /* ─── Back to top link ───────────────────────────────────────────────────── */
@@ -32,8 +35,11 @@ function BackToTop() {
 }
 
 /* ─── Accordion wrapper (always open on md+, collapsible on mobile) ──────── */
-function Section({ id, title, children, defaultOpen = false }: AccordionProps) {
-  const [open, setOpen] = useState(defaultOpen);
+function Section({ id, title, children, defaultOpen = false, forceOpen = false }: AccordionProps) {
+  const [open, setOpen] = useState(defaultOpen || forceOpen);
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
   return (
     <div id={id} className="bg-white rounded-xl border border-secondary-200 overflow-hidden scroll-mt-24 pe-help-card">
       <button
@@ -179,10 +185,28 @@ function KbdRow({ keys, desc }: { keys: string[]; desc: string }) {
   );
 }
 
-function FaqItem({ q, children }: { q: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function FaqItem({
+  id,
+  q,
+  children,
+  forceOpen = false,
+}: {
+  id?: string;
+  q: string;
+  children: React.ReactNode;
+  forceOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(forceOpen);
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden pe-help-card">
+    <div
+      id={id}
+      className={`border rounded-xl overflow-hidden pe-help-card scroll-mt-24 ${
+        forceOpen ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-gray-200'
+      }`}
+    >
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
@@ -238,9 +262,26 @@ const TOC = [
 
 /* ─── Main page ─────────────────────────────────────────────────────────── */
 export default function HelpPage() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
+  const focusId = helpAnchorFromHash(hash);
+
+  useEffect(() => {
+    if (!focusId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [focusId]);
+
+  const sectionForceOpen = (sectionId: string): boolean => {
+    if (!focusId) return false;
+    if (focusId === sectionId) return true;
+    if (sectionId === HELP_ANCHORS.faq && focusId.startsWith('faq-')) return true;
+    if (sectionId === HELP_ANCHORS.proposal && focusId === HELP_ANCHORS.proposalPreflight) return true;
+    return false;
+  };
 
   // Build grouped tip list from the flat TIPS array using TIP_COUNTS
   const groupedTips: { category: typeof TIP_CATEGORIES[0]; tips: string[] }[] = [];
@@ -259,11 +300,16 @@ export default function HelpPage() {
           <p className="mt-1 text-sm text-white/85">Rayenna Proposal Engine</p>
           <p className="mt-2 text-sm text-white/85 leading-relaxed max-w-3xl">
             Open a project, then press <strong>Continue</strong>. It opens the next step that project still needs.
-            The top bar still lists every page if you want to jump there. Help opens this guide, Tip of the Day, and About.
+            Press <strong>?</strong> on any page (or Help ▾) to jump straight to help for that screen.
           </p>
         </div>
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6">
+      {focusId ? (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950 pe-help-note">
+          Showing the topic linked from where you were — scroll stays on that section below.
+        </div>
+      ) : null}
       {/* ── Table of Contents ── */}
       <div id="toc" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 scroll-mt-24 pe-help-card">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to section</p>
@@ -283,11 +329,11 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 1. QUICK START                                                    */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="quickstart" icon="🚀" title="Quick Start" accent="bg-indigo-100 text-indigo-700" defaultOpen>
+      <Section id="quickstart" icon="🚀" title="Quick Start" accent="bg-indigo-100 text-indigo-700" defaultOpen forceOpen={sectionForceOpen('quickstart')}>
 
         <p className="text-sm text-gray-600 mb-4 leading-relaxed">
           You do not walk Costing, BOM, ROI, and Proposal by hand. <strong>Open</strong> a project, then press <strong>Continue</strong>.
-          The button label tells you what that project still needs.
+          The button label tells you what that project still needs. On the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link>, the <strong>Do this next</strong> coach shows the same checklist with Guide links — hide it anytime; it returns when the project moves to a new step.
         </p>
 
         <QuickStartNow />
@@ -361,7 +407,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 2. CUSTOMERS                                                      */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="customers" icon="👥" title="Managing Customers" accent="bg-sky-100 text-sky-700">
+      <Section id="customers" icon="👥" title="Managing Customers" accent="bg-sky-100 text-sky-700" forceOpen={sectionForceOpen('customers')}>
 
         <div className="space-y-5">
           <div>
@@ -440,7 +486,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 3. COSTING SHEET                                                  */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="costing" icon="📊" title="Costing Sheet" accent="bg-emerald-100 text-emerald-700">
+      <Section id="costing" icon="📊" title="Costing Sheet" accent="bg-emerald-100 text-emerald-700" forceOpen={sectionForceOpen('costing')}>
 
         <div className="space-y-5">
 
@@ -553,7 +599,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 4. BOM                                                            */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="bom" icon="📦" title="Bill of Materials (BOM)" accent="bg-orange-100 text-orange-700">
+      <Section id="bom" icon="📦" title="Bill of Materials (BOM)" accent="bg-orange-100 text-orange-700" forceOpen={sectionForceOpen('bom')}>
 
         <div className="space-y-5">
 
@@ -607,7 +653,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 5. ROI CALCULATOR                                                 */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="roi" icon="📈" title="ROI Calculator" accent="bg-purple-100 text-purple-700">
+      <Section id="roi" icon="📈" title="ROI Calculator" accent="bg-purple-100 text-purple-700" forceOpen={sectionForceOpen('roi')}>
 
         <div className="space-y-5">
 
@@ -686,7 +732,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 6. PROPOSAL                                                       */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="proposal" icon="📄" title="Proposal" accent="bg-rose-100 text-rose-700">
+      <Section id="proposal" icon="📄" title="Proposal" accent="bg-rose-100 text-rose-700" forceOpen={sectionForceOpen('proposal')}>
 
         <div className="space-y-5">
 
@@ -703,7 +749,7 @@ export default function HelpPage() {
             </div>
           </div>
 
-          <div>
+          <div id={HELP_ANCHORS.proposalPreflight} className="scroll-mt-24">
             <h3 className="font-semibold text-gray-800 mb-2">Proposal pre-flight</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
               Before <strong>Generate</strong>, <strong>Share</strong>, <strong>PDF</strong>, or <strong>DOCX</strong>, Proposal Engine runs a short quality check. The modal lists issues (must fix or consciously ignore) and warnings. You can <strong>Apply selected</strong> auto-fixes, <strong>Ignore &amp; proceed</strong>, or <strong>Cancel</strong>.
@@ -854,6 +900,7 @@ export default function HelpPage() {
         title="AI Roof Layout (Beta) — How it Integrates with Proposal"
         accent="bg-indigo-100 text-indigo-700"
         defaultOpen={false}
+        forceOpen={sectionForceOpen('ai-roof-layout')}
       >
         <div className="space-y-5">
           <div>
@@ -1140,14 +1187,14 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 7. TIPS & SHORTCUTS                                               */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="tips" icon="✨" title="Tips & Shortcuts" accent="bg-yellow-100 text-yellow-700">
+      <Section id="tips" icon="✨" title="Tips & Shortcuts" accent="bg-yellow-100 text-yellow-700" forceOpen={sectionForceOpen('tips')}>
 
         <div className="space-y-5">
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-3">Keyboard Shortcuts</h3>
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2 divide-y divide-gray-100">
-              <KbdRow keys={['?']}             desc="Open the Help page (when not typing in an input)" />
+              <KbdRow keys={['?']}             desc="Open help for the page you are on (e.g. Costing → Costing Sheet guide)" />
               <KbdRow keys={['Tab']}           desc="Move to the next input field in a row" />
               <KbdRow keys={['Shift', 'Tab']}  desc="Move to the previous input field" />
               <KbdRow keys={['Enter']}         desc="Confirm a modal or dialog" />
@@ -1204,7 +1251,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 8. TIP OF THE DAY                                                 */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="tip-of-the-day" icon="💡" title="Tip of the Day" accent="bg-amber-100 text-amber-700">
+      <Section id="tip-of-the-day" icon="💡" title="Tip of the Day" accent="bg-amber-100 text-amber-700" forceOpen={sectionForceOpen('tip-of-the-day')}>
 
         {/* Launch button */}
         <div className="flex items-center justify-between mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50">
@@ -1264,19 +1311,31 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 9. FAQ                                                            */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="faq" icon="❓" title="Frequently Asked Questions" accent="bg-teal-100 text-teal-700">
+      <Section id="faq" icon="❓" title="Frequently Asked Questions" accent="bg-teal-100 text-teal-700" forceOpen={sectionForceOpen('faq')}>
 
         <div className="space-y-2">
 
-          <FaqItem q="Why is the ROI Calculator not auto-filling System Size and Project Cost?">
+          <FaqItem
+            id={HELP_ANCHORS.faqRoiAutofill}
+            forceOpen={focusId === HELP_ANCHORS.faqRoiAutofill}
+            q="Why is the ROI Calculator not auto-filling System Size and Project Cost?"
+          >
             The ROI Calculator is filled when you <strong>save the Costing Sheet</strong> (not just edit it). <strong>System Size</strong> comes from the CRM project system capacity (whole kW); <strong>project cost</strong> comes from the costing grand total. Make sure you clicked <strong>💾 Save Sheet</strong>, the same customer is active, and the CRM project has a system capacity set. If values still don't appear, try saving the costing sheet again.
           </FaqItem>
 
-          <FaqItem q="Why did pre-flight ask me to choose between 3 kW and 3.025 kW?">
+          <FaqItem
+            id={HELP_ANCHORS.faqPreflightCapacity}
+            forceOpen={focusId === HELP_ANCHORS.faqPreflightCapacity}
+            q="Why did pre-flight ask me to choose between 3 kW and 3.025 kW?"
+          >
             CRM Project Lifecycle has a <strong>Panel Capacity (W)</strong> value, and that wattage × the panel quantity on your costing sheet differs from the CRM <strong>project system capacity</strong>. Pick <strong>CRM project capacity</strong> to keep the whole-kW figure on the proposal, or <strong>Lifecycle panel capacity</strong> to show the W × qty result (e.g. 605 W × 5 = 3.025 kW). If Panel Capacity is blank in CRM Lifecycle, this choice does not appear. Costing item names like &quot;620W&quot; are not used for this comparison.
           </FaqItem>
 
-          <FaqItem q="Why is the BOM empty when I open it?">
+          <FaqItem
+            id={HELP_ANCHORS.faqBomEmpty}
+            forceOpen={focusId === HELP_ANCHORS.faqBomEmpty}
+            q="Why is the BOM empty when I open it?"
+          >
             The BOM is generated when you save the Costing Sheet. If the BOM is empty, go to the Costing Sheet, make sure your items are entered, and click <strong>💾 Save Sheet</strong>. The BOM will be populated automatically.
           </FaqItem>
 
@@ -1308,7 +1367,11 @@ export default function HelpPage() {
             Go to the <Link to="/bom" className="text-indigo-600 underline">BOM page</Link> and enter it in the <strong>Specification</strong> column (e.g. &quot;Waaree Mono PERC 540W&quot;). That text appears in the proposal Bill of Quantities. Click <strong>💾 Save BOM</strong> to persist your changes.
           </FaqItem>
 
-          <FaqItem q="The proposal is showing 0 kW in the Financial Benefits section. How do I fix it?">
+          <FaqItem
+            id={HELP_ANCHORS.faqProposal0Kw}
+            forceOpen={focusId === HELP_ANCHORS.faqProposal0Kw}
+            q="The proposal is showing 0 kW in the Financial Benefits section. How do I fix it?"
+          >
             This happens when the ROI result has not been saved. Go to the <Link to="/roi" className="text-indigo-600 underline">ROI Calculator</Link>, click <strong>Calculate</strong>, and then click <strong>💾 Save Result</strong>. Then regenerate the proposal.
           </FaqItem>
 

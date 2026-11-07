@@ -45,6 +45,8 @@ export interface PreflightFinding {
   autoFixable: boolean;
   /** Deep-link for manual fixes. */
   navigateTo?: PreflightNavigateTo;
+  /** Help User Guide deep-link (e.g. /help#faq-preflight-capacity). */
+  helpHref?: string;
   /** Maps to applyPreflightFixes handler when autoFixable. */
   autoFixId?: PreflightAutoFixId;
   /** Present on system_size_mismatch — user picks CRM project kW vs Lifecycle panel-derived. */
