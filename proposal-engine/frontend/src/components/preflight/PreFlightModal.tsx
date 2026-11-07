@@ -9,7 +9,7 @@ export interface PreFlightModalProps {
   findings: PreflightFinding[];
   /** Finding ids currently selected (all by default). */
   selectedIds: Set<string>;
-  /** CRM vs costing capacity choice (default crm). */
+  /** CRM project kW vs Lifecycle panel-derived capacity (default crm). */
   systemSizeSource: SystemSizeSource;
   applying?: boolean;
   onToggle: (id: string) => void;
@@ -185,13 +185,13 @@ export function PreFlightModal({
                             type="radio"
                             name="preflight-system-size"
                             className="mt-0.5"
-                            checked={systemSizeSource === 'costing'}
-                            onChange={() => onSystemSizeSourceChange('costing')}
+                            checked={systemSizeSource === 'lifecycle'}
+                            onChange={() => onSystemSizeSourceChange('lifecycle')}
                           />
                           <span className="text-xs text-slate-800 leading-snug">
-                            <span className="font-semibold">Costing-derived capacity</span>
+                            <span className="font-semibold">Lifecycle panel capacity</span>
                             <span className="block text-slate-600 mt-0.5">
-                              {f.sizeChoice.costingKw} kW — {f.sizeChoice.costingDetail}
+                              {f.sizeChoice.lifecycleKw} kW — {f.sizeChoice.lifecycleDetail}
                             </span>
                           </span>
                         </label>
@@ -217,7 +217,7 @@ export function PreFlightModal({
         <div className="px-4 pt-2 pb-4 sm:px-5 sm:pb-5 border-t border-slate-100 space-y-3">
           <p className="text-xs text-slate-500">
             {sizeChoiceFinding
-              ? `Capacity choice defaults to CRM. Apply / Ignore & proceed will use ${systemSizeSource === 'crm' ? 'CRM' : 'costing-derived'} capacity on the proposal. `
+              ? `Capacity choice defaults to CRM. Apply / Ignore & proceed will use ${systemSizeSource === 'crm' ? 'CRM' : 'Lifecycle panel-derived'} capacity on the proposal. `
               : null}
             Apply runs auto-fixes for selected rows only ({selectedAutoFixable} auto-fix
             {selectedAutoFixable === 1 ? '' : 'es'} of {selectedCount} selected). Manual items need a visit to Costing / BOM / ROI / Roof.

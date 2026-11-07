@@ -34,7 +34,8 @@ export type PreflightApplyInput = {
   /** When applying system_size_mismatch. */
   systemSizeSource?: SystemSizeSource;
   crmSystemSizeKw?: number | null;
-  costingDerivedKw?: number | null;
+  /** CRM Lifecycle panel W × panel qty. */
+  lifecycleDerivedKw?: number | null;
 };
 
 export type PreflightApplyResult = {
@@ -102,17 +103,17 @@ export function applyPreflightFixes(input: PreflightApplyInput): PreflightApplyR
       input.crmSystemSizeKw != null && Number.isFinite(input.crmSystemSizeKw)
         ? Number(input.crmSystemSizeKw)
         : null;
-    const costingKw =
-      input.costingDerivedKw != null && Number.isFinite(input.costingDerivedKw)
-        ? Number(input.costingDerivedKw)
+    const lifecycleKw =
+      input.lifecycleDerivedKw != null && Number.isFinite(input.lifecycleDerivedKw)
+        ? Number(input.lifecycleDerivedKw)
         : null;
     const chosen =
       source === 'crm'
         ? crmKw != null && crmKw > 0
           ? crmKw
           : null
-        : costingKw != null && costingKw > 0
-          ? costingKw
+        : lifecycleKw != null && lifecycleKw > 0
+          ? lifecycleKw
           : null;
 
     if (chosen != null) {

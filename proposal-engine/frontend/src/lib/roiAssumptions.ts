@@ -21,8 +21,11 @@ export const GEN_FACTOR_BAND_MAX = 2000;
 export const INVERTER_ARRAY_RATIO_MIN = 0.8;
 export const INVERTER_ARRAY_RATIO_MAX = 1.3;
 
-/** System size values differing by more than this (kW) are a mismatch. */
-export const SYSTEM_SIZE_MISMATCH_TOLERANCE_KW = 0.1;
+/**
+ * System size values differing by more than this (kW) are a mismatch.
+ * Tight enough that CRM 3 kW vs Lifecycle 605 W × 5 (= 3.025 kW) still prompts a choice.
+ */
+export const SYSTEM_SIZE_MISMATCH_TOLERANCE_KW = 0.01;
 
 /**
  * Subsidy support as per PM-Surya Ghar / MNRE rooftop solar scheme

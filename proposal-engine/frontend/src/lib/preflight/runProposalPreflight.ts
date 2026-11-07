@@ -52,29 +52,32 @@ export function parseInverterKwTotal(
   return parsedAny ? total : null;
 }
 
-/** Human-readable module qty × watts for the capacity choice UI. */
-export function summarizeCostingModuleDerivation(
+/**
+ * CRM Lifecycle panel wattage × PV module qty from costing (ignores wattage tokens in item names).
+ * Used for the proposal capacity choice when Lifecycle Panel Capacity is set.
+ */
+export function summarizeLifecyclePanelDerivation(
   items: PreflightContext['sheetItems'],
-  crmPanelWattage?: number | null,
+  crmPanelWattage: number,
 ): { kw: number; detail: string } | null {
+  if (!Number.isFinite(crmPanelWattage) || crmPanelWattage <= 0) return null;
+
   const modules = items.filter((r) => r.category === 'pv-modules' && r.itemName.trim());
   if (modules.length === 0) return null;
 
-  let totalWatts = 0;
   let totalQty = 0;
   const parts: string[] = [];
-
   for (const m of modules) {
     const qty = parseFloat(m.quantity) || 0;
-    const watts = parseModuleWattageWatts(m.itemName, m.specification, crmPanelWattage);
-    if (watts == null || qty <= 0) continue;
-    totalWatts += qty * watts;
+    if (qty <= 0) continue;
     totalQty += qty;
-    parts.push(`${qty} × ${watts} W`);
+    parts.push(`${qty} × ${crmPanelWattage} W`);
   }
 
-  if (totalWatts <= 0) return null;
-  const kw = Math.round((totalWatts / 1000) * 100) / 100;
+  if (totalQty <= 0) return null;
+  const totalWatts = totalQty * crmPanelWattage;
+  // Three decimals so 605 W × 5 → 3.025 kW (not rounded away to 3.03).
+  const kw = Math.round((totalWatts / 1000) * 1000) / 1000;
   const detail = parts.length === 1 ? parts[0] : `${totalQty} panels (${parts.join(', ')})`;
   return { kw, detail };
 }
@@ -209,33 +212,36 @@ export function runProposalPreflight(ctx: PreflightContext): PreflightResult {
     });
   }
 
-  const costingSummary = hasCosting
-    ? summarizeCostingModuleDerivation(items, crmPanelW)
-    : null;
-  const costingKwForChoice = costingSummary?.kw ?? (derivedKw > 0 ? derivedKw : null);
+  // Capacity choice only when CRM Lifecycle Panel Capacity (W) is set.
+  // Alternate value = Lifecycle W × panel qty from costing (not wattage parsed from costing names).
+  const lifecycleSummary =
+    hasCosting && crmPanelW != null
+      ? summarizeLifecyclePanelDerivation(items, crmPanelW)
+      : null;
 
   if (
     !ctx.suppressSizeMismatch &&
+    crmPanelW != null &&
     crmKw != null &&
     crmKw > 0 &&
-    costingKwForChoice != null &&
-    costingKwForChoice > 0 &&
-    Math.abs(crmKw - costingKwForChoice) > SYSTEM_SIZE_MISMATCH_TOLERANCE_KW
+    lifecycleSummary != null &&
+    lifecycleSummary.kw > 0 &&
+    Math.abs(crmKw - lifecycleSummary.kw) > SYSTEM_SIZE_MISMATCH_TOLERANCE_KW
   ) {
     findings.push({
       id: 'system_size_mismatch',
       severity: 'warning',
       title: 'Choose proposal system capacity',
       detail:
-        `CRM project capacity is ${crmKw} kW. Costing implies ${costingKwForChoice} kW` +
-        (costingSummary ? ` (${costingSummary.detail})` : '') +
+        `CRM project capacity is ${crmKw} kW. Lifecycle panel capacity implies ${lifecycleSummary.kw} kW` +
+        ` (${lifecycleSummary.detail})` +
         '. Pick which value the proposal should show. Costing line items stay unchanged.',
       autoFixable: true,
       autoFixId: 'system_size_mismatch',
       sizeChoice: {
         crmKw,
-        costingKw: costingKwForChoice,
-        costingDetail: costingSummary?.detail ?? `${costingKwForChoice} kW from costing`,
+        lifecycleKw: lifecycleSummary.kw,
+        lifecycleDetail: lifecycleSummary.detail,
       },
     });
   }

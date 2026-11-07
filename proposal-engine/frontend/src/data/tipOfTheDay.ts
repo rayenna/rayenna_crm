@@ -25,7 +25,7 @@ const STORAGE_KEY_DONT_SHOW  = 'rayenna_pe_tip_dont_show'
 export const TIPS: string[] = [
   // ── Customers ──────────────────────────────────────────────────────────────
   'Use the Dashboard (Proposal Command Center) active project banner or the Customers / Projects page to choose which project is active — all four pages always work on the active project.',
-  'Use the "+ Select Project" button on the Customers / Projects page to pull projects from Rayenna CRM — customer name, address, contacts and system size are filled in automatically.',
+  'Use the "+ Select Project" button on the Customers / Projects page to pull projects from Rayenna CRM — customer name, address, contacts, system capacity, and Lifecycle panel capacity (W) are filled in automatically.',
   'The pulsing blue dot in the navbar shows which customer is currently active. Check it before saving any work.',
   'Document readiness shows as PE Ready when all four artifacts are saved (same labels as CRM: Not Yet Created, PE Draft, PE Ready).',
   'Use the search bar on the Customers page to quickly find a customer by name or location.',
@@ -47,7 +47,7 @@ export const TIPS: string[] = [
   'Auto-generated rows are tagged with an "auto" badge; rows you add manually show "manual" — easy to distinguish.',
 
   // ── ROI Calculator ──────────────────────────────────────────────────────────
-  'System size and project cost are auto-filled from the Costing Sheet — you mainly need to review the tariff and escalation rate.',
+  'ROI system size comes from CRM project capacity (whole kW); project cost comes from the Costing Sheet — you mainly need to review the tariff and escalation rate.',
   'The default generation factor of 1500 kWh/kW/year is the Kerala average — adjust for other states or shading conditions.',
   'Blue bars on the 25-year chart are pre-payback years; green bars are post-payback — the more green, the better the ROI.',
   'LCOE (Levelised Cost of Energy) should be well below the current grid tariff — a good indicator of project viability.',
@@ -55,6 +55,7 @@ export const TIPS: string[] = [
 
   // ── Proposal ────────────────────────────────────────────────────────────────
   'Generate the Proposal only after saving the Costing Sheet, BOM, and ROI result — all three feed into the proposal automatically.',
+  'Pre-flight may ask you to choose CRM project kW vs Lifecycle panel capacity × panel qty when Panel Capacity (W) is set in CRM — costing item names like "620W" do not drive that choice.',
   'Use the Edit button to make inline changes directly on the proposal text — click any paragraph and type your changes.',
   'An amber border around the proposal confirms you are in Edit mode — click the Edit button again to exit without saving.',
   'Use the main Save action (top-right or at the bottom) to save everything in one shot: inline edits, BOM comments, and all four artifacts.',

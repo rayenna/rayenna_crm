@@ -710,7 +710,7 @@ export default function ProposalPreview() {
     if (!choiceFinding?.sizeChoice) return preflightSizeOverrideRef.current;
     return preflightSystemSizeSource === 'crm'
       ? choiceFinding.sizeChoice.crmKw
-      : choiceFinding.sizeChoice.costingKw;
+      : choiceFinding.sizeChoice.lifecycleKw;
   };
 
   /**
@@ -1290,7 +1290,7 @@ export default function ProposalPreview() {
         fallbackPanelWattage: activeCustomer.master?.panelWattage ?? null,
         systemSizeSource: preflightSystemSizeSource,
         crmSystemSizeKw: sizeChoiceFinding?.sizeChoice?.crmKw ?? activeCustomer.master?.systemSizeKw,
-        costingDerivedKw: sizeChoiceFinding?.sizeChoice?.costingKw ?? null,
+        lifecycleDerivedKw: sizeChoiceFinding?.sizeChoice?.lifecycleKw ?? null,
         roi: roiInputs
           ? {
               systemSizeKw: Number(roiInputs.systemSizeKw),

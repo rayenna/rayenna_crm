@@ -226,18 +226,86 @@ describe('runProposalPreflight', () => {
     expect(result.findings.some((f) => f.id === 'roof_include_missing')).toBe(true);
   });
 
-  it('flags CRM vs costing capacity choice when they disagree', () => {
+  it('flags CRM vs Lifecycle panel capacity when Lifecycle Panel Capacity is set and they disagree', () => {
     const result = runProposalPreflight(
       baseCtx({
         crmSystemSizeKw: 10,
+        crmPanelWattage: 500,
         roi: { systemSizeKw: 5, tariff: 8.2, generationFactor: 1500 },
       }),
     );
     const f = result.findings.find((x) => x.id === 'system_size_mismatch' && x.sizeChoice);
     expect(f).toBeTruthy();
     expect(f?.sizeChoice?.crmKw).toBe(10);
-    expect(f?.sizeChoice?.costingKw).toBe(5);
+    expect(f?.sizeChoice?.lifecycleKw).toBe(5);
+    expect(f?.sizeChoice?.lifecycleDetail).toBe('10 × 500 W');
     expect(f?.autoFixable).toBe(true);
+  });
+
+  it('skips capacity choice when CRM Lifecycle Panel Capacity is empty', () => {
+    const result = runProposalPreflight(
+      baseCtx({
+        crmSystemSizeKw: 3,
+        crmPanelWattage: null,
+        sheetItems: [
+          {
+            category: 'pv-modules',
+            itemName: 'Adani 620W Mono',
+            quantity: '5',
+            gstPercent: '5',
+          },
+          {
+            category: 'inverters',
+            itemName: 'Deye 3kW On-grid',
+            quantity: '1',
+            gstPercent: '5',
+          },
+        ],
+        sheetSystemSizeKw: 3.1,
+        bomRows: [
+          { category: 'pv-modules', itemName: 'Adani 620W Mono', quantity: '5' },
+          { category: 'inverters', itemName: 'Deye 3kW On-grid', quantity: '1' },
+        ],
+        roi: { systemSizeKw: 3, tariff: 8.2, generationFactor: 1500 },
+      }),
+    );
+    expect(result.findings.find((x) => x.id === 'system_size_mismatch')).toBeUndefined();
+  });
+
+  it('uses Lifecycle Panel Capacity × panel qty (not costing name wattage)', () => {
+    const result = runProposalPreflight(
+      baseCtx({
+        crmSystemSizeKw: 3,
+        crmPanelWattage: 605,
+        sheetItems: [
+          {
+            category: 'pv-modules',
+            itemName: 'Adani 620W Mono',
+            quantity: '5',
+            gstPercent: '5',
+          },
+          {
+            category: 'inverters',
+            itemName: 'Deye 3kW On-grid',
+            quantity: '1',
+            gstPercent: '5',
+          },
+        ],
+        sheetSystemSizeKw: 3.1,
+        bomRows: [
+          { category: 'pv-modules', itemName: 'Adani 620W Mono', quantity: '5' },
+          { category: 'inverters', itemName: 'Deye 3kW On-grid', quantity: '1' },
+        ],
+        roi: { systemSizeKw: 3, tariff: 8.2, generationFactor: 1500 },
+      }),
+    );
+    const f = result.findings.find((x) => x.id === 'system_size_mismatch' && x.sizeChoice);
+    expect(f).toBeTruthy();
+    expect(f?.sizeChoice?.crmKw).toBe(3);
+    expect(f?.sizeChoice?.lifecycleKw).toBe(3.025);
+    expect(f?.sizeChoice?.lifecycleDetail).toBe('5 × 605 W');
+    expect(f?.detail).toContain('Lifecycle panel capacity');
+    expect(f?.detail).not.toContain('620');
   });
 
   it('offers round for near-integer ROI kW', () => {
@@ -289,12 +357,8 @@ describe('runProposalPreflight', () => {
       }),
     );
     expect(result.findings.find((x) => x.id === 'roi_not_integer_kw')).toBeUndefined();
-    // CRM vs costing mismatch may still appear — that is intentional
-    const mismatch = result.findings.find((x) => x.id === 'system_size_mismatch');
-    if (mismatch) {
-      expect(mismatch.sizeChoice?.crmKw).toBe(10);
-      expect(mismatch.autoFixable).toBe(true);
-    }
+    // No Lifecycle Panel Capacity → capacity choice is skipped (costing name wattage alone is not enough)
+    expect(result.findings.find((x) => x.id === 'system_size_mismatch')).toBeUndefined();
   });
 
   it('uses CRM whole kW for subsidy band when saved ROI is a decimal', () => {
@@ -397,7 +461,7 @@ describe('applyPreflightFixes', () => {
       sheetSystemSizeKw: 5.31,
       systemSizeSource: 'crm',
       crmSystemSizeKw: 5,
-      costingDerivedKw: 5.31,
+      lifecycleDerivedKw: 5.31,
       roi: { systemSizeKw: 5.31, tariff: 8.2, generationFactor: 1500 },
     });
     expect(result.proposalSystemSizeKw).toBe(5);
@@ -406,7 +470,7 @@ describe('applyPreflightFixes', () => {
     expect(result.applied).toContain('system_size_mismatch');
   });
 
-  it('applies costing-derived capacity choice', () => {
+  it('applies Lifecycle panel-derived capacity choice', () => {
     const result = applyPreflightFixes({
       selectedFixIds: ['system_size_mismatch'],
       sheetItems: [
@@ -418,9 +482,9 @@ describe('applyPreflightFixes', () => {
         },
       ],
       sheetSystemSizeKw: 5.31,
-      systemSizeSource: 'costing',
+      systemSizeSource: 'lifecycle',
       crmSystemSizeKw: 5,
-      costingDerivedKw: 5.31,
+      lifecycleDerivedKw: 5.31,
       roi: { systemSizeKw: 5, tariff: 8.2, generationFactor: 1500 },
     });
     expect(result.proposalSystemSizeKw).toBe(5.31);

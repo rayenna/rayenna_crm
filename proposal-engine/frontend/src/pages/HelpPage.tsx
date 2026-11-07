@@ -328,8 +328,8 @@ export default function HelpPage() {
 
           <Step n={4} title="Generate and send">
             <strong>Continue to proposal</strong> opens <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>.
-            Click <strong>Generate Proposal</strong>, then <strong>Save</strong>. If a roof drawing should appear in the document, turn on <strong>Include roof layout</strong> before you generate.
-            Then <strong>PDF</strong>, <strong>DOCX</strong>, or <strong>Share</strong>.
+            Click <strong>Generate Proposal</strong> — a <strong>pre-flight</strong> check may ask you to confirm capacity or fix warnings — then <strong>Save</strong>. If a roof drawing should appear in the document, turn on <strong>Include roof layout</strong> before you generate.
+            Then <strong>PDF</strong>, <strong>DOCX</strong>, or <strong>Share</strong> (those actions also run pre-flight).
           </Step>
         </div>
 
@@ -367,7 +367,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Creating a Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              On the <strong>Customers / Projects</strong> page, the <strong>card grid</strong> lists CRM projects that are already selected into Proposal Engine. To add another, click <strong>+ Select Project</strong> to open the <strong>CRM project picker</strong> (a separate modal with its own search and filters). The picker shows Rayenna CRM projects in <em>Proposal</em> or <em>Confirmed</em> stages. When you pick a project, the Proposal Engine creates a linked customer record and pulls in master data such as customer ID, name, full address, contact numbers, email, consumer number, system capacity, segment, sales person, project stage, and panel type from the CRM.
+              On the <strong>Customers / Projects</strong> page, the <strong>card grid</strong> lists CRM projects that are already selected into Proposal Engine. To add another, click <strong>+ Select Project</strong> to open the <strong>CRM project picker</strong> (a separate modal with its own search and filters). The picker shows Rayenna CRM projects in <em>Proposal</em> or <em>Confirmed</em> stages. When you pick a project, the Proposal Engine creates a linked customer record and pulls in master data such as customer ID, name, full address, contact numbers, email, consumer number, <strong>system capacity</strong>, <strong>panel capacity (W)</strong>, panel brand, panel type, inverter brand/capacity, segment, sales person, and project stage from the CRM Project Lifecycle.
             </p>
           </div>
 
@@ -612,9 +612,9 @@ export default function HelpPage() {
         <div className="space-y-5">
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Auto-Fill from Costing Sheet</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Auto-Fill from CRM &amp; Costing</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              When you save the Costing Sheet, <strong>System Size (kW)</strong> and <strong>Total Project Cost (₹)</strong> are automatically passed to the ROI Calculator. A blue banner at the top of the page confirms the source and values. You do not need to enter these manually.
+              When you save the Costing Sheet, <strong>System Size (kW)</strong> is taken from the <strong>CRM project system capacity</strong> (whole kW), and <strong>Total Project Cost (₹)</strong> comes from the costing grand total. A blue banner at the top of the page confirms the source and values. You do not need to enter these manually.
             </p>
           </div>
 
@@ -631,7 +631,7 @@ export default function HelpPage() {
                 </thead>
                 <tbody>
                   {[
-                    ['System Size (kW)',       'From costing sheet',  'Total installed capacity in kilowatts'],
+                    ['System Size (kW)',       'From CRM project',   'CRM Project System Capacity (whole kW) — used for payback and subsidy bands'],
                     ['Electricity Tariff',     '₹8.20/kWh',          'Current rate your customer pays per unit'],
                     ['Generation Factor',      '1500 kWh/kW/year',   'Expected annual solar generation per kW installed (Kerala average)'],
                     ['Tariff Escalation',      '5% per year',        'Expected annual increase in electricity tariff'],
@@ -695,8 +695,33 @@ export default function HelpPage() {
             <p className="text-sm text-gray-600 leading-relaxed">
               If an active customer is set, their details are pre-filled. Click <strong>Generate Proposal</strong> to assemble the full document. The proposal pulls data from the Costing Sheet, BOM, and ROI Calculator automatically.
             </p>
-            <div className="mt-2">
+            <div className="mt-2 space-y-2">
               <Note>For best results, save the Costing Sheet, BOM, and ROI result before generating the proposal.</Note>
+              <Tip>
+                Generate, Share, PDF, and DOCX all run a <strong>Proposal pre-flight</strong> check first — see below.
+              </Tip>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Proposal pre-flight</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              Before <strong>Generate</strong>, <strong>Share</strong>, <strong>PDF</strong>, or <strong>DOCX</strong>, Proposal Engine runs a short quality check. The modal lists issues (must fix or consciously ignore) and warnings. You can <strong>Apply selected</strong> auto-fixes, <strong>Ignore &amp; proceed</strong>, or <strong>Cancel</strong>.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              <strong>System capacity choice</strong> appears only when CRM Project Lifecycle has a <strong>Panel Capacity (W)</strong> value and that capacity × the PV module quantity on the costing sheet differs from the CRM <strong>project system capacity</strong> (kW). You then pick which value the proposal should show:
+            </p>
+            <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
+              <li><strong>CRM project capacity</strong> — the whole-kW system size on the Rayenna CRM project (default).</li>
+              <li><strong>Lifecycle panel capacity</strong> — Panel Capacity (W) × number of panels from costing (e.g. 605 W × 5 = 3.025 kW).</li>
+            </ul>
+            <div className="space-y-2">
+              <Note>
+                Wattage tokens in costing item names (e.g. &quot;620W&quot; in a module description) do <strong>not</strong> drive this choice. If Lifecycle Panel Capacity is empty, this capacity check is skipped.
+              </Note>
+              <Tip>
+                Costing line items stay unchanged either way — only the capacity shown on the proposal / ROI alignment for that run is updated when you Apply.
+              </Tip>
             </div>
           </div>
 
@@ -1244,7 +1269,11 @@ export default function HelpPage() {
         <div className="space-y-2">
 
           <FaqItem q="Why is the ROI Calculator not auto-filling System Size and Project Cost?">
-            The ROI Calculator is auto-filled when you <strong>save the Costing Sheet</strong> (not just edit it). Make sure you clicked <strong>💾 Save Sheet</strong> and that the same customer is active. If the values still don't appear, try saving the costing sheet again.
+            The ROI Calculator is filled when you <strong>save the Costing Sheet</strong> (not just edit it). <strong>System Size</strong> comes from the CRM project system capacity (whole kW); <strong>project cost</strong> comes from the costing grand total. Make sure you clicked <strong>💾 Save Sheet</strong>, the same customer is active, and the CRM project has a system capacity set. If values still don't appear, try saving the costing sheet again.
+          </FaqItem>
+
+          <FaqItem q="Why did pre-flight ask me to choose between 3 kW and 3.025 kW?">
+            CRM Project Lifecycle has a <strong>Panel Capacity (W)</strong> value, and that wattage × the panel quantity on your costing sheet differs from the CRM <strong>project system capacity</strong>. Pick <strong>CRM project capacity</strong> to keep the whole-kW figure on the proposal, or <strong>Lifecycle panel capacity</strong> to show the W × qty result (e.g. 605 W × 5 = 3.025 kW). If Panel Capacity is blank in CRM Lifecycle, this choice does not appear. Costing item names like &quot;620W&quot; are not used for this comparison.
           </FaqItem>
 
           <FaqItem q="Why is the BOM empty when I open it?">

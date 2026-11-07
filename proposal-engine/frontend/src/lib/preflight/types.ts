@@ -25,14 +25,15 @@ export type PreflightAutoFixId =
   | 'subsidy_override_high'
   | 'roi_not_integer_kw';
 
-/** Which system capacity the proposal should use when CRM and costing disagree. */
-export type SystemSizeSource = 'crm' | 'costing';
+/** Which system capacity the proposal should use when CRM project kW and Lifecycle panel-derived kW disagree. */
+export type SystemSizeSource = 'crm' | 'lifecycle';
 
 export interface PreflightSizeChoice {
   crmKw: number;
-  costingKw: number;
-  /** Human-readable costing breakdown, e.g. "8 × 620 W". */
-  costingDetail: string;
+  /** CRM Lifecycle panel wattage × panel qty from costing. */
+  lifecycleKw: number;
+  /** Human-readable breakdown, e.g. "5 × 605 W". */
+  lifecycleDetail: string;
 }
 
 export interface PreflightFinding {
@@ -46,7 +47,7 @@ export interface PreflightFinding {
   navigateTo?: PreflightNavigateTo;
   /** Maps to applyPreflightFixes handler when autoFixable. */
   autoFixId?: PreflightAutoFixId;
-  /** Present on system_size_mismatch — user picks CRM vs costing-derived. */
+  /** Present on system_size_mismatch — user picks CRM project kW vs Lifecycle panel-derived. */
   sizeChoice?: PreflightSizeChoice;
 }
 
