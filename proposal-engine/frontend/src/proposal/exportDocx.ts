@@ -19,7 +19,6 @@ import {
   WHAT_WE_OFFER_INTRO,
   closingText,
   savingsText,
-  scopeSectionsFor,
   scopeText,
 } from './proposalCopy';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
@@ -30,6 +29,7 @@ import {
   systemTypeCapacityChip,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
+import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
 
 export function buildDocx(
@@ -737,12 +737,14 @@ export function buildDocx(
         ...Array.from({ length: 3 }, (_, r) =>
           new TableRow({
             children: [0, 1].map((c) => {
-              const h = ABOUT_HIGHLIGHTS[r * 2 + c];
+              const idx = r * 2 + c;
+              const h = ABOUT_HIGHLIGHTS[idx];
+              const text = ov(textOverrides, `about-highlight-${idx}`, h.text);
               return new TableCell({
                 shading: { type: ShadingType.SOLID, color: 'F0F9FF' },
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: `${h.icon}  ${h.text}`, size: 20, color: '374151' })],
+                    children: [new TextRun({ text: `${h.icon}  ${text}`, size: 20, color: '374151' })],
                   }),
                 ],
               });
@@ -813,15 +815,24 @@ export function buildDocx(
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [
         new TableRow({
-          children: OUR_SERVICES.map((s) => new TableCell({
+          children: OUR_SERVICES.map((s, i) => new TableCell({
             shading: { type: ShadingType.SOLID, color: 'E0F2FE' },
             children: [
               new Paragraph({
-                children: [new TextRun({ text: `${s.icon}  ${s.title.toUpperCase()}`, bold: true, size: 20, color: '0369a1' })],
+                children: [new TextRun({
+                  text: `${s.icon}  ${ov(textOverrides, `offer-service-${i}-title`, s.title).toUpperCase()}`,
+                  bold: true,
+                  size: 20,
+                  color: '0369a1',
+                })],
                 spacing: { after: 60 },
               }),
               new Paragraph({
-                children: [new TextRun({ text: s.desc, size: 18, color: '374151' })],
+                children: [new TextRun({
+                  text: ov(textOverrides, `offer-service-${i}-desc`, s.desc),
+                  size: 18,
+                  color: '374151',
+                })],
               }),
             ],
           })),
@@ -833,24 +844,30 @@ export function buildDocx(
     ...(p.roi ? (() => {
       const r      = p.roi!;
       const sizeKw = r.inputs.systemSizeKw > 0 ? r.inputs.systemSizeKw : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
+      const heroOverride = textOverrides?.['financial-hero']?.trim();
       return [
-        // Hero statement paragraph
-        new Paragraph({
-          children: [
-            new TextRun({ text: 'The proposed ', size: 22, color: '374151' }),
-            new TextRun({ text: proposalForHeading(sizeKw, p.systemType), bold: true, size: 24, color: navy }),
-            new TextRun({ text: ' is projected to generate ', size: 22, color: '374151' }),
-            new TextRun({ text: `${r.annualGeneration.toLocaleString('en-IN')} kWh`, bold: true, size: 22, color: '059669' }),
-            new TextRun({ text: ' of clean electricity in Year 1, delivering annual savings of ', size: 22, color: '374151' }),
-            new TextRun({ text: fmtINR(r.annualSavings), bold: true, size: 22, color: '059669' }),
-            new TextRun({ text: '. Over 25 years, cumulative savings are estimated at ', size: 22, color: '374151' }),
-            new TextRun({ text: fmtINR(r.totalSavings25Years), bold: true, size: 24, color: navy }),
-            new TextRun({ text: ` — an ROI of `, size: 22, color: '374151' }),
-            new TextRun({ text: `${r.roiPercent.toFixed(1)}%`, bold: true, size: 24, color: navy }),
-            new TextRun({ text: '.', size: 22, color: '374151' }),
-          ],
-          spacing: { after: 160 },
-        }),
+        // Hero statement — prefer live Edit override when present
+        heroOverride
+          ? new Paragraph({
+              children: [new TextRun({ text: heroOverride, size: 22, color: '374151' })],
+              spacing: { after: 160 },
+            })
+          : new Paragraph({
+              children: [
+                new TextRun({ text: 'The proposed ', size: 22, color: '374151' }),
+                new TextRun({ text: proposalForHeading(sizeKw, p.systemType), bold: true, size: 24, color: navy }),
+                new TextRun({ text: ' is projected to generate ', size: 22, color: '374151' }),
+                new TextRun({ text: `${r.annualGeneration.toLocaleString('en-IN')} kWh`, bold: true, size: 22, color: '059669' }),
+                new TextRun({ text: ' of clean electricity in Year 1, delivering annual savings of ', size: 22, color: '374151' }),
+                new TextRun({ text: fmtINR(r.annualSavings), bold: true, size: 22, color: '059669' }),
+                new TextRun({ text: '. Over 25 years, cumulative savings are estimated at ', size: 22, color: '374151' }),
+                new TextRun({ text: fmtINR(r.totalSavings25Years), bold: true, size: 24, color: navy }),
+                new TextRun({ text: ` — an ROI of `, size: 22, color: '374151' }),
+                new TextRun({ text: `${r.roiPercent.toFixed(1)}%`, bold: true, size: 24, color: navy }),
+                new TextRun({ text: '.', size: 22, color: '374151' }),
+              ],
+              spacing: { after: 160 },
+            }),
         // 4-column highlight table
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
@@ -893,11 +910,13 @@ export function buildDocx(
     new Paragraph({ text: '', spacing: { after: 80 } }),
     heading('Environmental Impact'),
     new Paragraph({
-      children: [
-        new TextRun({ text: 'By harnessing solar energy, ', size: 22, color: '374151' }),
-        new TextRun({ text: p.customer.customerName || 'your organisation', bold: true, size: 22, color: '374151' }),
-        new TextRun({ text: ' will make a meaningful contribution to environmental sustainability — reducing carbon emissions, conserving natural resources, and supporting India\'s clean energy goals.', size: 22, color: '374151' }),
-      ],
+      children: textOverrides?.['env-intro']?.trim()
+        ? [new TextRun({ text: textOverrides['env-intro']!, size: 22, color: '374151' })]
+        : [
+            new TextRun({ text: 'By harnessing solar energy, ', size: 22, color: '374151' }),
+            new TextRun({ text: p.customer.customerName || 'your organisation', bold: true, size: 22, color: '374151' }),
+            new TextRun({ text: ' will make a meaningful contribution to environmental sustainability — reducing carbon emissions, conserving natural resources, and supporting India\'s clean energy goals.', size: 22, color: '374151' }),
+          ],
       spacing: { after: 160 },
     }),
     // 4 bullet cards as a 2-col table
@@ -933,16 +952,19 @@ export function buildDocx(
         rows.push(
           new TableRow({
             children: [0, 1].map((c) => {
-              const b = envBullets[r * 2 + c];
+              const idx = r * 2 + c;
+              const b = envBullets[idx];
+              const title = ov(textOverrides, `env-bullet-${idx}-title`, b.title);
+              const body = ov(textOverrides, `env-bullet-${idx}-body`, b.body);
               return new TableCell({
                 shading: { type: ShadingType.SOLID, color: b.bg },
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: `${b.icon}  ${b.title}`, bold: true, size: 20, color: b.color })],
+                    children: [new TextRun({ text: `${b.icon}  ${title}`, bold: true, size: 20, color: b.color })],
                     spacing: { after: 60 },
                   }),
                   new Paragraph({
-                    children: [new TextRun({ text: b.body, size: 19, color: '374151' })],
+                    children: [new TextRun({ text: body, size: 19, color: '374151' })],
                   }),
                 ],
               });
@@ -1043,7 +1065,11 @@ export function buildDocx(
       : []),
     heading('Our Process for Seamless Solar Integration'),
     new Paragraph({
-      children: [new TextRun({ text: OUR_PROCESS_INTRO, size: 22, color: '374151' })],
+      children: [new TextRun({
+        text: ov(textOverrides, 'our-process-intro', OUR_PROCESS_INTRO),
+        size: 22,
+        color: '374151',
+      })],
       spacing: { after: 160 },
     }),
     // Process steps as 2-column rows so Word on phone/iPad/A4 does not clip a 5-wide row
@@ -1052,6 +1078,8 @@ export function buildDocx(
       const fgColors = ['0369a1', '0891b2', '059669', 'd97706', '7c3aed'];
       const processCell = (idx: number) => {
         const step = OUR_PROCESS_STEPS[idx]!;
+        const title = ov(textOverrides, `process-step-${idx}-title`, step.title);
+        const desc = ov(textOverrides, `process-step-${idx}-desc`, step.desc);
         return new TableCell({
           shading: { type: ShadingType.SOLID, color: bgColors[idx] },
           width: { size: 50, type: WidthType.PERCENTAGE },
@@ -1061,11 +1089,11 @@ export function buildDocx(
               spacing: { after: 40 },
             }),
             new Paragraph({
-              children: [new TextRun({ text: `${step.icon}  ${step.title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
+              children: [new TextRun({ text: `${step.icon}  ${title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
               spacing: { after: 60 },
             }),
             new Paragraph({
-              children: [new TextRun({ text: step.desc, size: 17, color: '374151' })],
+              children: [new TextRun({ text: desc, size: 17, color: '374151' })],
             }),
           ],
         });
@@ -1091,66 +1119,39 @@ export function buildDocx(
     new Paragraph({ text: '', spacing: { after: 120 } }),
     heading('Scope of Work'),
     new Paragraph({
-      children: [new TextRun({ text: textOverrides?.['scope-intro'] ?? scopeText(p), size: 22, color: '374151' })],
+      children: [new TextRun({ text: ov(textOverrides, 'scope-intro', scopeText(p)), size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
     (() => {
-      const scopeSections = scopeSectionsFor(p.systemType);
+      const scopeSections = resolveScopeSectionsForExport(p.systemType, textOverrides);
+      const scopeCell = (idx: number) => {
+        const s = scopeSections[idx];
+        return new TableCell({
+          width: { size: 50, type: WidthType.PERCENTAGE },
+          shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
+              spacing: { after: 80 },
+            }),
+            ...s.items.map((item) =>
+              new Paragraph({
+                children: [
+                  new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
+                  new TextRun({ text: item, size: 20, color: '374151' }),
+                ],
+                spacing: { after: 40 },
+                indent: { left: 180 },
+              }),
+            ),
+          ],
+        });
+      };
       return new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: [
-          // Row 1: sections 0 & 1
-          new TableRow({
-            children: [0, 1].map((idx) => {
-              const s = scopeSections[idx];
-              return new TableCell({
-                width: { size: 50, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
-                    spacing: { after: 80 },
-                  }),
-                  ...s.items.map((item) =>
-                    new Paragraph({
-                      children: [
-                        new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
-                        new TextRun({ text: item, size: 20, color: '374151' }),
-                      ],
-                      spacing: { after: 40 },
-                      indent: { left: 180 },
-                    }),
-                  ),
-                ],
-              });
-            }),
-          }),
-          // Row 2: sections 2 & 3
-          new TableRow({
-            children: [2, 3].map((idx) => {
-              const s = scopeSections[idx];
-              return new TableCell({
-                width: { size: 50, type: WidthType.PERCENTAGE },
-                shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
-                    spacing: { after: 80 },
-                  }),
-                  ...s.items.map((item) =>
-                    new Paragraph({
-                      children: [
-                        new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
-                        new TextRun({ text: item, size: 20, color: '374151' }),
-                      ],
-                      spacing: { after: 40 },
-                      indent: { left: 180 },
-                    }),
-                  ),
-                ],
-              });
-            }),
-          }),
+          new TableRow({ children: [0, 1].map(scopeCell) }),
+          new TableRow({ children: [2, 3].map(scopeCell) }),
         ],
       });
     })(),

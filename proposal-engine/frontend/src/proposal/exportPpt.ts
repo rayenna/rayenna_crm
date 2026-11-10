@@ -11,7 +11,6 @@ import {
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
   PAYMENT_TERMS,
-  scopeSectionsFor,
   scopeText,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
@@ -25,6 +24,7 @@ import {
   systemTypeArticle,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
+import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { ProposalData, TextOverrides } from './types';
 
 const NAVY = '0d1b3a';
@@ -105,11 +105,6 @@ export function commercialsFromProposal(p: ProposalData): {
     subsidyAmt,
     showSubsidy,
   };
-}
-
-function ov(overrides: TextOverrides | undefined, key: string, fallback: string): string {
-  const v = overrides?.[key]?.trim();
-  return v || fallback;
 }
 
 function arrayBufferToDataUrl(buf: ArrayBuffer, mime = 'image/jpeg'): string {
@@ -575,7 +570,7 @@ export async function exportToPpt(
         fill: { color: i % 2 === 0 ? LIGHT : CARD },
         rectRadius: 0.08,
       });
-      s.addText(h.text, {
+      s.addText(ov(overrides, `about-highlight-${i}`, h.text), {
         x: x + 0.25,
         y: y + 0.22,
         w: 5.45,
@@ -611,6 +606,8 @@ export async function exportToPpt(
     }
     OUR_SERVICES.forEach((svc, i) => {
       const x = 0.5 + i * 4.15;
+      const title = ov(overrides, `offer-service-${i}-title`, svc.title);
+      const desc = ov(overrides, `offer-service-${i}-desc`, svc.desc);
       s.addShape('roundRect', {
         x,
         y: 3.55,
@@ -627,7 +624,7 @@ export async function exportToPpt(
         fill: { color: GOLD },
         line: { color: GOLD },
       });
-      s.addText(svc.title.toUpperCase(), {
+      s.addText(title.toUpperCase(), {
         x: x + 0.3,
         y: 3.75,
         w: 3.45,
@@ -637,7 +634,7 @@ export async function exportToPpt(
         color: NAVY,
         bold: true,
       });
-      s.addText(svc.desc, {
+      s.addText(desc, {
         x: x + 0.3,
         y: 4.4,
         w: 3.45,
@@ -820,40 +817,56 @@ export async function exportToPpt(
     const name = p.customer.customerName || 'your organisation';
     const co2 = p.roi?.co2OffsetTons;
     const gen = p.roi?.annualGeneration;
+    const envIntro = ov(
+      overrides,
+      'env-intro',
+      `By harnessing solar energy, ${name} will make a meaningful contribution to environmental sustainability.`,
+    );
+    s.addText(envIntro, {
+      x: 0.5,
+      y: 1.05,
+      w: 12.3,
+      h: 0.45,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+    });
     const cards = [
       {
-        title: 'Carbon reduction',
+        title: 'Carbon Footprint Reduction',
         body: co2
           ? `Over 25 years the system offsets about ${co2.toFixed(1)} tonnes of CO₂.`
           : 'The plant reduces carbon emissions across its 25-year life.',
       },
       {
-        title: 'Clean generation',
+        title: 'Clean Energy Generation',
         body: gen
           ? `${gen.toLocaleString('en-IN')} kWh of renewable electricity every year.`
           : 'Clean electricity generated on site, year after year.',
       },
       {
-        title: 'National mission',
+        title: 'National Solar Mission Alignment',
         body: `Aligns with India's National Solar Mission and ${name}'s sustainability goals.`,
       },
       {
-        title: 'Long-term value',
+        title: 'Long-Term Sustainability',
         body: 'Designed for 25 years of yield, with monitoring and after-sales support.',
       },
     ];
     cards.forEach((c, i) => {
       const x = 0.5 + (i % 2) * 6.2;
-      const y = 1.2 + Math.floor(i / 2) * 2.7;
+      const y = 1.55 + Math.floor(i / 2) * 2.55;
+      const title = ov(overrides, `env-bullet-${i}-title`, c.title);
+      const body = ov(overrides, `env-bullet-${i}-body`, c.body);
       s.addShape('roundRect', {
         x,
         y,
         w: 5.95,
-        h: 2.45,
+        h: 2.35,
         fill: { color: i % 2 === 0 ? CARD : LIGHT },
         rectRadius: 0.1,
       });
-      s.addText(c.title.toUpperCase(), {
+      s.addText(title.toUpperCase(), {
         x: x + 0.3,
         y: y + 0.28,
         w: 5.35,
@@ -863,7 +876,7 @@ export async function exportToPpt(
         color: NAVY,
         bold: true,
       });
-      s.addText(c.body, {
+      s.addText(body, {
         x: x + 0.3,
         y: y + 0.8,
         w: 5.35,
@@ -942,6 +955,8 @@ export async function exportToPpt(
     );
     OUR_PROCESS_STEPS.forEach((step, i) => {
       const x = 0.5 + i * 2.5;
+      const title = ov(overrides, `process-step-${i}-title`, step.title);
+      const desc = ov(overrides, `process-step-${i}-desc`, step.desc);
       s.addShape('ellipse', {
         x: x + 0.85,
         y: 1.9,
@@ -960,7 +975,7 @@ export async function exportToPpt(
         bold: true,
         align: 'center',
       });
-      s.addText(step.title, {
+      s.addText(title, {
         x,
         y: 2.6,
         w: 2.35,
@@ -971,7 +986,7 @@ export async function exportToPpt(
         bold: true,
         align: 'center',
       });
-      s.addText(step.desc, {
+      s.addText(desc, {
         x,
         y: 3.1,
         w: 2.35,
@@ -997,7 +1012,7 @@ export async function exportToPpt(
       fontSize: 13,
       color: SLATE,
     });
-    scopeSectionsFor(p.systemType).forEach((sec, i) => {
+    resolveScopeSectionsForExport(p.systemType, overrides).forEach((sec, i) => {
       const x = 0.5 + (i % 2) * 6.2;
       const y = 1.55 + Math.floor(i / 2) * 2.65;
       s.addShape('roundRect', {

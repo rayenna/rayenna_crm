@@ -1091,7 +1091,12 @@ export default function ProposalPreview() {
     if (sectionsForExport !== customSectionsBeforeBoq) {
       setCustomSectionsBeforeBoq(sectionsForExport);
     }
+    // Flush live Edit DOM (contentEditables) into overrides so DOCX/PPT match
+    // the on-screen proposal even if the user exports without clicking Save.
     const overridesForExport = currentTextOverrides();
+    if (overridesForExport) {
+      liveOverridesRef.current = { ...overridesForExport };
+    }
     if (kind === 'pdf') {
       if (!base) return;
       exportToPdf('proposal-print-root');
