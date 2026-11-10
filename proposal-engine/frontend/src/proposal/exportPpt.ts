@@ -11,14 +11,20 @@ import {
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
   PAYMENT_TERMS,
-  SCOPE_SECTIONS,
+  scopeSectionsFor,
+  scopeText,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
   WARRANTY_TERMS,
 } from './proposalCopy';
 import { renderCumulativeSavingsChartPng } from './cumulativeSavingsChart';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
-import { proposalForHeading } from './systemTypeLabel';
+import {
+  proposalForHeading,
+  rewriteSystemTypeInOverrides,
+  systemTypeArticle,
+  systemTypeHeadingTerm,
+} from './systemTypeLabel';
 import type { ProposalData, TextOverrides } from './types';
 
 const NAVY = '0d1b3a';
@@ -265,7 +271,9 @@ export async function exportToPpt(
     customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[];
   },
 ): Promise<void> {
-  const overrides = options?.textOverrides;
+  const overrides = options?.textOverrides
+    ? rewriteSystemTypeInOverrides(options.textOverrides, p.systemType)
+    : options?.textOverrides;
   const images = await loadImages(options?.container);
   const capacityKw = proposalDisplayCapacityKw(p);
   const heading = proposalForHeading(capacityKw, p.systemType);
@@ -453,10 +461,15 @@ export async function exportToPpt(
       bold: true,
     });
 
+    const typeTerm = systemTypeHeadingTerm(p.systemType);
+    const plantPhrase =
+      capacityKw > 0
+        ? `a ${capacityKw} kW ${typeTerm}`
+        : `${systemTypeArticle(p.systemType)} ${typeTerm}`;
     const p1 = ov(
       overrides,
       'exec-summary-p1',
-      `Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of a ${capacityKw > 0 ? `${capacityKw} kW ` : ''}${proposalForHeading(0, p.systemType).replace(' Solar Power Plant', '')} Solar Photovoltaic Power Plant at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.`,
+      `Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of ${plantPhrase} Solar Photovoltaic Power Plant at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.`,
     );
     const p2 = ov(
       overrides,
@@ -641,6 +654,24 @@ export async function exportToPpt(
     const r = p.roi;
     const s = newSlide();
     addSectionTitle(s, 'Financial Benefits & Savings', 'Returns');
+    const sizeKw =
+      r.inputs.systemSizeKw > 0
+        ? r.inputs.systemSizeKw
+        : p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0;
+    const financialHero = ov(
+      overrides,
+      'financial-hero',
+      `The proposed ${proposalForHeading(sizeKw, p.systemType)} is projected to generate ${r.annualGeneration.toLocaleString('en-IN')} kWh in Year 1, with annual savings of ${fmtINR(r.annualSavings)} and 25-year cumulative savings of ${fmtINR(r.totalSavings25Years)} (ROI ${r.roiPercent.toFixed(1)}%).`,
+    );
+    s.addText(financialHero, {
+      x: 0.5,
+      y: 1.05,
+      w: 12.3,
+      h: 0.55,
+      fontFace: FONT,
+      fontSize: 12,
+      color: SLATE,
+    });
     const kpis = [
       { label: 'Annual Generation', value: `${r.annualGeneration.toLocaleString('en-IN')} kWh` },
       { label: 'Year-1 Savings', value: fmtINR(r.annualSavings) },
@@ -651,20 +682,20 @@ export async function exportToPpt(
     ];
     kpis.forEach((k, i) => {
       const x = 0.5 + (i % 3) * 4.15;
-      const y = 1.2 + Math.floor(i / 3) * 1.55;
+      const y = 1.7 + Math.floor(i / 3) * 1.35;
       s.addShape('roundRect', {
         x,
         y,
         w: 3.95,
-        h: 1.4,
+        h: 1.2,
         fill: { color: i % 2 === 0 ? NAVY : CARD },
         rectRadius: 0.08,
       });
       s.addText(k.label.toUpperCase(), {
         x: x + 0.2,
-        y: y + 0.18,
+        y: y + 0.14,
         w: 3.55,
-        h: 0.3,
+        h: 0.28,
         fontFace: FONT,
         fontSize: 11,
         color: i % 2 === 0 ? GOLD : MUTED,
@@ -672,11 +703,11 @@ export async function exportToPpt(
       });
       s.addText(k.value, {
         x: x + 0.2,
-        y: y + 0.55,
+        y: y + 0.45,
         w: 3.55,
-        h: 0.6,
+        h: 0.55,
         fontFace: FONT,
-        fontSize: 22,
+        fontSize: 20,
         color: i % 2 === 0 ? WHITE : NAVY,
         bold: true,
       });
@@ -688,9 +719,9 @@ export async function exportToPpt(
     );
     s.addText(lcoe, {
       x: 0.5,
-      y: 4.45,
+      y: 4.5,
       w: 12.3,
-      h: 0.75,
+      h: 0.65,
       fontFace: FONT,
       fontSize: 12,
       color: SLATE,
@@ -705,7 +736,7 @@ export async function exportToPpt(
         x: 0.5,
         y: 5.25,
         w: 12.3,
-        h: 0.75,
+        h: 0.65,
         fontFace: FONT,
         fontSize: 12,
         color: MUTED,
@@ -957,22 +988,31 @@ export async function exportToPpt(
   {
     const s = newSlide();
     addSectionTitle(s, 'Scope of Work', 'Delivery');
-    SCOPE_SECTIONS.forEach((sec, i) => {
+    s.addText(ov(overrides, 'scope-intro', scopeText(p)), {
+      x: 0.5,
+      y: 1.05,
+      w: 12.3,
+      h: 0.45,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+    });
+    scopeSectionsFor(p.systemType).forEach((sec, i) => {
       const x = 0.5 + (i % 2) * 6.2;
-      const y = 1.15 + Math.floor(i / 2) * 2.85;
+      const y = 1.55 + Math.floor(i / 2) * 2.65;
       s.addShape('roundRect', {
         x,
         y,
         w: 5.95,
-        h: 2.65,
+        h: 2.45,
         fill: { color: LIGHT },
         rectRadius: 0.08,
       });
       s.addText(sec.title, {
         x: x + 0.25,
-        y: y + 0.15,
+        y: y + 0.12,
         w: 5.45,
-        h: 0.35,
+        h: 0.32,
         fontFace: FONT,
         fontSize: 14,
         color: NAVY,
@@ -980,9 +1020,9 @@ export async function exportToPpt(
       });
       s.addText(sec.items.map((item) => `•  ${item}`).join('\n'), {
         x: x + 0.25,
-        y: y + 0.55,
+        y: y + 0.48,
         w: 5.45,
-        h: 1.9,
+        h: 1.8,
         fontFace: FONT,
         fontSize: 12,
         color: SLATE,
@@ -1084,9 +1124,7 @@ export async function exportToPpt(
   if (commercials) {
     const s = newSlide();
     addSectionTitle(s, 'Commercials', 'Investment');
-    const desc = `Design, Supply, Installation & Commissioning of ${
-      commercials.sizeKw > 0 ? `${commercials.sizeKw} kW ` : ''
-    }${proposalForHeading(0, p.systemType)} including all electrical and structural work`;
+    const desc = `Design, Supply, Installation & Commissioning of ${proposalForHeading(commercials.sizeKw, p.systemType)} including all electrical and structural work`;
     const rows: PptxGenJS.TableRow[] = [
       [
         { text: desc, options: { fill: { color: WHITE }, color: SLATE } },

@@ -16,8 +16,15 @@ import {
   OUR_SERVICES,
   OUR_PROCESS_INTRO,
   OUR_PROCESS_STEPS,
-  SCOPE_SECTIONS,
+  scopeSectionsFor,
 } from './proposalCopy';
+import {
+  proposalForHeading,
+  rewriteSystemTypeMentions,
+  systemTypeArticle,
+  systemTypeCapacityChip,
+  systemTypeHeadingTerm,
+} from './systemTypeLabel';
 
 function readStorage<T>(key: string): T | null {
   try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch { return null; }
@@ -470,8 +477,9 @@ export function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) 
   const name = proposal.customer.customerName || 'Valued Customer';
   const loc  = proposal.customer.location;
 
+  const typeTerm = systemTypeHeadingTerm(proposal.systemType);
   const highlights = [
-    ...(sz > 0        ? [{ icon: '☀️', label: 'System Capacity',     value: `${sz} kW On-Grid Solar PV` }] : []),
+    ...(sz > 0        ? [{ icon: '☀️', label: 'System Capacity',     value: systemTypeCapacityChip(sz, proposal.systemType) }] : []),
     ...(cost > 0      ? [{ icon: '💼', label: 'Project Investment',   value: fmtINR(cost) }] : []),
     ...(pb            ? [{ icon: '⏱️', label: 'Payback Period',       value: `~${pb.toFixed(1)} years` }] : []),
     ...(sav           ? [{ icon: '📈', label: '25-Year Savings',      value: fmtINR(sav) }] : []),
@@ -502,7 +510,11 @@ export function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) 
       <OverriddenParagraph sectionKey="exec-summary-p1" className="text-sm text-secondary-700 leading-relaxed mb-4">
         Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the
         design, supply, installation, and commissioning of
-        {sz > 0 ? <> a <span className="font-bold text-secondary-800">{sz} kW</span></> : ' an'} On-Grid
+        {sz > 0 ? (
+          <> a <span className="font-bold text-secondary-800">{sz} kW</span> {typeTerm}</>
+        ) : (
+          <> {systemTypeArticle(proposal.systemType)} {typeTerm}</>
+        )}{' '}
         Solar Photovoltaic Power Plant at your premises{loc ? <> in <span className="font-semibold text-secondary-800">{loc}</span></> : ''}.
       </OverriddenParagraph>
       <OverriddenParagraph sectionKey="exec-summary-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
@@ -818,18 +830,22 @@ export function RoofLayoutBlock({ layout, systemSizeKw }: { layout: AiRoofLayout
 function ScopeSectionCard({
   section,
   index,
+  systemType,
 }: {
-  section: (typeof SCOPE_SECTIONS)[number];
+  section: ReturnType<typeof scopeSectionsFor>[number];
   index: number;
+  systemType?: string | null;
 }) {
   const scopeKey = `scope-section-${index}`;
   const map = React.useContext(ProposalTextOverridesContext);
   const isEditing = React.useContext(ProposalEditingContext);
   const o = map[scopeKey];
-  const lines =
+  const rawLines =
     o != null && o.trim() !== ''
       ? o.split('\n').map((t) => t.trim()).filter(Boolean)
       : section.items;
+  // Saved overrides often still say “On-grid string inverter(s)” — align to CRM type.
+  const lines = rawLines.map((line) => rewriteSystemTypeMentions(line, systemType));
   const seedItemsRef = React.useRef(lines);
   const wasEditingRef = React.useRef(false);
   if (isEditing && !wasEditingRef.current) {
@@ -876,6 +892,7 @@ export function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
   const sz = (proposal.roi?.inputs.systemSizeKw ?? 0) > 0
     ? proposal.roi!.inputs.systemSizeKw
     : (proposal.systemSizeKw || proposal.roiAutofill?.systemSizeKw || 0);
+  const sections = scopeSectionsFor(proposal.systemType);
 
   return (
     <div className="mb-8">
@@ -885,11 +902,16 @@ export function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Scope of Work</h2>
       </div>
       <OverriddenParagraph sectionKey="scope-intro" className="text-sm text-secondary-500 mb-5 pl-7">
-        {`The scope of work for the ${sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas:`}
+        {`The scope of work for the ${proposalForHeading(sz, proposal.systemType)} covers four key areas:`}
       </OverriddenParagraph>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {SCOPE_SECTIONS.map((s, si) => (
-          <ScopeSectionCard key={s.title} section={s} index={si} />
+        {sections.map((s, si) => (
+          <ScopeSectionCard
+            key={s.title}
+            section={s}
+            index={si}
+            systemType={proposal.systemType}
+          />
         ))}
       </div>
     </div>
@@ -959,7 +981,7 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
                 as="p"
                 className="text-white text-sm font-light leading-relaxed"
               >
-                {`The proposed ${sizeKw} kW On-Grid Solar Power Plant is projected to generate ${roi.annualGeneration.toLocaleString('en-IN')} kWh of clean electricity in Year 1, delivering annual savings of ${fmtINR(roi.annualSavings)}. Over 25 years, cumulative savings are estimated at ${fmtINR(roi.totalSavings25Years)} — an ROI of ${roi.roiPercent.toFixed(1)}%.`}
+                {`The proposed ${proposalForHeading(sizeKw, proposal.systemType)} is projected to generate ${roi.annualGeneration.toLocaleString('en-IN')} kWh of clean electricity in Year 1, delivering annual savings of ${fmtINR(roi.annualSavings)}. Over 25 years, cumulative savings are estimated at ${fmtINR(roi.totalSavings25Years)} — an ROI of ${roi.roiPercent.toFixed(1)}%.`}
               </EditableText>
             </div>
 
@@ -1392,12 +1414,15 @@ export function CommercialsBlock({
   roi,
   roiAutofill,
   systemSizeKw: headingSystemSizeKw,
+  systemType,
 }: {
   sheet: SavedSheet | null;
   roi: ROIResult | null;
   roiAutofill: RoiAutofill | null;
-  /** Same kW as the proposal header (“Proposal For … kW On-Grid …”). */
+  /** Same kW as the proposal header (“Proposal For … kW …”). */
   systemSizeKw?: number;
+  /** CRM Sales & Commercial system type (ON_GRID | OFF_GRID | HYBRID). */
+  systemType?: string | null;
 }) {
   // Prefer the saved costing sheet grand total + GST (must exactly match Excel).
   // Fall back to ROI inputs only when no costing sheet exists.
@@ -1438,9 +1463,9 @@ export function CommercialsBlock({
               <td className="px-5 py-3 text-secondary-600">
                 Design, Supply, Installation &amp; Commissioning of{' '}
                 {capacityKw > 0
-                  ? <span className="font-semibold text-secondary-800">{capacityKw} kW</span>
-                  : 'the'}{' '}
-                On-Grid Solar Power Plant including all electrical and structural work
+                  ? <><span className="font-semibold text-secondary-800">{capacityKw} kW</span> {systemTypeHeadingTerm(systemType)} </>
+                  : `the ${systemTypeHeadingTerm(systemType)} `}
+                Solar Power Plant including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}
@@ -1499,9 +1524,9 @@ export function CommercialsBlock({
               <td className="px-5 py-3 text-secondary-600">
                 Design, Supply, Installation &amp; Commissioning of{' '}
                 {capacityKw > 0
-                  ? <span className="font-semibold text-secondary-800">{capacityKw} kW</span>
-                  : 'the'}{' '}
-                On-Grid Solar Power Plant including all electrical and structural work
+                  ? <><span className="font-semibold text-secondary-800">{capacityKw} kW</span> {systemTypeHeadingTerm(systemType)} </>
+                  : `the ${systemTypeHeadingTerm(systemType)} `}
+                Solar Power Plant including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}

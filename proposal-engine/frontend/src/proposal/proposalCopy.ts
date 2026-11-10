@@ -1,14 +1,26 @@
 import type { ProposalData } from './types';
 import { fmtINR } from './format';
+import {
+  proposalForHeading,
+  systemTypeArticle,
+  systemTypeHeadingTerm,
+  systemTypeInverterSupplyLabel,
+} from './systemTypeLabel';
 
 export function execSummary(p: ProposalData): string {
   const sz   = (p.roi?.inputs.systemSizeKw ?? 0) > 0 ? p.roi!.inputs.systemSizeKw : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
   const cost = p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
   const pb   = p.roi?.paybackYears;
   const sav  = p.roi?.totalSavings25Years;
+  const typeTerm = systemTypeHeadingTerm(p.systemType);
+  const article = sz > 0 ? 'a' : systemTypeArticle(p.systemType);
+  const plant =
+    sz > 0
+      ? `${sz} kW ${typeTerm} Solar Photovoltaic Power Plant`
+      : `${typeTerm} Solar Photovoltaic Power Plant`;
   return `Dear ${p.customer.customerName || 'Valued Customer'},
 
-Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of a ${sz > 0 ? `${sz} kW` : ''} On-Grid Solar Photovoltaic Power Plant at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.
+Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of ${article} ${plant} at your premises${p.customer.location ? ` in ${p.customer.location}` : ''}.
 
 This proposal has been prepared based on a detailed assessment of your energy requirements and site conditions. The proposed solar system will significantly reduce your electricity costs, provide energy independence, and contribute to a cleaner environment.${cost > 0 ? `\n\nThe total project investment is ${fmtINR(cost)}.` : ''}${pb ? ` With a payback period of approximately ${pb.toFixed(1)} years, this represents an excellent return on investment.` : ''}${sav ? ` Over 25 years, the system is projected to generate cumulative savings of ${fmtINR(sav)}.` : ''}`;
 }
@@ -18,7 +30,7 @@ export function savingsText(p: ProposalData): string {
   const r = p.roi;
   // Prefer systemSizeKw from ROI inputs (most accurate), fall back to proposal-level value
   const sizeKw = r.inputs.systemSizeKw > 0 ? r.inputs.systemSizeKw : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
-  return `The proposed ${sizeKw} kW solar system is projected to generate approximately ${r.annualGeneration.toLocaleString('en-IN')} kWh of clean electricity in Year 1, resulting in annual savings of ${fmtINR(r.annualSavings)} at the current tariff of ₹${r.inputs.tariff}/kWh.
+  return `The proposed ${proposalForHeading(sizeKw, p.systemType)} is projected to generate approximately ${r.annualGeneration.toLocaleString('en-IN')} kWh of clean electricity in Year 1, resulting in annual savings of ${fmtINR(r.annualSavings)} at the current tariff of ₹${r.inputs.tariff}/kWh.
 
 With an assumed annual tariff escalation of ${r.inputs.escalationPercent}%, the cumulative savings over 25 years are estimated at ${fmtINR(r.totalSavings25Years)} — delivering an ROI of ${r.roiPercent.toFixed(1)}%.
 
@@ -114,9 +126,23 @@ export const SCOPE_SECTIONS = [
   },
 ];
 
+/** Scope cards with inverter wording matched to CRM system type. */
+export function scopeSectionsFor(systemType?: string | null) {
+  const inverterLabel = systemTypeInverterSupplyLabel(systemType);
+  return SCOPE_SECTIONS.map((sec) => {
+    if (sec.title !== '2. Supply of Equipment') return sec;
+    return {
+      ...sec,
+      items: sec.items.map((item) =>
+        item === 'On-grid string inverter(s)' ? inverterLabel : item,
+      ),
+    };
+  });
+}
+
 export function scopeText(p: ProposalData): string {
   const sz = (p.roi?.inputs.systemSizeKw ?? 0) > 0 ? p.roi!.inputs.systemSizeKw : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
-  return `The scope of work for the ${sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas: Site Survey & Design, Supply of Equipment, Installation & Commissioning, and Documentation & Handover.`;
+  return `The scope of work for the ${proposalForHeading(sz, p.systemType)} covers four key areas: Site Survey & Design, Supply of Equipment, Installation & Commissioning, and Documentation & Handover.`;
 }
 
 export const CLIENT_SCOPE = [

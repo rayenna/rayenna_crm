@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { pageBanner, pageShell } from '../components/ui/chrome';
@@ -57,7 +57,10 @@ import {
 } from '../proposal/proposalAssembly';
 import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, CLIENT_SCOPE, TERMS_AND_CONDITIONS, SERVICE_DETAILS, PAYMENT_TERMS, WARRANTY_TERMS, DELIVERY_TERMS } from '../proposal/proposalCopy';
 import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types';
-import { proposalForHeading } from '../proposal/systemTypeLabel';
+import {
+  proposalForHeading,
+  rewriteSystemTypeInOverrides,
+} from '../proposal/systemTypeLabel';
 import {
   ProposalTextOverridesContext,
   ProposalEditingContext,
@@ -305,10 +308,13 @@ export default function ProposalPreview() {
 
       if (isEditingRef.current) return;
       // Full document restore: body HTML → overrides, plus BOM notes + custom sections.
+      // Rewrite plant phrases so a previously saved “On-Grid” scope-intro follows live CRM type.
       const doc = restoreProposalDocumentFields(saved);
+      const liveType = latest.master.systemType ?? fromView?.systemType ?? null;
+      const textOverrides = rewriteSystemTypeInOverrides(doc.textOverrides, liveType);
       setBomComments(doc.bomComments);
-      setDisplayTextOverrides(doc.textOverrides);
-      liveOverridesRef.current = { ...doc.textOverrides };
+      setDisplayTextOverrides(textOverrides);
+      liveOverridesRef.current = { ...textOverrides };
       setCustomSectionsBeforeBoq(doc.customSectionsBeforeBoq);
       setIsEditing(false);
       setIncludeRoofLayout(!!saved.includeRoofLayout);
@@ -346,6 +352,14 @@ export default function ProposalPreview() {
         setProposal((prev) =>
           prev && (prev.systemType ?? null) !== systemType ? { ...prev, systemType } : prev,
         );
+        // Saved scope-intro / financial-hero may still say On-Grid from older generates.
+        setDisplayTextOverrides((prev) => rewriteSystemTypeInOverrides(prev, systemType));
+        liveOverridesRef.current = rewriteSystemTypeInOverrides(
+          liveOverridesRef.current,
+          systemType,
+        );
+        shareHtmlCacheRef.current = null;
+        setDocRevision((n) => n + 1);
       })
       .catch(() => {
         /* Keep the system type already on the open customer record. */
@@ -1046,16 +1060,22 @@ export default function ProposalPreview() {
     setCustomSectionsBeforeBoq(regeneratePreserveRef.current?.customSections ?? []);
   };
 
-  const proposalForExport = () => {
+  /** Live CRM Sales & Commercial system type on every document block (not only the heading). */
+  const proposalForDoc = useMemo(() => {
     if (!proposal) return null;
     return {
       ...proposal,
       systemType: crmSystemType !== undefined ? crmSystemType : proposal.systemType,
     };
-  };
+  }, [proposal, crmSystemType]);
+
+  const proposalForExport = () => proposalForDoc;
 
   const currentTextOverrides = () => {
-    const merged = captureLiveTextOverrides();
+    const merged = rewriteSystemTypeInOverrides(
+      captureLiveTextOverrides(),
+      crmSystemType !== undefined ? crmSystemType : proposal?.systemType,
+    );
     return Object.keys(merged).length > 0 ? merged : undefined;
   };
 
@@ -1571,7 +1591,7 @@ export default function ProposalPreview() {
                   <h2 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
                     {proposalForHeading(
                       proposal.systemSizeKw,
-                      crmSystemType !== undefined ? crmSystemType : proposal.systemType,
+                      proposalForDoc?.systemType,
                     )}
                   </h2>
                   {proposal.customer.location && (
@@ -1608,15 +1628,15 @@ export default function ProposalPreview() {
                 )}
 
                 <Divider />
-                <ExecutiveSummaryBlock proposal={proposal} />
+                <ExecutiveSummaryBlock proposal={proposalForDoc ?? proposal} />
                 <Divider />
                 <AboutRayennaBlock />
                 <Divider />
                 <WhatWeOfferBlock />
                 <Divider />
-                <FinancialBenefitsBlock proposal={proposal} />
+                <FinancialBenefitsBlock proposal={proposalForDoc ?? proposal} />
                 <Divider />
-                <EnvironmentalImpactBlock proposal={proposal} />
+                <EnvironmentalImpactBlock proposal={proposalForDoc ?? proposal} />
                 {canWrite && (
                   <div
                     className={`print-hide mb-6 rounded-xl px-4 py-3 space-y-2 border ${
@@ -1754,7 +1774,7 @@ export default function ProposalPreview() {
                 <Divider />
                 <OurProcessBlock />
                 <Divider />
-                <ScopeOfWorkBlock proposal={proposal} />
+                <ScopeOfWorkBlock proposal={proposalForDoc ?? proposal} />
                 </div>
                 <CustomSectionsBeforeBoq
                   ref={customSectionsRef}
@@ -1789,6 +1809,7 @@ export default function ProposalPreview() {
                   roi={proposal.roi}
                   roiAutofill={proposal.roiAutofill}
                   systemSizeKw={proposal.systemSizeKw}
+                  systemType={(proposalForDoc ?? proposal).systemType}
                 />
                 <div className="print-hide">
                   <Divider />

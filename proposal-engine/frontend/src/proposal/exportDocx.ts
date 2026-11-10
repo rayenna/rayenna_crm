@@ -12,7 +12,6 @@ import {
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
   PAYMENT_TERMS,
-  SCOPE_SECTIONS,
   SERVICE_DETAILS,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
@@ -20,10 +19,17 @@ import {
   WHAT_WE_OFFER_INTRO,
   closingText,
   savingsText,
+  scopeSectionsFor,
   scopeText,
 } from './proposalCopy';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
-import { proposalForHeading } from './systemTypeLabel';
+import {
+  proposalForHeading,
+  rewriteSystemTypeInOverrides,
+  systemTypeArticle,
+  systemTypeCapacityChip,
+  systemTypeHeadingTerm,
+} from './systemTypeLabel';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
 
 export function buildDocx(
@@ -41,6 +47,10 @@ export function buildDocx(
   if (!docx) {
     throw new Error('DOCX export module not loaded.');
   }
+  // Defense in depth: stale saved edits must not reintroduce a wrong system type.
+  textOverrides = textOverrides
+    ? rewriteSystemTypeInOverrides(textOverrides, p.systemType)
+    : textOverrides;
   const {
     Document,
     Paragraph,
@@ -539,7 +549,7 @@ export function buildDocx(
     const commercialRows: DocxTableRow[] = [
           new TableRow({
             children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${proposalForHeading(sizeKw, p.systemType)} including all electrical and structural work`, size: 20 })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
             ],
           }),
@@ -638,11 +648,19 @@ export function buildDocx(
           spacing: { after: 120 },
         });
       }
+      const typeTerm = systemTypeHeadingTerm(p.systemType);
       return new Paragraph({
         children: [
           new TextRun({ text: 'Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of', size: 22, color: '374151' }),
-          ...(sz > 0 ? [new TextRun({ text: ` a ${sz} kW`, bold: true, size: 22, color: navy })] : [new TextRun({ text: ' an', size: 22, color: '374151' })]),
-          new TextRun({ text: ' On-Grid Solar Photovoltaic Power Plant at your premises', size: 22, color: '374151' }),
+          ...(sz > 0
+            ? [
+                new TextRun({ text: ` a ${sz} kW`, bold: true, size: 22, color: navy }),
+                new TextRun({ text: ` ${typeTerm}`, size: 22, color: '374151' }),
+              ]
+            : [
+                new TextRun({ text: ` ${systemTypeArticle(p.systemType)} ${typeTerm}`, size: 22, color: '374151' }),
+              ]),
+          new TextRun({ text: ' Solar Photovoltaic Power Plant at your premises', size: 22, color: '374151' }),
           ...(loc ? [new TextRun({ text: ` in ${loc}`, bold: true, size: 22, color: navy })] : []),
           new TextRun({ text: '.', size: 22, color: '374151' }),
         ],
@@ -660,7 +678,7 @@ export function buildDocx(
       const pb   = p.roi?.paybackYears;
       const sav  = p.roi?.totalSavings25Years;
       const metrics = [
-        ...(sz > 0   ? [{ label: 'System Capacity',   value: `${sz} kW On-Grid Solar PV` }] : []),
+        ...(sz > 0   ? [{ label: 'System Capacity',   value: systemTypeCapacityChip(sz, p.systemType) }] : []),
         ...(cost > 0 ? [{ label: 'Project Investment', value: fmtINR(cost) }] : []),
         ...(pb       ? [{ label: 'Payback Period',     value: `~${pb.toFixed(1)} years` }] : []),
         ...(sav      ? [{ label: '25-Year Savings',    value: fmtINR(sav) }] : []),
@@ -820,8 +838,8 @@ export function buildDocx(
         new Paragraph({
           children: [
             new TextRun({ text: 'The proposed ', size: 22, color: '374151' }),
-            new TextRun({ text: `${sizeKw} kW`, bold: true, size: 24, color: navy }),
-            new TextRun({ text: ' On-Grid Solar Power Plant is projected to generate ', size: 22, color: '374151' }),
+            new TextRun({ text: proposalForHeading(sizeKw, p.systemType), bold: true, size: 24, color: navy }),
+            new TextRun({ text: ' is projected to generate ', size: 22, color: '374151' }),
             new TextRun({ text: `${r.annualGeneration.toLocaleString('en-IN')} kWh`, bold: true, size: 22, color: '059669' }),
             new TextRun({ text: ' of clean electricity in Year 1, delivering annual savings of ', size: 22, color: '374151' }),
             new TextRun({ text: fmtINR(r.annualSavings), bold: true, size: 22, color: '059669' }),
@@ -1076,63 +1094,66 @@ export function buildDocx(
       children: [new TextRun({ text: textOverrides?.['scope-intro'] ?? scopeText(p), size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
-    new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [
-        // Row 1: sections 0 & 1
-        new TableRow({
-          children: [0, 1].map((idx) => {
-            const s = SCOPE_SECTIONS[idx];
-            return new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
-                  spacing: { after: 80 },
-                }),
-                ...s.items.map((item) =>
+    (() => {
+      const scopeSections = scopeSectionsFor(p.systemType);
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          // Row 1: sections 0 & 1
+          new TableRow({
+            children: [0, 1].map((idx) => {
+              const s = scopeSections[idx];
+              return new TableCell({
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
+                children: [
                   new Paragraph({
-                    children: [
-                      new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
-                      new TextRun({ text: item, size: 20, color: '374151' }),
-                    ],
-                    spacing: { after: 40 },
-                    indent: { left: 180 },
+                    children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
+                    spacing: { after: 80 },
                   }),
-                ),
-              ],
-            });
+                  ...s.items.map((item) =>
+                    new Paragraph({
+                      children: [
+                        new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
+                        new TextRun({ text: item, size: 20, color: '374151' }),
+                      ],
+                      spacing: { after: 40 },
+                      indent: { left: 180 },
+                    }),
+                  ),
+                ],
+              });
+            }),
           }),
-        }),
-        // Row 2: sections 2 & 3
-        new TableRow({
-          children: [2, 3].map((idx) => {
-            const s = SCOPE_SECTIONS[idx];
-            return new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
-              shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
-                  spacing: { after: 80 },
-                }),
-                ...s.items.map((item) =>
+          // Row 2: sections 2 & 3
+          new TableRow({
+            children: [2, 3].map((idx) => {
+              const s = scopeSections[idx];
+              return new TableCell({
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.SOLID, color: 'F8FAFC' },
+                children: [
                   new Paragraph({
-                    children: [
-                      new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
-                      new TextRun({ text: item, size: 20, color: '374151' }),
-                    ],
-                    spacing: { after: 40 },
-                    indent: { left: 180 },
+                    children: [new TextRun({ text: `${s.icon}  ${s.title}`, bold: true, size: 22, color: navy })],
+                    spacing: { after: 80 },
                   }),
-                ),
-              ],
-            });
+                  ...s.items.map((item) =>
+                    new Paragraph({
+                      children: [
+                        new TextRun({ text: '• ', bold: true, size: 20, color: navy }),
+                        new TextRun({ text: item, size: 20, color: '374151' }),
+                      ],
+                      spacing: { after: 40 },
+                      indent: { left: 180 },
+                    }),
+                  ),
+                ],
+              });
+            }),
           }),
-        }),
-      ],
-    }),
+        ],
+      });
+    })(),
     new Paragraph({ text: '', spacing: { after: 200 } }),
     ...roiSection,
     ...customBeforeBoqDocx,
