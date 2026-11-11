@@ -19,6 +19,7 @@ import {
   scopeSectionsFor,
 } from './proposalCopy';
 import {
+  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeMentions,
   systemTypeArticle,
@@ -1438,6 +1439,7 @@ export function CommercialsBlock({
   const showSubsidy = !!roi?.inputs?.subsidyEligible && subsidyAmount > 0;
 
   const grandRounded = Math.round(grandTotal);
+  const descText = commercialsDescription(capacityKw, systemType);
 
   // If a costing sheet exists, use its GST total. Recompute from items if stored total is 0 (legacy data).
   if (sheet) {
@@ -1461,11 +1463,9 @@ export function CommercialsBlock({
           <tbody>
             <tr className="border-b border-primary-100">
               <td className="px-5 py-3 text-secondary-600">
-                Design, Supply, Installation &amp; Commissioning of{' '}
-                {capacityKw > 0
-                  ? <><span className="font-semibold text-secondary-800">{capacityKw} kW</span> {systemTypeHeadingTerm(systemType)} </>
-                  : `the ${systemTypeHeadingTerm(systemType)} `}
-                Solar Power Plant including all electrical and structural work
+                <EditableText sectionKey="commercials-desc" as="p" className="m-0">
+                  {descText}
+                </EditableText>
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}
@@ -1522,11 +1522,9 @@ export function CommercialsBlock({
           <tbody>
             <tr className="border-b border-primary-100">
               <td className="px-5 py-3 text-secondary-600">
-                Design, Supply, Installation &amp; Commissioning of{' '}
-                {capacityKw > 0
-                  ? <><span className="font-semibold text-secondary-800">{capacityKw} kW</span> {systemTypeHeadingTerm(systemType)} </>
-                  : `the ${systemTypeHeadingTerm(systemType)} `}
-                Solar Power Plant including all electrical and structural work
+                <EditableText sectionKey="commercials-desc" as="p" className="m-0">
+                  {descText}
+                </EditableText>
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}

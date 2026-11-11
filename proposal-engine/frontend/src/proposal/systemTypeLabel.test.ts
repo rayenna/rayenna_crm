@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   rewriteSystemTypeMentions,
@@ -8,6 +9,7 @@ import {
   systemTypeHeadingTerm,
   systemTypeInverterSupplyLabel,
 } from './systemTypeLabel';
+import { ov } from './textOverridesApply';
 import { scopeSectionsFor, scopeText, execSummary, savingsText } from './proposalCopy';
 import type { ProposalData, ROIResult } from './types';
 
@@ -35,6 +37,27 @@ describe('proposalForHeading', () => {
     expect(proposalForHeading(5, 'OFF_GRID')).toBe('5 kW Off-Grid Solar Power Plant');
     expect(proposalForHeading(0, 'HYBRID')).toBe('Hybrid Solar Power Plant');
     expect(proposalForHeading(15, 'HYBRID')).toBe('15 kW Hybrid Solar Power Plant');
+  });
+});
+
+describe('commercialsDescription (editable commercials-desc)', () => {
+  it('builds the default Commercials service line', () => {
+    expect(commercialsDescription(15, 'HYBRID')).toBe(
+      'Design, Supply, Installation & Commissioning of 15 kW Hybrid Solar Power Plant including all electrical and structural work',
+    );
+    expect(commercialsDescription(0, 'ON_GRID')).toBe(
+      'Design, Supply, Installation & Commissioning of the On-Grid Solar Power Plant including all electrical and structural work',
+    );
+  });
+
+  it('lets Edit overrides win for DOCX/PPT/PDF parity', () => {
+    expect(
+      ov(
+        { 'commercials-desc': 'EDITED commercials service description' },
+        'commercials-desc',
+        commercialsDescription(10, 'ON_GRID'),
+      ),
+    ).toBe('EDITED commercials service description');
   });
 });
 

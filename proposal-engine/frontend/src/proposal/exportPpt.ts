@@ -19,6 +19,7 @@ import {
 import { renderCumulativeSavingsChartPng } from './cumulativeSavingsChart';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
 import {
+  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   systemTypeArticle,
@@ -1139,7 +1140,11 @@ export async function exportToPpt(
   if (commercials) {
     const s = newSlide();
     addSectionTitle(s, 'Commercials', 'Investment');
-    const desc = `Design, Supply, Installation & Commissioning of ${proposalForHeading(commercials.sizeKw, p.systemType)} including all electrical and structural work`;
+    const desc = ov(
+      overrides,
+      'commercials-desc',
+      commercialsDescription(commercials.sizeKw, p.systemType),
+    );
     const rows: PptxGenJS.TableRow[] = [
       [
         { text: desc, options: { fill: { color: WHITE }, color: SLATE } },

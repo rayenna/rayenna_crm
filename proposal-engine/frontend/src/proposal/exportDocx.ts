@@ -23,6 +23,7 @@ import {
 } from './proposalCopy';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
 import {
+  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   systemTypeArticle,
@@ -549,7 +550,7 @@ export function buildDocx(
     const commercialRows: DocxTableRow[] = [
           new TableRow({
             children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${proposalForHeading(sizeKw, p.systemType)} including all electrical and structural work`, size: 20 })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ov(textOverrides, 'commercials-desc', commercialsDescription(sizeKw, p.systemType)), size: 20 })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
             ],
           }),

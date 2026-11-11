@@ -27,6 +27,17 @@ export function proposalForHeading(
   return `${size}${systemTypeHeadingTerm(systemType)} Solar Power Plant`;
 }
 
+/** Default Commercials line description (editable via `commercials-desc`). */
+export function commercialsDescription(
+  systemSizeKw: number,
+  systemType?: string | null,
+): string {
+  if (systemSizeKw > 0) {
+    return `Design, Supply, Installation & Commissioning of ${proposalForHeading(systemSizeKw, systemType)} including all electrical and structural work`;
+  }
+  return `Design, Supply, Installation & Commissioning of the ${systemTypeHeadingTerm(systemType)} Solar Power Plant including all electrical and structural work`;
+}
+
 /** e.g. “15 kW Hybrid Solar PV” for capacity chips. */
 export function systemTypeCapacityChip(
   systemSizeKw: number,
