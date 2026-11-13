@@ -44,6 +44,7 @@ export const INVERTER_BRAND_CANONICAL = [
   'Microtek',
   'Panasonic',
   'Polycab',
+  'PVblink',
   'Selec',
   'Seltrik',
   'Solaire',

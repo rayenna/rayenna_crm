@@ -15,6 +15,7 @@ export const INVERTER_BRAND_OPTIONS = [
   'Microtek',
   'Panasonic',
   'Polycab',
+  'PVblink',
   'Selec',
   'Seltrik',
   'Solaire',
