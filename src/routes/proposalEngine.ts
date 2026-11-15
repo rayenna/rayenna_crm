@@ -106,7 +106,7 @@ async function ensureProjectAccess(project: any, req: Request, res: Response): P
 
 /**
  * Latest saved PE proposal row. If the DB is missing newer columns (e.g. proposalView,
- * includedOptionalSections), a full-model read throws P2022; retry without those columns.
+ * includedOptionalSections, sectionOrder), a full-model read throws P2022; retry without those columns.
  */
 async function findLatestPeProposal(projectId: string) {
   try {
@@ -119,7 +119,9 @@ async function findLatestPeProposal(projectId: string) {
     const missingCol = String(err?.meta?.column ?? '');
     if (
       err?.code === 'P2022' &&
-      (missingCol.includes('proposalView') || missingCol.includes('includedOptionalSections'))
+      (missingCol.includes('proposalView') ||
+        missingCol.includes('includedOptionalSections') ||
+        missingCol.includes('sectionOrder'))
     ) {
       return prisma.pEProposal.findFirst({
         where: { projectId },
@@ -1214,6 +1216,20 @@ router.put(
         }
       }
 
+      const sectionOrderPatch: {
+        sectionOrder?: Prisma.InputJsonValue | typeof Prisma.DbNull;
+      } = {};
+      if (Object.prototype.hasOwnProperty.call(req.body, 'sectionOrder')) {
+        const raw = req.body.sectionOrder;
+        if (raw == null) {
+          sectionOrderPatch.sectionOrder = Prisma.DbNull;
+        } else if (!Array.isArray(raw) || raw.some((x: unknown) => typeof x !== 'string')) {
+          return res.status(400).json({ error: 'sectionOrder must be a string array or null' });
+        } else {
+          sectionOrderPatch.sectionOrder = raw as Prisma.InputJsonValue;
+        }
+      }
+
       const includeRoofLayout: boolean =
         typeof req.body.includeRoofLayout === 'boolean'
           ? req.body.includeRoofLayout
@@ -1229,6 +1245,7 @@ router.put(
         textOverrides: req.body.textOverrides ?? null,
         ...customSectionsPatch,
         ...includedOptionalPatch,
+        ...sectionOrderPatch,
         summary: req.body.summary ?? null,
         includeRoofLayout,
         ...(Object.prototype.hasOwnProperty.call(req.body, 'proposalView')

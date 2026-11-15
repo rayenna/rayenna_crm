@@ -759,6 +759,8 @@ model PEProposal {
   customSectionsBeforeBoq Json?
   /// Which optional narrative sections are included (JSON map of sectionId → boolean)
   includedOptionalSections Json?
+  /// Ordered list of reorderable body section ids (after Cover + Executive Summary)
+  sectionOrder Json?
   /// Full Proposal Engine view snapshot (costing/BOM/ROI-backed) for reopening on any device
   proposalView  Json?
   summary       String?
