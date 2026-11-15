@@ -55,6 +55,8 @@ export function buildDocx(
   customSectionPostersById?: Record<string, ArrayBuffer | undefined>,
   docx?: DocxModule,
   includedOptionalSections?: IncludedOptionalSections | null,
+  /** Composited cover hero (navy wash) for the DOCX title banner. */
+  coverHeroImageData?: ArrayBuffer,
 ): import('docx').Document {
   if (!docx) {
     throw new Error('DOCX export module not loaded.');
@@ -110,6 +112,23 @@ export function buildDocx(
       spacing: { after: 80 },
       indent: { left: 360 },
     });
+
+  // Title-page wallpaper banner (Word cannot layer CSS under text like PDF/PPT).
+  const coverBanner = coverHeroImageData
+    ? [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 160 },
+          children: [
+            new ImageRun({
+              data: coverHeroImageData,
+              transformation: { width: 650, height: 366 },
+              type: 'jpg',
+            }),
+          ],
+        }),
+      ]
+    : [];
 
   // ── Letterhead ──
   const letterhead = [
@@ -995,6 +1014,7 @@ export function buildDocx(
   ];
 
   const sections = [
+    ...coverBanner,
     ...letterhead,
     heading('Executive Summary'),
     // Greeting shaded box

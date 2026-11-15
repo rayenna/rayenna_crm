@@ -45,6 +45,15 @@ describe('PROPOSAL_PRINT_CSS', () => {
     );
   });
 
+  it('prints the cover hero wallpaper without the global img max-height clamp', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /img\[data-docx-image="cover-hero"\][\s\S]*max-height:\s*none\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /img\[data-docx-image="cover-hero"\][\s\S]*object-fit:\s*cover\s*!important/,
+    );
+  });
+
   it('keeps the Financial Benefits chart from splitting across pages', () => {
     expect(PROPOSAL_PRINT_CSS).toMatch(
       /\[data-pdf-keep="financial-chart"\][\s\S]*page-break-inside:\s*avoid\s*!important/,

@@ -307,6 +307,9 @@ export async function exportToDocx(
     );
   }
 
+  const { loadCoverHeroComposited } = await import('./coverHero');
+  const coverHero = await loadCoverHeroComposited();
+
   const doc = buildDocx(
     p,
     diagramImageData,
@@ -319,6 +322,7 @@ export async function exportToDocx(
     posterById,
     docx,
     includedOptionalSections,
+    coverHero?.arrayBuffer,
   );
   const blob = await docx.Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
@@ -1914,11 +1918,28 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
 
   return (
     <div
-      className="mb-8 pdf-section pdf-cover-page rounded-none sm:rounded-2xl overflow-hidden border border-primary-100"
+      className="relative mb-8 pdf-section pdf-cover-page rounded-none sm:rounded-2xl overflow-hidden border border-primary-100"
       data-pdf-section="cover"
-      style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #1e2848 55%, #0d1b3a 100%)' }}
+      style={{ backgroundColor: '#0d1b3a' }}
     >
-      <div className="px-5 sm:px-8 py-8 sm:py-10 text-white">
+      {/* Title-page wallpaper — same asset in PDF/DOCX/PPT (see coverHero.ts). */}
+      <img
+        data-docx-image="cover-hero"
+        src="/proposal_cover_hero.jpg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+      />
+      {/* Navy wash (~58%) so white cover copy stays readable — cue from rayennaenergy.com */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(13,27,58,0.82) 0%, rgba(13,27,58,0.55) 48%, rgba(13,27,58,0.72) 100%)',
+        }}
+      />
+      <div className="relative z-10 px-5 sm:px-8 py-8 sm:py-10 text-white">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <div className="bg-white rounded-xl p-2 shadow">
@@ -1931,14 +1952,14 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
               />
             </div>
             <div>
-              <p className="font-extrabold text-sm sm:text-base tracking-tight">Rayenna Energy Private Limited</p>
-              <p className="text-white/70 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
+              <p className="font-extrabold text-sm sm:text-base tracking-tight drop-shadow">Rayenna Energy Private Limited</p>
+              <p className="text-white/80 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
             </div>
           </div>
           <div className="sm:text-right">
-            <p className="text-[10px] text-white/50 uppercase tracking-widest">Reference</p>
-            <p className="font-mono text-sm font-semibold break-all">{proposal.refNumber}</p>
-            <p className="text-[10px] text-white/50 uppercase tracking-widest mt-2">Date</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-widest">Reference</p>
+            <p className="font-mono text-sm font-semibold break-all drop-shadow">{proposal.refNumber}</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-widest mt-2">Date</p>
             <p className="text-sm font-medium">{dateStr}</p>
           </div>
         </div>
@@ -1947,14 +1968,14 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
           <div className="flex-1 min-w-0">
             <p className="text-amber-300 text-xs font-bold uppercase tracking-[0.2em] mb-2">Proposal for</p>
             <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight drop-shadow mb-3">{heading}</h2>
-            <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] text-white/60 uppercase tracking-widest mb-1">Client</p>
+            <div className="rounded-xl bg-white/15 border border-white/20 px-4 py-3 backdrop-blur-sm">
+              <p className="text-[10px] text-white/70 uppercase tracking-widest mb-1">Client</p>
               <p className="font-bold text-lg">{proposal.customer.customerName || 'Valued Customer'}</p>
               {proposal.customer.location && (
                 <p className="text-white/80 text-sm mt-1">{proposal.customer.location}</p>
               )}
               {(proposal.projectNumber != null || proposal.customerNumber) && (
-                <p className="text-white/60 text-[11px] font-mono mt-2">
+                <p className="text-white/70 text-[11px] font-mono mt-2">
                   {proposal.projectNumber != null ? `Project #${proposal.projectNumber}` : ''}
                   {proposal.projectNumber != null && proposal.customerNumber ? ' · ' : ''}
                   {proposal.customerNumber ? `Customer #${proposal.customerNumber}` : ''}

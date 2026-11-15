@@ -775,7 +775,7 @@ export default function HelpPage() {
             <h3 className="font-semibold text-gray-800 mb-2">Proposal Sections</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {[
-                ['Cover + Contact strip',  'Capacity hero, client card, reference, date, and Rayenna contact line — PDF page 1 keeps both together and centred'],
+                ['Cover + Contact strip',  'Title-page photo wallpaper (navy wash), capacity hero, client card, reference, date, and contact line — PDF page 1 keeps both together and centred'],
                 ['Executive Summary',       'Personalised letter with system size, cost, payback, savings'],
                 ['About Rayenna',           'Company intro plus Key Highlights table (kept whole on one PDF page)'],
                 ['What We Offer',           'Domestic, Commercial, and Consultation services'],
@@ -876,7 +876,7 @@ export default function HelpPage() {
               <strong>PDF page layout</strong> (how sections paginate for client-ready PDFs):
             </p>
             <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
-              <li><strong>Page 1</strong> — Cover and the Rayenna contact strip stay together and are centred on the first sheet; the rest of the proposal starts on page 2.</li>
+              <li><strong>Page 1</strong> — Cover and the Rayenna contact strip stay together and are centred on the first sheet; the cover uses a branded photo wallpaper with a navy transparency wash (same cue as rayennaenergy.com) so white text stays readable. Preview, Share, PDF, and PPT use the full wallpaper; DOCX shows the same image as a title banner.</li>
               <li><strong>Kept whole</strong> — the Financial Benefits 25-year chart and the About Rayenna <em>Key Highlights</em> table do not split across pages.</li>
               <li><strong>No forced break</strong> — Responsibility Matrix flows into Technical Details; Bill of Quantities flows into Commercials (BOQ itself still starts on a fresh page).</li>
             </ul>

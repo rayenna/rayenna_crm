@@ -62,6 +62,23 @@ export const PROPOSAL_PRINT_CSS = `
       margin-left: auto !important;
       margin-right: auto !important;
       max-width: 100% !important;
+      position: relative !important;
+      overflow: hidden !important;
+      background-color: #0d1b3a !important;
+    }
+    /* Title-page wallpaper must fill the cover (override global img max-height). */
+    [data-pdf-section="cover"] img[data-docx-image="cover-hero"] {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-height: none !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+    }
+    [data-pdf-section="cover"] > .relative.z-10 {
+      position: relative !important;
+      z-index: 10 !important;
     }
     [data-pdf-section="contact-strip"] {
       break-before: avoid !important;

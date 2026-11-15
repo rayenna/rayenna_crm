@@ -38,6 +38,7 @@ import {
 import { isOptionalSectionIncluded, type IncludedOptionalSections } from './optionalSections';
 import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { ProposalData, TextOverrides } from './types';
+import { loadCoverHeroComposited } from './coverHero';
 
 export { commercialsFromProposal };
 
@@ -126,6 +127,7 @@ async function loadImages(container?: HTMLElement | null): Promise<{
   logo?: string;
   diagram?: string;
   roof?: string;
+  coverHero?: string;
 }> {
   let logoBuf: ArrayBuffer | undefined;
   let diagramBuf: ArrayBuffer | undefined;
@@ -158,10 +160,12 @@ async function loadImages(container?: HTMLElement | null): Promise<{
       /* optional */
     }
   }
+  const coverComposited = await loadCoverHeroComposited();
   return {
     logo: logoBuf ? arrayBufferToDataUrl(logoBuf) : undefined,
     diagram: diagramBuf ? arrayBufferToDataUrl(diagramBuf) : undefined,
     roof: roofBuf ? arrayBufferToDataUrl(roofBuf) : undefined,
+    coverHero: coverComposited?.dataUrl,
   };
 }
 
@@ -275,7 +279,12 @@ export async function exportToPpt(
   // ── 1. Cover ────────────────────────────────────────────────────────────
   {
     const s = pptx.addSlide();
-    s.background = { color: NAVY };
+    // Title-page wallpaper (composited navy wash) — matches preview/PDF/DOCX.
+    if (images.coverHero) {
+      s.background = { data: images.coverHero };
+    } else {
+      s.background = { color: NAVY };
+    }
     s.addShape('rect', {
       x: 12.55,
       y: 0,
