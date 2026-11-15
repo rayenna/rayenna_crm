@@ -1,6 +1,7 @@
 /** Alphabetical; "Others" last — Project Lifecycle / panel brand dropdown */
 export const PANEL_BRAND_OPTIONS = [
   'Adani Solar',
+  'Avaada Electro',
   'Azure Power',
   'Emmvee',
   'Goldi Solar',

@@ -5,6 +5,7 @@
 
 export const PANEL_BRAND_CANONICAL = [
   'Adani Solar',
+  'Avaada Electro',
   'Azure Power',
   'Emmvee',
   'Goldi Solar',
