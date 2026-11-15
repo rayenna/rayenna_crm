@@ -98,6 +98,8 @@ export function collectProposalAssembly(activeCustomer: CustomerRecord | null): 
         ? activeCustomer.master.systemSizeKw
         : null,
     systemType: activeCustomer.master.systemType ?? null,
+    panelBrand: activeCustomer.master.panelBrand?.trim() || null,
+    inverterBrand: activeCustomer.master.inverterBrand?.trim() || null,
   };
 
   const customer: CustomerDetails = {
@@ -148,6 +150,8 @@ export function buildProposal(
     customerNumber: meta?.customerNumber ?? null,
     projectNumber:  meta?.projectNumber ?? null,
     systemType:     meta?.systemType ?? null,
+    panelBrand:     meta?.panelBrand ?? null,
+    inverterBrand:  meta?.inverterBrand ?? null,
   };
 }
 
@@ -178,6 +182,8 @@ export function rehydrateProposalData(
     customerNumber: meta?.customerNumber ?? null,
     projectNumber:  meta?.projectNumber ?? null,
     systemType:     meta?.systemType ?? null,
+    panelBrand:     meta?.panelBrand ?? null,
+    inverterBrand:  meta?.inverterBrand ?? null,
   };
 }
 

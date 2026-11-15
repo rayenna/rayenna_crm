@@ -1,4 +1,4 @@
-import { CATEGORIES, sheetTotalGst } from '../lib/costingConstants';
+import { CATEGORIES } from '../lib/costingConstants';
 import type { ProposalCustomSectionBeforeBoq } from '../lib/customerStore';
 import { formatEmailForDisplay } from '../lib/customerStore';
 import { proposalCustomSectionsToDocxBlocks } from '../lib/proposalCustomSectionsDocx';
@@ -6,30 +6,40 @@ import type { AiRoofLayoutResponse } from '../lib/apiClient';
 import { fmtINR, fmtINRFull } from './format';
 import {
   ABOUT_HIGHLIGHTS,
-  CLIENT_SCOPE,
   DELIVERY_TERMS,
   OUR_PROCESS_INTRO,
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
-  PAYMENT_TERMS,
   SERVICE_DETAILS,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
-  WARRANTY_TERMS,
   WHAT_WE_OFFER_INTRO,
   closingText,
   savingsText,
   scopeText,
 } from './proposalCopy';
+import {
+  buildCommercialsWaterfall,
+  buildTechDetailCards,
+  buildWarrantyRows,
+  resolveAuthorityFees,
+  resolveExclusions,
+  resolveKeyPoints,
+  resolveOfferValidity,
+  resolvePaymentMilestones,
+  resolveRaciRows,
+  subsidyCreditNote,
+  techDetailsFootnote,
+} from './proposalContent';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
 import {
-  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   systemTypeArticle,
   systemTypeCapacityChip,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
+import { isOptionalSectionIncluded, type IncludedOptionalSections } from './optionalSections';
 import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
 
@@ -44,6 +54,7 @@ export function buildDocx(
   customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[],
   customSectionPostersById?: Record<string, ArrayBuffer | undefined>,
   docx?: DocxModule,
+  includedOptionalSections?: IncludedOptionalSections | null,
 ): import('docx').Document {
   if (!docx) {
     throw new Error('DOCX export module not loaded.');
@@ -52,6 +63,8 @@ export function buildDocx(
   textOverrides = textOverrides
     ? rewriteSystemTypeInOverrides(textOverrides, p.systemType)
     : textOverrides;
+  const opt = (id: Parameters<typeof isOptionalSectionIncluded>[0]) =>
+    isOptionalSectionIncluded(id, includedOptionalSections);
   const {
     Document,
     Paragraph,
@@ -65,6 +78,8 @@ export function buildDocx(
     BorderStyle,
     ShadingType,
     ImageRun,
+    Header,
+    Footer,
   } = docx;
 
   const navy  = '0d1b3a';
@@ -187,8 +202,42 @@ export function buildDocx(
       children: [
         new TextRun({ text: `Proposal For: ${proposalForHeading(proposalDisplayCapacityKw(p), p.systemType)}`, bold: true, size: 28, color: navy }),
       ],
-      spacing: { after: 400 },
+      spacing: { after: 80 },
     }),
+    ...(proposalDisplayCapacityKw(p) > 0
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `System capacity: ${proposalDisplayCapacityKw(p)} kW`,
+                bold: true,
+                size: 22,
+                color: 'B45309',
+              }),
+            ],
+            spacing: { after: 80 },
+          }),
+        ]
+      : []),
+    ...((p.projectNumber != null || p.customerNumber)
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: [
+                  p.projectNumber != null ? `Project #${p.projectNumber}` : '',
+                  p.customerNumber ? `Customer #${p.customerNumber}` : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+                size: 18,
+                color: '64748B',
+              }),
+            ],
+            spacing: { after: 280 },
+          }),
+        ]
+      : [new Paragraph({ text: '', spacing: { after: 280 } })]),
   ];
 
   // ── ROI KPIs ──
@@ -518,95 +567,432 @@ export function buildDocx(
     docx,
   );
 
-  // ── Commercials ──
-  const grandTotal = p.sheet?.grandTotal ?? p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
-  const commercialsSection = grandTotal > 0 ? (() => {
-    const grandRounded = Math.round(grandTotal);
-    const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
-    const showSubsidy  = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
-    const hasSheet     = !!p.sheet;
-    const sizeKw = proposalDisplayCapacityKw(p) || (p.sheet?.systemSizeKw ?? 0);
-
-    let gstAmount: number;
-    let preGst: number;
-    let gstLabel: string;
-
-    if (hasSheet) {
-      const sheetGst =
-        (p.sheet!.totalGst != null && p.sheet!.totalGst > 0)
-          ? p.sheet!.totalGst
-          : (p.sheet!.items?.length ? sheetTotalGst(p.sheet!.items, p.sheet!.marginPercent ?? 15) : 0);
-      gstAmount = Math.round(sheetGst);
-      preGst = Math.round(grandRounded - gstAmount);
-      gstLabel = 'GST (mixed: 5% & 18%)';
-    } else {
-      gstAmount = (() => {
-        const pre = Math.round(grandRounded / 1.18);
-        return Math.round(grandRounded - pre);
-      })();
-      preGst = Math.round(grandRounded / 1.18);
-      gstLabel = 'GST @ 18% (estimate)';
-    }
-    const commercialRows: DocxTableRow[] = [
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ov(textOverrides, 'commercials-desc', commercialsDescription(sizeKw, p.systemType)), size: 20 })] })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
-            ],
-          }),
-    ];
-    if (showSubsidy) {
-      commercialRows.push(
-        new TableRow({
+  // ── Technical details + Commercials waterfall ──
+  const techCards = buildTechDetailCards(p, textOverrides, bomComments);
+  const techDetailsSection = techCards.length
+    ? [
+        heading('Technical Details'),
+        new Paragraph({
           children: [
-            new TableCell({
+            new TextRun({
+              text: 'Major components proposed for this installation. Full quantities and notes follow in the Bill of Quantities.',
+              size: 20,
+              color: '64748B',
+            }),
+          ],
+          spacing: { after: 120 },
+        }),
+        ...techCards.flatMap((c) => [
+          new Paragraph({
+            children: [new TextRun({ text: c.title.toUpperCase(), bold: true, size: 20, color: navy })],
+            spacing: { before: 80, after: 40 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `Manufacturer: ${c.manufacturer}`, size: 18, color: '374151' }),
+            ],
+            spacing: { after: 20 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Type / rating: ${c.typeRating}`, size: 18, color: '374151' })],
+            spacing: { after: 20 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Quantity: ${c.quantity}`, size: 18, color: '374151' })],
+            spacing: { after: 20 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Specification: ${c.specification}`, size: 18, color: '374151' })],
+            spacing: { after: 20 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Warranty: ${c.warranty}`, size: 18, color: '374151' })],
+            spacing: { after: 80 },
+          }),
+        ]),
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: techDetailsFootnote(textOverrides),
+              size: 16,
+              color: 'B91C1C',
+              italics: true,
+            }),
+          ],
+          spacing: { after: 160 },
+        }),
+      ]
+    : [];
+
+  const waterfall = buildCommercialsWaterfall(p, textOverrides);
+  const commercialsSection = waterfall
+    ? (() => {
+        const commercialRows: DocxTableRow[] = [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: waterfall.description, size: 20 })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: fmtINRFull(waterfall.preGst), bold: true, size: 20 })],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+                width: { size: 22, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: waterfall.gstLabel, size: 20, color: '1D4ED8' })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: fmtINRFull(waterfall.gstAmount), bold: true, size: 20, color: '1D4ED8' }),
+                    ],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: 'Total project cost (incl. GST)', bold: true, size: 20 }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: fmtINRFull(waterfall.grandRounded), bold: true, size: 20 }),
+                    ],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ];
+        if (waterfall.showSubsidy) {
+          commercialRows.push(
+            new TableRow({
               children: [
-                new Paragraph({
+                new TableCell({
                   children: [
-                    new TextRun({
-                      text: `Subsidy Eligible – Rs. ${subsidyAmt.toLocaleString('en-IN')}/-`,
-                      size: 20,
-                      color: '92400E',
+                    new Paragraph({
+                      children: [new TextRun({ text: 'Subsidy eligible', size: 20, color: '92400E' })],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: `(−) ${fmtINRFull(waterfall.subsidyAmt)}`,
+                          bold: true,
+                          size: 20,
+                          color: '92400E',
+                        }),
+                      ],
+                      alignment: AlignmentType.RIGHT,
                     }),
                   ],
                 }),
               ],
             }),
-            new TableCell({
+            new TableRow({
               children: [
-                new Paragraph({
+                new TableCell({
                   children: [
-                    new TextRun({ text: fmtINRFull(subsidyAmt), bold: true, size: 20, color: '92400E' }),
+                    new Paragraph({
+                      children: [
+                        new TextRun({ text: 'Effective price after subsidy', bold: true, size: 20, color: '065F46' }),
+                      ],
+                    }),
                   ],
-                  alignment: AlignmentType.RIGHT,
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: fmtINRFull(waterfall.effectiveAfterSubsidy),
+                          bold: true,
+                          size: 20,
+                          color: '065F46',
+                        }),
+                      ],
+                      alignment: AlignmentType.RIGHT,
+                    }),
+                  ],
                 }),
               ],
             }),
-          ],
+          );
+        }
+        commercialRows.push(
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: 'PAYABLE TO RAYENNA ENERGY', bold: true, size: 22, color: white }),
+                    ],
+                    alignment: AlignmentType.LEFT,
+                  }),
+                ],
+                shading: { type: ShadingType.SOLID, color: navy },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: fmtINRFull(waterfall.payableToRayenna),
+                        bold: true,
+                        size: 24,
+                        color: white,
+                      }),
+                    ],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+                shading: { type: ShadingType.SOLID, color: navy },
+              }),
+            ],
+          }),
+        );
+
+        const feeRows = resolveAuthorityFees(waterfall.sizeKw, textOverrides).map(
+          (fee) =>
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: fee.label, size: 18 })],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: fee.amountLabel, size: 18 })],
+                      alignment: AlignmentType.RIGHT,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+        );
+
+        return [
+          heading('Commercials'),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: commercialRows,
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `In words (payable): ${waterfall.payableInWords}`,
+                size: 18,
+                italics: true,
+                color: '475569',
+              }),
+            ],
+            spacing: { before: 80, after: 40 },
+          }),
+          ...(waterfall.showSubsidy
+            ? [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `In words (effective after subsidy): ${waterfall.effectiveInWords}`,
+                      size: 18,
+                      italics: true,
+                      color: '475569',
+                    }),
+                  ],
+                  spacing: { after: 40 },
+                }),
+              ]
+            : []),
+          new Paragraph({
+            children: [
+              new TextRun({ text: subsidyCreditNote(textOverrides), size: 16, color: '92400E' }),
+            ],
+            spacing: { after: 120 },
+          }),
+          heading('Authority / DISCOM Fees'),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: feeRows,
+          }),
+          new Paragraph({ text: '', spacing: { after: 160 } }),
+        ];
+      })()
+    : [];
+
+  const raciRows = resolveRaciRows(textOverrides);
+  const raciSection = [
+    heading('Responsibility Matrix'),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: ['#', 'Description', 'Rayenna', 'Client'].map(
+            (label) =>
+              new TableCell({
+                shading: { type: ShadingType.SOLID, color: navy },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: label, bold: true, size: 16, color: white })],
+                  }),
+                ],
+              }),
+          ),
         }),
-      );
-    }
-    return [
-      heading('Commercials'),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: commercialRows,
-      }),
-      new Paragraph({ text: '', spacing: { after: 200 } }),
-    ];
-  })() : [];
+        ...raciRows.map(
+          (r, i) =>
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: String(i + 1), size: 16 })],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: r.description, size: 16 })],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: r.rayenna ? 'Yes' : '—', size: 16 })],
+                      alignment: AlignmentType.CENTER,
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: r.client ? 'Yes' : '—', size: 16 })],
+                      alignment: AlignmentType.CENTER,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+        ),
+      ],
+    }),
+    new Paragraph({ text: '', spacing: { after: 160 } }),
+  ];
+
+  const paymentMilestones = resolvePaymentMilestones(textOverrides);
+  const paymentSection = [
+    heading('Payment Terms'),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: ['%', 'Milestone'].map(
+            (label) =>
+              new TableCell({
+                shading: { type: ShadingType.SOLID, color: 'B45309' },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: label, bold: true, size: 16, color: white })],
+                  }),
+                ],
+              }),
+          ),
+        }),
+        ...paymentMilestones.map(
+          (m) =>
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: `${m.percent}%`, bold: true, size: 18 })],
+                    }),
+                  ],
+                  width: { size: 15, type: WidthType.PERCENTAGE },
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: m.trigger, size: 18 })],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+        ),
+      ],
+    }),
+    new Paragraph({ text: '', spacing: { after: 120 } }),
+  ];
+
+  const warrantyRows = buildWarrantyRows(p, textOverrides, bomComments);
+  const warrantySection = [
+    heading('Warranty'),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: warrantyRows.map(
+        (r) =>
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: r.label, bold: true, size: 18 })],
+                  }),
+                ],
+                width: { size: 32, type: WidthType.PERCENTAGE },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: r.detail, size: 18 })],
+                  }),
+                ],
+              }),
+            ],
+          }),
+      ),
+    }),
+    new Paragraph({ text: '', spacing: { after: 120 } }),
+  ];
 
   const sections = [
     ...letterhead,
@@ -909,75 +1295,77 @@ export function buildDocx(
       ];
     })() : multilineParagraphs(textOverrides?.['financial-no-roi'] ?? savingsText(p))),
     new Paragraph({ text: '', spacing: { after: 80 } }),
-    heading('Environmental Impact'),
-    new Paragraph({
-      children: textOverrides?.['env-intro']?.trim()
-        ? [new TextRun({ text: textOverrides['env-intro']!, size: 22, color: '374151' })]
-        : [
-            new TextRun({ text: 'By harnessing solar energy, ', size: 22, color: '374151' }),
-            new TextRun({ text: p.customer.customerName || 'your organisation', bold: true, size: 22, color: '374151' }),
-            new TextRun({ text: ' will make a meaningful contribution to environmental sustainability — reducing carbon emissions, conserving natural resources, and supporting India\'s clean energy goals.', size: 22, color: '374151' }),
-          ],
-      spacing: { after: 160 },
-    }),
-    // 4 bullet cards as a 2-col table
-    ...(() => {
-      const co2 = p.roi?.co2OffsetTons;
-      const gen = p.roi?.annualGeneration;
-      const name = p.customer.customerName || 'your organisation';
-      const envBullets = [
-        {
-          icon: '🌍', title: 'Carbon Footprint Reduction', color: '16a34a', bg: 'F0FDF4',
-          body: co2
-            ? `Over 25 years, the proposed system will offset approximately ${co2.toFixed(1)} tonnes of CO₂ emissions — equivalent to planting thousands of trees and removing hundreds of cars from the road.`
-            : 'The solar system will significantly reduce carbon emissions over its 25-year operational life, contributing to a cleaner, greener environment.',
-        },
-        {
-          icon: '⚡', title: 'Clean Energy Generation', color: '1d4ed8', bg: 'EFF6FF',
-          body: gen
-            ? `Each year, the system will generate ${gen.toLocaleString('en-IN')} kWh of clean, renewable electricity — directly reducing dependence on fossil-fuel-based grid power.`
-            : 'The system will generate clean, renewable electricity every year, directly offsetting grid consumption powered by fossil fuels.',
-        },
-        {
-          icon: '🏛️', title: 'National Solar Mission Alignment', color: 'b45309', bg: 'FEFCE8',
-          body: `This initiative aligns with India's National Solar Mission and demonstrates ${name}'s commitment to a sustainable future and responsible energy consumption.`,
-        },
-        {
-          icon: '♻️', title: 'Long-Term Sustainability', color: '7c3aed', bg: 'F5F3FF',
-          body: 'Rayenna Energy will ensure the system is designed and installed to maximise energy yield and environmental benefit throughout its 25-year operational life, with ongoing monitoring and support.',
-        },
-      ];
-      // Render as 2 rows × 2 cols
-      const rows = [];
-      for (let r = 0; r < 2; r++) {
-        rows.push(
-          new TableRow({
-            children: [0, 1].map((c) => {
-              const idx = r * 2 + c;
-              const b = envBullets[idx];
-              const title = ov(textOverrides, `env-bullet-${idx}-title`, b.title);
-              const body = ov(textOverrides, `env-bullet-${idx}-body`, b.body);
-              return new TableCell({
-                shading: { type: ShadingType.SOLID, color: b.bg },
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: `${b.icon}  ${title}`, bold: true, size: 20, color: b.color })],
-                    spacing: { after: 60 },
-                  }),
-                  new Paragraph({
-                    children: [new TextRun({ text: body, size: 19, color: '374151' })],
-                  }),
+    ...(opt('environmental-impact')
+      ? [
+          heading('Environmental Impact'),
+          new Paragraph({
+            children: textOverrides?.['env-intro']?.trim()
+              ? [new TextRun({ text: textOverrides['env-intro']!, size: 22, color: '374151' })]
+              : [
+                  new TextRun({ text: 'By harnessing solar energy, ', size: 22, color: '374151' }),
+                  new TextRun({ text: p.customer.customerName || 'your organisation', bold: true, size: 22, color: '374151' }),
+                  new TextRun({ text: ' will make a meaningful contribution to environmental sustainability — reducing carbon emissions, conserving natural resources, and supporting India\'s clean energy goals.', size: 22, color: '374151' }),
                 ],
-              });
-            }),
-          })
-        );
-      }
-      return [
-        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows }),
-        new Paragraph({ text: '', spacing: { after: 80 } }),
-      ];
-    })(),
+            spacing: { after: 160 },
+          }),
+          ...(() => {
+            const co2 = p.roi?.co2OffsetTons;
+            const gen = p.roi?.annualGeneration;
+            const name = p.customer.customerName || 'your organisation';
+            const envBullets = [
+              {
+                icon: '🌍', title: 'Carbon Footprint Reduction', color: '16a34a', bg: 'F0FDF4',
+                body: co2
+                  ? `Over 25 years, the proposed system will offset approximately ${co2.toFixed(1)} tonnes of CO₂ emissions — equivalent to planting thousands of trees and removing hundreds of cars from the road.`
+                  : 'The solar system will significantly reduce carbon emissions over its 25-year operational life, contributing to a cleaner, greener environment.',
+              },
+              {
+                icon: '⚡', title: 'Clean Energy Generation', color: '1d4ed8', bg: 'EFF6FF',
+                body: gen
+                  ? `Each year, the system will generate ${gen.toLocaleString('en-IN')} kWh of clean, renewable electricity — directly reducing dependence on fossil-fuel-based grid power.`
+                  : 'The system will generate clean, renewable electricity every year, directly offsetting grid consumption powered by fossil fuels.',
+              },
+              {
+                icon: '🏛️', title: 'National Solar Mission Alignment', color: 'b45309', bg: 'FEFCE8',
+                body: `This initiative aligns with India's National Solar Mission and demonstrates ${name}'s commitment to a sustainable future and responsible energy consumption.`,
+              },
+              {
+                icon: '♻️', title: 'Long-Term Sustainability', color: '7c3aed', bg: 'F5F3FF',
+                body: 'Rayenna Energy will ensure the system is designed and installed to maximise energy yield and environmental benefit throughout its 25-year operational life, with ongoing monitoring and support.',
+              },
+            ];
+            const rows = [];
+            for (let r = 0; r < 2; r++) {
+              rows.push(
+                new TableRow({
+                  children: [0, 1].map((c) => {
+                    const idx = r * 2 + c;
+                    const b = envBullets[idx];
+                    const title = ov(textOverrides, `env-bullet-${idx}-title`, b.title);
+                    const body = ov(textOverrides, `env-bullet-${idx}-body`, b.body);
+                    return new TableCell({
+                      shading: { type: ShadingType.SOLID, color: b.bg },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: `${b.icon}  ${title}`, bold: true, size: 20, color: b.color })],
+                          spacing: { after: 60 },
+                        }),
+                        new Paragraph({
+                          children: [new TextRun({ text: body, size: 19, color: '374151' })],
+                        }),
+                      ],
+                    });
+                  }),
+                })
+              );
+            }
+            return [
+              new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows }),
+              new Paragraph({ text: '', spacing: { after: 80 } }),
+            ];
+          })(),
+        ]
+      : []),
     ...(roofLayout
       ? (() => {
           // Detect image type from the URL so the DOCX embed format is correct
@@ -1064,60 +1452,63 @@ export function buildDocx(
           ];
         })()
       : []),
-    heading('Our Process for Seamless Solar Integration'),
-    new Paragraph({
-      children: [new TextRun({
-        text: ov(textOverrides, 'our-process-intro', OUR_PROCESS_INTRO),
-        size: 22,
-        color: '374151',
-      })],
-      spacing: { after: 160 },
-    }),
-    // Process steps as 2-column rows so Word on phone/iPad/A4 does not clip a 5-wide row
-    (() => {
-      const bgColors = ['EFF6FF', 'E0F2FE', 'F0FDF4', 'FFFBEB', 'F5F3FF'];
-      const fgColors = ['0369a1', '0891b2', '059669', 'd97706', '7c3aed'];
-      const processCell = (idx: number) => {
-        const step = OUR_PROCESS_STEPS[idx]!;
-        const title = ov(textOverrides, `process-step-${idx}-title`, step.title);
-        const desc = ov(textOverrides, `process-step-${idx}-desc`, step.desc);
-        return new TableCell({
-          shading: { type: ShadingType.SOLID, color: bgColors[idx] },
-          width: { size: 50, type: WidthType.PERCENTAGE },
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: `${idx + 1}`, bold: true, size: 28, color: fgColors[idx] })],
-              spacing: { after: 40 },
-            }),
-            new Paragraph({
-              children: [new TextRun({ text: `${step.icon}  ${title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
-              spacing: { after: 60 },
-            }),
-            new Paragraph({
-              children: [new TextRun({ text: desc, size: 17, color: '374151' })],
-            }),
-          ],
-        });
-      };
-      const emptyCell = new TableCell({
-        width: { size: 50, type: WidthType.PERCENTAGE },
-        children: [new Paragraph({ text: '' })],
-      });
-      const rows: DocxTableRow[] = [];
-      for (let i = 0; i < OUR_PROCESS_STEPS.length; i += 2) {
-        rows.push(new TableRow({
-          children: [
-            processCell(i),
-            i + 1 < OUR_PROCESS_STEPS.length ? processCell(i + 1) : emptyCell,
-          ],
-        }));
-      }
-      return new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows,
-      });
-    })(),
-    new Paragraph({ text: '', spacing: { after: 120 } }),
+    ...(opt('our-process')
+      ? [
+          heading('Our Process for Seamless Solar Integration'),
+          new Paragraph({
+            children: [new TextRun({
+              text: ov(textOverrides, 'our-process-intro', OUR_PROCESS_INTRO),
+              size: 22,
+              color: '374151',
+            })],
+            spacing: { after: 160 },
+          }),
+          (() => {
+            const bgColors = ['EFF6FF', 'E0F2FE', 'F0FDF4', 'FFFBEB', 'F5F3FF'];
+            const fgColors = ['0369a1', '0891b2', '059669', 'd97706', '7c3aed'];
+            const processCell = (idx: number) => {
+              const step = OUR_PROCESS_STEPS[idx]!;
+              const title = ov(textOverrides, `process-step-${idx}-title`, step.title);
+              const desc = ov(textOverrides, `process-step-${idx}-desc`, step.desc);
+              return new TableCell({
+                shading: { type: ShadingType.SOLID, color: bgColors[idx] },
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: `${idx + 1}`, bold: true, size: 28, color: fgColors[idx] })],
+                    spacing: { after: 40 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: `${step.icon}  ${title.toUpperCase()}`, bold: true, size: 18, color: fgColors[idx] })],
+                    spacing: { after: 60 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: desc, size: 17, color: '374151' })],
+                  }),
+                ],
+              });
+            };
+            const emptyCell = new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              children: [new Paragraph({ text: '' })],
+            });
+            const rows: DocxTableRow[] = [];
+            for (let i = 0; i < OUR_PROCESS_STEPS.length; i += 2) {
+              rows.push(new TableRow({
+                children: [
+                  processCell(i),
+                  i + 1 < OUR_PROCESS_STEPS.length ? processCell(i + 1) : emptyCell,
+                ],
+              }));
+            }
+            return new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows,
+            });
+          })(),
+          new Paragraph({ text: '', spacing: { after: 120 } }),
+        ]
+      : []),
     heading('Scope of Work'),
     new Paragraph({
       children: [new TextRun({ text: ov(textOverrides, 'scope-intro', scopeText(p)), size: 22, color: '374151' })],
@@ -1157,26 +1548,13 @@ export function buildDocx(
       });
     })(),
     new Paragraph({ text: '', spacing: { after: 200 } }),
+    ...(opt('responsibility-matrix') ? raciSection : []),
     ...roiSection,
     ...customBeforeBoqDocx,
+    ...(opt('technical-details') ? techDetailsSection : []),
     ...bomSection,
     ...commercialsSection,
-    heading('Client Scope'),
-    ...(textOverrides?.['list-client-scope']
-      ? textOverrides['list-client-scope'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
-      : CLIENT_SCOPE.map((t, i) => listItem(t, i + 1))),
-    heading('Terms & Conditions'),
-    ...(textOverrides?.['list-terms-&-conditions']
-      ? textOverrides['list-terms-&-conditions'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
-      : TERMS_AND_CONDITIONS.map((t, i) => listItem(t, i + 1))),
-    heading('Service Details'),
-    ...(textOverrides?.['list-service-details']
-      ? textOverrides['list-service-details'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
-      : SERVICE_DETAILS.map((t, i) => listItem(t, i + 1))),
-    heading('Payment Terms'),
-    ...(textOverrides?.['list-payment-terms']
-      ? textOverrides['list-payment-terms'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
-      : PAYMENT_TERMS.map((t, i) => listItem(t, i + 1))),
+    ...paymentSection,
     heading('Account Details'),
     new Table({
       width: { size: 60, type: WidthType.PERCENTAGE },
@@ -1202,22 +1580,56 @@ export function buildDocx(
       ),
     }),
     new Paragraph({ text: '', spacing: { after: 120 } }),
-    heading('Warranty'),
-    ...(textOverrides?.['list-warranty']
-      ? textOverrides['list-warranty'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
-      : WARRANTY_TERMS.map((t, i) => listItem(t, i + 1))),
+    ...(opt('warranty') ? warrantySection : []),
     heading('Material Delivery Period'),
     ...(textOverrides?.['list-material-delivery-period']
       ? textOverrides['list-material-delivery-period'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
       : DELIVERY_TERMS.map((t, i) => listItem(t, i + 1))),
+    ...(opt('offer-validity')
+      ? [
+          heading('Offer Validity'),
+          new Paragraph({
+            children: [new TextRun({ text: resolveOfferValidity(textOverrides), size: 20, color: '374151' })],
+            spacing: { after: 120 },
+          }),
+        ]
+      : []),
+    heading('Terms & Conditions'),
+    ...(textOverrides?.['list-terms-&-conditions']
+      ? textOverrides['list-terms-&-conditions'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : TERMS_AND_CONDITIONS.map((t, i) => listItem(t, i + 1))),
+    ...(opt('service-details')
+      ? [
+          heading('Service Details'),
+          ...(textOverrides?.['list-service-details']
+            ? textOverrides['list-service-details'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+            : SERVICE_DETAILS.map((t, i) => listItem(t, i + 1))),
+        ]
+      : []),
+    ...(opt('key-points')
+      ? [
+          heading('Key Points'),
+          ...resolveKeyPoints(textOverrides).map((t, i) => listItem(t, i + 1)),
+        ]
+      : []),
+    ...(opt('exclusions')
+      ? [
+          heading('Exclusions'),
+          ...resolveExclusions(textOverrides).map((t, i) => listItem(t, i + 1)),
+        ]
+      : []),
     heading('Closing Note'),
     ...(() => {
       const override = textOverrides?.['section-closing-note'];
       const body = override && override.trim().length > 0 ? override : closingText(p);
       return multilineParagraphs(body);
     })(),
-    heading('Subsidy Disclaimer and Payment Terms'),
-    ...multilineParagraphs(SUBSIDY_DISCLAIMER_TEXT),
+    ...(opt('subsidy-disclaimer')
+      ? [
+          heading('Subsidy Disclaimer and Payment Terms'),
+          ...multilineParagraphs(SUBSIDY_DISCLAIMER_TEXT),
+        ]
+      : []),
     new Paragraph({
       children: [new TextRun({ text: `Generated: ${new Date(p.generatedAt).toLocaleString('en-IN')}  |  ${p.refNumber}`, size: 16, color: '9CA3AF', italics: true })],
       alignment: AlignmentType.CENTER,
@@ -1226,7 +1638,44 @@ export function buildDocx(
   ];
 
   return new Document({
-    sections: [{ properties: {}, children: sections }],
+    sections: [
+      {
+        properties: {},
+        headers: {
+          default: new Header({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: 'Rayenna Energy Private Limited  ·  www.rayennaenergy.com  ·  +91 7907 369 304',
+                    size: 14,
+                    color: '94A3B8',
+                  }),
+                ],
+                alignment: AlignmentType.RIGHT,
+              }),
+            ],
+          }),
+        },
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${p.refNumber}  ·  Confidential proposal`,
+                    size: 14,
+                    color: '94A3B8',
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          }),
+        },
+        children: sections,
+      },
+    ],
     styles: {
       default: {
         document: {

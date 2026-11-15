@@ -60,6 +60,10 @@ export interface ProposalData {
   projectNumber?: number | null;
   /** CRM Project system type (ON_GRID, OFF_GRID, HYBRID) for the envelope heading. */
   systemType?: string | null;
+  /** CRM / master panel brand when available (Technical Details). */
+  panelBrand?: string | null;
+  /** CRM / master inverter brand when available (Technical Details / warranty). */
+  inverterBrand?: string | null;
 }
 
 export interface ProposalMeta {
@@ -69,6 +73,8 @@ export interface ProposalMeta {
   crmSystemSizeKw?: number | null;
   /** CRM Project system type (ON_GRID, OFF_GRID, HYBRID). */
   systemType?: string | null;
+  panelBrand?: string | null;
+  inverterBrand?: string | null;
 }
 
 /** Text overrides extracted from the live DOM before DOCX export. */

@@ -48,4 +48,29 @@ describe('Edit → DOCX/PPT override parity', () => {
     const sections = resolveScopeSectionsForExport('HYBRID', fixed);
     expect(sections[1].items[0]).toBe('Hybrid inverter(s)');
   });
+
+  it('new FERT-lift override keys resolve for exporters', () => {
+    const edited = {
+      'commercials-desc': 'EDITED commercials package',
+      'offer-validity': 'EDITED validity 15 days',
+      'payment-milestone-0-trigger': 'EDITED advance trigger',
+      'authority-fee-feasibility-amount': '₹ 1,500',
+      'warranty-row-system-detail': 'EDITED system warranty',
+      'raci-0-desc': 'EDITED raci row',
+      'list-key-points': 'Point A\nPoint B',
+      'list-exclusions': 'Exclusion A',
+      'subsidy-credit-note': 'EDITED subsidy note',
+      'tech-modules-manufacturer': 'EDITED modules brand',
+    };
+    expect(ov(edited, 'commercials-desc', 'stock')).toBe('EDITED commercials package');
+    expect(ov(edited, 'offer-validity', 'stock')).toContain('15 days');
+    expect(ov(edited, 'payment-milestone-0-trigger', 'stock')).toBe('EDITED advance trigger');
+    expect(ov(edited, 'authority-fee-feasibility-amount', 'stock')).toBe('₹ 1,500');
+    expect(ov(edited, 'warranty-row-system-detail', 'stock')).toBe('EDITED system warranty');
+    expect(ov(edited, 'raci-0-desc', 'stock')).toBe('EDITED raci row');
+    expect(ov(edited, 'list-key-points', 'stock')).toContain('Point A');
+    expect(ov(edited, 'list-exclusions', 'stock')).toBe('Exclusion A');
+    expect(ov(edited, 'subsidy-credit-note', 'stock')).toBe('EDITED subsidy note');
+    expect(ov(edited, 'tech-modules-manufacturer', 'stock')).toBe('EDITED modules brand');
+  });
 });

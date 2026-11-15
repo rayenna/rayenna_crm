@@ -7,7 +7,6 @@ import {
   getCustomer,
   upsertCustomer,
   saveAllArtifacts,
-  formatEmailForDisplay,
   clearProposalArtifact,
   getWipKeysForCurrentUser,
 } from '../lib/customerStore';
@@ -55,16 +54,21 @@ import {
   withProposalSystemSizeKw,
   rewriteCapacityInOverrides,
 } from '../proposal/proposalAssembly';
-import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, CLIENT_SCOPE, TERMS_AND_CONDITIONS, SERVICE_DETAILS, PAYMENT_TERMS, WARRANTY_TERMS, DELIVERY_TERMS } from '../proposal/proposalCopy';
+import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, TERMS_AND_CONDITIONS, SERVICE_DETAILS, KEY_POINTS, PROPOSAL_EXCLUSIONS } from '../proposal/proposalCopy';
 import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types';
+import { rewriteSystemTypeInOverrides } from '../proposal/systemTypeLabel';
 import {
-  proposalForHeading,
-  rewriteSystemTypeInOverrides,
-} from '../proposal/systemTypeLabel';
+  defaultIncludedOptionalSections,
+  isOptionalSectionIncluded,
+  normalizeIncludedOptionalSections,
+  OPTIONAL_PROPOSAL_SECTIONS,
+  type OptionalProposalSectionId,
+} from '../proposal/optionalSections';
 import {
   ProposalTextOverridesContext,
   ProposalEditingContext,
   Divider,
+  ProposalCoverBlock,
   ExecutiveSummaryBlock,
   AboutRayennaBlock,
   WhatWeOfferBlock,
@@ -73,8 +77,14 @@ import {
   RoofLayoutBlock,
   OurProcessBlock,
   ScopeOfWorkBlock,
+  TechnicalDetailsBlock,
   BOMGroupedTable,
   CommercialsBlock,
+  PaymentMilestonesBlock,
+  ResponsibilityMatrixBlock,
+  OfferValidityBlock,
+  WarrantyTableBlock,
+  DeliveryTermsBlock,
   ListBlock,
   AccountDetailsBlock,
   SectionBlock,
@@ -143,6 +153,7 @@ type RegeneratePreserve = {
   bomComments: Record<string, string>;
   editedHtml?: string;
   textOverrides?: Record<string, string | undefined>;
+  includedOptionalSections?: Record<string, boolean>;
 };
 
 export default function ProposalPreview() {
@@ -170,6 +181,10 @@ export default function ProposalPreview() {
   const [roofLayout, setRoofLayout]               = useState<AiRoofLayoutResponse | null>(null);
   const [roofLayoutLoading, setRoofLayoutLoading] = useState(false);
   const [roofLayoutError, setRoofLayoutError]     = useState<string | null>(null);
+  const [includedOptionalSections, setIncludedOptionalSections] = useState(
+    () => defaultIncludedOptionalSections(),
+  );
+  const [optionalSectionsOpen, setOptionalSectionsOpen] = useState(false);
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   /** Split so nested rich editors (custom sections) are not inside a parent contentEditable — paste/images break otherwise. */
@@ -251,6 +266,7 @@ export default function ProposalPreview() {
       setDisplayTextOverrides({});
       setBomComments({});
       setCustomSectionsBeforeBoq([]);
+      setIncludedOptionalSections(defaultIncludedOptionalSections());
     };
 
     void (async () => {
@@ -318,6 +334,9 @@ export default function ProposalPreview() {
       setCustomSectionsBeforeBoq(doc.customSectionsBeforeBoq);
       setIsEditing(false);
       setIncludeRoofLayout(!!saved.includeRoofLayout);
+      setIncludedOptionalSections(
+        normalizeIncludedOptionalSections(saved.includedOptionalSections),
+      );
     })();
     return () => {
       cancelled = true;
@@ -561,6 +580,7 @@ export default function ProposalPreview() {
       editedHtml,
       textOverrides: textOverridesMaybeEmpty,
       customSectionsBeforeBoq: customSectionsSnapshot,
+      includedOptionalSections: { ...includedOptionalSections },
       proposalView: cloneProposalForStorage(proposal),
       includeRoofLayout: includeRoofSnap,
       roofLayout: includeRoofSnap ? (roofLayoutSnap ?? null) : null,
@@ -931,6 +951,13 @@ export default function ProposalPreview() {
       {};
     setBomComments(savedComments);
 
+    const sectionsIncluded = normalizeIncludedOptionalSections(
+      preserved?.includedOptionalSections ??
+        activeCustomer?.proposal?.includedOptionalSections ??
+        includedOptionalSections,
+    );
+    setIncludedOptionalSections(sectionsIncluded);
+
     // ── Persist all 4 artifacts to active customer, preserving custom sections / edits when regenerating ──
     if (activeCustomer) {
       setSyncError(null);
@@ -972,6 +999,7 @@ export default function ProposalPreview() {
               ? customSectionsBeforeBoq
               : activeCustomer.proposal?.customSectionsBeforeBoq ?? [],
         ),
+        includedOptionalSections: sectionsIncluded,
         proposalView: cloneProposalForStorage(p),
         includeRoofLayout: options.includeRoofLayout,
         roofLayout: null,
@@ -1043,6 +1071,11 @@ export default function ProposalPreview() {
         bomComments: { ...(ac.proposal.bomComments ?? {}), ...bomComments },
         editedHtml: ac.proposal.editedHtml,
         textOverrides: ac.proposal.textOverrides,
+        includedOptionalSections: {
+          ...normalizeIncludedOptionalSections(
+            ac.proposal.includedOptionalSections ?? includedOptionalSections,
+          ),
+        },
       };
     }
 
@@ -1058,6 +1091,11 @@ export default function ProposalPreview() {
     setIsEditing(false);
     setSaveStatus('idle');
     setCustomSectionsBeforeBoq(regeneratePreserveRef.current?.customSections ?? []);
+    setIncludedOptionalSections(
+      normalizeIncludedOptionalSections(
+        regeneratePreserveRef.current?.includedOptionalSections,
+      ),
+    );
   };
 
   /** Live CRM Sales & Commercial system type on every document block (not only the heading). */
@@ -1117,6 +1155,7 @@ export default function ProposalPreview() {
           printRef.current ?? undefined,
           includeRoofLayout ? roofLayout : null,
           sectionsForExport,
+          includedOptionalSections,
         );
       } else {
         await exportToPpt(p, {
@@ -1125,6 +1164,7 @@ export default function ProposalPreview() {
           container: printRef.current ?? undefined,
           roofLayout: includeRoofLayout ? roofLayout : null,
           customSectionsBeforeBoq: sectionsForExport,
+          includedOptionalSections,
         });
       }
     } finally {
@@ -1529,79 +1569,17 @@ export default function ProposalPreview() {
                   </p>
                 </div>
               )}
-              {/* Letterhead */}
-              <div className="px-3 sm:px-6 md:px-8 py-6 sm:py-8 min-w-0" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-                {/* Top bar: logo left, ref/date right */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-5 border-b border-white/20">
-                  {/* Logo + company name */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 bg-white rounded-xl p-2 shadow-lg">
-                      <img
-                        data-docx-image="logo"
-                        src="/rayenna_logo.jpg"
-                        alt="Rayenna Energy"
-                        className="h-16 sm:h-[4.5rem] w-auto object-contain"
-                        style={{ maxWidth: '160px' }}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-white font-extrabold text-base sm:text-lg tracking-tight drop-shadow leading-tight">Rayenna Energy Private Limited</p>
-                      <p className="text-white/75 text-xs leading-relaxed mt-0.5">Door No. 3329/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019</p>
-                      <p className="text-white/60 text-[10px] leading-relaxed mt-0.5">
-                        Tel: +91 7907 369 304 · sales@rayenna.energy · www.rayennaenergy.com · GST: 32AANCR8677A1Z6
-                      </p>
-                    </div>
-                  </div>
-                  {/* Ref + Date */}
-                  <div className="sm:text-right sm:flex-shrink-0 sm:max-w-[180px]">
-                    <p className="text-[10px] text-white/50 uppercase tracking-widest mb-0.5">Reference</p>
-                    <p className="text-white font-mono text-sm font-semibold break-all">{proposal.refNumber}</p>
-                    <p className="text-[10px] text-white/50 uppercase tracking-widest mt-2 mb-0.5">Date</p>
-                    <p className="text-white text-sm font-medium">
-                      {new Date(proposal.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              {/* Cover + contact strip share page 1 in PDF (see PROPOSAL_PRINT_CSS). */}
+              <div data-pdf-section="cover-first-page" className="pdf-cover-first-page">
+                <ProposalCoverBlock proposal={proposalForDoc ?? proposal} />
 
-                {/* To: block */}
-                </div>{/* end flex row */}
-
-                {(proposal.customer.customerName || proposal.customer.contactPerson) && (
-                  <div className="mt-5 pt-4 border-t border-white/20">
-                    {(proposal.projectNumber != null || proposal.customerNumber) && (
-                      <div className="mb-2 text-[11px] text-white/70 font-mono">
-                        {proposal.projectNumber != null && (
-                          <span>
-                            Project #{proposal.projectNumber}
-                            {proposal.customerNumber ? ' · ' : ''}
-                          </span>
-                        )}
-                        {proposal.customerNumber && (
-                          <span>Customer #{proposal.customerNumber}</span>
-                        )}
-                      </div>
-                    )}
-                    <p className="text-xs text-white/60 uppercase tracking-widest mb-1">To</p>
-                    <p className="text-white font-bold text-base">{proposal.customer.customerName}</p>
-                    {proposal.customer.contactPerson && <p className="text-white/80 text-sm">Attn: {proposal.customer.contactPerson}</p>}
-                    {proposal.customer.location && <p className="text-white/70 text-xs mt-0.5">{proposal.customer.location}</p>}
-                    {proposal.customer.phone && <p className="text-white/70 text-xs">📞 {proposal.customer.phone}</p>}
-                    {proposal.customer.email && <p className="text-white/70 text-xs">✉ {formatEmailForDisplay(proposal.customer.email)}</p>}
-                  </div>
-                )}
-
-                <div className="mt-5 pt-5 border-t border-white/20">
-                  <p className="text-xs text-white/60 uppercase tracking-widest mb-1">Proposal For</p>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
-                    {proposalForHeading(
-                      proposal.systemSizeKw,
-                      proposalForDoc?.systemType,
-                    )}
-                  </h2>
-                  {proposal.customer.location && (
-                    <p className="text-white/80 mt-1 text-sm">{proposal.customer.location}</p>
-                  )}
+                {/* Compact contact strip */}
+                <div
+                  data-pdf-section="contact-strip"
+                  className="px-3 sm:px-6 md:px-8 py-2.5 border-b border-primary-100 bg-slate-50 text-[10px] sm:text-xs text-secondary-600 flex flex-wrap gap-x-3 gap-y-1 justify-between"
+                >
+                  <span>Rayenna Energy · Kochi · GST 32AANCR8677A1Z6</span>
+                  <span>+91 7907 369 304 · sales@rayenna.energy · www.rayennaenergy.com</span>
                 </div>
               </div>
 
@@ -1640,8 +1618,56 @@ export default function ProposalPreview() {
                 <WhatWeOfferBlock />
                 <Divider />
                 <FinancialBenefitsBlock proposal={proposalForDoc ?? proposal} />
-                <Divider />
-                <EnvironmentalImpactBlock proposal={proposalForDoc ?? proposal} />
+                {canWrite && (
+                  <div className="print-hide mb-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-2 text-left"
+                      onClick={() => setOptionalSectionsOpen((o) => !o)}
+                    >
+                      <span>
+                        <span className="text-xs font-semibold text-slate-800">Optional sections</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5 font-normal">
+                          Include or exclude narrative sections. Click Save to keep this on the server for every device.
+                          AI Roof Layout and custom sections keep their own controls.
+                        </span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                        {optionalSectionsOpen ? 'Hide' : 'Show'}
+                      </span>
+                    </button>
+                    {optionalSectionsOpen && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {OPTIONAL_PROPOSAL_SECTIONS.map((sec) => (
+                          <label
+                            key={sec.id}
+                            className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/80"
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-sky-700 focus:ring-sky-500"
+                              checked={isOptionalSectionIncluded(sec.id, includedOptionalSections)}
+                              onChange={() => {
+                                const id = sec.id as OptionalProposalSectionId;
+                                setIncludedOptionalSections((prev) => ({
+                                  ...prev,
+                                  [id]: !isOptionalSectionIncluded(id, prev),
+                                }));
+                              }}
+                            />
+                            <span>{sec.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isOptionalSectionIncluded('environmental-impact', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <EnvironmentalImpactBlock proposal={proposalForDoc ?? proposal} />
+                  </>
+                )}
                 {canWrite && (
                   <div
                     className={`print-hide mb-6 rounded-xl px-4 py-3 space-y-2 border ${
@@ -1776,10 +1802,20 @@ export default function ProposalPreview() {
                     )}
                   </>
                 )}
-                <Divider />
-                <OurProcessBlock />
+                {isOptionalSectionIncluded('our-process', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <OurProcessBlock />
+                  </>
+                )}
                 <Divider />
                 <ScopeOfWorkBlock proposal={proposalForDoc ?? proposal} />
+                {isOptionalSectionIncluded('responsibility-matrix', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <ResponsibilityMatrixBlock />
+                  </>
+                )}
                 </div>
                 <CustomSectionsBeforeBoq
                   ref={customSectionsRef}
@@ -1791,6 +1827,15 @@ export default function ProposalPreview() {
                   ref={docBodyBottomRef}
                   onInput={handleEditableInput}
                 >
+                {isOptionalSectionIncluded('technical-details', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <TechnicalDetailsBlock
+                      proposal={proposalForDoc ?? proposal}
+                      bomComments={bomComments}
+                    />
+                  </>
+                )}
                 {proposal.bom.length > 0 && (
                   <>
                     <Divider />
@@ -1809,33 +1854,58 @@ export default function ProposalPreview() {
                   </>
                 )}
                 <Divider />
-                <CommercialsBlock
-                  sheet={proposal.sheet}
-                  roi={proposal.roi}
-                  roiAutofill={proposal.roiAutofill}
-                  systemSizeKw={proposal.systemSizeKw}
-                  systemType={(proposalForDoc ?? proposal).systemType}
-                />
+                <CommercialsBlock proposal={proposalForDoc ?? proposal} />
                 <div className="print-hide">
                   <Divider />
                 </div>
-                <ListBlock title="Client Scope" items={CLIENT_SCOPE} />
-                <Divider />
-                <ListBlock title="Terms & Conditions" items={TERMS_AND_CONDITIONS} />
-                <Divider />
-                <ListBlock title="Service Details" items={SERVICE_DETAILS} />
-                <Divider />
-                <ListBlock title="Payment Terms" items={PAYMENT_TERMS} />
+                <PaymentMilestonesBlock />
                 <Divider />
                 <AccountDetailsBlock />
+                {isOptionalSectionIncluded('warranty', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <WarrantyTableBlock
+                      proposal={proposalForDoc ?? proposal}
+                      bomComments={bomComments}
+                    />
+                  </>
+                )}
                 <Divider />
-                <ListBlock title="Warranty" items={WARRANTY_TERMS} />
+                <DeliveryTermsBlock />
+                {isOptionalSectionIncluded('offer-validity', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <OfferValidityBlock />
+                  </>
+                )}
                 <Divider />
-                <ListBlock title="Material Delivery Period" items={DELIVERY_TERMS} />
+                <ListBlock title="Terms & Conditions" items={TERMS_AND_CONDITIONS} />
+                {isOptionalSectionIncluded('service-details', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <ListBlock title="Service Details" items={SERVICE_DETAILS} />
+                  </>
+                )}
+                {isOptionalSectionIncluded('key-points', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <ListBlock title="Key Points" items={KEY_POINTS} />
+                  </>
+                )}
+                {isOptionalSectionIncluded('exclusions', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <ListBlock title="Exclusions" items={PROPOSAL_EXCLUSIONS} />
+                  </>
+                )}
                 <Divider />
                 <SectionBlock title="Closing Note" content={closingText(proposal)} />
-                <Divider />
-                <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
+                {isOptionalSectionIncluded('subsidy-disclaimer', includedOptionalSections) && (
+                  <>
+                    <Divider />
+                    <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
+                  </>
+                )}
                 </div>
                 </ProposalTextOverridesContext.Provider>
                 </ProposalEditingContext.Provider>

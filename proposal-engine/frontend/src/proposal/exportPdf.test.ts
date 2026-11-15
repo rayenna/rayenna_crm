@@ -31,4 +31,46 @@ describe('PROPOSAL_PRINT_CSS', () => {
       /\[data-pdf-section="bom"\][\s\S]*page-break-after:\s*always/,
     );
   });
+
+  it('keeps Cover + contact strip on page 1 and centres them', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="cover-first-page"\][\s\S]*page-break-after:\s*always\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="cover-first-page"\][\s\S]*justify-content:\s*center\s*!important/,
+    );
+    // Cover alone must not force a page break (that split contact onto page 2)
+    expect(PROPOSAL_PRINT_CSS).not.toMatch(
+      /\[data-pdf-section="cover"\]\s*\{[^}]*page-break-after:\s*always/,
+    );
+  });
+
+  it('keeps the Financial Benefits chart from splitting across pages', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-keep="financial-chart"\][\s\S]*page-break-inside:\s*avoid\s*!important/,
+    );
+  });
+
+  it('keeps the About Rayenna Key Highlights table from splitting across pages', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-keep="key-highlights"\][\s\S]*page-break-inside:\s*avoid\s*!important/,
+    );
+  });
+
+  it('does not force a page break before Commercials (follows BOQ)', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="commercials"\][\s\S]*page-break-before:\s*auto\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).not.toMatch(
+      /\[data-pdf-section="commercials"\][\s\S]*page-break-before:\s*always/,
+    );
+  });
+
+  it('does not force a page break before Technical Details (follows Responsibility Matrix)', () => {
+    const techRule = PROPOSAL_PRINT_CSS.match(
+      /\[data-pdf-section="technical-details"\]\s*\{[^}]*\}/,
+    )?.[0];
+    expect(techRule).toMatch(/page-break-before:\s*auto\s*!important/);
+    expect(techRule).not.toMatch(/page-break-before:\s*always/);
+  });
 });

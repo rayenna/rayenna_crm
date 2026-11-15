@@ -2,31 +2,44 @@ import type PptxGenJS from 'pptxgenjs';
 import type { ProposalCustomSectionBeforeBoq } from '../lib/customerStore';
 import { formatEmailForDisplay } from '../lib/customerStore';
 import type { AiRoofLayoutResponse } from '../lib/apiClient';
-import { CATEGORIES, sheetTotalGst } from '../lib/costingConstants';
+import { CATEGORIES } from '../lib/costingConstants';
 import { fmtINR, fmtINRFull } from './format';
 import {
   ABOUT_HIGHLIGHTS,
-  CLIENT_SCOPE,
   DELIVERY_TERMS,
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
-  PAYMENT_TERMS,
   scopeText,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
-  WARRANTY_TERMS,
 } from './proposalCopy';
+import {
+  buildCommercialsWaterfall,
+  buildTechDetailCards,
+  buildWarrantyRows,
+  commercialsFromProposal,
+  resolveAuthorityFees,
+  resolveExclusions,
+  resolveKeyPoints,
+  resolveOfferValidity,
+  resolvePaymentMilestones,
+  resolveRaciRows,
+  subsidyCreditNote,
+  techDetailsFootnote,
+} from './proposalContent';
 import { renderCumulativeSavingsChartPng } from './cumulativeSavingsChart';
 import { proposalDisplayCapacityKw } from './proposalAssembly';
 import {
-  commercialsDescription,
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   systemTypeArticle,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
+import { isOptionalSectionIncluded, type IncludedOptionalSections } from './optionalSections';
 import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { ProposalData, TextOverrides } from './types';
+
+export { commercialsFromProposal };
 
 const NAVY = '0d1b3a';
 const GOLD = 'eab308';
@@ -61,51 +74,6 @@ export function proposalDownloadStem(p: ProposalData): string {
   const name = (p.customer.customerName || 'Customer').replace(/\s+/g, '_').replace(/[^\w.-]/g, '');
   const ref = p.refNumber.replace(/\//g, '-');
   return `Rayenna_Proposal_${name}_${ref}`;
-}
-
-export function commercialsFromProposal(p: ProposalData): {
-  grandRounded: number;
-  preGst: number;
-  gstAmount: number;
-  gstLabel: string;
-  sizeKw: number;
-  subsidyAmt: number;
-  showSubsidy: boolean;
-} | null {
-  const grandTotal = p.sheet?.grandTotal ?? p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
-  if (!grandTotal) return null;
-  const grandRounded = Math.round(grandTotal);
-  const subsidyAmt = p.roi?.inputs?.subsidyAmount ?? 0;
-  const showSubsidy = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
-  const sizeKw = proposalDisplayCapacityKw(p) || (p.sheet?.systemSizeKw ?? 0);
-  if (p.sheet) {
-    const sheetGst =
-      p.sheet.totalGst != null && p.sheet.totalGst > 0
-        ? p.sheet.totalGst
-        : p.sheet.items?.length
-          ? sheetTotalGst(p.sheet.items, p.sheet.marginPercent ?? 15)
-          : 0;
-    const gstAmount = Math.round(sheetGst);
-    return {
-      grandRounded,
-      preGst: Math.round(grandRounded - gstAmount),
-      gstAmount,
-      gstLabel: 'GST (mixed: 5% & 18%)',
-      sizeKw,
-      subsidyAmt,
-      showSubsidy,
-    };
-  }
-  const preGst = Math.round(grandRounded / 1.18);
-  return {
-    grandRounded,
-    preGst,
-    gstAmount: Math.round(grandRounded - preGst),
-    gstLabel: 'GST @ 18% (estimate)',
-    sizeKw,
-    subsidyAmt,
-    showSubsidy,
-  };
 }
 
 function arrayBufferToDataUrl(buf: ArrayBuffer, mime = 'image/jpeg'): string {
@@ -265,11 +233,14 @@ export async function exportToPpt(
     container?: HTMLElement | null;
     roofLayout?: AiRoofLayoutResponse | null;
     customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[];
+    includedOptionalSections?: IncludedOptionalSections | null;
   },
 ): Promise<void> {
   const overrides = options?.textOverrides
     ? rewriteSystemTypeInOverrides(options.textOverrides, p.systemType)
     : options?.textOverrides;
+  const opt = (id: Parameters<typeof isOptionalSectionIncluded>[0]) =>
+    isOptionalSectionIncluded(id, options?.includedOptionalSections);
   const images = await loadImages(options?.container);
   const capacityKw = proposalDisplayCapacityKw(p);
   const heading = proposalForHeading(capacityKw, p.systemType);
@@ -367,18 +338,51 @@ export async function exportToPpt(
     s.addText(heading, {
       x: 0.55,
       y: 2.68,
-      w: 11.6,
+      w: 9.2,
       h: 0.7,
       fontFace: FONT,
-      fontSize: 28,
+      fontSize: 26,
       color: WHITE,
       bold: true,
     });
+    const coverKw = proposalDisplayCapacityKw(p);
+    if (coverKw > 0) {
+      s.addShape('ellipse', {
+        x: 10.55,
+        y: 2.35,
+        w: 1.85,
+        h: 1.85,
+        fill: { color: GOLD },
+        line: { color: GOLD },
+      });
+      s.addText(Number.isInteger(coverKw) ? String(coverKw) : coverKw.toFixed(1), {
+        x: 10.55,
+        y: 2.75,
+        w: 1.85,
+        h: 0.7,
+        fontFace: FONT,
+        fontSize: 28,
+        color: NAVY,
+        bold: true,
+        align: 'center',
+      });
+      s.addText('kW', {
+        x: 10.55,
+        y: 3.4,
+        w: 1.85,
+        h: 0.3,
+        fontFace: FONT,
+        fontSize: 12,
+        color: NAVY,
+        bold: true,
+        align: 'center',
+      });
+    }
     if (p.customer.location) {
       s.addText(p.customer.location, {
         x: 0.55,
-        y: 3.4,
-        w: 11.6,
+        y: 3.45,
+        w: 9.2,
         h: 0.28,
         fontFace: FONT,
         fontSize: 14,
@@ -394,13 +398,32 @@ export async function exportToPpt(
     if (email) meta.push(email);
     s.addText(meta.join('   ·   '), {
       x: 0.55,
-      y: 4.15,
+      y: 4.25,
       w: 11.6,
       h: 0.4,
       fontFace: FONT,
       fontSize: 13,
       color: WHITE,
     });
+    if (p.projectNumber != null || p.customerNumber) {
+      s.addText(
+        [
+          p.projectNumber != null ? `Project #${p.projectNumber}` : '',
+          p.customerNumber ? `Customer #${p.customerNumber}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        {
+          x: 0.55,
+          y: 4.7,
+          w: 11.6,
+          h: 0.28,
+          fontFace: FONT,
+          fontSize: 12,
+          color: '94A3B8',
+        },
+      );
+    }
 
     s.addText(`Ref  ${p.refNumber}`, {
       x: 0.55,
@@ -812,7 +835,7 @@ export async function exportToPpt(
   }
 
   // ── 6. Environmental ────────────────────────────────────────────────────
-  {
+  if (opt('environmental-impact')) {
     const s = newSlide();
     addSectionTitle(s, 'Environmental Impact', 'Sustainability');
     const name = p.customer.customerName || 'your organisation';
@@ -935,7 +958,7 @@ export async function exportToPpt(
   }
 
   // ── 8. Process ──────────────────────────────────────────────────────────
-  {
+  if (opt('our-process')) {
     const s = newSlide();
     addSectionTitle(s, 'Our Process', 'Delivery');
     s.addText(
@@ -1046,7 +1069,62 @@ export async function exportToPpt(
     });
   }
 
-  // ── 10. Custom sections ─────────────────────────────────────────────────
+  // ── Responsibility matrix ───────────────────────────────────────────────
+  if (opt('responsibility-matrix')) {
+    const s = newSlide();
+    addSectionTitle(s, 'Responsibility Matrix', 'Scope');
+    const raci = resolveRaciRows(overrides);
+    s.addTable(
+      [
+        [
+          { text: '#', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+          { text: 'Description', options: { fill: { color: NAVY }, color: WHITE, bold: true } },
+          { text: 'Rayenna', options: { fill: { color: NAVY }, color: WHITE, bold: true, align: 'center' } },
+          { text: 'Client', options: { fill: { color: NAVY }, color: WHITE, bold: true, align: 'center' } },
+        ],
+        ...raci.map((r, i) => [
+          {
+            text: String(i + 1),
+            options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: MUTED },
+          },
+          {
+            text: r.description,
+            options: { fill: { color: i % 2 ? LIGHT : WHITE }, color: SLATE },
+          },
+          {
+            text: r.rayenna ? 'Yes' : '—',
+            options: {
+              fill: { color: i % 2 ? LIGHT : WHITE },
+              color: NAVY,
+              align: 'center' as const,
+              bold: true,
+            },
+          },
+          {
+            text: r.client ? 'Yes' : '—',
+            options: {
+              fill: { color: i % 2 ? LIGHT : WHITE },
+              color: 'B45309',
+              align: 'center' as const,
+              bold: true,
+            },
+          },
+        ]),
+      ],
+      {
+        x: 0.4,
+        y: 1.15,
+        w: 12.5,
+        colW: [0.6, 8.3, 1.8, 1.8],
+        border: { pt: 0.3, color: 'E2E8F0' },
+        fontFace: FONT,
+        fontSize: 10,
+        valign: 'middle',
+      },
+    );
+  }
+
+  // ── Custom sections ─────────────────────────────────────────────────────
   const custom = (options?.customSectionsBeforeBoq ?? []).filter(
     (sec) => sec.title.trim() || htmlToPlainText(sec.bodyHtml || ''),
   );
@@ -1065,7 +1143,72 @@ export async function exportToPpt(
     });
   });
 
-  // ── 11. BOQ ─────────────────────────────────────────────────────────────
+  // ── Technical Details ───────────────────────────────────────────────────
+  if (opt('technical-details')) {
+    const cards = buildTechDetailCards(p, overrides, options?.bomComments);
+    if (cards.length) {
+      const s = newSlide();
+      addSectionTitle(s, 'Technical Details', 'Components');
+      cards.slice(0, 4).forEach((c, i) => {
+        const x = 0.5 + (i % 2) * 6.2;
+        const y = 1.25 + Math.floor(i / 2) * 2.7;
+        s.addShape('roundRect', {
+          x,
+          y,
+          w: 5.95,
+          h: 2.5,
+          fill: { color: LIGHT },
+          rectRadius: 0.08,
+        });
+        s.addShape('rect', {
+          x,
+          y,
+          w: 5.95,
+          h: 0.42,
+          fill: { color: NAVY },
+        });
+        s.addText(c.title.toUpperCase(), {
+          x: x + 0.15,
+          y: y + 0.08,
+          w: 5.65,
+          h: 0.3,
+          fontFace: FONT,
+          fontSize: 12,
+          color: GOLD,
+          bold: true,
+        });
+        s.addText(
+          [
+            `Manufacturer: ${c.manufacturer}`,
+            `Type: ${c.typeRating}`,
+            `Qty: ${c.quantity}`,
+            `Spec: ${c.specification}`,
+            `Warranty: ${c.warranty}`,
+          ].join('\n'),
+          {
+            x: x + 0.2,
+            y: y + 0.55,
+            w: 5.55,
+            h: 1.8,
+            fontFace: FONT,
+            fontSize: 12,
+            color: SLATE,
+          },
+        );
+      });
+      s.addText(techDetailsFootnote(overrides), {
+        x: 0.5,
+        y: 6.7,
+        w: 12.3,
+        h: 0.28,
+        fontFace: FONT,
+        fontSize: 10,
+        color: 'B91C1C',
+      });
+    }
+  }
+
+  // ── BOQ ─────────────────────────────────────────────────────────────────
   if (p.bom.length > 0) {
     const grouped = CATEGORIES.map(({ value, label }) => ({
       cat: value,
@@ -1135,19 +1278,14 @@ export async function exportToPpt(
     }
   }
 
-  // ── 12. Commercials ─────────────────────────────────────────────────────
-  const commercials = commercialsFromProposal(p);
+  // ── Commercials waterfall ───────────────────────────────────────────────
+  const commercials = buildCommercialsWaterfall(p, overrides);
   if (commercials) {
     const s = newSlide();
     addSectionTitle(s, 'Commercials', 'Investment');
-    const desc = ov(
-      overrides,
-      'commercials-desc',
-      commercialsDescription(commercials.sizeKw, p.systemType),
-    );
     const rows: PptxGenJS.TableRow[] = [
       [
-        { text: desc, options: { fill: { color: WHITE }, color: SLATE } },
+        { text: commercials.description, options: { fill: { color: WHITE }, color: SLATE } },
         {
           text: fmtINRFull(commercials.preGst),
           options: { fill: { color: WHITE }, color: NAVY, bold: true, align: 'right' },
@@ -1162,88 +1300,188 @@ export async function exportToPpt(
       ],
       [
         {
-          text: 'TOTAL PROJECT COST (incl. GST)',
-          options: { fill: { color: NAVY }, color: WHITE, bold: true },
+          text: 'Total project cost (incl. GST)',
+          options: { fill: { color: WHITE }, color: NAVY, bold: true },
         },
         {
           text: fmtINRFull(commercials.grandRounded),
-          options: { fill: { color: NAVY }, color: GOLD, bold: true, align: 'right' },
+          options: { fill: { color: WHITE }, color: NAVY, bold: true, align: 'right' },
         },
       ],
     ];
     if (commercials.showSubsidy) {
-      rows.push([
-        {
-          text: `Subsidy eligible – Rs. ${commercials.subsidyAmt.toLocaleString('en-IN')}/-`,
-          options: { fill: { color: 'FEF3C7' }, color: '92400E' },
-        },
-        {
-          text: fmtINRFull(commercials.subsidyAmt),
-          options: { fill: { color: 'FEF3C7' }, color: '92400E', bold: true, align: 'right' },
-        },
-      ]);
+      rows.push(
+        [
+          {
+            text: 'Subsidy eligible',
+            options: { fill: { color: 'FEF3C7' }, color: '92400E' },
+          },
+          {
+            text: `(−) ${fmtINRFull(commercials.subsidyAmt)}`,
+            options: { fill: { color: 'FEF3C7' }, color: '92400E', bold: true, align: 'right' },
+          },
+        ],
+        [
+          {
+            text: 'Effective price after subsidy',
+            options: { fill: { color: 'D1FAE5' }, color: '065F46', bold: true },
+          },
+          {
+            text: fmtINRFull(commercials.effectiveAfterSubsidy),
+            options: { fill: { color: 'D1FAE5' }, color: '065F46', bold: true, align: 'right' },
+          },
+        ],
+      );
     }
+    rows.push([
+      {
+        text: 'PAYABLE TO RAYENNA ENERGY',
+        options: { fill: { color: NAVY }, color: WHITE, bold: true },
+      },
+      {
+        text: fmtINRFull(commercials.payableToRayenna),
+        options: { fill: { color: NAVY }, color: GOLD, bold: true, align: 'right' },
+      },
+    ]);
     s.addTable(rows, {
       x: 0.5,
-      y: 1.3,
+      y: 1.15,
       w: 12.3,
       colW: [8.8, 3.5],
       border: { pt: 0.4, color: 'E2E8F0' },
       fontFace: FONT,
-      fontSize: 14,
+      fontSize: 13,
       valign: 'middle',
+    });
+    s.addText(`In words (payable): ${commercials.payableInWords}`, {
+      x: 0.5,
+      y: 5.35,
+      w: 12.3,
+      h: 0.35,
+      fontFace: FONT,
+      fontSize: 11,
+      color: MUTED,
+      italic: true,
+    });
+    s.addText(subsidyCreditNote(overrides), {
+      x: 0.5,
+      y: 5.7,
+      w: 12.3,
+      h: 0.4,
+      fontFace: FONT,
+      fontSize: 11,
+      color: '92400E',
+    });
+    const fees = resolveAuthorityFees(commercials.sizeKw, overrides);
+    s.addText('Authority / DISCOM fees', {
+      x: 0.5,
+      y: 6.15,
+      w: 12.3,
+      h: 0.25,
+      fontFace: FONT,
+      fontSize: 12,
+      color: NAVY,
+      bold: true,
+    });
+    s.addText(fees.map((f) => `${f.label}: ${f.amountLabel}`).join('   ·   '), {
+      x: 0.5,
+      y: 6.4,
+      w: 12.3,
+      h: 0.4,
+      fontFace: FONT,
+      fontSize: 11,
+      color: SLATE,
     });
   }
 
-  // ── 13. Payment / warranty / delivery ───────────────────────────────────
+  // ── Payment / warranty / delivery ───────────────────────────────────────
   {
     const s = newSlide();
     addSectionTitle(s, 'Commercial Terms', 'Engagement');
-    const blocks = [
-      { title: 'Payment Terms', items: PAYMENT_TERMS },
-      { title: 'Warranty', items: WARRANTY_TERMS },
-      { title: 'Delivery', items: DELIVERY_TERMS },
-    ];
-    blocks.forEach((b, i) => {
-      const x = 0.5 + i * 4.15;
-      s.addShape('roundRect', {
-        x,
+    const milestones = resolvePaymentMilestones(overrides);
+    const warranty = opt('warranty')
+      ? buildWarrantyRows(p, overrides, options?.bomComments)
+      : [];
+    s.addText('PAYMENT MILESTONES', {
+      x: 0.5,
+      y: 1.2,
+      w: 6,
+      h: 0.3,
+      fontFace: FONT,
+      fontSize: 12,
+      color: GOLD,
+      bold: true,
+    });
+    s.addTable(
+      milestones.map((m) => [
+        {
+          text: `${m.percent}%`,
+          options: { fill: { color: LIGHT }, color: NAVY, bold: true },
+        },
+        { text: m.trigger, options: { fill: { color: WHITE }, color: SLATE } },
+      ]),
+      {
+        x: 0.5,
+        y: 1.55,
+        w: 6,
+        colW: [1.1, 4.9],
+        border: { pt: 0.3, color: 'E2E8F0' },
+        fontFace: FONT,
+        fontSize: 12,
+        valign: 'middle',
+      },
+    );
+    if (warranty.length) {
+      s.addText('WARRANTY', {
+        x: 6.8,
         y: 1.2,
-        w: 3.95,
-        h: 5.6,
-        fill: { color: LIGHT },
-        rectRadius: 0.1,
-      });
-      s.addShape('rect', {
-        x,
-        y: 1.2,
-        w: 3.95,
-        h: 0.55,
-        fill: { color: NAVY },
-      });
-      s.addText(b.title.toUpperCase(), {
-        x: x + 0.15,
-        y: 1.3,
-        w: 3.65,
-        h: 0.38,
+        w: 6,
+        h: 0.3,
         fontFace: FONT,
         fontSize: 12,
         color: GOLD,
         bold: true,
       });
-      s.addText(b.items.map((item, n) => `${n + 1}.  ${item}`).join('\n\n'), {
-        x: x + 0.2,
-        y: 1.95,
-        w: 3.55,
-        h: 4.6,
+      s.addTable(
+        warranty.map((r) => [
+          { text: r.label, options: { fill: { color: LIGHT }, color: NAVY, bold: true } },
+          { text: r.detail, options: { fill: { color: WHITE }, color: SLATE } },
+        ]),
+        {
+          x: 6.8,
+          y: 1.55,
+          w: 6,
+          colW: [2.2, 3.8],
+          border: { pt: 0.3, color: 'E2E8F0' },
+          fontFace: FONT,
+          fontSize: 11,
+          valign: 'middle',
+        },
+      );
+    }
+    s.addText(`Delivery: ${DELIVERY_TERMS[0]}`, {
+      x: 0.5,
+      y: 5.6,
+      w: 12.3,
+      h: 0.4,
+      fontFace: FONT,
+      fontSize: 12,
+      color: SLATE,
+    });
+    if (opt('offer-validity')) {
+      s.addText(`Validity: ${resolveOfferValidity(overrides)}`, {
+        x: 0.5,
+        y: 6.1,
+        w: 12.3,
+        h: 0.5,
         fontFace: FONT,
         fontSize: 12,
         color: SLATE,
       });
-    });
+    }
   }
 
-  // ── 14. Account ─────────────────────────────────────────────────────────
+  // ── Account ─────────────────────────────────────────────────────────────
   {
     const s = newSlide();
     addSectionTitle(s, 'Account Details', 'Bank');
@@ -1277,22 +1515,62 @@ export async function exportToPpt(
     );
   }
 
-  // ── 15. Client scope + T&Cs ─────────────────────────────────────────────
-  {
+  // ── Key points / exclusions / T&Cs ──────────────────────────────────────
+  if (opt('key-points') || opt('exclusions')) {
     const s = newSlide();
-    addSectionTitle(s, 'Client Scope', 'Your responsibilities');
-    s.addText(
-      CLIENT_SCOPE.map((item, i) => `${i + 1}.  ${item}`).join('\n'),
-      {
+    addSectionTitle(s, 'Key Points & Exclusions', 'Offer');
+    if (opt('key-points')) {
+      s.addText('KEY POINTS', {
         x: 0.5,
         y: 1.2,
-        w: 12.3,
-        h: 5.6,
+        w: 6,
+        h: 0.28,
         fontFace: FONT,
-        fontSize: 14,
-        color: SLATE,
-      },
-    );
+        fontSize: 12,
+        color: GOLD,
+        bold: true,
+      });
+      s.addText(
+        resolveKeyPoints(overrides)
+          .map((item, i) => `${i + 1}.  ${item}`)
+          .join('\n\n'),
+        {
+          x: 0.5,
+          y: 1.55,
+          w: 6,
+          h: 5.2,
+          fontFace: FONT,
+          fontSize: 12,
+          color: SLATE,
+        },
+      );
+    }
+    if (opt('exclusions')) {
+      s.addText('EXCLUSIONS', {
+        x: 6.8,
+        y: 1.2,
+        w: 6,
+        h: 0.28,
+        fontFace: FONT,
+        fontSize: 12,
+        color: GOLD,
+        bold: true,
+      });
+      s.addText(
+        resolveExclusions(overrides)
+          .map((item, i) => `${i + 1}.  ${item}`)
+          .join('\n\n'),
+        {
+          x: 6.8,
+          y: 1.55,
+          w: 6,
+          h: 5.2,
+          fontFace: FONT,
+          fontSize: 11,
+          color: SLATE,
+        },
+      );
+    }
   }
   {
     const s = newSlide();
@@ -1357,15 +1635,17 @@ export async function exportToPpt(
         color: 'E2E8F0',
       },
     );
-    s.addText(SUBSIDY_DISCLAIMER_TEXT.slice(0, 280) + '…', {
-      x: 0.7,
-      y: 5.5,
-      w: 11.8,
-      h: 1.3,
-      fontFace: FONT,
-      fontSize: 10,
-      color: '94A3B8',
-    });
+    if (opt('subsidy-disclaimer')) {
+      s.addText(SUBSIDY_DISCLAIMER_TEXT.slice(0, 280) + '…', {
+        x: 0.7,
+        y: 5.5,
+        w: 11.8,
+        h: 1.3,
+        fontFace: FONT,
+        fontSize: 10,
+        color: '94A3B8',
+      });
+    }
   }
 
   await pptx.writeFile({ fileName: `${proposalDownloadStem(p)}.pptx` });

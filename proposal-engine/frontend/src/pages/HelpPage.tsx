@@ -775,24 +775,26 @@ export default function HelpPage() {
             <h3 className="font-semibold text-gray-800 mb-2">Proposal Sections</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {[
-                ['Letterhead',              'Company logo, reference number, customer address'],
+                ['Cover + Contact strip',  'Capacity hero, client card, reference, date, and Rayenna contact line — PDF page 1 keeps both together and centred'],
                 ['Executive Summary',       'Personalised letter with system size, cost, payback, savings'],
-                ['About Rayenna',           'Company highlights and credentials'],
+                ['About Rayenna',           'Company intro plus Key Highlights table (kept whole on one PDF page)'],
                 ['What We Offer',           'Domestic, Commercial, and Consultation services'],
-                ['Financial Benefits',      'Savings narrative, LCOE, 25-year chart and table'],
+                ['Financial Benefits',      'Savings narrative, LCOE, 25-year chart and table (chart stays on one PDF page)'],
                 ['Environmental Impact',    'CO₂ offset, clean energy generation, sustainability'],
                 ['Our Process',             '5-step journey from consultation to ongoing support'],
                 ['Scope of Work',           'Site survey, equipment supply, installation, documentation'],
-                ['Custom Sections (optional)', 'Your own content between Scope of Work and BOQ — add with the "+ Add section" button; supports rich text, tables, and images'],
-                ['Bill of Quantities',      'Grouped equipment list with per-category comment fields'],
-                ['Proposed Rooftop Solar Layout (optional)', 'When enabled: satellite-based draft and metrics; intro text states the layout is conceptual and refers readers to the Bill of Quantities for accurate scope and deliverables'],
-                ['Commercials',             'Project cost breakdown and ROI summary'],
-                ['Client Scope',            'Customer responsibilities and charges'],
-                ['Terms & Conditions',      '10 standard clauses including validity and jurisdiction'],
-                ['Service Details',         '5-year monitoring and complaint support'],
-                ['Payment Terms',           '70% / 15% / 10% / 5% milestone schedule'],
+                ['Responsibility Matrix',   'Rayenna vs Client checklist — continues into Technical Details in PDF (no forced page break)'],
+                ['Custom Sections (optional)', 'Your own content before Technical Details / BOQ — rich text, tables, images'],
+                ['Technical Details',       'Major component cards (modules, inverter, structure, DBs) from BOM / CRM brands'],
+                ['Bill of Quantities',      'Grouped equipment list with per-category notes — PDF starts BOQ on a fresh page'],
+                ['Proposed Rooftop Solar Layout (optional)', 'When enabled: satellite-based draft; BOQ remains source of truth for scope'],
+                ['Commercials',             'Price waterfall after BOQ on the same PDF flow (no forced break between BOQ and Commercials)'],
+                ['Payment Terms',           'Milestone table (70% / 15% / 10% / 5%)'],
                 ['Account Details',         'Rayenna bank account for payment'],
-                ['Warranty',                'Module, inverter, and equipment warranty terms'],
+                ['Warranty',                'System / modules / inverter table (brand-aware when known)'],
+                ['Offer Validity',          'Standalone editable validity (default 7 days)'],
+                ['Terms & Conditions',      'Standard offer clauses (validity moved to its own field)'],
+                ['Key Points & Exclusions', 'Commissioning caveats and out-of-scope items'],
                 ['Material Delivery',       '7–15 working days from confirmed PO'],
               ].map(([section, desc]) => (
                 <div key={section} className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
@@ -867,11 +869,20 @@ export default function HelpPage() {
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Exporting to PDF</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
               Click <strong>⬇ PDF</strong> (in the header or footer). A new browser tab opens with the proposal formatted for A4 printing. Your browser's print dialog will appear — choose <strong>Save as PDF</strong> as the destination. Make sure <strong>Background graphics</strong> is enabled in the print options for the best result.
             </p>
-            <div className="mt-2">
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              <strong>PDF page layout</strong> (how sections paginate for client-ready PDFs):
+            </p>
+            <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
+              <li><strong>Page 1</strong> — Cover and the Rayenna contact strip stay together and are centred on the first sheet; the rest of the proposal starts on page 2.</li>
+              <li><strong>Kept whole</strong> — the Financial Benefits 25-year chart and the About Rayenna <em>Key Highlights</em> table do not split across pages.</li>
+              <li><strong>No forced break</strong> — Responsibility Matrix flows into Technical Details; Bill of Quantities flows into Commercials (BOQ itself still starts on a fresh page).</li>
+            </ul>
+            <div className="space-y-2 mt-2">
               <Tip>In Chrome: More settings → Background graphics → ON. In Edge: More settings → Print backgrounds → ON.</Tip>
+              <Tip>Turn off browser <strong>Headers and footers</strong> in the print dialog if you do not want the date/URL line on every page — those come from the browser, not from Proposal Engine.</Tip>
             </div>
           </div>
 
@@ -1356,7 +1367,10 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
-            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups from this site — the PDF opens in a new tab. Allow pop-ups if prompted.
+            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups from this site — the PDF opens in a new tab. Allow pop-ups if prompted. Page 1 is intentionally Cover + contact strip only (centred); if that looks sparse, that is expected — body content starts on page 2.
+          </FaqItem>
+          <FaqItem q="Why do some proposal sections share a page in the PDF while others start fresh?">
+            PDF pagination is intentional: Cover + contact strip share page 1; Bill of Quantities starts on a new page; Commercials continue after BOQ; Responsibility Matrix continues into Technical Details. Charts and the Key Highlights table are kept from splitting mid-block. Tall BOQ tables still paginate normally so content is not clipped.
           </FaqItem>
 
           <FaqItem q="Can I use the same template for multiple customers?">

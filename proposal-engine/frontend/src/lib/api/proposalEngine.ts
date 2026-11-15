@@ -45,6 +45,7 @@ export interface ProposalEngineProjectFromApi {
   projectStage?: string | null;
   panelCapacityW?: number | null;
   panelBrand?: string | null;
+  inverterBrand?: string | null;
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   peArtifacts?: PeArtifactsFromApi;
   roofLayoutSummary?: PeRoofLayoutListSummary;
@@ -429,6 +430,7 @@ export async function syncProjectProposal(
         editedHtml: artifact.editedHtml ?? null,
         textOverrides: artifact.textOverrides ?? null,
         customSectionsBeforeBoq: artifact.customSectionsBeforeBoq ?? null,
+        includedOptionalSections: artifact.includedOptionalSections ?? null,
         proposalView: artifact.proposalView ?? null,
         summary: artifact.summary ?? null,
         includeRoofLayout: artifact.includeRoofLayout ?? false,

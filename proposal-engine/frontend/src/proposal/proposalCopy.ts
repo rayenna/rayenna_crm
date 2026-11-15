@@ -145,16 +145,18 @@ export function scopeText(p: ProposalData): string {
   return `The scope of work for the ${proposalForHeading(sz, p.systemType)} covers four key areas: Site Survey & Design, Supply of Equipment, Installation & Commissioning, and Documentation & Handover.`;
 }
 
+/** @deprecated Prefer RACI matrix + Authority fees; kept for override migration / older snapshots. */
 export const CLIENT_SCOPE = [
   'Clear shadow free rooftop area for the installation of PV panels.',
   'Space for installation and commissioning of electrical panels.',
   'A secured area for storage of supplied equipment till commissioning.',
   'Electricity – construction power/Water shall be arranged by the owner at its own cost.',
   'Customer need to provide internet connectivity for the system.',
-  'Feasibility Charges - Rs.1000/-',
-  'Registration Charges - 5KW × Rs. 1000 (Rs.5000/-) + 18% GST.',
-  'Bidirectional / Net Meter.',
+  'Bidirectional / Net Meter (if not supplied by Utility).',
 ];
+
+/** Offer validity (days) — surfaced as its own editable field, not buried mid-T&Cs. */
+export const OFFER_VALIDITY_DAYS = 7;
 
 export const TERMS_AND_CONDITIONS = [
   'Capacity that can be installed is subject to allocation of feasibility by KSEB.',
@@ -162,7 +164,6 @@ export const TERMS_AND_CONDITIONS = [
   'Net Meter cost will be additional if not supplied by Utility.',
   'Any modification to the existing electrical system due to non-conformity to Electrical Inspectorate / Utility standards will have to be carried out by the customer.',
   'Customer shall provide necessary support for getting approvals from the concerned utility section offices.',
-  'VALIDITY: The offer is valid for 7 days from the date of proposal. Prices are subject to change based on market conditions and GST revisions.',
   'Civil and structural work beyond the scope defined herein will be charged separately.',
   'Rayenna Energy will not be responsible for delays caused by force majeure events, government restrictions, or site-related issues beyond our control.',
   'Any additional work not covered in this proposal will be executed only after written approval and issuance of a revised quotation.',
@@ -173,22 +174,87 @@ export const SERVICE_DETAILS = [
   'Regular Monitoring of the system and complaint support for 5 years.',
 ];
 
-export const PAYMENT_TERMS = [
-  '70% advance of the total invoice value to be paid along with the Purchase Order.',
-  '15% of the total invoice value to be made towards supply of material at site.',
-  '10% against work completion.',
-  '5% to be paid immediately after meter installation.',
+export interface PaymentMilestone {
+  percent: number;
+  trigger: string;
+}
+
+export const PAYMENT_MILESTONES: PaymentMilestone[] = [
+  { percent: 70, trigger: 'On acceptance of work order / with Purchase Order (advance)' },
+  { percent: 15, trigger: 'Upon delivery of material at site' },
+  { percent: 10, trigger: 'On completion of installation work' },
+  { percent: 5, trigger: 'Immediately after meter installation' },
 ];
 
+/** Legacy bullet list derived from milestones (Edit override key list-payment-terms). */
+export const PAYMENT_TERMS = PAYMENT_MILESTONES.map(
+  (m) => `${m.percent}% of the total invoice value — ${m.trigger}.`,
+);
+
+export const WARRANTY_SYSTEM_DEFAULT =
+  '5 years complaint support and workmanship cover for the complete system (excludes consumables and force majeure).';
 
 export const WARRANTY_TERMS = [
+  WARRANTY_SYSTEM_DEFAULT,
   '12 Year product warranty and 30 year performance warranty for PV modules.',
-  '10 Years warranty for Inverter.',
+  '10 Years warranty for Inverter (or as per manufacturer when specified).',
   'All other equipment supplied carries the original manufacturer\'s warranty.',
 ];
 
 export const DELIVERY_TERMS = [
-  '7 to 15 working days from the date of confirmed purchase order with advance.',
+  '7 to 15 working days from the date of confirmed purchase order with advance. Materials will be delivered directly to the site.',
+];
+
+export const AUTHORITY_FEE_DEFAULTS = {
+  feasibility: 1000,
+  registrationPerKw: 1000,
+  registrationFallback: 5000,
+};
+
+export const TECH_DETAILS_FOOTNOTE =
+  '** Subject to availability. Makes and models may be substituted with equivalent Tier-1 alternatives with prior intimation.';
+
+export const SUBSIDY_CREDIT_NOTE =
+  'Subsidy, if applicable, shall be credited to your bank account by the relevant DISCOM / MNRE authority. Payable to Rayenna is independent of subsidy disbursement.';
+
+export interface RaciRow {
+  description: string;
+  rayenna: boolean;
+  client: boolean;
+}
+
+export const RACI_ROWS: RaciRow[] = [
+  { description: 'Access to utility information / electricity bill', rayenna: false, client: true },
+  { description: 'Name change / phase change / load enhancement in electricity bill', rayenna: false, client: true },
+  { description: 'Access to site and shadow-free rooftop area', rayenna: false, client: true },
+  { description: 'Detailed design & engineering (SLD, layout)', rayenna: true, client: false },
+  { description: 'DISCOM feasibility / registration documentation support', rayenna: true, client: true },
+  { description: 'Supply of solar system components (as per BOQ)', rayenna: true, client: false },
+  { description: 'Secured storage area for materials till commissioning', rayenna: false, client: true },
+  { description: 'Construction power and water at site', rayenna: false, client: true },
+  { description: 'Civil works for module mounting structure (within scope)', rayenna: true, client: false },
+  { description: 'Installation, testing & pre-commissioning', rayenna: true, client: false },
+  { description: 'Internet / Wi-Fi (min. 1 Mbps) at inverter location', rayenna: false, client: true },
+  { description: 'Net meter / bidirectional meter (if not by Utility)', rayenna: false, client: true },
+  { description: 'Debris removal after installation', rayenna: true, client: false },
+  { description: 'System operational training & handover', rayenna: true, client: true },
+  { description: 'Regular cleaning of PV modules', rayenna: false, client: true },
+  { description: 'Warranty document management / claim assistance', rayenna: true, client: true },
+];
+
+export const PROPOSAL_EXCLUSIONS = [
+  'Load extension, name change, or similar modifications to the existing power meter are the customer’s responsibility.',
+  'Civil works beyond the plinth/supports of solar panels (building modifications, chasing, painting, PCU room alterations) are excluded.',
+  'Wi-Fi modem and internet connectivity within range of the inverter are in customer scope.',
+  'Unloading / loading of materials and local labour facilitation at site are typically in customer scope unless agreed otherwise.',
+  'Re-commissioning or component replacement after natural disasters is outside Rayenna’s warranty and at customer cost.',
+];
+
+export const KEY_POINTS = [
+  'If installation requires components or quantities beyond this proposal, pricing may change — Rayenna will notify you in advance.',
+  'Final commissioning depends on supply and installation of the net meter by the local DISCOM.',
+  'Customers are advised to clean solar panels regularly for optimum generation.',
+  'Timely payments are essential to adhere to project timelines.',
 ];
 
 export const SUBSIDY_DISCLAIMER_TEXT = `The subsidy, if applicable, is subject to approval and disbursement by the relevant DISCOM and/or government authority. Rayenna Energy's scope is limited to providing reasonable assistance with documentation and procedural requirements. We have no control over, and shall not be liable or responsible for, any delay, rejection, non-approval, or non-disbursement of the subsidy by the concerned authorities. The Customer expressly acknowledges and agrees that all payment obligations under this agreement are absolute and unconditional, and are not linked to, dependent upon, or contingent upon the approval or receipt of any subsidy amount.`;

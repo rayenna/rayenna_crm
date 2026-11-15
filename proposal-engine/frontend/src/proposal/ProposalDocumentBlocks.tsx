@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CATEGORIES, sheetTotalGst } from '../lib/costingConstants';
-import type { SavedSheet, BomRowGenerated, Category } from '../lib/costingConstants';
+import { CATEGORIES } from '../lib/costingConstants';
+import type { BomRowGenerated, Category } from '../lib/costingConstants';
 import { getActiveCustomer, getWipKeysForCurrentUser, formatEmailForDisplay } from '../lib/customerStore';
 import type { ProposalCustomSectionBeforeBoq } from '../lib/customerStore';
 import { getApiBaseUrl, type AiRoofLayoutResponse } from '../lib/apiClient';
-import type { RoiAutofill } from '../lib/costingConstants';
 import { fmtINR, fmtINRFull } from './format';
 import { buildDocx } from './exportDocx';
 import { getLatestSheet, getBom } from './proposalAssembly';
@@ -16,10 +15,23 @@ import {
   OUR_SERVICES,
   OUR_PROCESS_INTRO,
   OUR_PROCESS_STEPS,
+  DELIVERY_TERMS,
   scopeSectionsFor,
 } from './proposalCopy';
 import {
-  commercialsDescription,
+  buildCommercialsWaterfall,
+  buildTechDetailCards,
+  buildWarrantyRows,
+  resolveAuthorityFees,
+  resolveExclusions,
+  resolveKeyPoints,
+  resolveOfferValidity,
+  resolvePaymentMilestones,
+  resolveRaciRows,
+  subsidyCreditNote,
+  techDetailsFootnote,
+} from './proposalContent';
+import {
   proposalForHeading,
   rewriteSystemTypeMentions,
   systemTypeArticle,
@@ -224,6 +236,7 @@ export async function exportToDocx(
   container?: HTMLElement | null,
   roofLayout?: AiRoofLayoutResponse | null,
   customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[],
+  includedOptionalSections?: Record<string, boolean> | null,
 ): Promise<void> {
   const docx = await import('docx');
 
@@ -305,6 +318,7 @@ export async function exportToDocx(
     customSectionsBeforeBoq,
     posterById,
     docx,
+    includedOptionalSections,
   );
   const blob = await docx.Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
@@ -571,8 +585,11 @@ export function AboutRayennaBlock() {
         cost-effective solar solutions that provide long-term value to our customers.
       </OverriddenParagraph>
 
-      {/* Key highlights — 2-col bullet cards */}
-      <div className="rounded-xl border border-sky-100 overflow-hidden">
+      {/* Key highlights — 2-col bullet cards (keep whole table on one PDF page) */}
+      <div
+        data-pdf-keep="key-highlights"
+        className="rounded-xl border border-sky-100 overflow-hidden"
+      >
         <div
           className="px-4 py-2.5"
           style={{ background: 'linear-gradient(90deg, #0369a1 0%, #0891b2 100%)' }}
@@ -1046,12 +1063,15 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
         </div>
       )}
 
-      {/* Chart + Table side-by-side */}
+      {/* Chart + Table side-by-side — keep chart unsplit in PDF */}
       {rows.length > 0 && (
         <div className="flex flex-col lg:flex-row gap-4 mb-2">
 
           {/* ── Left: SVG bar chart ── */}
-          <div className="lg:w-[58%] min-w-0 rounded-xl border border-primary-100 bg-white p-3 flex flex-col">
+          <div
+            data-pdf-keep="financial-chart"
+            className="lg:w-[58%] min-w-0 rounded-xl border border-primary-100 bg-white p-3 flex flex-col"
+          >
             <p className="text-[10px] font-semibold text-secondary-400 uppercase tracking-widest mb-2">
               25-Year Cumulative Savings
             </p>
@@ -1410,155 +1430,564 @@ export function BOMGroupedTable({
   );
 }
 
-export function CommercialsBlock({
-  sheet,
-  roi,
-  roiAutofill,
-  systemSizeKw: headingSystemSizeKw,
-  systemType,
+export function CommercialsBlock({ proposal }: { proposal: ProposalData }) {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const waterfall = buildCommercialsWaterfall(proposal, map);
+  if (!waterfall) return null;
+
+  const fees = resolveAuthorityFees(waterfall.sizeKw, map);
+  const creditNote = subsidyCreditNote(map);
+
+  return (
+    <div className="mb-8 pdf-section" data-pdf-section="commercials">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
+        <span className="text-lg leading-none">💰</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#059669' }}>Commercials</h2>
+      </div>
+      <div className="bg-white border rounded-xl overflow-x-auto shadow-sm" style={{ borderColor: '#a7f3d0' }}>
+        <table className="w-full text-sm min-w-[340px]">
+          <tbody>
+            <tr className="border-b border-primary-100">
+              <td className="px-5 py-3 text-secondary-600">
+                <EditableText sectionKey="commercials-desc" as="p" className="m-0">
+                  {waterfall.description}
+                </EditableText>
+              </td>
+              <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
+                {fmtINRFull(waterfall.preGst)}
+              </td>
+            </tr>
+            <tr className="border-b border-primary-100 bg-blue-50/40">
+              <td className="px-5 py-3 text-blue-700">{waterfall.gstLabel}</td>
+              <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
+                {fmtINRFull(waterfall.gstAmount)}
+              </td>
+            </tr>
+            <tr className="border-b border-primary-100">
+              <td className="px-5 py-3 text-secondary-800 font-semibold">Total project cost (incl. GST)</td>
+              <td className="px-5 py-3 text-right text-secondary-900 font-bold tabular-nums">
+                {fmtINRFull(waterfall.grandRounded)}
+              </td>
+            </tr>
+            {waterfall.showSubsidy && (
+              <tr className="border-b border-primary-100 bg-amber-50/60">
+                <td className="px-5 py-3 text-amber-800 font-medium">
+                  Subsidy eligible
+                </td>
+                <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
+                  (−) {fmtINRFull(waterfall.subsidyAmt)}
+                </td>
+              </tr>
+            )}
+            {waterfall.showSubsidy && (
+              <tr className="border-b border-primary-100 bg-emerald-50/70">
+                <td className="px-5 py-3 text-emerald-900 font-semibold">Effective price after subsidy</td>
+                <td className="px-5 py-3 text-right text-emerald-900 font-extrabold tabular-nums">
+                  {fmtINRFull(waterfall.effectiveAfterSubsidy)}
+                </td>
+              </tr>
+            )}
+            <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+              <td className="px-5 py-3 text-white font-bold uppercase tracking-wide text-xs drop-shadow">
+                Payable to Rayenna Energy
+              </td>
+              <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
+                {fmtINRFull(waterfall.payableToRayenna)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-xs text-secondary-600 italic leading-relaxed" data-docx-section="commercials-payable-words">
+        <span className="font-semibold not-italic text-secondary-700">In words (payable): </span>
+        {waterfall.payableInWords}
+      </p>
+      {waterfall.showSubsidy && (
+        <p className="mt-1 text-xs text-secondary-600 italic leading-relaxed" data-docx-section="commercials-effective-words">
+          <span className="font-semibold not-italic text-secondary-700">In words (effective after subsidy): </span>
+          {waterfall.effectiveInWords}
+        </p>
+      )}
+      <EditableText sectionKey="subsidy-credit-note" as="p" className="mt-2 text-[11px] text-amber-900/90 leading-relaxed">
+        {creditNote}
+      </EditableText>
+
+      <div className="mt-5">
+        <h3 className="text-xs font-extrabold uppercase tracking-widest text-sky-800 mb-2">Authority / DISCOM fees</h3>
+        <div className="bg-sky-50/60 border border-sky-100 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <tbody>
+              {fees.map((fee) => (
+                <tr key={fee.id} className="border-b border-sky-100 last:border-b-0">
+                  <td className="px-4 py-2.5 text-secondary-700">
+                    <EditableText sectionKey={`authority-fee-${fee.id}-label`} as="span">
+                      {fee.label}
+                    </EditableText>
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-secondary-800 font-medium tabular-nums">
+                    <EditableText sectionKey={`authority-fee-${fee.id}-amount`} as="span">
+                      {fee.amountLabel}
+                    </EditableText>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-1.5 text-[10px] text-secondary-500">
+          Authority fees are typically paid to the DISCOM / utility and are separate from the payable to Rayenna above.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function PaymentMilestonesBlock() {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const milestones = resolvePaymentMilestones(map);
+  return (
+    <div className="mb-8 pdf-section" data-pdf-section="payment-milestones">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#b45309', height: '28px' }} />
+        <span className="text-lg leading-none">💳</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#b45309' }}>Payment Terms</h2>
+      </div>
+      <div className="rounded-xl border border-amber-200 overflow-hidden bg-amber-50/40">
+        <table className="w-full text-sm min-w-[320px]">
+          <thead>
+            <tr className="bg-amber-100/80 text-[10px] uppercase tracking-widest text-amber-900">
+              <th className="px-4 py-2 text-left font-bold w-24">%</th>
+              <th className="px-4 py-2 text-left font-bold">Milestone</th>
+            </tr>
+          </thead>
+          <tbody>
+            {milestones.map((m, i) => (
+              <tr key={i} className="border-t border-amber-100">
+                <td className="px-4 py-2.5 font-extrabold text-amber-900 tabular-nums">
+                  <EditableText sectionKey={`payment-milestone-${i}-percent`} as="span">
+                    {String(m.percent)}
+                  </EditableText>
+                  %
+                </td>
+                <td className="px-4 py-2.5 text-secondary-700">
+                  <EditableText sectionKey={`payment-milestone-${i}-trigger`} as="span">
+                    {m.trigger}
+                  </EditableText>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function TechnicalDetailsBlock({
+  proposal,
+  bomComments,
 }: {
-  sheet: SavedSheet | null;
-  roi: ROIResult | null;
-  roiAutofill: RoiAutofill | null;
-  /** Same kW as the proposal header (“Proposal For … kW …”). */
-  systemSizeKw?: number;
-  /** CRM Sales & Commercial system type (ON_GRID | OFF_GRID | HYBRID). */
-  systemType?: string | null;
+  proposal: ProposalData;
+  bomComments?: Record<string, string>;
 }) {
-  // Prefer the saved costing sheet grand total + GST (must exactly match Excel).
-  // Fall back to ROI inputs only when no costing sheet exists.
-  const grandTotal = sheet?.grandTotal ?? roiAutofill?.grandTotal ?? roi?.inputs.projectCost ?? 0;
-  if (!grandTotal) return null;
-
-  const capacityKw =
-    (headingSystemSizeKw != null && headingSystemSizeKw > 0
-      ? headingSystemSizeKw
-      : (roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0)) || 0;
-
-  const subsidyAmount = roi?.inputs?.subsidyAmount ?? 0;
-  const showSubsidy = !!roi?.inputs?.subsidyEligible && subsidyAmount > 0;
-
-  const grandRounded = Math.round(grandTotal);
-  const descText = commercialsDescription(capacityKw, systemType);
-
-  // If a costing sheet exists, use its GST total. Recompute from items if stored total is 0 (legacy data).
-  if (sheet) {
-    const sheetGst =
-      (sheet.totalGst != null && sheet.totalGst > 0)
-        ? sheet.totalGst
-        : (sheet.items?.length ? sheetTotalGst(sheet.items, sheet.marginPercent ?? 15) : 0);
-    const gstAmount = Math.round(sheetGst);
-    const preGst = Math.round(grandRounded - gstAmount);
-    const gstLabel = 'GST (mixed: 5% & 18%)';
+  const map = React.useContext(ProposalTextOverridesContext);
+  const cards = buildTechDetailCards(proposal, map, bomComments);
+  if (!cards.length) return null;
+  const footnote = techDetailsFootnote(map);
 
   return (
-    <div className="mb-8 pdf-section">
+    <div className="mb-8 pdf-section" data-pdf-section="technical-details">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
-        <span className="text-lg leading-none">💰</span>
-        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#059669' }}>Commercials</h2>
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0369a1', height: '28px' }} />
+        <span className="text-lg leading-none">🔩</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Technical Details</h2>
       </div>
-      <div className="bg-white border rounded-xl overflow-x-auto shadow-sm" style={{ borderColor: '#a7f3d0' }}>
-        <table className="w-full text-sm min-w-[340px]">
+      <p className="text-xs text-secondary-600 mb-3">
+        Major components proposed for this installation. Full quantities and notes follow in the Bill of Quantities.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {cards.map((c) => (
+          <div
+            key={c.id}
+            className="rounded-xl border border-sky-100 bg-sky-50/40 overflow-hidden"
+          >
+            <div className="px-4 py-2 bg-sky-800 text-white text-xs font-extrabold uppercase tracking-wider">
+              {c.title}
+            </div>
+            <dl className="px-4 py-3 space-y-1.5 text-xs">
+              <div className="flex gap-2">
+                <dt className="w-28 flex-shrink-0 text-secondary-500 font-semibold">Manufacturer</dt>
+                <dd className="text-secondary-800 font-medium">
+                  <EditableText sectionKey={`tech-${c.id}-manufacturer`} as="span">{c.manufacturer}</EditableText>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-28 flex-shrink-0 text-secondary-500 font-semibold">Type / rating</dt>
+                <dd className="text-secondary-800">
+                  <EditableText sectionKey={`tech-${c.id}-type`} as="span">{c.typeRating}</EditableText>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-28 flex-shrink-0 text-secondary-500 font-semibold">Quantity</dt>
+                <dd className="text-secondary-800">
+                  <EditableText sectionKey={`tech-${c.id}-qty`} as="span">{c.quantity}</EditableText>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-28 flex-shrink-0 text-secondary-500 font-semibold">Specification</dt>
+                <dd className="text-secondary-800">
+                  <EditableText sectionKey={`tech-${c.id}-spec`} as="span">{c.specification}</EditableText>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="w-28 flex-shrink-0 text-secondary-500 font-semibold">Warranty</dt>
+                <dd className="text-secondary-800">
+                  <EditableText sectionKey={`tech-${c.id}-warranty`} as="span">{c.warranty}</EditableText>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ))}
+      </div>
+      <EditableText sectionKey="tech-details-footnote" as="p" className="mt-3 text-[11px] text-rose-700 font-medium">
+        {footnote}
+      </EditableText>
+    </div>
+  );
+}
+
+export function WarrantyTableBlock({
+  proposal,
+  bomComments,
+}: {
+  proposal: ProposalData;
+  bomComments?: Record<string, string>;
+}) {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const rows = buildWarrantyRows(proposal, map, bomComments);
+  return (
+    <div className="mb-8 pdf-section" data-pdf-section="warranty-table">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#7c3aed', height: '28px' }} />
+        <span className="text-lg leading-none">🛡️</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#7c3aed' }}>Warranty</h2>
+      </div>
+      <div className="rounded-xl border border-violet-200 overflow-hidden bg-violet-50/30">
+        <table className="w-full text-sm">
           <tbody>
-            <tr className="border-b border-primary-100">
-              <td className="px-5 py-3 text-secondary-600">
-                <EditableText sectionKey="commercials-desc" as="p" className="m-0">
-                  {descText}
-                </EditableText>
-              </td>
-              <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
-                {fmtINRFull(preGst)}
-              </td>
-            </tr>
-            <tr className="border-b border-primary-100 bg-blue-50/40">
-              <td className="px-5 py-3 text-blue-700">{gstLabel}</td>
-              <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
-                {fmtINRFull(gstAmount)}
-              </td>
-            </tr>
-            <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-              <td className="px-5 py-3 text-white font-bold uppercase tracking-wide text-xs drop-shadow">
-                Total Project Cost (incl. GST)
-              </td>
-              <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
-                {fmtINRFull(grandRounded)}
-              </td>
-            </tr>
-            {showSubsidy && (
-              <tr className="border-b border-primary-100 bg-amber-50/60">
-                <td className="px-5 py-3 text-amber-800 font-medium">
-                  Subsidy Eligible – Rs. {subsidyAmount.toLocaleString('en-IN')}/-
+            {rows.map((r) => (
+              <tr key={r.id} className="border-b border-violet-100 last:border-b-0">
+                <td className="px-4 py-2.5 font-semibold text-violet-950 w-[34%] align-top">
+                  <EditableText sectionKey={`warranty-row-${r.id}-label`} as="span">{r.label}</EditableText>
                 </td>
-                <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
-                  {fmtINRFull(subsidyAmount)}
+                <td className="px-4 py-2.5 text-secondary-700">
+                  <EditableText sectionKey={`warranty-row-${r.id}-detail`} as="span">{r.detail}</EditableText>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
     </div>
   );
-  }
+}
 
-  // No costing sheet: fall back to a flat 18% estimate.
-  const gstAmount   = (() => {
-    const pre = Math.round(grandRounded / 1.18);
-    return Math.round(grandRounded - pre);
-  })();
-  const preGst      = Math.round(grandRounded / 1.18);
-  const gstLabel    = 'GST @ 18% (estimate)';
+type RaciDraftRow = {
+  key: string;
+  description: string;
+  rayenna: boolean;
+  client: boolean;
+};
+
+function RaciCheckCell({
+  sectionKey,
+  checked,
+  accentClass,
+  isEditing,
+  onToggle,
+}: {
+  sectionKey: string;
+  checked: boolean;
+  accentClass: string;
+  isEditing: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <td className={`px-3 py-2 text-center font-bold ${accentClass}`}>
+      <button
+        type="button"
+        className={`inline-flex items-center justify-center min-w-[2rem] min-h-[1.75rem] rounded-md ${
+          isEditing
+            ? 'hover:bg-sky-100/80 focus:outline-none focus:ring-2 focus:ring-sky-300 cursor-pointer'
+            : 'cursor-default'
+        }`}
+        onClick={() => {
+          if (!isEditing) return;
+          onToggle();
+        }}
+        disabled={!isEditing}
+        title={isEditing ? 'Click to toggle' : undefined}
+        aria-pressed={checked}
+      >
+        {checked ? '✓' : '—'}
+      </button>
+      <span data-docx-section={sectionKey} className="sr-only">
+        {checked ? 'yes' : 'no'}
+      </span>
+    </td>
+  );
+}
+
+export function ResponsibilityMatrixBlock() {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
+  const resolved = resolveRaciRows(map);
+
+  const [draftRows, setDraftRows] = useState<RaciDraftRow[] | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (isEditing && draftRows === null) {
+      setDraftRows(
+        resolved.map((r, i) => ({
+          key: `raci-seed-${i}`,
+          description: r.description,
+          rayenna: r.rayenna,
+          client: r.client,
+        })),
+      );
+    }
+    if (!isEditing && draftRows !== null) {
+      setDraftRows(null);
+    }
+  }, [isEditing, draftRows, resolved]);
+
+  const viewRows: RaciDraftRow[] = resolved.map((r, i) => ({
+    key: `raci-view-${i}`,
+    description: r.description,
+    rayenna: r.rayenna,
+    client: r.client,
+  }));
+  const rows: RaciDraftRow[] = isEditing ? (draftRows ?? viewRows) : viewRows;
+
+  const addRow = () => {
+    setDraftRows((prev) => [
+      ...(prev ?? viewRows),
+      {
+        key: `raci-new-${Date.now()}`,
+        description: 'New responsibility',
+        rayenna: true,
+        client: false,
+      },
+    ]);
+  };
+
+  const deleteRow = (index: number) => {
+    setDraftRows((prev) => (prev ?? viewRows).filter((_, i) => i !== index));
+  };
+
+  const patchRow = (index: number, patch: Partial<Pick<RaciDraftRow, 'rayenna' | 'client'>>) => {
+    setDraftRows((prev) =>
+      (prev ?? viewRows).map((row, idx) => (idx === index ? { ...row, ...patch } : row)),
+    );
+  };
 
   return (
-    <div className="mb-8">
+    <div className="mb-8 pdf-section" data-pdf-section="responsibility-matrix">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
-        <span className="text-lg leading-none">💰</span>
-        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#059669' }}>Commercials</h2>
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0369a1', height: '28px' }} />
+        <span className="text-lg leading-none">📋</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>
+          Responsibility Matrix
+        </h2>
       </div>
-      <div className="bg-white border rounded-xl overflow-x-auto shadow-sm" style={{ borderColor: '#a7f3d0' }}>
-        <table className="w-full text-sm min-w-[340px]">
+      <p className="text-xs text-secondary-600 mb-3">
+        Clear split of responsibilities so site readiness and handovers stay on schedule.
+        {isEditing ? ' Click Rayenna / Client cells to toggle. Add or remove rows as needed.' : ''}
+      </p>
+      <span data-docx-section="raci-count" className="sr-only">
+        {rows.length}
+      </span>
+      <div className="rounded-xl border border-sky-200 overflow-x-auto bg-white shadow-sm">
+        <table className="w-full text-sm min-w-[420px]">
+          <thead>
+            <tr className="bg-sky-800 text-white text-[10px] uppercase tracking-widest">
+              <th className="px-3 py-2 text-left font-bold">#</th>
+              <th className="px-3 py-2 text-left font-bold">Description</th>
+              <th className="px-3 py-2 text-center font-bold w-24">Rayenna</th>
+              <th className="px-3 py-2 text-center font-bold w-24">Client</th>
+              {isEditing ? <th className="px-2 py-2 text-center font-bold w-16 print-hide"> </th> : null}
+            </tr>
+          </thead>
           <tbody>
-            <tr className="border-b border-primary-100">
-              <td className="px-5 py-3 text-secondary-600">
-                <EditableText sectionKey="commercials-desc" as="p" className="m-0">
-                  {descText}
-                </EditableText>
-              </td>
-              <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
-                {fmtINRFull(preGst)}
-              </td>
-            </tr>
-            <tr className="border-b border-primary-100 bg-blue-50/40">
-              <td className="px-5 py-3 text-blue-700">{gstLabel}</td>
-              <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
-                {fmtINRFull(gstAmount)}
-              </td>
-            </tr>
-            <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
-              <td className="px-5 py-3 text-white font-bold uppercase tracking-wide text-xs drop-shadow">
-                Total Project Cost (incl. GST)
-              </td>
-              <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
-                {fmtINRFull(grandRounded)}
-              </td>
-            </tr>
-            {showSubsidy && (
-              <tr className="border-b border-primary-100 bg-amber-50/60">
-                <td className="px-5 py-3 text-amber-800 font-medium">
-                  Subsidy Eligible – Rs. {subsidyAmount.toLocaleString('en-IN')}/-
+            {rows.map((r, i) => (
+              <tr key={r.key} className={i % 2 ? 'bg-sky-50/50' : 'bg-white'}>
+                <td className="px-3 py-2 text-secondary-500 tabular-nums">{i + 1}</td>
+                <td className="px-3 py-2 text-secondary-800">
+                  <EditableText sectionKey={`raci-${i}-desc`} as="span">
+                    {r.description}
+                  </EditableText>
                 </td>
-                <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
-                  {fmtINRFull(subsidyAmount)}
-                </td>
+                <RaciCheckCell
+                  sectionKey={`raci-${i}-rayenna`}
+                  checked={r.rayenna}
+                  accentClass="text-sky-800"
+                  isEditing={isEditing}
+                  onToggle={() => patchRow(i, { rayenna: !r.rayenna })}
+                />
+                <RaciCheckCell
+                  sectionKey={`raci-${i}-client`}
+                  checked={r.client}
+                  accentClass="text-amber-800"
+                  isEditing={isEditing}
+                  onToggle={() => patchRow(i, { client: !r.client })}
+                />
+                {isEditing ? (
+                  <td className="px-2 py-2 text-center print-hide">
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 px-1.5 py-1 rounded hover:bg-rose-50"
+                      onClick={() => deleteRow(i)}
+                      title="Delete row"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                ) : null}
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
+      {isEditing ? (
+        <div className="mt-2 print-hide">
+          <button
+            type="button"
+            className="text-xs font-semibold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg px-3 py-1.5"
+            onClick={addRow}
+          >
+            + Add row
+          </button>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+export function KeyPointsAndExclusionsBlock() {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const keys = resolveKeyPoints(map);
+  const exclusions = resolveExclusions(map);
+
+  return (
+    <>
+      <ListBlock title="Key Points" items={keys} />
+      <div className="print-hide"><Divider /></div>
+      <ListBlock title="Exclusions" items={exclusions} />
+    </>
+  );
+}
+
+export function OfferValidityBlock() {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const text = resolveOfferValidity(map);
+  return (
+    <div className="mb-6 pdf-section" data-pdf-section="offer-validity">
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3">
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-800 mb-1">Offer validity</p>
+        <EditableText sectionKey="offer-validity" as="p" className="text-sm text-secondary-800 m-0">
+          {text}
+        </EditableText>
+      </div>
+    </div>
+  );
+}
+
+export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
+  const sizeKw = proposal.systemSizeKw || proposalDisplayCapacityFromProposal(proposal);
+  const dateStr = new Date(proposal.generatedAt).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+  const heading = proposalForHeading(sizeKw, proposal.systemType);
+
+  return (
+    <div
+      className="mb-8 pdf-section pdf-cover-page rounded-none sm:rounded-2xl overflow-hidden border border-primary-100"
+      data-pdf-section="cover"
+      style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #1e2848 55%, #0d1b3a 100%)' }}
+    >
+      <div className="px-5 sm:px-8 py-8 sm:py-10 text-white">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl p-2 shadow">
+              <img
+                data-docx-image="logo"
+                src="/rayenna_logo.jpg"
+                alt="Rayenna Energy"
+                className="h-14 w-auto object-contain"
+                style={{ maxWidth: '140px' }}
+              />
+            </div>
+            <div>
+              <p className="font-extrabold text-sm sm:text-base tracking-tight">Rayenna Energy Private Limited</p>
+              <p className="text-white/70 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
+            </div>
+          </div>
+          <div className="sm:text-right">
+            <p className="text-[10px] text-white/50 uppercase tracking-widest">Reference</p>
+            <p className="font-mono text-sm font-semibold break-all">{proposal.refNumber}</p>
+            <p className="text-[10px] text-white/50 uppercase tracking-widest mt-2">Date</p>
+            <p className="text-sm font-medium">{dateStr}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-end gap-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-amber-300 text-xs font-bold uppercase tracking-[0.2em] mb-2">Proposal for</p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight drop-shadow mb-3">{heading}</h2>
+            <div className="rounded-xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur-sm">
+              <p className="text-[10px] text-white/60 uppercase tracking-widest mb-1">Client</p>
+              <p className="font-bold text-lg">{proposal.customer.customerName || 'Valued Customer'}</p>
+              {proposal.customer.location && (
+                <p className="text-white/80 text-sm mt-1">{proposal.customer.location}</p>
+              )}
+              {(proposal.projectNumber != null || proposal.customerNumber) && (
+                <p className="text-white/60 text-[11px] font-mono mt-2">
+                  {proposal.projectNumber != null ? `Project #${proposal.projectNumber}` : ''}
+                  {proposal.projectNumber != null && proposal.customerNumber ? ' · ' : ''}
+                  {proposal.customerNumber ? `Customer #${proposal.customerNumber}` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {sizeKw > 0 && (
+            <div
+              className="flex-shrink-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center border-4 border-amber-400 shadow-lg"
+              style={{ background: 'radial-gradient(circle at 30% 30%, #fbbf24, #d97706)' }}
+            >
+              <span className="text-3xl sm:text-4xl font-black text-[#0d1b3a] leading-none tabular-nums">
+                {Number.isInteger(sizeKw) ? sizeKw : sizeKw.toFixed(1)}
+              </span>
+              <span className="text-[11px] font-extrabold text-[#0d1b3a]/uppercase tracking-wider mt-1">kW</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function proposalDisplayCapacityFromProposal(p: ProposalData): number {
+  if ((p.roi?.inputs.systemSizeKw ?? 0) > 0) return Number(p.roi!.inputs.systemSizeKw);
+  if ((p.systemSizeKw ?? 0) > 0) return Number(p.systemSizeKw);
+  if ((p.roiAutofill?.systemSizeKw ?? 0) > 0) return Number(p.roiAutofill!.systemSizeKw);
+  return 0;
+}
+
+export function DeliveryTermsBlock() {
+  return <ListBlock title="Material Delivery Period" items={DELIVERY_TERMS} />;
 }
 
 const LIST_META: Record<string, { icon: string; accent: string; bg: string; border: string }> = {
@@ -1568,6 +1997,8 @@ const LIST_META: Record<string, { icon: string; accent: string; bg: string; bord
   'Payment Terms':          { icon: '💳',  accent: '#b45309', bg: '#fffbeb',  border: '#fde68a' },
   'Warranty':               { icon: '🛡️',  accent: '#7c3aed', bg: '#faf5ff',  border: '#ddd6fe' },
   'Material Delivery Period':{ icon: '🚚', accent: '#0891b2', bg: '#ecfeff',  border: '#a5f3fc' },
+  'Key Points':             { icon: '📌',  accent: '#0f766e', bg: '#f0fdfa',  border: '#99f6e4' },
+  'Exclusions':             { icon: '🚫',  accent: '#b91c1c', bg: '#fef2f2',  border: '#fecaca' },
 };
 
 export function ListBlock({ title, items }: { title: string; items: string[] }) {

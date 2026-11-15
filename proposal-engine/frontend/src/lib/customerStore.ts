@@ -143,6 +143,9 @@ export interface CustomerMaster {
   /** Panel brand from CRM Project lifecycle (e.g. Waaree, Adani). Used for module SKU dimensions. */
   panelBrand?:      string;
 
+  /** Inverter brand from CRM Project lifecycle (e.g. Deye, Solis). Used in Technical Details. */
+  inverterBrand?:   string;
+
   /** Latitude for site (e.g. for AI Roof Layout or maps). Filled from CRM customer when available. */
   latitude?:        number;
 
@@ -243,6 +246,12 @@ export interface ProposalArtifact {
 
   /** Optional sections (title + rich body + optional video) rendered before the Bill of Quantities */
   customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[];
+
+  /**
+   * Include/exclude map for optional narrative sections (Environmental Impact, Warranty, etc.).
+   * Missing keys default to included. AI Roof Layout and custom sections use their own UX.
+   */
+  includedOptionalSections?: Partial<Record<string, boolean>>;
 
   /**
    * Full in-memory proposal view model (JSON snapshot) so the Proposal page can reopen

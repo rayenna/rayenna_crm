@@ -41,6 +41,7 @@ interface ApiProposalArtifact {
   editedHtml?: string | null;
   textOverrides?: Record<string, string | undefined> | null;
   customSectionsBeforeBoq?: unknown;
+  includedOptionalSections?: Record<string, boolean> | null;
   proposalView?: unknown;
   summary?: string | null;
   includeRoofLayout?: boolean | null;
@@ -163,6 +164,12 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
           customSectionsBeforeBoq: Array.isArray(artifacts.proposal.customSectionsBeforeBoq)
             ? (artifacts.proposal.customSectionsBeforeBoq as ProposalCustomSectionBeforeBoq[])
             : undefined,
+          includedOptionalSections:
+            artifacts.proposal.includedOptionalSections &&
+            typeof artifacts.proposal.includedOptionalSections === 'object' &&
+            !Array.isArray(artifacts.proposal.includedOptionalSections)
+              ? (artifacts.proposal.includedOptionalSections as Record<string, boolean>)
+              : undefined,
           proposalView: artifacts.proposal.proposalView ?? undefined,
           includeRoofLayout: !!artifacts.proposal.includeRoofLayout,
           roofLayout: artifacts.proposal.roofLayout
@@ -252,6 +259,7 @@ export function applyProposalEngineProjectDetail(
     projectStage: projectStage ?? existing.master.projectStage,
     panelType: (p.panelType ?? '').trim() || existing.master.panelType,
     panelBrand: (p.panelBrand ?? '').trim() || existing.master.panelBrand,
+    inverterBrand: (p.inverterBrand ?? '').trim() || existing.master.inverterBrand,
     latitude: typeof cust.latitude === 'number' ? cust.latitude : existing.master.latitude,
     longitude: typeof cust.longitude === 'number' ? cust.longitude : existing.master.longitude,
     panelWattage: typeof p.panelCapacityW === 'number' ? p.panelCapacityW : existing.master.panelWattage,
@@ -293,6 +301,7 @@ function proposalApiLooksLight(fromApi: ProposalArtifact): boolean {
     fromApi.editedHtml == null &&
     fromApi.textOverrides == null &&
     fromApi.customSectionsBeforeBoq == null &&
+    fromApi.includedOptionalSections == null &&
     fromApi.bomComments == null
   );
 }
@@ -347,6 +356,8 @@ export function mergeProposalArtifactPreservingDocumentFields(
   const apiCustom = fromApi.customSectionsBeforeBoq;
   const customSectionsBeforeBoq =
     localCustom && localCustom.length > 0 ? localCustom : apiCustom ?? localCustom;
+  const includedOptionalSections =
+    existing.includedOptionalSections ?? fromApi.includedOptionalSections;
 
   return {
     ...existing,
@@ -358,6 +369,7 @@ export function mergeProposalArtifactPreservingDocumentFields(
     textOverrides:
       Object.keys(mergedTextOverrides).length > 0 ? mergedTextOverrides : undefined,
     customSectionsBeforeBoq,
+    includedOptionalSections,
     proposalView: existing.proposalView ?? fromApi.proposalView,
     roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
   };
@@ -384,6 +396,8 @@ export function mergeProposalArtifactPreferringServerDocument(
     textOverrides: fromApi.textOverrides ?? existing.textOverrides,
     customSectionsBeforeBoq:
       fromApi.customSectionsBeforeBoq ?? existing.customSectionsBeforeBoq,
+    includedOptionalSections:
+      fromApi.includedOptionalSections ?? existing.includedOptionalSections,
     proposalView: fromApi.proposalView ?? existing.proposalView,
     roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
   };

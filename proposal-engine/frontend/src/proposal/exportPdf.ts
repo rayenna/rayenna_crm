@@ -37,16 +37,81 @@ export const PROPOSAL_PRINT_CSS = `
 
     tr[data-bom-header="true"] { page-break-after: avoid; }
     /*
+     * Page 1: Cover + contact strip together, vertically centred on the sheet.
+     * break-after on the wrapper only — do not also break after cover alone
+     * (that used to push the contact strip onto page 2).
+     */
+    [data-pdf-section="cover-first-page"] {
+      break-after: page !important;
+      page-break-after: always !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: stretch !important;
+      min-height: 250mm !important;
+      height: 250mm !important;
+      max-height: none !important;
+      box-sizing: border-box !important;
+    }
+    [data-pdf-section="cover-first-page"] [data-pdf-section="cover"] {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      margin-bottom: 12px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      max-width: 100% !important;
+    }
+    [data-pdf-section="contact-strip"] {
+      break-before: avoid !important;
+      page-break-before: avoid !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      justify-content: center !important;
+      text-align: center !important;
+      gap: 8px 24px !important;
+    }
+    /* Financial Benefits chart must stay on one page (no mid-chart split). */
+    [data-pdf-keep="financial-chart"] {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      overflow: visible !important;
+    }
+    [data-pdf-keep="financial-chart"] svg {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    /* About Rayenna — Key Highlights table must not split across pages. */
+    [data-pdf-keep="key-highlights"] {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      overflow: visible !important;
+    }
+    [data-pdf-keep="key-highlights"] > div {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    /*
      * Bill of Quantities always starts on a fresh page for client PDFs.
      * Only break-before here — do not add break-after on the prior section
      * (double breaks create blank pages in Chromium). The BOQ table itself
      * still uses break-inside:auto above so tall tables paginate without blanks.
+     * Commercials follow BOQ on the same page flow (no forced break).
      */
+    [data-pdf-section="technical-details"] {
+      break-before: auto !important;
+      page-break-before: auto !important;
+    }
     [data-pdf-section="bom"] {
       break-before: page !important;
       page-break-before: always !important;
       margin-top: 0 !important;
       padding-top: 0 !important;
+    }
+    [data-pdf-section="commercials"] {
+      break-before: auto !important;
+      page-break-before: auto !important;
     }
     /* Keep “N categories” + Bill of Quantities title with the table header row */
     caption.bom-boq-caption { break-inside:avoid; page-break-inside:avoid; break-after:avoid; page-break-after:avoid; }

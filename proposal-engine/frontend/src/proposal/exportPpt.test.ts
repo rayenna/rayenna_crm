@@ -54,7 +54,7 @@ describe('proposalDownloadStem', () => {
 describe('commercialsFromProposal', () => {
   it('uses sheet GST when a costing sheet is present', () => {
     const c = commercialsFromProposal(base);
-    expect(c).toEqual({
+    expect(c).toMatchObject({
       grandRounded: 118000,
       preGst: 100000,
       gstAmount: 18000,
@@ -62,7 +62,10 @@ describe('commercialsFromProposal', () => {
       sizeKw: 5,
       subsidyAmt: 0,
       showSubsidy: false,
+      payableToRayenna: 118000,
+      effectiveAfterSubsidy: 118000,
     });
+    expect(c?.payableInWords).toMatch(/^Rupees /);
   });
 
   it('returns null when there is no project cost', () => {
