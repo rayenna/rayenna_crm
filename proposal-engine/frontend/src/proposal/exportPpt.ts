@@ -6,12 +6,17 @@ import { CATEGORIES } from '../lib/costingConstants';
 import { fmtINR, fmtINRFull } from './format';
 import {
   ABOUT_HIGHLIGHTS,
+  closingNoteModel,
+  closingText,
+  isCollapsedClosingNote,
   DELIVERY_TERMS,
   OUR_PROCESS_STEPS,
   OUR_SERVICES,
   scopeText,
+  SERVICE_DETAILS,
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
+  WHAT_WE_OFFER_INTRO,
 } from './proposalCopy';
 import {
   buildCommercialsWaterfall,
@@ -33,9 +38,16 @@ import {
   proposalForHeading,
   rewriteSystemTypeInOverrides,
   systemTypeArticle,
+  systemTypeDiagramSrc,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
 import { isOptionalSectionIncluded, type IncludedOptionalSections } from './optionalSections';
+import {
+  normalizeSectionOrder,
+  REORDERABLE_SECTIONS,
+  type ReorderableSectionId,
+  type SectionOrder,
+} from './sectionOrder';
 import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { ProposalData, TextOverrides } from './types';
 import { loadCoverHeroComposited } from './coverHero';
@@ -123,39 +135,51 @@ async function imageElToBuffer(img: HTMLImageElement): Promise<ArrayBuffer | und
   });
 }
 
-async function loadImages(container?: HTMLElement | null): Promise<{
+async function loadImages(
+  container?: HTMLElement | null,
+  systemType?: string | null,
+): Promise<{
   logo?: string;
   diagram?: string;
   roof?: string;
   coverHero?: string;
+  closingSolar?: string;
 }> {
   let logoBuf: ArrayBuffer | undefined;
   let diagramBuf: ArrayBuffer | undefined;
   let roofBuf: ArrayBuffer | undefined;
+  let closingBuf: ArrayBuffer | undefined;
   if (container) {
     const logoImg =
       container.querySelector<HTMLImageElement>('[data-docx-image="logo"]') ??
       container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
     const diagramImg =
       container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]') ??
+      container.querySelector<HTMLImageElement>('img[src*="solar_setup_colorful"]') ??
       container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
     const roofImg = container.querySelector<HTMLImageElement>('[data-docx-image="roof-layout"]');
+    const closingImg =
+      container.querySelector<HTMLImageElement>('[data-docx-image="closing-solar"]') ??
+      container.querySelector<HTMLImageElement>('img[src*="closing_note_solar"]');
     try {
       if (logoImg) logoBuf = await imageElToBuffer(logoImg);
       if (diagramImg) diagramBuf = await imageElToBuffer(diagramImg);
       if (roofImg) roofBuf = await imageElToBuffer(roofImg);
+      if (closingImg) closingBuf = await imageElToBuffer(closingImg);
     } catch {
       /* best-effort */
     }
   }
-  if (!logoBuf || !diagramBuf) {
+  if (!logoBuf || !diagramBuf || !closingBuf) {
     try {
-      const [logoResp, diagResp] = await Promise.all([
+      const [logoResp, diagResp, closingResp] = await Promise.all([
         fetch('/rayenna_logo.jpg'),
-        fetch('/rayenna_proposal.jpg'),
+        fetch(systemTypeDiagramSrc(systemType)),
+        fetch('/closing_note_solar.jpg'),
       ]);
       if (!logoBuf && logoResp.ok) logoBuf = await logoResp.arrayBuffer();
       if (!diagramBuf && diagResp.ok) diagramBuf = await diagResp.arrayBuffer();
+      if (!closingBuf && closingResp.ok) closingBuf = await closingResp.arrayBuffer();
     } catch {
       /* optional */
     }
@@ -166,6 +190,7 @@ async function loadImages(container?: HTMLElement | null): Promise<{
     diagram: diagramBuf ? arrayBufferToDataUrl(diagramBuf) : undefined,
     roof: roofBuf ? arrayBufferToDataUrl(roofBuf) : undefined,
     coverHero: coverComposited?.dataUrl,
+    closingSolar: closingBuf ? arrayBufferToDataUrl(closingBuf) : undefined,
   };
 }
 
@@ -229,6 +254,35 @@ function contentTop(hasEyebrow: boolean) {
   return hasEyebrow ? 1.12 : 0.92;
 }
 
+/**
+ * Body section ids to emit in PPT, honouring saved order + optional includes.
+ * Exported for regression tests (Save → export must match preview).
+ */
+export function pptOrderedBodySectionIds(
+  sectionOrder?: SectionOrder | string[] | null,
+  includedOptionalSections?: IncludedOptionalSections | null,
+  flags?: {
+    hasBom?: boolean;
+    includeRoof?: boolean;
+    hasCustomSections?: boolean;
+  },
+): ReorderableSectionId[] {
+  const opt = (id: Parameters<typeof isOptionalSectionIncluded>[0]) =>
+    isOptionalSectionIncluded(id, includedOptionalSections);
+  return normalizeSectionOrder(sectionOrder).filter((id) => {
+    if (flags) {
+      if (id === 'bom' && flags.hasBom === false) return false;
+      if (id === 'roof-layout' && flags.includeRoof !== true) return false;
+      if (id === 'custom-sections' && flags.hasCustomSections === false) return false;
+    }
+    const meta = REORDERABLE_SECTIONS.find((s) => s.id === id);
+    if (meta?.optionalId) {
+      return opt(meta.optionalId as Parameters<typeof isOptionalSectionIncluded>[0]);
+    }
+    return true;
+  });
+}
+
 export async function exportToPpt(
   p: ProposalData,
   options?: {
@@ -238,6 +292,7 @@ export async function exportToPpt(
     roofLayout?: AiRoofLayoutResponse | null;
     customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[];
     includedOptionalSections?: IncludedOptionalSections | null;
+    sectionOrder?: SectionOrder | string[] | null;
   },
 ): Promise<void> {
   const overrides = options?.textOverrides
@@ -245,7 +300,7 @@ export async function exportToPpt(
     : options?.textOverrides;
   const opt = (id: Parameters<typeof isOptionalSectionIncluded>[0]) =>
     isOptionalSectionIncluded(id, options?.includedOptionalSections);
-  const images = await loadImages(options?.container);
+  const images = await loadImages(options?.container, p.systemType);
   const capacityKw = proposalDisplayCapacityKw(p);
   const heading = proposalForHeading(capacityKw, p.systemType);
   const dateStr = new Date(p.generatedAt).toLocaleDateString('en-IN', {
@@ -565,8 +620,10 @@ export async function exportToPpt(
     });
   }
 
+  const sectionBuilders: Partial<Record<string, () => void>> = {};
+
   // ── 3. About ────────────────────────────────────────────────────────────
-  {
+  sectionBuilders['about-rayenna'] = () => {
     const s = newSlide();
     addSectionTitle(s, 'About Rayenna Energy', 'Who we are');
     const about =
@@ -614,17 +671,14 @@ export async function exportToPpt(
         valign: 'middle',
       });
     });
-  }
+  };
 
   // ── 4. What we offer ────────────────────────────────────────────────────
-  {
+  sectionBuilders['what-we-offer'] = () => {
     const s = newSlide();
     addSectionTitle(s, 'What We Offer', 'Solutions');
-    const intro = ov(
-      overrides,
-      'what-we-offer-intro',
-      'We at Rayenna understand that energy requirements vary from one client to another, which is why our services are designed with flexibility in mind.',
-    );
+    // Same shared intro for On-Grid / Hybrid / Off-Grid — only the diagram image changes.
+    const intro = ov(overrides, 'what-we-offer-intro', WHAT_WE_OFFER_INTRO);
     s.addText(intro, {
       x: 0.5,
       y: contentTop(true),
@@ -635,7 +689,8 @@ export async function exportToPpt(
       color: SLATE,
     });
     if (images.diagram) {
-      s.addImage({ data: images.diagram, x: 8.15, y: 1.15, w: 4.6, h: 2.0 });
+      // Match ~2720×1920 diagram aspect (On-Grid / Hybrid / Off-Grid).
+      s.addImage({ data: images.diagram, x: 8.15, y: 1.15, w: 4.6, h: 3.25 });
     }
     OUR_SERVICES.forEach((svc, i) => {
       const x = 0.5 + i * 4.15;
@@ -677,10 +732,11 @@ export async function exportToPpt(
         color: SLATE,
       });
     });
-  }
+  };
 
   // ── 5. Financial benefits ───────────────────────────────────────────────
-  if (p.roi) {
+  sectionBuilders['financial-benefits'] = () => {
+    if (!p.roi) return;
     const r = p.roi;
     const s = newSlide();
     addSectionTitle(s, 'Financial Benefits & Savings', 'Returns');
@@ -841,10 +897,11 @@ export async function exportToPpt(
         );
       }
     }
-  }
+  };
 
   // ── 6. Environmental ────────────────────────────────────────────────────
-  if (opt('environmental-impact')) {
+  sectionBuilders['environmental-impact'] = () => {
+    if (!opt('environmental-impact')) return;
     const s = newSlide();
     addSectionTitle(s, 'Environmental Impact', 'Sustainability');
     const name = p.customer.customerName || 'your organisation';
@@ -919,10 +976,11 @@ export async function exportToPpt(
         color: SLATE,
       });
     });
-  }
+  };
 
   // ── 7. Roof layout ──────────────────────────────────────────────────────
-  if (options?.roofLayout && images.roof) {
+  sectionBuilders['roof-layout'] = () => {
+    if (!options?.roofLayout || !images.roof) return;
     const layout = options.roofLayout;
     const s = newSlide();
     addSectionTitle(s, 'Proposed Roof Layout', 'Site');
@@ -964,10 +1022,11 @@ export async function exportToPpt(
         bold: true,
       });
     });
-  }
+  };
 
   // ── 8. Process ──────────────────────────────────────────────────────────
-  if (opt('our-process')) {
+  sectionBuilders['our-process'] = () => {
+    if (!opt('our-process')) return;
     const s = newSlide();
     addSectionTitle(s, 'Our Process', 'Delivery');
     s.addText(
@@ -1030,10 +1089,10 @@ export async function exportToPpt(
         align: 'center',
       });
     });
-  }
+  };
 
   // ── 9. Scope ────────────────────────────────────────────────────────────
-  {
+  sectionBuilders['scope-of-work'] = () => {
     const s = newSlide();
     addSectionTitle(s, 'Scope of Work', 'Delivery');
     s.addText(ov(overrides, 'scope-intro', scopeText(p)), {
@@ -1076,10 +1135,11 @@ export async function exportToPpt(
         color: SLATE,
       });
     });
-  }
+  };
 
   // ── Responsibility matrix ───────────────────────────────────────────────
-  if (opt('responsibility-matrix')) {
+  sectionBuilders['responsibility-matrix'] = () => {
+    if (!opt('responsibility-matrix')) return;
     const s = newSlide();
     addSectionTitle(s, 'Responsibility Matrix', 'Scope');
     const raci = resolveRaciRows(overrides);
@@ -1131,29 +1191,32 @@ export async function exportToPpt(
         valign: 'middle',
       },
     );
-  }
+  };
 
   // ── Custom sections ─────────────────────────────────────────────────────
-  const custom = (options?.customSectionsBeforeBoq ?? []).filter(
-    (sec) => sec.title.trim() || htmlToPlainText(sec.bodyHtml || ''),
-  );
-  custom.forEach((sec) => {
-    const s = newSlide();
-    addSectionTitle(s, sec.title.trim() || 'Additional Section', 'Project notes');
-    s.addText(htmlToPlainText(sec.bodyHtml || '') || ' ', {
-      x: 0.5,
-      y: contentTop(true),
-      w: 12.3,
-      h: 5.7,
-      fontFace: FONT,
-      fontSize: 14,
-      color: SLATE,
-      valign: 'top',
+  sectionBuilders['custom-sections'] = () => {
+    const custom = (options?.customSectionsBeforeBoq ?? []).filter(
+      (sec) => sec.title.trim() || htmlToPlainText(sec.bodyHtml || ''),
+    );
+    custom.forEach((sec) => {
+      const s = newSlide();
+      addSectionTitle(s, sec.title.trim() || 'Additional Section', 'Project notes');
+      s.addText(htmlToPlainText(sec.bodyHtml || '') || ' ', {
+        x: 0.5,
+        y: contentTop(true),
+        w: 12.3,
+        h: 5.7,
+        fontFace: FONT,
+        fontSize: 14,
+        color: SLATE,
+        valign: 'top',
+      });
     });
-  });
+  };
 
   // ── Technical Details ───────────────────────────────────────────────────
-  if (opt('technical-details')) {
+  sectionBuilders['technical-details'] = () => {
+    if (!opt('technical-details')) return;
     const cards = buildTechDetailCards(p, overrides, options?.bomComments);
     if (cards.length) {
       const s = newSlide();
@@ -1215,10 +1278,11 @@ export async function exportToPpt(
         color: 'B91C1C',
       });
     }
-  }
+  };
 
   // ── BOQ ─────────────────────────────────────────────────────────────────
-  if (p.bom.length > 0) {
+  sectionBuilders['bom'] = () => {
+    if (p.bom.length === 0) return;
     const grouped = CATEGORIES.map(({ value, label }) => ({
       cat: value,
       label,
@@ -1285,11 +1349,12 @@ export async function exportToPpt(
         align: 'left',
       });
     }
-  }
+  };
 
   // ── Commercials waterfall ───────────────────────────────────────────────
-  const commercials = buildCommercialsWaterfall(p, overrides);
-  if (commercials) {
+  sectionBuilders['commercials'] = () => {
+    const commercials = buildCommercialsWaterfall(p, overrides);
+    if (!commercials) return;
     const s = newSlide();
     addSectionTitle(s, 'Commercials', 'Investment');
     const rows: PptxGenJS.TableRow[] = [
@@ -1401,26 +1466,13 @@ export async function exportToPpt(
       fontSize: 11,
       color: SLATE,
     });
-  }
+  };
 
-  // ── Payment / warranty / delivery ───────────────────────────────────────
-  {
+  // ── Payment milestones ──────────────────────────────────────────────────
+  sectionBuilders['payment-milestones'] = () => {
     const s = newSlide();
-    addSectionTitle(s, 'Commercial Terms', 'Engagement');
+    addSectionTitle(s, 'Payment Terms', 'Engagement');
     const milestones = resolvePaymentMilestones(overrides);
-    const warranty = opt('warranty')
-      ? buildWarrantyRows(p, overrides, options?.bomComments)
-      : [];
-    s.addText('PAYMENT MILESTONES', {
-      x: 0.5,
-      y: 1.2,
-      w: 6,
-      h: 0.3,
-      fontFace: FONT,
-      fontSize: 12,
-      color: GOLD,
-      bold: true,
-    });
     s.addTable(
       milestones.map((m) => [
         {
@@ -1431,67 +1483,77 @@ export async function exportToPpt(
       ]),
       {
         x: 0.5,
-        y: 1.55,
-        w: 6,
-        colW: [1.1, 4.9],
+        y: 1.3,
+        w: 12.3,
+        colW: [1.6, 10.7],
         border: { pt: 0.3, color: 'E2E8F0' },
         fontFace: FONT,
-        fontSize: 12,
+        fontSize: 14,
         valign: 'middle',
       },
     );
-    if (warranty.length) {
-      s.addText('WARRANTY', {
-        x: 6.8,
-        y: 1.2,
-        w: 6,
-        h: 0.3,
-        fontFace: FONT,
-        fontSize: 12,
-        color: GOLD,
-        bold: true,
-      });
-      s.addTable(
-        warranty.map((r) => [
-          { text: r.label, options: { fill: { color: LIGHT }, color: NAVY, bold: true } },
-          { text: r.detail, options: { fill: { color: WHITE }, color: SLATE } },
-        ]),
-        {
-          x: 6.8,
-          y: 1.55,
-          w: 6,
-          colW: [2.2, 3.8],
-          border: { pt: 0.3, color: 'E2E8F0' },
-          fontFace: FONT,
-          fontSize: 11,
-          valign: 'middle',
-        },
-      );
-    }
-    s.addText(`Delivery: ${DELIVERY_TERMS[0]}`, {
-      x: 0.5,
-      y: 5.6,
-      w: 12.3,
-      h: 0.4,
-      fontFace: FONT,
-      fontSize: 12,
-      color: SLATE,
-    });
-    if (opt('offer-validity')) {
-      s.addText(`Validity: ${resolveOfferValidity(overrides)}`, {
+  };
+
+  // ── Warranty ────────────────────────────────────────────────────────────
+  sectionBuilders['warranty'] = () => {
+    if (!opt('warranty')) return;
+    const warranty = buildWarrantyRows(p, overrides, options?.bomComments);
+    if (!warranty.length) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Warranty', 'Engagement');
+    s.addTable(
+      warranty.map((r) => [
+        { text: r.label, options: { fill: { color: LIGHT }, color: NAVY, bold: true } },
+        { text: r.detail, options: { fill: { color: WHITE }, color: SLATE } },
+      ]),
+      {
         x: 0.5,
-        y: 6.1,
+        y: 1.3,
         w: 12.3,
-        h: 0.5,
+        colW: [3.6, 8.7],
+        border: { pt: 0.3, color: 'E2E8F0' },
         fontFace: FONT,
-        fontSize: 12,
-        color: SLATE,
-      });
-    }
-  }
+        fontSize: 13,
+        valign: 'middle',
+      },
+    );
+  };
+
+  // ── Delivery terms ──────────────────────────────────────────────────────
+  sectionBuilders['delivery-terms'] = () => {
+    const s = newSlide();
+    addSectionTitle(s, 'Material Delivery Period', 'Engagement');
+    s.addText(DELIVERY_TERMS[0], {
+      x: 0.5,
+      y: contentTop(true),
+      w: 12.3,
+      h: 1.5,
+      fontFace: FONT,
+      fontSize: 16,
+      color: SLATE,
+      valign: 'top',
+    });
+  };
+
+  // ── Offer validity ──────────────────────────────────────────────────────
+  sectionBuilders['offer-validity'] = () => {
+    if (!opt('offer-validity')) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Offer Validity', 'Engagement');
+    s.addText(resolveOfferValidity(overrides), {
+      x: 0.5,
+      y: contentTop(true),
+      w: 12.3,
+      h: 1.0,
+      fontFace: FONT,
+      fontSize: 16,
+      color: SLATE,
+      valign: 'top',
+    });
+  };
 
   // ── Account ─────────────────────────────────────────────────────────────
-  {
+  sectionBuilders['account-details'] = () => {
     const s = newSlide();
     addSectionTitle(s, 'Account Details', 'Bank');
     s.addTable(
@@ -1522,66 +1584,10 @@ export async function exportToPpt(
         valign: 'middle',
       },
     );
-  }
+  };
 
-  // ── Key points / exclusions / T&Cs ──────────────────────────────────────
-  if (opt('key-points') || opt('exclusions')) {
-    const s = newSlide();
-    addSectionTitle(s, 'Key Points & Exclusions', 'Offer');
-    if (opt('key-points')) {
-      s.addText('KEY POINTS', {
-        x: 0.5,
-        y: 1.2,
-        w: 6,
-        h: 0.28,
-        fontFace: FONT,
-        fontSize: 12,
-        color: GOLD,
-        bold: true,
-      });
-      s.addText(
-        resolveKeyPoints(overrides)
-          .map((item, i) => `${i + 1}.  ${item}`)
-          .join('\n\n'),
-        {
-          x: 0.5,
-          y: 1.55,
-          w: 6,
-          h: 5.2,
-          fontFace: FONT,
-          fontSize: 12,
-          color: SLATE,
-        },
-      );
-    }
-    if (opt('exclusions')) {
-      s.addText('EXCLUSIONS', {
-        x: 6.8,
-        y: 1.2,
-        w: 6,
-        h: 0.28,
-        fontFace: FONT,
-        fontSize: 12,
-        color: GOLD,
-        bold: true,
-      });
-      s.addText(
-        resolveExclusions(overrides)
-          .map((item, i) => `${i + 1}.  ${item}`)
-          .join('\n\n'),
-        {
-          x: 6.8,
-          y: 1.55,
-          w: 6,
-          h: 5.2,
-          fontFace: FONT,
-          fontSize: 11,
-          color: SLATE,
-        },
-      );
-    }
-  }
-  {
+  // ── Terms & Conditions ──────────────────────────────────────────────────
+  sectionBuilders['terms-and-conditions'] = () => {
     const s = newSlide();
     addSectionTitle(s, 'Terms & Conditions', 'Offer');
     s.addText(
@@ -1596,6 +1602,208 @@ export async function exportToPpt(
         color: SLATE,
       },
     );
+  };
+
+  // ── Service details ─────────────────────────────────────────────────────
+  sectionBuilders['service-details'] = () => {
+    if (!opt('service-details')) return;
+    const override = overrides?.['list-service-details'];
+    const items = override ? override.split('\n').filter(Boolean) : SERVICE_DETAILS;
+    if (!items.length) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Service Details', 'Offer');
+    s.addText(items.map((item, i) => `${i + 1}.  ${item}`).join('\n\n'), {
+      x: 0.5,
+      y: 1.2,
+      w: 12.3,
+      h: 5.6,
+      fontFace: FONT,
+      fontSize: 14,
+      color: SLATE,
+      valign: 'top',
+    });
+  };
+
+  // ── Key points ──────────────────────────────────────────────────────────
+  sectionBuilders['key-points'] = () => {
+    if (!opt('key-points')) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Key Points', 'Offer');
+    s.addText(
+      resolveKeyPoints(overrides)
+        .map((item, i) => `${i + 1}.  ${item}`)
+        .join('\n\n'),
+      {
+        x: 0.5,
+        y: 1.2,
+        w: 12.3,
+        h: 5.6,
+        fontFace: FONT,
+        fontSize: 12,
+        color: SLATE,
+        valign: 'top',
+      },
+    );
+  };
+
+  // ── Exclusions ──────────────────────────────────────────────────────────
+  sectionBuilders['exclusions'] = () => {
+    if (!opt('exclusions')) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Exclusions', 'Offer');
+    s.addText(
+      resolveExclusions(overrides)
+        .map((item, i) => `${i + 1}.  ${item}`)
+        .join('\n\n'),
+      {
+        x: 0.5,
+        y: 1.2,
+        w: 12.3,
+        h: 5.6,
+        fontFace: FONT,
+        fontSize: 11,
+        color: SLATE,
+        valign: 'top',
+      },
+    );
+  };
+
+  // ── Closing note (body position follows sectionOrder; Thank-you slide stays last) ──
+  sectionBuilders['closing-note'] = () => {
+    const s = newSlide();
+    addSectionTitle(s, 'Closing Note', 'Offer');
+    const hasHero = !!images.closingSolar;
+    // Letter left, image right — professional proposal closing layout.
+    const textX = 0.5;
+    const textW = hasHero ? 8.6 : 12.3;
+    const y0 = contentTop(true);
+    if (hasHero) {
+      s.addImage({
+        data: images.closingSolar!,
+        x: 10.35,
+        y: y0,
+        w: 2.45,
+        h: 2.45,
+      });
+    }
+    const override = overrides?.['section-closing-note']?.trim();
+    const stock = closingText(p);
+    if (
+      override &&
+      override !== stock.trim() &&
+      !isCollapsedClosingNote(override)
+    ) {
+      s.addText(override, {
+        x: textX,
+        y: y0,
+        w: textW,
+        h: 5.5,
+        fontFace: FONT,
+        fontSize: 13,
+        color: SLATE,
+        valign: 'top',
+      });
+      return;
+    }
+    const m = closingNoteModel(p);
+    s.addText(m.para1, {
+      x: textX,
+      y: y0,
+      w: textW,
+      h: 0.95,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+      valign: 'top',
+    });
+    s.addText(m.para2, {
+      x: textX,
+      y: y0 + 1.05,
+      w: textW,
+      h: 0.5,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+      valign: 'top',
+    });
+    s.addText(m.contactIntro, {
+      x: textX,
+      y: y0 + 1.65,
+      w: textW,
+      h: 0.32,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+    });
+    s.addText(`📞  ${m.phone}      📧  ${m.email}      🌐  ${m.website}`, {
+      x: textX,
+      y: y0 + 2.05,
+      w: textW,
+      h: 0.35,
+      fontFace: FONT,
+      fontSize: 12,
+      color: NAVY,
+    });
+    s.addText(m.thankYou, {
+      x: textX,
+      y: y0 + 2.6,
+      w: textW,
+      h: 0.35,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+    });
+    s.addText(m.regards, {
+      x: textX,
+      y: y0 + 3.1,
+      w: textW,
+      h: 0.3,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+    });
+    s.addText(`${m.team}\n${m.company}`, {
+      x: textX,
+      y: y0 + 3.7,
+      w: textW,
+      h: 0.6,
+      fontFace: FONT,
+      fontSize: 13,
+      color: NAVY,
+      bold: true,
+      valign: 'top',
+    });
+  };
+
+  // ── Subsidy disclaimer ──────────────────────────────────────────────────
+  sectionBuilders['subsidy-disclaimer'] = () => {
+    if (!opt('subsidy-disclaimer')) return;
+    const s = newSlide();
+    addSectionTitle(s, 'Subsidy Disclaimer and Payment Terms', 'Offer');
+    s.addText(SUBSIDY_DISCLAIMER_TEXT, {
+      x: 0.5,
+      y: 1.2,
+      w: 12.3,
+      h: 5.6,
+      fontFace: FONT,
+      fontSize: 13,
+      color: SLATE,
+      valign: 'top',
+    });
+  };
+
+  // ── Body sections in user-defined order (same map as preview / Save) ─────
+  const customCount = options?.customSectionsBeforeBoq?.length ?? 0;
+  for (const id of pptOrderedBodySectionIds(
+    options?.sectionOrder,
+    options?.includedOptionalSections,
+    {
+      hasBom: p.bom.length > 0,
+      includeRoof: !!options?.roofLayout,
+      hasCustomSections: customCount > 0,
+    },
+  )) {
+    sectionBuilders[id]?.();
   }
 
   // ── 16. Closing ─────────────────────────────────────────────────────────
@@ -1644,17 +1852,6 @@ export async function exportToPpt(
         color: 'E2E8F0',
       },
     );
-    if (opt('subsidy-disclaimer')) {
-      s.addText(SUBSIDY_DISCLAIMER_TEXT.slice(0, 280) + '…', {
-        x: 0.7,
-        y: 5.5,
-        w: 11.8,
-        h: 1.3,
-        fontFace: FONT,
-        fontSize: 10,
-        color: '94A3B8',
-      });
-    }
   }
 
   await pptx.writeFile({ fileName: `${proposalDownloadStem(p)}.pptx` });

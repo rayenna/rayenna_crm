@@ -19,17 +19,18 @@ describe('PROPOSAL_PRINT_CSS', () => {
     );
   });
 
-  it('forces Bill of Quantities onto a new page without an after-break on the prior section', () => {
+  it('forces Bill of Quantities onto a new page via the section UNIT, not the inner block', () => {
+    // Unit-level stamp — Divider stays with BOQ (no blank orphan page).
     expect(PROPOSAL_PRINT_CSS).toMatch(
-      /\[data-pdf-section="bom"\][\s\S]*page-break-before:\s*always\s*!important/,
+      /\.pdf-section-unit\[data-pdf-break-before="page"\][\s\S]{0,200}break-before:\s*page\s*!important/,
     );
-    expect(PROPOSAL_PRINT_CSS).toMatch(
-      /\[data-pdf-section="bom"\][\s\S]*break-before:\s*page\s*!important/,
-    );
-    // Guard against the Chromium blank-page pattern: break-before + break-after pair
-    expect(PROPOSAL_PRINT_CSS).not.toMatch(
-      /\[data-pdf-section="bom"\][\s\S]*page-break-after:\s*always/,
-    );
+    // Inner bom must NOT force its own page break (orphans the leading Divider).
+    const bomInner = PROPOSAL_PRINT_CSS.match(
+      /\[data-pdf-section="bom"\]\s*\{[^}]*\}/,
+    )?.[0];
+    expect(bomInner).toMatch(/break-before:\s*auto\s*!important/);
+    expect(bomInner).not.toMatch(/break-before:\s*page/);
+    expect(bomInner).not.toMatch(/page-break-after:\s*always/);
   });
 
   it('keeps Cover + contact strip on page 1 and centres them', () => {
@@ -63,6 +64,64 @@ describe('PROPOSAL_PRINT_CSS', () => {
   it('keeps the About Rayenna Key Highlights table from splitting across pages', () => {
     expect(PROPOSAL_PRINT_CSS).toMatch(
       /\[data-pdf-keep="key-highlights"\][\s\S]*page-break-inside:\s*avoid\s*!important/,
+    );
+  });
+
+  it('hides mid-edit greyed optional sections in print CSS', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.section-edit-excluded\s*\{[\s\S]*display:\s*none\s*!important/,
+    );
+  });
+
+  it('keeps section heading icon–title gap consistent (flex gap-3, not table-cell)', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-section-heading[\s\S]*gap:\s*0\.75rem\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).not.toMatch(
+      /\.pdf-section-heading\s*>\s*\*[\s\S]*display:\s*table-cell/,
+    );
+  });
+
+  it('starts Closing Note on a new page via the section UNIT (never orphans the Divider)', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-section-unit\[data-pdf-break-before="page"\][\s\S]{0,200}break-before:\s*page\s*!important/,
+    );
+    const closingInner = PROPOSAL_PRINT_CSS.match(
+      /\[data-pdf-section="section-closing-note"\]\s*\{[^}]*\}/,
+    )?.[0];
+    expect(closingInner).toMatch(/break-before:\s*auto\s*!important/);
+    expect(closingInner).not.toMatch(/break-before:\s*page/);
+    const subsidyRule = PROPOSAL_PRINT_CSS.match(
+      /\[data-pdf-section="section-subsidy-disclaimer-and-payment-terms"\][\s\S]{0,280}page-break-after:\s*auto\s*!important/,
+    );
+    expect(subsidyRule).toBeTruthy();
+  });
+
+  it('never forces page-break-before on an inner [data-pdf-section] (blank-page anti-pattern)', () => {
+    // Any forced new page must use .pdf-section-unit[data-pdf-break-before="page"].
+    const innerForcedBreaks = [
+      ...PROPOSAL_PRINT_CSS.matchAll(
+        /\[data-pdf-section="[^"]+"\]\s*\{[^}]*\}/g,
+      ),
+    ]
+      .map((m) => m[0])
+      .filter(
+        (rule) =>
+          /break-before:\s*page/.test(rule) ||
+          /page-break-before:\s*always/.test(rule),
+      );
+    expect(innerForcedBreaks).toEqual([]);
+  });
+
+  it('strips Closing Note image shadow so PDF does not show a grey slab', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\*\s*,\s*\*::before\s*,\s*\*::after\s*\{[\s\S]{0,200}box-shadow:\s*none\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /img\[data-docx-image="closing-solar"\][\s\S]{0,500}box-shadow:\s*none\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="section-closing-note"\]\s*\.closing-note-hero\s*\{[\s\S]{0,500}box-shadow:\s*none\s*!important/,
     );
   });
 

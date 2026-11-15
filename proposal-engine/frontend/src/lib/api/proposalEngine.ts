@@ -431,6 +431,7 @@ export async function syncProjectProposal(
         textOverrides: artifact.textOverrides ?? null,
         customSectionsBeforeBoq: artifact.customSectionsBeforeBoq ?? null,
         includedOptionalSections: artifact.includedOptionalSections ?? null,
+        sectionOrder: artifact.sectionOrder ?? null,
         proposalView: artifact.proposalView ?? null,
         summary: artifact.summary ?? null,
         includeRoofLayout: artifact.includeRoofLayout ?? false,

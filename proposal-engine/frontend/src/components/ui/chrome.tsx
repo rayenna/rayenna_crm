@@ -139,7 +139,7 @@ export const btnGhost =
 
 /** Compact action chips used on the Proposal page toolbar (top and bottom). */
 export const toolbarBtn =
-  'inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md min-h-[32px] leading-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap';
+  'inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-md min-h-[44px] sm:min-h-[32px] leading-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap touch-manipulation active:opacity-90';
 
 export const toolbarBtnGhost = `${toolbarBtn} bg-white text-slate-800 border border-slate-200 hover:bg-slate-50 dark:bg-white/10 dark:text-white dark:border-white/15 dark:hover:bg-white/15`;
 

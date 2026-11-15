@@ -375,7 +375,7 @@ export default function HelpPage() {
           <Step n={4} title="Generate and send">
             <strong>Continue to proposal</strong> opens <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>.
             Click <strong>Generate Proposal</strong> — a <strong>pre-flight</strong> check may ask you to confirm capacity or fix warnings — then <strong>Save</strong>. If a roof drawing should appear in the document, turn on <strong>Include roof layout</strong> before you generate.
-            Then <strong>PDF</strong>, <strong>DOCX</strong>, or <strong>Share</strong> (those actions also run pre-flight).
+            Then <strong>PDF</strong>, <strong>DOCX</strong>, <strong>PPT</strong>, or <strong>Share</strong> (PDF / DOCX / Share also run pre-flight).
           </Step>
         </div>
 
@@ -778,7 +778,7 @@ export default function HelpPage() {
                 ['Cover + Contact strip',  'Title-page photo wallpaper (navy wash), capacity hero, client card, reference, date, and contact line — PDF page 1 keeps both together and centred'],
                 ['Executive Summary',       'Personalised letter with system size, cost, payback, savings'],
                 ['About Rayenna',           'Company intro plus Key Highlights table (kept whole on one PDF page)'],
-                ['What We Offer',           'Domestic, Commercial, and Consultation services'],
+                ['What We Offer',           'Shared intro text for all system types + On-Grid / Hybrid / Off-Grid diagram from CRM System Type, then Domestic / Commercial / Consultation cards'],
                 ['Financial Benefits',      'Savings narrative, LCOE, 25-year chart and table (chart stays on one PDF page)'],
                 ['Environmental Impact',    'CO₂ offset, clean energy generation, sustainability'],
                 ['Our Process',             '5-step journey from consultation to ongoing support'],
@@ -786,7 +786,7 @@ export default function HelpPage() {
                 ['Responsibility Matrix',   'Rayenna vs Client checklist — continues into Technical Details in PDF (no forced page break)'],
                 ['Custom Sections (optional)', 'Your own content before Technical Details / BOQ — rich text, tables, images'],
                 ['Technical Details',       'Major component cards (modules, inverter, structure, DBs) from BOM / CRM brands'],
-                ['Bill of Quantities',      'Grouped equipment list with per-category notes — PDF starts BOQ on a fresh page'],
+                ['Bill of Quantities',      'Grouped equipment list with per-category notes — PDF starts BOQ on a fresh page (with its divider)'],
                 ['Proposed Rooftop Solar Layout (optional)', 'When enabled: satellite-based draft; BOQ remains source of truth for scope'],
                 ['Commercials',             'Price waterfall after BOQ on the same PDF flow (no forced break between BOQ and Commercials)'],
                 ['Payment Terms',           'Milestone table (70% / 15% / 10% / 5%)'],
@@ -794,8 +794,11 @@ export default function HelpPage() {
                 ['Warranty',                'System / modules / inverter table (brand-aware when known)'],
                 ['Offer Validity',          'Standalone editable validity (default 7 days)'],
                 ['Terms & Conditions',      'Standard offer clauses (validity moved to its own field)'],
+                ['Service Details',         'Optional post-commissioning service bullets'],
                 ['Key Points & Exclusions', 'Commissioning caveats and out-of-scope items'],
                 ['Material Delivery',       '7–15 working days from confirmed PO'],
+                ['Closing Note',            'Letter-style sign-off with contact links + side solar image — PDF opens Closing Note on a fresh page'],
+                ['Subsidy Disclaimer',      'Optional DISCOM / payment disclaimer after Closing Note by default'],
               ].map(([section, desc]) => (
                 <div key={section} className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
                   <span className="text-gray-400 flex-shrink-0">▸</span>
@@ -816,17 +819,18 @@ export default function HelpPage() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Optional sections (include / exclude)</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Sections (include / exclude and reorder)</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              While you have write access on the Proposal page, a sky-blue <strong>Optional sections</strong> panel appears in the document (after Financial Benefits). Use it to include or exclude narrative sections such as Environmental Impact, Our Process, Responsibility Matrix, Technical Details, Warranty, Offer Validity, Service Details, Key Points, Exclusions, and the Subsidy Disclaimer.
+              Click <strong>✏️ Edit</strong> on the Proposal page. Each body section shows a slim control bar: optional sections get an <strong>Include</strong> checkbox; every body section gets <strong>↑</strong> / <strong>↓</strong> to reorder. <strong>Cover</strong> and <strong>Executive Summary</strong> always stay first and cannot be moved.
             </p>
             <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
-              <li>Click the bright green <strong>SHOW</strong> button to expand the checklist; click the amber <strong>HIDE</strong> button to collapse it.</li>
-              <li>Tick or untick sections — excluded sections disappear from the live proposal and from PDF, DOCX, PPT, and Share exports.</li>
-              <li>Click <strong>💾 Save</strong> so the choices sync to the CRM server and reopen the same way on any device.</li>
-              <li><strong>AI Roof Layout</strong> and <strong>Custom sections</strong> keep their own include / add controls — they are not in this checklist.</li>
+              <li><strong>Include</strong> — uncheck an optional section (Environmental Impact, Our Process, Responsibility Matrix, Technical Details, Warranty, Offer Validity, Service Details, Key Points, Exclusions, Subsidy Disclaimer). It greys out in Edit so you can still see it and re-check before saving.</li>
+              <li><strong>↑ / ↓</strong> — move any body section in place (About, Financial Benefits, Scope, BOQ, Commercials, custom sections as a group, roof layout slot, closing note, and the rest). The live proposal reorders immediately so you can preview before Save.</li>
+              <li>After <strong>💾 Save</strong>, unchecked optionals disappear from view and from PDF, DOCX, PPT, and Share. Re-open <strong>Edit</strong> to bring them back (they reappear greyed with Include off).</li>
+              <li>Use <strong>Reset sections</strong> in the Edit banner to restore default includes and the default section order (local until you Save).</li>
+              <li><strong>AI Roof Layout</strong> include checkbox and <strong>Custom sections</strong> content editors keep their own controls; custom sections move as one group with ↑ / ↓.</li>
             </ul>
-            <Tip>By default every optional section is included until you turn one off. Saving after a change is required for cross-device continuity.</Tip>
+            <Tip>By default every optional section is included and the default section order matches a new proposal. Saving after a change is required for cross-device continuity. Cancel restores include and order to what they were when you entered Edit.</Tip>
           </div>
 
           <div>
@@ -877,7 +881,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Saving the Proposal</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save</strong> in the proposal header. This saves BOM comments, any inline edits, and all four core artifacts (Costing, BOM, ROI, Proposal) to the active customer record. A roof layout included in the proposal is stored with the proposal artifact. When all four artifacts are present, document readiness shows as <em>PE Ready</em> (same label as in CRM; still separate from the <strong>CRM project stage</strong>). Track the sales pipeline only in CRM. The header and footer offer <strong>⬇ PDF</strong>, <strong>⬇ DOCX</strong>, and <strong>🔗 Share</strong> only — no separate Save button in the footer.
+              Click <strong>💾 Save</strong> in the proposal header. This saves BOM comments, any inline edits, section include/order choices, and all four core artifacts (Costing, BOM, ROI, Proposal) to the active customer record. A roof layout included in the proposal is stored with the proposal artifact. When all four artifacts are present, document readiness shows as <em>PE Ready</em> (same label as in CRM; still separate from the <strong>CRM project stage</strong>). Track the sales pipeline only in CRM. The header and footer offer <strong>⬇ PDF</strong>, <strong>⬇ DOCX</strong>, <strong>⬇ PPT</strong>, and <strong>🔗 Share</strong> — no separate Save button in the footer.
             </p>
           </div>
 
@@ -891,8 +895,10 @@ export default function HelpPage() {
             </p>
             <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
               <li><strong>Page 1</strong> — Cover and the Rayenna contact strip stay together and are centred on the first sheet; the cover uses a branded photo wallpaper with a navy transparency wash (same cue as rayennaenergy.com) so white text stays readable. Preview, Share, PDF, and PPT use the full wallpaper; DOCX shows the same image as a title banner.</li>
+              <li><strong>Fresh pages</strong> — Bill of Quantities and Closing Note each start on a new page <em>with</em> their section divider (no blank sheet that only shows a line).</li>
               <li><strong>Kept whole</strong> — the Financial Benefits 25-year chart and the About Rayenna <em>Key Highlights</em> table do not split across pages.</li>
-              <li><strong>No forced break</strong> — Responsibility Matrix flows into Technical Details; Bill of Quantities flows into Commercials (BOQ itself still starts on a fresh page).</li>
+              <li><strong>No forced break</strong> — Responsibility Matrix flows into Technical Details; Bill of Quantities flows into Commercials.</li>
+              <li><strong>Images</strong> — Closing Note side image and What We Offer diagrams print without grey shadow boxes; enable Background graphics so colours render correctly.</li>
             </ul>
             <div className="space-y-2 mt-2">
               <Tip>In Chrome: More settings → Background graphics → ON. In Edge: More settings → Print backgrounds → ON.</Tip>
@@ -903,14 +909,28 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Exporting to DOCX (Word)</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>⬇ DOCX</strong> (in the header or footer). A Word document is generated and downloaded directly to your device. It includes the Rayenna logo, all proposal sections, the BOM table, and the ROI summary. You can open it in Microsoft Word or Google Docs for any final edits before sending.
+              Click <strong>⬇ DOCX</strong> (in the header or footer). A Word document is generated and downloaded directly to your device. It includes the Rayenna logo, all included sections in your saved order, the BOM table, ROI summary, What We Offer diagram for the CRM System Type, and Closing Note letter + side image. You can open it in Microsoft Word or Google Docs for any final edits before sending.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Exporting to PPT (PowerPoint)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Click <strong>⬇ PPT</strong> in the proposal toolbar. A PowerPoint file downloads with section slides matching your saved include/order choices, the system-type diagram on What We Offer, and Closing Note with letter copy and side image. Use this for customer presentations; use PDF/DOCX for formal written offers.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Share as Link</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>🔗 Share</strong> (next to PDF and DOCX in the header or footer) to open the Share modal. Optionally set a password and a custom expiry date (default is 48 hours). Click <strong>Generate link</strong>, then copy the proposal link and send it to your customer. Anyone with the link can open a read-only view of the proposal in their browser; the Export PDF / DOCX / Share row is hidden in that view so recipients only see the proposal content.
+              Click <strong>🔗 Share</strong> (next to PDF and DOCX in the header or footer) to open the Share modal. Optionally set a password and a custom expiry date (default is 48 hours). Click <strong>Generate link</strong>, then copy the proposal link and send it to your customer. Anyone with the link can open a read-only view of the proposal in their browser; the Export PDF / DOCX / PPT / Share row is hidden in that view so recipients only see the proposal content (including Closing Note image and What We Offer diagram).
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">CRM System Type (On-Grid / Hybrid / Off-Grid)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              The CRM project <strong>System Type</strong> drives proposal wording (e.g. capacity chips, scope inverter lines) and the <strong>What We Offer</strong> diagram. The What We Offer <em>description</em> stays the same for every system type — only the picture changes. Set System Type on the CRM project before generating so Hybrid and Off-Grid proposals show the matching diagram automatically.
             </p>
           </div>
         </div>
@@ -1380,15 +1400,18 @@ export default function HelpPage() {
             Click the <strong>✏️ Edit</strong> button in the proposal header. The document turns editable (amber border appears). Click on any text and type your changes. When done, click <strong>💾 Save</strong> in the header — this saves your edits, BOM comments, and all artifacts together. The PDF export will capture your inline edits automatically since it renders the live document.
           </FaqItem>
 
-          <FaqItem q="How do I hide sections I do not want in this proposal?">
-            On the Proposal page, open the sky-blue <strong>Optional sections</strong> panel (green <strong>SHOW</strong> / amber <strong>HIDE</strong>). Untick sections you want to omit, then click <strong>💾 Save</strong>. The choice applies to preview and all exports, and reloads on other devices after Save. AI Roof Layout and custom sections use their own controls.
+          <FaqItem q="How do I hide or reorder proposal sections?">
+            Click <strong>✏️ Edit</strong>. Use the <strong>Include</strong> checkbox on optional section headings (unchecked sections grey out until Save) and <strong>↑</strong> / <strong>↓</strong> on each body section to reorder in place. Cover and Executive Summary stay first. Click <strong>💾 Save</strong> — choices apply to preview and all exports and reload on other devices. <strong>Reset sections</strong> restores defaults; Cancel undoes unsaved include/order changes. AI Roof Layout include and custom-section editors keep their own controls; custom sections move as one group.
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
-            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups from this site — the PDF opens in a new tab. Allow pop-ups if prompted. Page 1 is intentionally Cover + contact strip only (centred); if that looks sparse, that is expected — body content starts on page 2.
+            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups — the PDF opens in a new tab. Page 1 is intentionally Cover + contact strip only (centred); body content starts on page 2. A sheet that shows <em>only</em> a thin divider line with no section heading is a defect — hard-refresh Proposal Engine and re-export; BOQ and Closing Note should open on a fresh page <em>with</em> their content, not leave the divider alone.
           </FaqItem>
           <FaqItem q="Why do some proposal sections share a page in the PDF while others start fresh?">
-            PDF pagination is intentional: Cover + contact strip share page 1; Bill of Quantities starts on a new page; Commercials continue after BOQ; Responsibility Matrix continues into Technical Details. Charts and the Key Highlights table are kept from splitting mid-block. Tall BOQ tables still paginate normally so content is not clipped.
+            PDF pagination is intentional: Cover + contact strip share page 1; Bill of Quantities and Closing Note each start on a new page (with their divider); Commercials continue after BOQ; Responsibility Matrix continues into Technical Details. Charts and the Key Highlights table are kept from splitting mid-block. Tall BOQ tables still paginate normally so content is not clipped.
+          </FaqItem>
+          <FaqItem q="Why does What We Offer show a different diagram for Hybrid or Off-Grid?">
+            The diagram follows the CRM project <strong>System Type</strong> (On-Grid, Hybrid, or Off-Grid). The written description beside it is the same for all three — only the picture changes. Preview, Share, PDF, DOCX, and PPT all use that rule.
           </FaqItem>
 
           <FaqItem q="Can I use the same template for multiple customers?">

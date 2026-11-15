@@ -5,6 +5,12 @@ export const PROPOSAL_PRINT_CSS = `
     html, body { margin:0; padding:0; background:#fff; height:auto !important; overflow:visible !important; }
     body { font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; }
     * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; color:inherit; }
+    /* Chromium print flattens box-shadow into solid grey slabs — never print shadows. */
+    *, *::before, *::after {
+      box-shadow: none !important;
+      -webkit-box-shadow: none !important;
+      text-shadow: none !important;
+    }
 
     /*
      * Chromium inserts a blank sheet when an element with page-break-inside:avoid
@@ -110,10 +116,198 @@ export const PROPOSAL_PRINT_CSS = `
       page-break-inside: avoid !important;
     }
     /*
-     * Bill of Quantities always starts on a fresh page for client PDFs.
-     * Only break-before here — do not add break-after on the prior section
-     * (double breaks create blank pages in Chromium). The BOQ table itself
-     * still uses break-inside:auto above so tall tables paginate without blanks.
+     * Section hygiene: never leave a lone accent bar / divider on the prior page.
+     * Chromium will otherwise split the flex heading row (bar | icon | title).
+     */
+    .pdf-divider,
+    [data-pdf-keep="divider"] {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    /*
+     * Section titles: bar | icon | h2.
+     * Do NOT use display:table here — table-cell + width:100% made the gap between
+     * emoji and title vary by section (Financial Benefits looked tight; RACI wide).
+     * Keep flex + fixed gap-3 (0.75rem) so every heading matches Financial Benefits.
+     */
+    .pdf-section-heading,
+    [data-pdf-keep="section-heading"],
+    .pdf-section > div.flex.items-center:has(> h2),
+    .pdf-section > div.flex.items-start:has(> h2),
+    div.mb-8 > div.flex.items-center:has(> h2),
+    div.mb-8 > div.flex.items-start:has(> h2) {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: center !important;
+      gap: 0.75rem !important;
+      column-gap: 0.75rem !important;
+      row-gap: 0 !important;
+      width: 100% !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+    .pdf-section-heading > *,
+    [data-pdf-keep="section-heading"] > *,
+    .pdf-section > div.flex.items-center:has(> h2) > *,
+    .pdf-section > div.flex.items-start:has(> h2) > *,
+    div.mb-8 > div.flex.items-center:has(> h2) > *,
+    div.mb-8 > div.flex.items-start:has(> h2) > * {
+      display: block !important;
+      padding-right: 0 !important;
+      margin-right: 0 !important;
+    }
+    /* Fixed icon slot so emoji glyph metrics cannot widen the gap. */
+    .pdf-section-heading > span.text-lg,
+    [data-pdf-keep="section-heading"] > span.text-lg,
+    .pdf-section > div.flex.items-center:has(> h2) > span.text-lg,
+    .pdf-section > div.flex.items-start:has(> h2) > span.text-lg,
+    div.mb-8 > div.flex.items-center:has(> h2) > span.text-lg,
+    div.mb-8 > div.flex.items-start:has(> h2) > span.text-lg {
+      width: 1.25rem !important;
+      min-width: 1.25rem !important;
+      max-width: 1.25rem !important;
+      flex: 0 0 1.25rem !important;
+      text-align: center !important;
+      line-height: 1 !important;
+      overflow: visible !important;
+    }
+    .pdf-section-heading > .w-1,
+    [data-pdf-keep="section-heading"] > .w-1,
+    .pdf-section > div.flex.items-center:has(> h2) > .w-1,
+    .pdf-section > div.flex.items-start:has(> h2) > .w-1,
+    div.mb-8 > div.flex.items-center:has(> h2) > .w-1,
+    div.mb-8 > div.flex.items-start:has(> h2) > .w-1 {
+      flex: 0 0 auto !important;
+    }
+    .pdf-section-heading > h2,
+    [data-pdf-keep="section-heading"] > h2,
+    .pdf-section > div.flex.items-center:has(> h2) > h2,
+    .pdf-section > div.flex.items-start:has(> h2) > h2,
+    div.mb-8 > div.flex.items-center:has(> h2) > h2,
+    div.mb-8 > div.flex.items-start:has(> h2) > h2 {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+    }
+    /*
+     * Forced new pages (BOM, Closing Note): break ONLY on the section unit
+     * stamped with data-pdf-break-before="page". Breaking on the inner
+     * [data-pdf-section] leaves the leading .pdf-divider alone on a blank
+     * sheet — unacceptable for client PDFs. Never pair break-before:page with
+     * break-after:page on adjacent sections (Chromium blank-page pattern).
+     */
+    .pdf-section-unit[data-pdf-break-before="page"] {
+      break-before: page !important;
+      page-break-before: always !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+      break-after: auto !important;
+      page-break-after: auto !important;
+    }
+    /* Closing Note body: no own page break — unit owns it. */
+    [data-pdf-section="section-closing-note"] {
+      break-before: auto !important;
+      page-break-before: auto !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+      break-after: auto !important;
+      page-break-after: auto !important;
+    }
+    /* Side-by-side: copy left, image right (print / PDF / share HTML). */
+    [data-pdf-section="section-closing-note"] .closing-note-layout {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: flex-start !important;
+      justify-content: space-between !important;
+      gap: 1.5rem !important;
+      padding-left: 1.75rem !important;
+    }
+    [data-pdf-section="section-closing-note"] .closing-note-layout > [data-docx-section] {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+    }
+    [data-pdf-section="section-closing-note"] .closing-note-hero {
+      flex: 0 0 200px !important;
+      width: 200px !important;
+      max-width: 200px !important;
+      margin: 0 0 0 auto !important;
+      padding: 0 !important;
+      float: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      filter: none !important;
+      border: none !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+    [data-pdf-section="section-closing-note"] img[data-docx-image="closing-solar"] {
+      display: block !important;
+      width: 200px !important;
+      height: 200px !important;
+      max-width: 200px !important;
+      max-height: 200px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      object-fit: cover !important;
+      border-radius: 8px !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+      filter: none !important;
+      border: none !important;
+      outline: none !important;
+      -webkit-box-shadow: none !important;
+    }
+    /* Subsidy Disclaimer: no trailing blank page. */
+    [data-pdf-section="section-subsidy-disclaimer-and-payment-terms"],
+    [data-pdf-keep="compact-section"] {
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+      break-before: auto !important;
+      page-break-before: auto !important;
+      break-after: auto !important;
+      page-break-after: auto !important;
+    }
+    /* Letter-style Closing Note: keep paragraph rhythm in print/PDF/share HTML. */
+    [data-pdf-section="section-closing-note"] p {
+      margin-top: 0 !important;
+      margin-bottom: 0.85em !important;
+      line-height: 1.65 !important;
+    }
+    [data-pdf-section="section-closing-note"] a {
+      color: #0369a1 !important;
+      text-decoration: underline !important;
+    }
+    /* Ordered-section wrapper: keep divider glued to the section that follows. */
+    .pdf-section-unit {
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
+    .pdf-section-unit > .pdf-divider,
+    .pdf-section-unit > [data-pdf-keep="divider"] {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+    /* Never split the heading row from the body that follows. */
+    .pdf-section > .pdf-section-heading,
+    .pdf-section > [data-pdf-keep="section-heading"] {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+    /* Mid-Edit greyed optionals must never appear in the printed PDF. */
+    .section-edit-excluded {
+      display: none !important;
+    }
+    /*
+     * Bill of Quantities starts on a fresh page via the unit
+     * data-pdf-break-before="page" stamp — NOT via this inner selector.
+     * Inner break-before:page orphaned the BOQ Divider on a blank sheet.
      * Commercials follow BOQ on the same page flow (no forced break).
      */
     [data-pdf-section="technical-details"] {
@@ -121,8 +315,8 @@ export const PROPOSAL_PRINT_CSS = `
       page-break-before: auto !important;
     }
     [data-pdf-section="bom"] {
-      break-before: page !important;
-      page-break-before: always !important;
+      break-before: auto !important;
+      page-break-before: auto !important;
       margin-top: 0 !important;
       padding-top: 0 !important;
     }
@@ -165,9 +359,10 @@ export function exportToPdf(printRootId: string): void {
     .map((s) => `<style>${s.innerHTML}</style>`)
     .join('\n');
 
-  // Clone the proposal element so we can strip print-hide elements
+  // Clone the proposal element so we can strip print-hide / mid-edit ghosts
   const clone = el.cloneNode(true) as HTMLElement;
   clone.querySelectorAll('.print-hide').forEach((n) => n.remove());
+  clone.querySelectorAll('.section-edit-excluded').forEach((n) => n.remove());
   // Remove border/shadow/rounded corners and overflow clipping for clean print pagination
   clone.style.cssText =
     'border:none!important;box-shadow:none!important;border-radius:0!important;overflow:visible!important;height:auto!important;max-height:none!important;';
@@ -175,6 +370,20 @@ export function exportToPdf(printRootId: string): void {
     .forEach((n) => {
       n.style.overflow = 'visible';
       n.style.maxHeight = 'none';
+    });
+  // Closing Note image: kill any residual shadow/bg that prints as a grey slab
+  clone
+    .querySelectorAll<HTMLElement>(
+      '.closing-note-hero, img[data-docx-image="closing-solar"], img[data-docx-image="diagram"]',
+    )
+    .forEach((n) => {
+      n.style.setProperty('box-shadow', 'none', 'important');
+      n.style.setProperty('-webkit-box-shadow', 'none', 'important');
+      n.style.setProperty('filter', 'none', 'important');
+      n.style.setProperty('background', 'transparent', 'important');
+      n.style.setProperty('background-color', 'transparent', 'important');
+      n.style.setProperty('border', 'none', 'important');
+      n.classList.remove('shadow-sm', 'shadow', 'shadow-md', 'shadow-lg', 'shadow-xl');
     });
 
   const html = `<!DOCTYPE html>

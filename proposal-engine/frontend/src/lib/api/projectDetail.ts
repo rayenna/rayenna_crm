@@ -42,6 +42,7 @@ interface ApiProposalArtifact {
   textOverrides?: Record<string, string | undefined> | null;
   customSectionsBeforeBoq?: unknown;
   includedOptionalSections?: Record<string, boolean> | null;
+  sectionOrder?: string[] | null;
   proposalView?: unknown;
   summary?: string | null;
   includeRoofLayout?: boolean | null;
@@ -170,6 +171,9 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
             !Array.isArray(artifacts.proposal.includedOptionalSections)
               ? (artifacts.proposal.includedOptionalSections as Record<string, boolean>)
               : undefined,
+          sectionOrder: Array.isArray(artifacts.proposal.sectionOrder)
+            ? (artifacts.proposal.sectionOrder as string[])
+            : undefined,
           proposalView: artifacts.proposal.proposalView ?? undefined,
           includeRoofLayout: !!artifacts.proposal.includeRoofLayout,
           roofLayout: artifacts.proposal.roofLayout
@@ -302,6 +306,7 @@ function proposalApiLooksLight(fromApi: ProposalArtifact): boolean {
     fromApi.textOverrides == null &&
     fromApi.customSectionsBeforeBoq == null &&
     fromApi.includedOptionalSections == null &&
+    fromApi.sectionOrder == null &&
     fromApi.bomComments == null
   );
 }
@@ -358,6 +363,7 @@ export function mergeProposalArtifactPreservingDocumentFields(
     localCustom && localCustom.length > 0 ? localCustom : apiCustom ?? localCustom;
   const includedOptionalSections =
     existing.includedOptionalSections ?? fromApi.includedOptionalSections;
+  const sectionOrder = existing.sectionOrder ?? fromApi.sectionOrder;
 
   return {
     ...existing,
@@ -370,6 +376,7 @@ export function mergeProposalArtifactPreservingDocumentFields(
       Object.keys(mergedTextOverrides).length > 0 ? mergedTextOverrides : undefined,
     customSectionsBeforeBoq,
     includedOptionalSections,
+    sectionOrder,
     proposalView: existing.proposalView ?? fromApi.proposalView,
     roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
   };
@@ -398,6 +405,7 @@ export function mergeProposalArtifactPreferringServerDocument(
       fromApi.customSectionsBeforeBoq ?? existing.customSectionsBeforeBoq,
     includedOptionalSections:
       fromApi.includedOptionalSections ?? existing.includedOptionalSections,
+    sectionOrder: fromApi.sectionOrder ?? existing.sectionOrder,
     proposalView: fromApi.proposalView ?? existing.proposalView,
     roofLayout: fromApi.roofLayout ?? existing.roofLayout ?? null,
   };

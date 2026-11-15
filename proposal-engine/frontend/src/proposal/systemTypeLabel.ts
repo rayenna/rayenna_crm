@@ -4,12 +4,26 @@
  * Labels match the CRM radio: Off-Grid, On-Grid, Hybrid.
  * When the project has no system type, copy stays “On-Grid”.
  */
-export function systemTypeHeadingTerm(systemType: string | null | undefined): string {
+export type SystemTypeKind = 'On-Grid' | 'Hybrid' | 'Off-Grid';
+
+export function systemTypeHeadingTerm(systemType: string | null | undefined): SystemTypeKind {
   const raw = (systemType ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   if (raw === 'OFF_GRID' || raw === 'OFFGRID') return 'Off-Grid';
   if (raw === 'HYBRID') return 'Hybrid';
   if (raw === 'ON_GRID' || raw === 'ONGRID') return 'On-Grid';
   return 'On-Grid';
+}
+
+/** Public URL for the What We Offer system diagram (preview / PDF / share / DOCX / PPT). */
+export function systemTypeDiagramSrc(systemType?: string | null): string {
+  const term = systemTypeHeadingTerm(systemType);
+  if (term === 'Hybrid') return '/hybrid_solar_setup_colorful.jpg';
+  if (term === 'Off-Grid') return '/off_grid_solar_setup_colorful.jpg';
+  return '/on_grid_solar_setup_colorful.jpg';
+}
+
+export function systemTypeDiagramAlt(systemType?: string | null): string {
+  return `${systemTypeHeadingTerm(systemType)} solar system diagram`;
 }
 
 /** “a” / “an” before the system-type adjective when no kW is shown. */

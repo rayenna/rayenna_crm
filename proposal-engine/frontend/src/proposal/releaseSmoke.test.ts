@@ -132,6 +132,8 @@ describe('release smoke — layout accuracy + exports', () => {
       {},
       docx,
       null,
+      undefined,
+      null,
     );
     const fullBuf = await docx.Packer.toBuffer(full);
     expect(fullBuf.byteLength).toBeGreaterThan(5_000);
@@ -154,6 +156,8 @@ describe('release smoke — layout accuracy + exports', () => {
       {},
       docx,
       none,
+      undefined,
+      ['commercials', 'about-rayenna'],
     );
     const minBuf = await docx.Packer.toBuffer(minimal);
     expect(minBuf.byteLength).toBeGreaterThan(3_000);

@@ -17,6 +17,9 @@ import {
   OUR_PROCESS_STEPS,
   DELIVERY_TERMS,
   scopeSectionsFor,
+  closingNoteModel,
+  closingText,
+  isCollapsedClosingNote,
 } from './proposalCopy';
 import {
   buildCommercialsWaterfall,
@@ -36,6 +39,8 @@ import {
   rewriteSystemTypeMentions,
   systemTypeArticle,
   systemTypeCapacityChip,
+  systemTypeDiagramAlt,
+  systemTypeDiagramSrc,
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
 
@@ -52,6 +57,12 @@ function plainTextFromNode(node: React.ReactNode): string {
   if (node == null || typeof node === 'boolean') return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(plainTextFromNode).join('');
+  if (typeof node === 'object' && node !== null && 'props' in node) {
+    const el = node as React.ReactElement<{ children?: React.ReactNode }>;
+    // Preserve paragraph breaks from <br /> used in stock copy.
+    if (el.type === 'br') return '\n';
+    return plainTextFromNode(el.props?.children);
+  }
   return '';
 }
 
@@ -104,7 +115,8 @@ function EditableText({
   const map = React.useContext(ProposalTextOverridesContext);
   const isEditing = React.useContext(ProposalEditingContext);
   const o = map[sectionKey];
-  const text = o != null && o !== '' ? o : plainTextFromNode(children);
+  // Whitespace-only overrides must not wipe stock copy (e.g. What We Offer intro).
+  const text = o != null && o.trim() !== '' ? o : plainTextFromNode(children);
   const edit = useUncontrolledDocSection(text, isEditing);
   return (
     <Tag
@@ -237,12 +249,14 @@ export async function exportToDocx(
   roofLayout?: AiRoofLayoutResponse | null,
   customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[],
   includedOptionalSections?: Record<string, boolean> | null,
+  sectionOrder?: string[] | null,
 ): Promise<void> {
   const docx = await import('docx');
 
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
-   let roofLayoutImageData: ArrayBuffer | undefined;
+  let roofLayoutImageData: ArrayBuffer | undefined;
+  let closingSolarImageData: ArrayBuffer | undefined;
 
   // 1) Prefer the already-rendered <img> elements inside the proposal.
   // This works consistently on both mobile and desktop and avoids any
@@ -251,12 +265,16 @@ export async function exportToDocx(
     try {
       const diagramImg =
         container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="solar_setup_colorful"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
       const logoImg =
         container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
       const roofImg =
         container.querySelector<HTMLImageElement>('[data-docx-image="roof-layout"]') ?? null;
+      const closingImg =
+        container.querySelector<HTMLImageElement>('[data-docx-image="closing-solar"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="closing_note_solar"]');
 
       if (diagramImg) {
         diagramImageData = await imageElementToArrayBuffer(diagramImg);
@@ -267,23 +285,30 @@ export async function exportToDocx(
       if (roofImg) {
         roofLayoutImageData = await imageElementToArrayBuffer(roofImg);
       }
+      if (closingImg) {
+        closingSolarImageData = await imageElementToArrayBuffer(closingImg);
+      }
     } catch {
       // best-effort only; we will still try network fetch below
     }
   }
 
   // 2) If either image is still missing, try network fetch as a fallback.
-  if (!diagramImageData || !logoImageData) {
+  if (!diagramImageData || !logoImageData || !closingSolarImageData) {
     try {
-      const [diagResp, logoResp] = await Promise.all([
-        fetch('/rayenna_proposal.jpg'),
+      const [diagResp, logoResp, closingResp] = await Promise.all([
+        fetch(systemTypeDiagramSrc(p.systemType)),
         fetch('/rayenna_logo.jpg'),
+        fetch('/closing_note_solar.jpg'),
       ]);
       if (!diagramImageData && diagResp.ok) {
         diagramImageData = await diagResp.arrayBuffer();
       }
       if (!logoImageData && logoResp.ok) {
         logoImageData = await logoResp.arrayBuffer();
+      }
+      if (!closingSolarImageData && closingResp.ok) {
+        closingSolarImageData = await closingResp.arrayBuffer();
       }
     } catch {
       // still optional; if fetch fails we just omit the images
@@ -323,6 +348,8 @@ export async function exportToDocx(
     docx,
     includedOptionalSections,
     coverHero?.arrayBuffer,
+    sectionOrder,
+    closingSolarImageData,
   );
   const blob = await docx.Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
@@ -339,7 +366,7 @@ export async function exportToDocx(
 
 export function Divider() {
   return (
-    <div className="my-8 flex items-center gap-3">
+    <div className="my-8 flex items-center gap-3 pdf-divider" data-pdf-keep="divider">
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #e0e7ff, #c7d2fe40)' }} />
       <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#0d1b3a30' }} />
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, #e0e7ff, #c7d2fe40)' }} />
@@ -366,13 +393,21 @@ export function SectionBlock({ title, content }: { title: string; content: strin
   const text = o != null && o !== '' ? o : content;
   const edit = useUncontrolledDocSection(text, isEditing);
   return (
-    <div className="mb-8 pdf-section" data-pdf-section={sectionKey}>
-      <div className="flex items-center gap-3 mb-4">
+    <div
+      className="mb-8 pdf-section"
+      data-pdf-section={sectionKey}
+    >
+      <div
+        className="flex items-center gap-3 mb-4 pdf-section-heading"
+        data-pdf-keep="section-heading"
+      >
         <div
           className="w-1 rounded-full flex-shrink-0"
           style={{ background: meta.accent, height: '28px' }}
         />
-        <span className="text-lg leading-none">{meta.icon}</span>
+        <span className="text-lg leading-none" aria-hidden>
+          {meta.icon}
+        </span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: meta.accent }}>
           {title}
         </h2>
@@ -387,6 +422,128 @@ export function SectionBlock({ title, content }: { title: string; content: strin
         style={isEditing ? { outline: 'none', cursor: 'text' } : undefined}
       >
         {edit.children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Letter-style Closing Note for preview / PDF / share.
+ * Structured paragraphs + contact row with links; Edit mode keeps a single
+ * contentEditable seeded from closingText() so Save still captures overrides.
+ */
+export function ClosingNoteBlock({ proposal }: { proposal: ProposalData }) {
+  const accent = '#7c3aed';
+  const sectionKey = 'section-closing-note';
+  const map = React.useContext(ProposalTextOverridesContext);
+  const isEditing = React.useContext(ProposalEditingContext);
+  const stock = closingText(proposal);
+  const o = map[sectionKey];
+  const raw = o != null && o !== '' ? o : stock;
+  // Seed Edit with letter-spaced stock when a prior save flattened newlines.
+  const text = isCollapsedClosingNote(raw) ? stock : raw;
+  const edit = useUncontrolledDocSection(text, isEditing);
+  const m = closingNoteModel(proposal);
+  const useStructured =
+    !isEditing && (o == null || o === '' || o === stock || isCollapsedClosingNote(raw));
+
+  const closingImage = (
+    <figure className="closing-note-hero m-0 w-full max-w-[200px] sm:max-w-[220px] lg:max-w-[240px] flex-shrink-0 mx-auto lg:mx-0 lg:ml-auto bg-transparent">
+      <img
+        data-docx-image="closing-solar"
+        src="/closing_note_solar.jpg"
+        alt="Growing clean energy — hands holding a living plant and light"
+        className="block w-full h-auto rounded-lg bg-transparent"
+        style={{
+          aspectRatio: '1 / 1',
+          objectFit: 'cover',
+          // No box-shadow — Chromium print/PDF turns shadows into a solid grey slab.
+        }}
+      />
+    </figure>
+  );
+
+  const letterBody = useStructured ? (
+    <div
+      data-docx-section={sectionKey}
+      className="min-w-0 flex-1 text-secondary-700 text-sm leading-7"
+    >
+      <p className="mb-3.5">{m.para1}</p>
+      <p className="mb-3.5">{m.para2}</p>
+      <p className="mb-2.5">{m.contactIntro}</p>
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-secondary-800">
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span aria-hidden>📞</span>
+          <a href={`tel:${m.phone.replace(/\s+/g, '')}`} className="hover:underline">
+            {m.phone}
+          </a>
+        </span>
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span aria-hidden>📧</span>
+          <a
+            href={`mailto:${m.email}`}
+            className="text-sky-700 underline underline-offset-2 hover:text-sky-900"
+          >
+            {m.email}
+          </a>
+        </span>
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span aria-hidden>🌐</span>
+          <a
+            href={m.websiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sky-700 underline underline-offset-2 hover:text-sky-900"
+          >
+            {m.website}
+          </a>
+        </span>
+      </div>
+      <p className="mb-4">{m.thankYou}</p>
+      <p className="mb-1">{m.regards}</p>
+      <div className="h-8 sm:h-10" aria-hidden />
+      <p className="mb-0.5 font-medium text-secondary-800">{m.team}</p>
+      <p className="mb-0 text-secondary-800">{m.company}</p>
+    </div>
+  ) : (
+    <div
+      ref={edit.ref as React.RefObject<HTMLDivElement>}
+      data-docx-section={sectionKey}
+      className="min-w-0 flex-1 text-secondary-700 text-sm leading-7 whitespace-pre-line"
+      contentEditable={edit.contentEditable}
+      suppressContentEditableWarning
+      spellCheck={isEditing}
+      style={isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+    >
+      {edit.children}
+    </div>
+  );
+
+  return (
+    <div
+      className="mb-8 pdf-section"
+      data-pdf-section={sectionKey}
+    >
+      <div
+        className="flex items-center gap-3 mb-5 pdf-section-heading"
+        data-pdf-keep="section-heading"
+      >
+        <div
+          className="w-1 rounded-full flex-shrink-0"
+          style={{ background: accent, height: '28px' }}
+        />
+        <span className="text-lg leading-none" aria-hidden>
+          🤝
+        </span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
+          Closing Note
+        </h2>
+      </div>
+
+      {/* Letter left, image right — stacks on small screens */}
+      <div className="closing-note-layout pl-0 sm:pl-7 flex flex-col-reverse lg:flex-row lg:items-start gap-6 lg:gap-10">
+        {letterBody}
+        {closingImage}
       </div>
     </div>
   );
@@ -622,8 +779,13 @@ export function AboutRayennaBlock() {
   );
 }
 
-export function WhatWeOfferBlock() {
+export function WhatWeOfferBlock({
+  systemType,
+}: {
+  systemType?: string | null;
+}) {
   const accent = '#0891b2';
+  const diagramSrc = systemTypeDiagramSrc(systemType);
   return (
     <div className="mb-8">
       {/* Section heading */}
@@ -635,24 +797,26 @@ export function WhatWeOfferBlock() {
         </h2>
       </div>
 
-      {/* Two-column: text + image */}
+      {/* Two-column: common intro (same for On/Hybrid/Off-Grid) + system-type diagram only */}
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
-        {/* Left: intro text */}
+        {/* Left: shared description — never varies by CRM System Type */}
         <div className="flex-1 min-w-0">
-          <OverriddenDiv sectionKey="what-we-offer-intro" className="text-sm text-secondary-700 leading-relaxed mb-4">
-            {WHAT_WE_OFFER_INTRO.split('\n\n').map((para, i) => (
-              <span key={i}>{i > 0 && <><br /><br /></>}{para}</span>
-            ))}
+          <OverriddenDiv
+            sectionKey="what-we-offer-intro"
+            className="text-sm text-secondary-700 leading-relaxed mb-4 whitespace-pre-line"
+          >
+            {WHAT_WE_OFFER_INTRO}
           </OverriddenDiv>
         </div>
-        {/* Right: diagram image */}
+        {/* Right: only this image swaps by CRM System Type */}
         <div className="lg:w-[42%] flex-shrink-0 flex items-center justify-center">
           <img
             data-docx-image="diagram"
-            src="/rayenna_proposal.jpg"
-            alt="Solar System Diagram"
-            className="w-full h-auto"
-            style={{ maxHeight: '220px', objectFit: 'contain' }}
+            data-system-type-diagram={systemTypeHeadingTerm(systemType)}
+            src={diagramSrc}
+            alt={systemTypeDiagramAlt(systemType)}
+            className="max-w-full h-auto rounded-lg bg-transparent"
+            style={{ maxHeight: '240px', width: 'auto', objectFit: 'contain', display: 'block' }}
           />
         </div>
       </div>

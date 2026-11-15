@@ -6,6 +6,7 @@ import {
   rewriteSystemTypeMentions,
   systemTypeArticle,
   systemTypeCapacityChip,
+  systemTypeDiagramSrc,
   systemTypeHeadingTerm,
   systemTypeInverterSupplyLabel,
 } from './systemTypeLabel';
@@ -29,6 +30,15 @@ describe('systemTypeHeadingTerm', () => {
     expect(systemTypeHeadingTerm(null)).toBe('On-Grid');
     expect(systemTypeHeadingTerm('')).toBe('On-Grid');
     expect(systemTypeHeadingTerm('UNKNOWN')).toBe('On-Grid');
+  });
+});
+
+describe('systemTypeDiagramSrc', () => {
+  it('maps CRM System Type to the matching What We Offer diagram', () => {
+    expect(systemTypeDiagramSrc('ON_GRID')).toBe('/on_grid_solar_setup_colorful.jpg');
+    expect(systemTypeDiagramSrc('HYBRID')).toBe('/hybrid_solar_setup_colorful.jpg');
+    expect(systemTypeDiagramSrc('OFF_GRID')).toBe('/off_grid_solar_setup_colorful.jpg');
+    expect(systemTypeDiagramSrc(null)).toBe('/on_grid_solar_setup_colorful.jpg');
   });
 });
 

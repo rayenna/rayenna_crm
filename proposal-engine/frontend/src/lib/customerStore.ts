@@ -254,6 +254,12 @@ export interface ProposalArtifact {
   includedOptionalSections?: Partial<Record<string, boolean>>;
 
   /**
+   * Order of reorderable body sections (after Cover + Executive Summary).
+   * Unknown/missing ids are normalized to the default catalog order on load.
+   */
+  sectionOrder?: string[];
+
+  /**
    * Full in-memory proposal view model (JSON snapshot) so the Proposal page can reopen
    * without clicking Generate again. Not synced to CRM in the current API payload.
    */

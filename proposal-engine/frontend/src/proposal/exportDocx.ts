@@ -14,7 +14,9 @@ import {
   SUBSIDY_DISCLAIMER_TEXT,
   TERMS_AND_CONDITIONS,
   WHAT_WE_OFFER_INTRO,
+  closingNoteModel,
   closingText,
+  isCollapsedClosingNote,
   savingsText,
   scopeText,
 } from './proposalCopy';
@@ -40,8 +42,137 @@ import {
   systemTypeHeadingTerm,
 } from './systemTypeLabel';
 import { isOptionalSectionIncluded, type IncludedOptionalSections } from './optionalSections';
+import { normalizeSectionOrder, type SectionOrder } from './sectionOrder';
 import { ov, resolveScopeSectionsForExport } from './textOverridesApply';
 import type { DocxModule, DocxTableRow, ProposalData, TextOverrides } from './types';
+
+/** Private tag on Heading-2 paragraphs so reorder can find section starts. */
+export const PE_DOCX_SECTION_HEADING = '__peSectionHeading';
+
+const DOCX_SECTION_LABEL_TO_ID: Record<string, string> = {
+  'About Rayenna Energy': 'about-rayenna',
+  'What We Offer': 'what-we-offer',
+  'Financial Benefits & Savings': 'financial-benefits',
+  'Financial Highlights': 'financial-benefits',
+  'Environmental Impact': 'environmental-impact',
+  'Proposed Rooftop Solar Layout': 'roof-layout',
+  'Our Process for Seamless Solar Integration': 'our-process',
+  'Our Process': 'our-process',
+  'Scope of Work': 'scope-of-work',
+  'Responsibility Matrix': 'responsibility-matrix',
+  'Custom Sections': 'custom-sections',
+  'Technical Details': 'technical-details',
+  'Bill of Quantities': 'bom',
+  'Commercials': 'commercials',
+  'Payment Terms': 'payment-milestones',
+  'Account Details': 'account-details',
+  'Warranty': 'warranty',
+  'Material Delivery Period': 'delivery-terms',
+  'Offer Validity': 'offer-validity',
+  'Terms & Conditions': 'terms-and-conditions',
+  'Service Details': 'service-details',
+  'Key Points': 'key-points',
+  'Exclusions': 'exclusions',
+  'Closing Note': 'closing-note',
+  'Subsidy Disclaimer and Payment Terms': 'subsidy-disclaimer',
+};
+
+/**
+ * Read section title from a tagged heading paragraph, with XML-tree fallback
+ * (docx does not keep options.text after Paragraph construction).
+ */
+export function readDocxSectionHeading(node: unknown): string | null {
+  if (!node || typeof node !== 'object') return null;
+  const tagged = (node as Record<string, unknown>)[PE_DOCX_SECTION_HEADING];
+  if (typeof tagged === 'string' && tagged.trim()) return tagged.trim();
+
+  // Fallback: walk w:t text only when this paragraph is Heading2.
+  let isHeading2 = false;
+  const texts: string[] = [];
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== 'object') {
+      if (typeof n === 'string') texts.push(n);
+      return;
+    }
+    if (Array.isArray(n)) {
+      n.forEach(walk);
+      return;
+    }
+    const obj = n as { rootKey?: string; root?: unknown };
+    if (obj.rootKey === 'w:pStyle') {
+      const attr = (obj.root as { root?: { val?: { value?: string } } }[] | undefined)?.[0]?.root;
+      if (attr?.val?.value === 'Heading2') isHeading2 = true;
+    }
+    if (obj.rootKey === 'w:t' && Array.isArray(obj.root)) {
+      obj.root.forEach((x) => {
+        if (typeof x === 'string') texts.push(x);
+      });
+      return;
+    }
+    if (obj.root != null) walk(obj.root);
+  };
+  walk(node);
+  if (!isHeading2) return null;
+  const t = texts.join('').trim();
+  return t || null;
+}
+
+/**
+ * Reorder flat DOCX body nodes so catalog sections follow `order`.
+ * Prefix (cover + executive summary) and Generated footer stay fixed.
+ */
+export function reorderDocxBodyBySectionOrder(
+  all: unknown[],
+  order: string[],
+): unknown[] {
+  type Chunk = { id: string; nodes: unknown[] };
+  const chunks: Chunk[] = [];
+  let current: Chunk = { id: 'prefix', nodes: [] };
+
+  for (const node of all) {
+    const t = readDocxSectionHeading(node);
+    const id = t ? DOCX_SECTION_LABEL_TO_ID[t] ?? null : null;
+    if (id) {
+      if (current.nodes.length) chunks.push(current);
+      // Merge Financial Highlights into financial-benefits if that chunk already exists
+      const existing = chunks.find((c) => c.id === id);
+      if (existing && id === 'financial-benefits') {
+        current = existing;
+        const ix = chunks.indexOf(existing);
+        chunks.splice(ix, 1);
+        current.nodes.push(node);
+        continue;
+      }
+      current = { id, nodes: [node] };
+      continue;
+    }
+    current.nodes.push(node);
+  }
+  if (current.nodes.length) chunks.push(current);
+
+  const prefix = chunks.filter((c) => c.id === 'prefix').flatMap((c) => c.nodes);
+  const byId = new Map<string, unknown[]>();
+  let suffix: unknown[] = [];
+  for (const c of chunks) {
+    if (c.id === 'prefix') continue;
+    const prev = byId.get(c.id) ?? [];
+    byId.set(c.id, [...prev, ...c.nodes]);
+  }
+
+  for (const [id, nodes] of [...byId.entries()]) {
+    const last = nodes[nodes.length - 1];
+    if (last && JSON.stringify(last).includes('Generated:')) {
+      suffix = [nodes.pop(), ...suffix];
+      byId.set(id, nodes);
+    }
+  }
+
+  const body = order.flatMap((id) => byId.get(id) ?? []);
+  for (const [id, nodes] of byId) {
+    if (!order.includes(id) && nodes.length) body.push(...nodes);
+  }
+  return [...prefix, ...body, ...suffix];
+}
 
 export function buildDocx(
   p: ProposalData,
@@ -57,6 +188,9 @@ export function buildDocx(
   includedOptionalSections?: IncludedOptionalSections | null,
   /** Composited cover hero (navy wash) for the DOCX title banner. */
   coverHeroImageData?: ArrayBuffer,
+  sectionOrder?: SectionOrder | string[] | null,
+  /** Centered solar image on the Closing Note page. */
+  closingSolarImageData?: ArrayBuffer,
 ): import('docx').Document {
   if (!docx) {
     throw new Error('DOCX export module not loaded.');
@@ -82,26 +216,171 @@ export function buildDocx(
     ImageRun,
     Header,
     Footer,
+    ExternalHyperlink,
   } = docx;
 
   const navy  = '0d1b3a';
   const white = 'FFFFFF';
 
-  const heading = (text: string) =>
-    new Paragraph({
+  const heading = (text: string) => {
+    const para = new Paragraph({
       text,
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 320, after: 120 },
       border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'C7D2FE', space: 4 } },
     });
+    // Tag for reorderDocxBodyBySectionOrder — docx Paragraphs do not expose
+    // options.text after construction (text lives only in the XML tree).
+    Object.defineProperty(para, PE_DOCX_SECTION_HEADING, {
+      value: text,
+      enumerable: false,
+      configurable: true,
+    });
+    return para;
+  };
 
+  /** Letter-style lines: blank lines get extra space so notes do not look like a log dump. */
   const multilineParagraphs = (text: string) =>
     text.split('\n').map((line) =>
       new Paragraph({
-        children: [new TextRun({ text: line, size: 22, color: '374151' })],
-        spacing: { after: 80 },
+        children: line
+          ? [new TextRun({ text: line, size: 22, color: '374151' })]
+          : [],
+        spacing: { after: line.trim() ? 140 : 200 },
       }),
     );
+
+  const closingNoteParagraphs = () => {
+    const override = textOverrides?.['section-closing-note'];
+    const stock = closingText(p);
+    const useOverride =
+      !!override &&
+      override.trim().length > 0 &&
+      override.trim() !== stock.trim() &&
+      !isCollapsedClosingNote(override);
+
+    const m = closingNoteModel(p);
+    const letterParas = useOverride
+      ? multilineParagraphs(override!)
+      : [
+          new Paragraph({
+            children: [new TextRun({ text: m.para1, size: 22, color: '374151' })],
+            spacing: { after: 160 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: m.para2, size: 22, color: '374151' })],
+            spacing: { after: 160 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: m.contactIntro, size: 22, color: '374151' })],
+            spacing: { after: 100 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: '📞 ', size: 22, color: '374151' }),
+              new TextRun({ text: m.phone, size: 22, color: '374151' }),
+              new TextRun({ text: '    📧 ', size: 22, color: '374151' }),
+              new ExternalHyperlink({
+                children: [
+                  new TextRun({
+                    text: m.email,
+                    style: 'Hyperlink',
+                    color: '0369A1',
+                    underline: {},
+                    size: 22,
+                  }),
+                ],
+                link: `mailto:${m.email}`,
+              }),
+              new TextRun({ text: '    🌐 ', size: 22, color: '374151' }),
+              new ExternalHyperlink({
+                children: [
+                  new TextRun({
+                    text: m.website,
+                    style: 'Hyperlink',
+                    color: '0369A1',
+                    underline: {},
+                    size: 22,
+                  }),
+                ],
+                link: m.websiteUrl,
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+        ];
+
+    const signOff = useOverride
+      ? []
+      : [
+          new Paragraph({
+            children: [new TextRun({ text: m.thankYou, size: 22, color: '374151' })],
+            spacing: { before: 80, after: 160 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: m.regards, size: 22, color: '374151' })],
+            spacing: { after: 320 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: m.team, size: 22, color: '374151', bold: true })],
+            spacing: { after: 40 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: m.company, size: 22, color: '374151' })],
+            spacing: { after: 120 },
+          }),
+        ];
+
+    // Two-column row: letter (left) | image (right), then sign-off full width.
+    if (closingSolarImageData) {
+      const noBorder = {
+        top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      };
+      return [
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          columnWidths: [4200, 2200],
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 4200, type: WidthType.DXA },
+                  borders: noBorder,
+                  shading: { type: ShadingType.CLEAR, fill: 'FFFFFF' },
+                  children: letterParas as any[],
+                }),
+                new TableCell({
+                  width: { size: 2200, type: WidthType.DXA },
+                  borders: noBorder,
+                  shading: { type: ShadingType.CLEAR, fill: 'FFFFFF' },
+                  verticalAlign: 'top' as any,
+                  children: [
+                    new Paragraph({
+                      alignment: AlignmentType.RIGHT,
+                      spacing: { before: 40, after: 0 },
+                      children: [
+                        new ImageRun({
+                          data: closingSolarImageData,
+                          transformation: { width: 168, height: 168 },
+                          type: 'jpg',
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+        ...signOff,
+      ];
+    }
+
+    return [...letterParas, ...signOff];
+  };
 
   const listItem = (text: string, num?: number) =>
     new Paragraph({
@@ -1183,14 +1462,18 @@ export function buildDocx(
                 left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
                 right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
               },
-              children: (textOverrides?.['what-we-offer-intro'] ?? WHAT_WE_OFFER_INTRO).split('\n\n').map((para: string) =>
+              // Shared intro for all system types — only the diagram cell changes.
+              shading: { type: ShadingType.CLEAR, fill: 'FFFFFF' },
+              children: ov(textOverrides, 'what-we-offer-intro', WHAT_WE_OFFER_INTRO)
+                .split('\n\n')
+                .map((para: string) =>
                 new Paragraph({
                   children: [new TextRun({ text: para, size: 22, color: '374151' })],
                   spacing: { after: 120 },
                 })
               ),
             }),
-            // Right: diagram image (if available)
+            // Right: diagram image (On-Grid / Hybrid / Off-Grid)
             new TableCell({
               width: { size: 42, type: WidthType.PERCENTAGE },
               borders: {
@@ -1199,13 +1482,15 @@ export function buildDocx(
                 left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
                 right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
               },
+              shading: { type: ShadingType.CLEAR, fill: 'FFFFFF' },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
                   children: diagramImageData ? [
                     new ImageRun({
                       data: diagramImageData,
-                      transformation: { width: 240, height: 160 },
+                      // ~2720×1920 source aspect for On/Hybrid/Off-Grid diagrams
+                      transformation: { width: 260, height: 184 },
                       type: 'jpg',
                     }),
                   ] : [new TextRun({ text: '[Solar System Diagram]', size: 20, color: '9CA3AF', italics: true })],
@@ -1570,7 +1855,9 @@ export function buildDocx(
     new Paragraph({ text: '', spacing: { after: 200 } }),
     ...(opt('responsibility-matrix') ? raciSection : []),
     ...roiSection,
-    ...customBeforeBoqDocx,
+    ...(customBeforeBoqDocx.length
+      ? [heading('Custom Sections'), ...customBeforeBoqDocx]
+      : []),
     ...(opt('technical-details') ? techDetailsSection : []),
     ...bomSection,
     ...commercialsSection,
@@ -1639,11 +1926,7 @@ export function buildDocx(
         ]
       : []),
     heading('Closing Note'),
-    ...(() => {
-      const override = textOverrides?.['section-closing-note'];
-      const body = override && override.trim().length > 0 ? override : closingText(p);
-      return multilineParagraphs(body);
-    })(),
+    ...closingNoteParagraphs(),
     ...(opt('subsidy-disclaimer')
       ? [
           heading('Subsidy Disclaimer and Payment Terms'),
@@ -1656,6 +1939,12 @@ export function buildDocx(
       spacing: { before: 480 },
     }),
   ];
+
+
+  const orderedBodyChildren = reorderDocxBodyBySectionOrder(
+    sections,
+    normalizeSectionOrder(sectionOrder),
+  ) as typeof sections;
 
   return new Document({
     sections: [
@@ -1693,7 +1982,7 @@ export function buildDocx(
             ],
           }),
         },
-        children: sections,
+        children: orderedBodyChildren,
       },
     ],
     styles: {

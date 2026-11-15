@@ -1,0 +1,56 @@
+---
+description: Proposal Engine export visual QA — every PE proposal UI/layout change must be verified across preview, PDF, DOCX, PPT, share, and device formats
+alwaysApply: true
+---
+
+# Proposal Engine — export & format visual QA (mandatory)
+
+Whenever you change **Proposal Engine** proposal presentation (sections, images, spacing, page breaks, headings, Closing Note, What We Offer, etc.), you MUST verify neat / tidy / elegant output across **all** delivery surfaces before finishing. Do not ship preview-only fixes.
+
+## Surfaces to check (every change)
+
+| Surface | How it renders | What to verify |
+|---|---|---|
+| Preview (web) | React DOM in `ProposalPreview` | Layout, spacing, no grey slabs / letterboxing |
+| PDF | `exportPdf.ts` print CSS + DOM clone | Same layout; **no `box-shadow`** (Chromium prints shadows as solid grey boxes); page breaks intentional |
+| Share link | Cloned proposal HTML (strips `.print-hide`) | Matches preview; images present; no edit chrome |
+| DOCX | `exportDocx.ts` / `buildDocx` | Side layouts via tables if needed; white cell shading; images embedded |
+| PPTX | `exportPpt.ts` | Side-aligned images; text not overlapping; correct system-type / closing art |
+
+## Device / viewing formats
+
+Confirm the layout still works on:
+
+- Laptop (Mac + Intel browsers)
+- Mobile (Android Chrome, iOS Safari)
+- iPad
+
+Use existing PE touch / responsive patterns (`min-h-[44px]`, flex wrap, no sticky inside `overflow-hidden`).
+
+## Hard rules for proposal images
+
+1. **Never rely on `box-shadow` / drop-shadow for print or PDF** — they become grey rectangles. Prefer no shadow, or kill shadow in `PROPOSAL_PRINT_CSS` + export clone cleanup.
+2. **No letterbox bars** — do not put dark/grey backgrounds behind `object-fit: contain` images in a wider box.
+3. **Side layouts** (e.g. Closing Note): letter left, image right; stack on small screens; print CSS must force the same row layout.
+4. **System-type diagrams** and **closing solar** must resolve from CRM / public assets in preview **and** DOCX/PPT fetch fallbacks.
+5. After layout CSS changes, update `exportPdf.test.ts` (or related) when page-break or shadow rules change.
+
+## Hard rules for PDF page breaks (no blank pages — ever)
+
+Blank sheets with only a divider/rule are a **P0 client-facing defect**.
+
+1. **Forced new pages** (BOM, Closing Note) must use `data-pdf-break-before="page"` on the **`.pdf-section-unit` wrapper** (`pdfPageBreaks.ts` + `wrapSectionChrome`). Never put `break-before: page` on an inner `[data-pdf-section]` that has a sibling leading `Divider`.
+2. **Never pair** `break-before:page` on section N with `break-after:page` on section N−1 (Chromium inserts a blank sheet).
+3. Keep leading `.pdf-divider` glued with `break-after: avoid` on the unit’s divider child.
+4. After any page-break change, re-export PDF and confirm **no empty pages** (especially before BOQ and Closing Note). Update `exportPdf.test.ts` / `pdfPageBreaks.test.ts`.
+
+## Finish checklist (copy into the work summary)
+
+- [ ] Preview looks neat on desktop + narrow width
+- [ ] PDF: no grey shadow slabs, correct page breaks, side image alignment
+- [ ] DOCX: image + letter alignment, no grey cell fill
+- [ ] PPTX: image + letter alignment, no overlap
+- [ ] Share path still strips edit-only chrome and keeps images
+- [ ] PE frontend tests for touched export CSS / helpers pass
+
+Proposal Engine commits stay under `proposal-engine/` only (git isolation).

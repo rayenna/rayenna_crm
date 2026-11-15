@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { pageBanner, pageShell } from '../components/ui/chrome';
@@ -54,16 +54,24 @@ import {
   withProposalSystemSizeKw,
   rewriteCapacityInOverrides,
 } from '../proposal/proposalAssembly';
-import { execSummary, closingText, SUBSIDY_DISCLAIMER_TEXT, TERMS_AND_CONDITIONS, SERVICE_DETAILS, KEY_POINTS, PROPOSAL_EXCLUSIONS } from '../proposal/proposalCopy';
+import { execSummary, SUBSIDY_DISCLAIMER_TEXT, TERMS_AND_CONDITIONS, SERVICE_DETAILS, KEY_POINTS, PROPOSAL_EXCLUSIONS } from '../proposal/proposalCopy';
 import type { CustomerDetails, ProposalData, ROIResult } from '../proposal/types';
 import { rewriteSystemTypeInOverrides } from '../proposal/systemTypeLabel';
 import {
   defaultIncludedOptionalSections,
   isOptionalSectionIncluded,
   normalizeIncludedOptionalSections,
-  OPTIONAL_PROPOSAL_SECTIONS,
   type OptionalProposalSectionId,
 } from '../proposal/optionalSections';
+import {
+  defaultSectionOrder,
+  moveSection,
+  normalizeSectionOrder,
+  REORDERABLE_SECTIONS,
+  type ReorderableSectionId,
+  type SectionOrder,
+} from '../proposal/sectionOrder';
+import { sectionBreaksBeforePage } from '../proposal/pdfPageBreaks';
 import {
   ProposalTextOverridesContext,
   ProposalEditingContext,
@@ -88,6 +96,7 @@ import {
   ListBlock,
   AccountDetailsBlock,
   SectionBlock,
+  ClosingNoteBlock,
   CustomerForm,
   exportToDocx,
 } from '../proposal/ProposalDocumentBlocks';
@@ -154,6 +163,7 @@ type RegeneratePreserve = {
   editedHtml?: string;
   textOverrides?: Record<string, string | undefined>;
   includedOptionalSections?: Record<string, boolean>;
+  sectionOrder?: string[];
 };
 
 export default function ProposalPreview() {
@@ -174,6 +184,8 @@ export default function ProposalPreview() {
     bomComments: Record<string, string>;
     customSections: ProposalCustomSectionBeforeBoq[];
     textOverrides: Record<string, string | undefined>;
+    includedOptionalSections: Record<OptionalProposalSectionId, boolean>;
+    sectionOrder: SectionOrder;
   } | null>(null);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [syncError, setSyncError]             = useState<string | null>(null);
@@ -184,7 +196,7 @@ export default function ProposalPreview() {
   const [includedOptionalSections, setIncludedOptionalSections] = useState(
     () => defaultIncludedOptionalSections(),
   );
-  const [optionalSectionsOpen, setOptionalSectionsOpen] = useState(false);
+  const [sectionOrder, setSectionOrder] = useState<SectionOrder>(() => defaultSectionOrder());
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   /** Split so nested rich editors (custom sections) are not inside a parent contentEditable — paste/images break otherwise. */
@@ -267,6 +279,7 @@ export default function ProposalPreview() {
       setBomComments({});
       setCustomSectionsBeforeBoq([]);
       setIncludedOptionalSections(defaultIncludedOptionalSections());
+      setSectionOrder(defaultSectionOrder());
     };
 
     void (async () => {
@@ -337,6 +350,7 @@ export default function ProposalPreview() {
       setIncludedOptionalSections(
         normalizeIncludedOptionalSections(saved.includedOptionalSections),
       );
+      setSectionOrder(normalizeSectionOrder(saved.sectionOrder));
     })();
     return () => {
       cancelled = true;
@@ -581,6 +595,7 @@ export default function ProposalPreview() {
       textOverrides: textOverridesMaybeEmpty,
       customSectionsBeforeBoq: customSectionsSnapshot,
       includedOptionalSections: { ...includedOptionalSections },
+      sectionOrder: [...sectionOrder],
       proposalView: cloneProposalForStorage(proposal),
       includeRoofLayout: includeRoofSnap,
       roofLayout: includeRoofSnap ? (roofLayoutSnap ?? null) : null,
@@ -628,6 +643,8 @@ export default function ProposalPreview() {
         JSON.stringify(normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq)),
       ) as ProposalCustomSectionBeforeBoq[],
       textOverrides: { ...displayTextOverrides },
+      includedOptionalSections: { ...includedOptionalSections },
+      sectionOrder: [...sectionOrder],
     };
     liveOverridesRef.current = { ...displayTextOverrides };
     isEditingRef.current = true;
@@ -644,6 +661,8 @@ export default function ProposalPreview() {
       );
       setDisplayTextOverrides({ ...snap.textOverrides });
       liveOverridesRef.current = { ...snap.textOverrides };
+      setIncludedOptionalSections({ ...snap.includedOptionalSections });
+      setSectionOrder([...snap.sectionOrder]);
     } else {
       liveOverridesRef.current = {};
     }
@@ -651,6 +670,11 @@ export default function ProposalPreview() {
     isEditingRef.current = false;
     setDocRevision((n) => n + 1);
     setIsEditing(false);
+  };
+
+  const handleResetSections = () => {
+    setIncludedOptionalSections(defaultIncludedOptionalSections());
+    setSectionOrder(defaultSectionOrder());
   };
 
   const handleEditableInput = () => {
@@ -957,6 +981,12 @@ export default function ProposalPreview() {
         includedOptionalSections,
     );
     setIncludedOptionalSections(sectionsIncluded);
+    const orderNormalized = normalizeSectionOrder(
+      preserved?.sectionOrder ??
+        activeCustomer?.proposal?.sectionOrder ??
+        sectionOrder,
+    );
+    setSectionOrder(orderNormalized);
 
     // ── Persist all 4 artifacts to active customer, preserving custom sections / edits when regenerating ──
     if (activeCustomer) {
@@ -1000,6 +1030,7 @@ export default function ProposalPreview() {
               : activeCustomer.proposal?.customSectionsBeforeBoq ?? [],
         ),
         includedOptionalSections: sectionsIncluded,
+        sectionOrder: orderNormalized,
         proposalView: cloneProposalForStorage(p),
         includeRoofLayout: options.includeRoofLayout,
         roofLayout: null,
@@ -1076,6 +1107,9 @@ export default function ProposalPreview() {
             ac.proposal.includedOptionalSections ?? includedOptionalSections,
           ),
         },
+        sectionOrder: normalizeSectionOrder(
+          ac.proposal.sectionOrder ?? sectionOrder,
+        ),
       };
     }
 
@@ -1096,6 +1130,9 @@ export default function ProposalPreview() {
         regeneratePreserveRef.current?.includedOptionalSections,
       ),
     );
+    setSectionOrder(
+      normalizeSectionOrder(regeneratePreserveRef.current?.sectionOrder),
+    );
   };
 
   /** Live CRM Sales & Commercial system type on every document block (not only the heading). */
@@ -1106,6 +1143,324 @@ export default function ProposalPreview() {
       systemType: crmSystemType !== undefined ? crmSystemType : proposal.systemType,
     };
   }, [proposal, crmSystemType]);
+
+  const orderedSectionIds = useMemo(
+    () => normalizeSectionOrder(sectionOrder),
+    [sectionOrder],
+  );
+
+  const renderRoofLayoutSection = () => {
+    if (!includeRoofLayout) return null;
+    return (
+      <>
+        <Divider />
+        {roofLayout ? (
+          <RoofLayoutBlock
+            layout={roofLayout}
+            systemSizeKw={
+              proposal
+                ? ((proposal.roi?.inputs.systemSizeKw ?? 0) > 0
+                    ? proposal.roi!.inputs.systemSizeKw
+                    : proposal.systemSizeKw || proposal.roiAutofill?.systemSizeKw || 0)
+                : null
+            }
+          />
+        ) : roofLayoutLoading ? (
+          <div className="mb-8 pdf-section">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+              <span className="text-lg leading-none">🛰️</span>
+              <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                Proposed Rooftop Solar Layout
+              </h2>
+            </div>
+            <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
+              Loading roof layout…
+            </div>
+          </div>
+        ) : roofLayoutError ? (
+          <div className="mb-8 pdf-section">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+              <span className="text-lg leading-none">🛰️</span>
+              <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                Proposed Rooftop Solar Layout
+              </h2>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+              {roofLayoutError}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-8 pdf-section">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+              <span className="text-lg leading-none">🛰️</span>
+              <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                Proposed Rooftop Solar Layout
+              </h2>
+            </div>
+            <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
+              No roof layout found for this project yet.
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  /**
+   * Edit-mode chrome: optional Include checkbox + ↑/↓ next to each body section.
+   * Excluded optionals stay visible (greyed) while editing so they can be re-checked;
+   * after Save / outside Edit they are omitted. Toolbar is print-hide.
+   */
+  const wrapSectionChrome = (id: ReorderableSectionId, body: ReactNode) => {
+    const meta = REORDERABLE_SECTIONS.find((s) => s.id === id);
+    const optionalId = meta?.optionalId as OptionalProposalSectionId | undefined;
+    const included = optionalId
+      ? isOptionalSectionIncluded(optionalId, includedOptionalSections)
+      : true;
+
+    if (optionalId && !included && !isEditing) return null;
+
+    const idx = orderedSectionIds.indexOf(id);
+    const excludedVisual = Boolean(optionalId && !included && isEditing);
+    const breakBeforePage = sectionBreaksBeforePage(id);
+
+    return (
+      <div
+        className={`pdf-section-unit${excludedVisual ? ' section-edit-excluded' : ''}`}
+        data-pdf-keep="section-unit"
+        data-section-id={id}
+        {...(breakBeforePage ? { 'data-pdf-break-before': 'page' as const } : {})}
+      >
+        {isEditing && (
+          /*
+           * Static bar (not sticky): parent #proposal-print-root uses overflow-hidden,
+           * which breaks position:sticky on iOS Safari / Chrome Android.
+           * Touch targets ≥44px on phone/iPad; compact on sm+ laptops.
+           */
+          <div className="print-hide mb-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 sm:py-1 shadow-sm">
+            {optionalId ? (
+              <label className="mr-auto flex min-h-[44px] sm:min-h-0 cursor-pointer select-none items-center gap-2 px-1 text-xs sm:text-[10px] font-bold uppercase tracking-wide text-sky-900 touch-manipulation">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 sm:h-3.5 sm:w-3.5 flex-shrink-0 rounded border-sky-400 text-sky-700 accent-sky-700 focus:ring-sky-500"
+                  checked={included}
+                  onChange={() => {
+                    setIncludedOptionalSections((prev) => ({
+                      ...prev,
+                      [optionalId]: !isOptionalSectionIncluded(optionalId, prev),
+                    }));
+                  }}
+                />
+                Include
+              </label>
+            ) : (
+              <span className="mr-auto min-w-0 max-w-[55%] truncate px-1 text-xs sm:text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                {meta?.label ?? id}
+              </span>
+            )}
+            <div className="flex flex-shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center rounded-md px-3 sm:px-2 py-2 sm:py-0.5 text-sm sm:text-[11px] font-bold bg-white text-sky-800 ring-1 ring-sky-200 touch-manipulation active:bg-sky-100 disabled:opacity-30"
+                disabled={idx <= 0}
+                aria-label={`Move ${meta?.label ?? id} up`}
+                onClick={() => setSectionOrder((prev) => moveSection(prev, id, 'up'))}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center rounded-md px-3 sm:px-2 py-2 sm:py-0.5 text-sm sm:text-[11px] font-bold bg-white text-sky-800 ring-1 ring-sky-200 touch-manipulation active:bg-sky-100 disabled:opacity-30"
+                disabled={idx < 0 || idx >= orderedSectionIds.length - 1}
+                aria-label={`Move ${meta?.label ?? id} down`}
+                onClick={() => setSectionOrder((prev) => moveSection(prev, id, 'down'))}
+              >
+                ↓
+              </button>
+            </div>
+          </div>
+        )}
+        <div
+          className={
+            excludedVisual
+              ? 'opacity-40 pointer-events-none select-none [-webkit-user-select:none]'
+              : undefined
+          }
+        >
+          {body}
+        </div>
+      </div>
+    );
+  };
+
+  const renderOrderedSection = (id: ReorderableSectionId) => {
+    const doc = proposalForDoc ?? proposal;
+    if (!doc) return null;
+    /** Show optional section when included, or always while editing (greyed if excluded). */
+    const showOptional = (oid: OptionalProposalSectionId) =>
+      isOptionalSectionIncluded(oid, includedOptionalSections) || isEditing;
+
+    switch (id) {
+      case 'about-rayenna':
+        return wrapSectionChrome(id, <><Divider /><AboutRayennaBlock /></>);
+      case 'what-we-offer':
+        return wrapSectionChrome(
+          id,
+          <><Divider /><WhatWeOfferBlock systemType={doc.systemType} /></>,
+        );
+      case 'financial-benefits':
+        return wrapSectionChrome(id, <><Divider /><FinancialBenefitsBlock proposal={doc} /></>);
+      case 'environmental-impact':
+        return showOptional('environmental-impact')
+          ? wrapSectionChrome(id, <><Divider /><EnvironmentalImpactBlock proposal={doc} /></>)
+          : null;
+      case 'roof-layout': {
+        const roofBody = renderRoofLayoutSection();
+        return roofBody ? wrapSectionChrome(id, roofBody) : null;
+      }
+      case 'our-process':
+        return showOptional('our-process')
+          ? wrapSectionChrome(id, <><Divider /><OurProcessBlock /></>)
+          : null;
+      case 'scope-of-work':
+        return wrapSectionChrome(id, <><Divider /><ScopeOfWorkBlock proposal={doc} /></>);
+      case 'responsibility-matrix':
+        return showOptional('responsibility-matrix')
+          ? wrapSectionChrome(id, <><Divider /><ResponsibilityMatrixBlock /></>)
+          : null;
+      case 'custom-sections':
+        return wrapSectionChrome(
+          id,
+          <CustomSectionsBeforeBoq
+            ref={customSectionsRef}
+            sections={customSectionsBeforeBoq}
+            onChange={setCustomSectionsBeforeBoq}
+            readOnly={!canWrite || !isEditing}
+          />,
+        );
+      case 'technical-details':
+        return showOptional('technical-details')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <TechnicalDetailsBlock proposal={doc} bomComments={bomComments} />
+            </>,
+          )
+          : null;
+      case 'bom':
+        return doc.bom.length > 0
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <BOMGroupedTable
+                items={doc.bom}
+                comments={bomComments}
+                onCommentsChange={(c) => setBomComments(c)}
+                collapsed={bomCollapsed}
+                setCollapsed={setBomCollapsed}
+                allCollapsed={bomAllCollapsed}
+                setAllCollapsed={setBomAllCollapsed}
+                notesEditable={canWrite && isEditing}
+              />
+            </>,
+          )
+          : null;
+      case 'commercials':
+        return wrapSectionChrome(id, <><Divider /><CommercialsBlock proposal={doc} /></>);
+      case 'payment-milestones':
+        return wrapSectionChrome(
+          id,
+          <>
+            <div className="print-hide"><Divider /></div>
+            <PaymentMilestonesBlock />
+          </>,
+        );
+      case 'account-details':
+        return wrapSectionChrome(id, <><Divider /><AccountDetailsBlock /></>);
+      case 'warranty':
+        return showOptional('warranty')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <WarrantyTableBlock proposal={doc} bomComments={bomComments} />
+            </>,
+          )
+          : null;
+      case 'delivery-terms':
+        return wrapSectionChrome(id, <><Divider /><DeliveryTermsBlock /></>);
+      case 'offer-validity':
+        return showOptional('offer-validity')
+          ? wrapSectionChrome(id, <><Divider /><OfferValidityBlock /></>)
+          : null;
+      case 'terms-and-conditions':
+        return wrapSectionChrome(
+          id,
+          <>
+            <Divider />
+            <ListBlock title="Terms & Conditions" items={TERMS_AND_CONDITIONS} />
+          </>,
+        );
+      case 'service-details':
+        return showOptional('service-details')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <ListBlock title="Service Details" items={SERVICE_DETAILS} />
+            </>,
+          )
+          : null;
+      case 'key-points':
+        return showOptional('key-points')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <ListBlock title="Key Points" items={KEY_POINTS} />
+            </>,
+          )
+          : null;
+      case 'exclusions':
+        return showOptional('exclusions')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <ListBlock title="Exclusions" items={PROPOSAL_EXCLUSIONS} />
+            </>,
+          )
+          : null;
+      case 'closing-note':
+        return wrapSectionChrome(
+          id,
+          <>
+            <Divider />
+            <ClosingNoteBlock proposal={doc} />
+          </>,
+        );
+      case 'subsidy-disclaimer':
+        return showOptional('subsidy-disclaimer')
+          ? wrapSectionChrome(
+            id,
+            <>
+              <Divider />
+              <SectionBlock
+                title="Subsidy Disclaimer and Payment Terms"
+                content={SUBSIDY_DISCLAIMER_TEXT}
+              />
+            </>,
+          )
+          : null;
+      default:
+        return null;
+    }
+  };
 
   const proposalForExport = () => proposalForDoc;
 
@@ -1156,6 +1511,7 @@ export default function ProposalPreview() {
           includeRoofLayout ? roofLayout : null,
           sectionsForExport,
           includedOptionalSections,
+          sectionOrder,
         );
       } else {
         await exportToPpt(p, {
@@ -1165,6 +1521,7 @@ export default function ProposalPreview() {
           roofLayout: includeRoofLayout ? roofLayout : null,
           customSectionsBeforeBoq: sectionsForExport,
           includedOptionalSections,
+          sectionOrder,
         });
       }
     } finally {
@@ -1231,6 +1588,20 @@ export default function ProposalPreview() {
       const clone = printRef.current.cloneNode(true) as HTMLElement;
       // Remove elements marked for print/share hiding (buttons, edit-only controls)
       clone.querySelectorAll('.print-hide').forEach((n) => n.remove());
+      // Drop greyed optional sections still visible mid-Edit
+      clone.querySelectorAll('.section-edit-excluded').forEach((n) => n.remove());
+      // Closing Note image: no residual shadow/bg (same hygiene as PDF)
+      clone
+        .querySelectorAll<HTMLElement>(
+          '.closing-note-hero, img[data-docx-image="closing-solar"], img[data-docx-image="diagram"]',
+        )
+        .forEach((n) => {
+          n.style.setProperty('box-shadow', 'none', 'important');
+          n.style.setProperty('-webkit-box-shadow', 'none', 'important');
+          n.style.setProperty('background', 'transparent', 'important');
+          n.style.setProperty('background-color', 'transparent', 'important');
+          n.classList.remove('shadow-sm', 'shadow', 'shadow-md', 'shadow-lg', 'shadow-xl');
+        });
       // Ensure BOM notes are visible in the shared HTML (remove Tailwind's `hidden` utility on note paragraphs)
       clone.querySelectorAll<HTMLElement>('tr[data-bom-note] p').forEach((p) => {
         p.classList.remove('hidden');
@@ -1557,15 +1928,24 @@ export default function ProposalPreview() {
             >
               {/* Edit mode banner */}
               {isEditing && (
-                <div className="print-hide bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-amber-800 text-[11px] sm:text-xs font-medium">
-                  <div className="flex items-center gap-2">
-                    <span>✏️</span>
-                    <span>
-                      Edit mode — click any blue-outlined text to edit (About, Scope, Process, lists, account details, BOQ notes, custom sections, and more). Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
-                    </span>
+                <div className="print-hide bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex flex-col gap-2 text-amber-800 text-[11px] sm:text-xs font-medium">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="flex-shrink-0">✏️</span>
+                      <span>
+                        Edit mode — edit blue-outlined text, use <strong>Include</strong> checkboxes on optional sections (unchecked stay grey until Save), and <strong>↑ / ↓</strong> to reorder. Cover and Executive Summary stay first. Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex-shrink-0 self-stretch sm:self-center min-h-[44px] sm:min-h-0 rounded-lg border border-amber-300 bg-white px-3 py-2 sm:py-1.5 text-xs sm:text-[10px] font-bold uppercase tracking-wide text-amber-900 hover:bg-amber-100 active:bg-amber-200 touch-manipulation"
+                      onClick={handleResetSections}
+                    >
+                      Reset sections
+                    </button>
                   </div>
-                  <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
-                    Text changes are used in exports; layout, buttons, and collapse behaviour stay controlled by the app.
+                  <p className="text-[10px] sm:text-[11px] text-amber-700">
+                    Text, include, and order changes apply to exports after Save; AI Roof Layout include and custom-section editors keep their own controls.
                   </p>
                 </div>
               )}
@@ -1612,76 +1992,6 @@ export default function ProposalPreview() {
 
                 <Divider />
                 <ExecutiveSummaryBlock proposal={proposalForDoc ?? proposal} />
-                <Divider />
-                <AboutRayennaBlock />
-                <Divider />
-                <WhatWeOfferBlock />
-                <Divider />
-                <FinancialBenefitsBlock proposal={proposalForDoc ?? proposal} />
-                {canWrite && (
-                  <div className="print-hide mb-6 rounded-xl border-2 border-sky-400 bg-sky-50 shadow-sm px-4 py-3.5">
-                    <button
-                      type="button"
-                      className="w-full flex items-center justify-between gap-3 text-left"
-                      onClick={() => setOptionalSectionsOpen((o) => !o)}
-                    >
-                      <span className="min-w-0 flex items-start gap-2.5">
-                        <span
-                          className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-sky-700 text-white text-sm font-bold shadow-sm"
-                          aria-hidden
-                        >
-                          ≡
-                        </span>
-                        <span>
-                          <span className="text-sm font-bold text-sky-950">Optional sections</span>
-                          <span className="block text-[11px] text-sky-900/75 mt-0.5 font-normal leading-snug">
-                            Include or exclude narrative sections. Click Save to keep this on the server for every device.
-                            AI Roof Layout and custom sections keep their own controls.
-                          </span>
-                        </span>
-                      </span>
-                      <span
-                        className={`flex-shrink-0 rounded-lg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-sm ${
-                          optionalSectionsOpen
-                            ? 'bg-amber-500 text-white ring-1 ring-amber-600/40'
-                            : 'bg-emerald-600 text-white ring-1 ring-emerald-700/40'
-                        }`}
-                      >
-                        {optionalSectionsOpen ? 'Hide' : 'Show'}
-                      </span>
-                    </button>
-                    {optionalSectionsOpen && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-lg border border-sky-200 bg-white p-2 shadow-inner">
-                        {OPTIONAL_PROPOSAL_SECTIONS.map((sec) => (
-                          <label
-                            key={sec.id}
-                            className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-sky-50"
-                          >
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 h-3.5 w-3.5 rounded border-sky-400 text-sky-700 focus:ring-sky-500"
-                              checked={isOptionalSectionIncluded(sec.id, includedOptionalSections)}
-                              onChange={() => {
-                                const id = sec.id as OptionalProposalSectionId;
-                                setIncludedOptionalSections((prev) => ({
-                                  ...prev,
-                                  [id]: !isOptionalSectionIncluded(id, prev),
-                                }));
-                              }}
-                            />
-                            <span>{sec.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {isOptionalSectionIncluded('environmental-impact', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <EnvironmentalImpactBlock proposal={proposalForDoc ?? proposal} />
-                  </>
-                )}
                 {canWrite && (
                   <div
                     className={`print-hide mb-6 rounded-xl px-4 py-3 space-y-2 border ${
@@ -1760,166 +2070,16 @@ export default function ProposalPreview() {
                     </p>
                   </div>
                 )}
-                {includeRoofLayout && (
-                  <>
-                    <Divider />
-                    {roofLayout ? (
-                      <RoofLayoutBlock
-                        layout={roofLayout}
-                        systemSizeKw={
-                          proposal
-                            ? ((proposal.roi?.inputs.systemSizeKw ?? 0) > 0
-                                ? proposal.roi!.inputs.systemSizeKw
-                                : proposal.systemSizeKw || proposal.roiAutofill?.systemSizeKw || 0)
-                            : null
-                        }
-                      />
-                    ) : roofLayoutLoading ? (
-                      <div className="mb-8 pdf-section">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
-                          <span className="text-lg leading-none">🛰️</span>
-                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
-                            Proposed Rooftop Solar Layout
-                          </h2>
-                        </div>
-                        <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
-                          Loading roof layout…
-                        </div>
-                      </div>
-                    ) : roofLayoutError ? (
-                      <div className="mb-8 pdf-section">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
-                          <span className="text-lg leading-none">🛰️</span>
-                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
-                            Proposed Rooftop Solar Layout
-                          </h2>
-                        </div>
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                          {roofLayoutError}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mb-8 pdf-section">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
-                          <span className="text-lg leading-none">🛰️</span>
-                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
-                            Proposed Rooftop Solar Layout
-                          </h2>
-                        </div>
-                        <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
-                          No roof layout found for this project yet.
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-                {isOptionalSectionIncluded('our-process', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <OurProcessBlock />
-                  </>
-                )}
-                <Divider />
-                <ScopeOfWorkBlock proposal={proposalForDoc ?? proposal} />
-                {isOptionalSectionIncluded('responsibility-matrix', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <ResponsibilityMatrixBlock />
-                  </>
-                )}
                 </div>
-                <CustomSectionsBeforeBoq
-                  ref={customSectionsRef}
-                  sections={customSectionsBeforeBoq}
-                  onChange={setCustomSectionsBeforeBoq}
-                  readOnly={!canWrite || !isEditing}
-                />
                 <div
                   ref={docBodyBottomRef}
                   onInput={handleEditableInput}
                 >
-                {isOptionalSectionIncluded('technical-details', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <TechnicalDetailsBlock
-                      proposal={proposalForDoc ?? proposal}
-                      bomComments={bomComments}
-                    />
-                  </>
-                )}
-                {proposal.bom.length > 0 && (
-                  <>
-                    <Divider />
-                    <BOMGroupedTable
-                      items={proposal.bom}
-                      comments={bomComments}
-                      onCommentsChange={(c) => {
-                        setBomComments(c);
-                      }}
-                      collapsed={bomCollapsed}
-                      setCollapsed={setBomCollapsed}
-                      allCollapsed={bomAllCollapsed}
-                      setAllCollapsed={setBomAllCollapsed}
-                      notesEditable={canWrite && isEditing}
-                    />
-                  </>
-                )}
-                <Divider />
-                <CommercialsBlock proposal={proposalForDoc ?? proposal} />
-                <div className="print-hide">
-                  <Divider />
-                </div>
-                <PaymentMilestonesBlock />
-                <Divider />
-                <AccountDetailsBlock />
-                {isOptionalSectionIncluded('warranty', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <WarrantyTableBlock
-                      proposal={proposalForDoc ?? proposal}
-                      bomComments={bomComments}
-                    />
-                  </>
-                )}
-                <Divider />
-                <DeliveryTermsBlock />
-                {isOptionalSectionIncluded('offer-validity', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <OfferValidityBlock />
-                  </>
-                )}
-                <Divider />
-                <ListBlock title="Terms & Conditions" items={TERMS_AND_CONDITIONS} />
-                {isOptionalSectionIncluded('service-details', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <ListBlock title="Service Details" items={SERVICE_DETAILS} />
-                  </>
-                )}
-                {isOptionalSectionIncluded('key-points', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <ListBlock title="Key Points" items={KEY_POINTS} />
-                  </>
-                )}
-                {isOptionalSectionIncluded('exclusions', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <ListBlock title="Exclusions" items={PROPOSAL_EXCLUSIONS} />
-                  </>
-                )}
-                <Divider />
-                <SectionBlock title="Closing Note" content={closingText(proposal)} />
-                {isOptionalSectionIncluded('subsidy-disclaimer', includedOptionalSections) && (
-                  <>
-                    <Divider />
-                    <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
-                  </>
-                )}
+                  {orderedSectionIds.map((id) => (
+                    <div key={id}>
+                      {renderOrderedSection(id)}
+                    </div>
+                  ))}
                 </div>
                 </ProposalTextOverridesContext.Provider>
                 </ProposalEditingContext.Provider>

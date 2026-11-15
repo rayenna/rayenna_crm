@@ -259,20 +259,76 @@ export const KEY_POINTS = [
 
 export const SUBSIDY_DISCLAIMER_TEXT = `The subsidy, if applicable, is subject to approval and disbursement by the relevant DISCOM and/or government authority. Rayenna Energy's scope is limited to providing reasonable assistance with documentation and procedural requirements. We have no control over, and shall not be liable or responsible for, any delay, rejection, non-approval, or non-disbursement of the subsidy by the concerned authorities. The Customer expressly acknowledges and agrees that all payment obligations under this agreement are absolute and unconditional, and are not linked to, dependent upon, or contingent upon the approval or receipt of any subsidy amount.`;
 
+/** Structured closing-note copy — used by preview, PDF, share, DOCX, and PPT. */
+export interface ClosingNoteModel {
+  para1: string;
+  para2: string;
+  contactIntro: string;
+  phone: string;
+  email: string;
+  website: string;
+  websiteUrl: string;
+  thankYou: string;
+  regards: string;
+  team: string;
+  company: string;
+}
+
+export function closingNoteModel(p: ProposalData): ClosingNoteModel {
+  const name = p.customer.customerName?.trim() || 'you';
+  return {
+    para1:
+      'We at Rayenna Energy are committed to delivering a world-class solar installation that meets your energy needs and exceeds your expectations. Our team will be with you at every step — from design and installation to commissioning and beyond.',
+    para2: `We look forward to the opportunity to partner with ${name} on this journey towards clean, sustainable energy.`,
+    contactIntro: 'For any queries or clarifications, please feel free to contact us at:',
+    phone: '+91 7907 369 304',
+    email: 'sales@rayenna.energy',
+    website: 'www.rayennaenergy.com',
+    websiteUrl: 'https://www.rayennaenergy.com',
+    thankYou: 'Thank you for considering Rayenna Energy as your solar partner.',
+    regards: 'Warm regards,',
+    team: 'Sales Team',
+    company: 'Rayenna Energy Private Limited',
+  };
+}
+
+/**
+ * Plain-text closing note with letter-style blank lines (contact on one row).
+ * Used for Edit-mode seeding, textOverrides, and plain-text export fallbacks.
+ */
 export function closingText(p: ProposalData): string {
-  return `We at Rayenna Energy are committed to delivering a world-class solar installation that meets your energy needs and exceeds your expectations. Our team will be with you at every step — from design and installation to commissioning and beyond.
+  const m = closingNoteModel(p);
+  return [
+    m.para1,
+    '',
+    m.para2,
+    '',
+    m.contactIntro,
+    `📞 ${m.phone}   📧 ${m.email}   🌐 ${m.website}`,
+    '',
+    m.thankYou,
+    '',
+    m.regards,
+    '',
+    '',
+    m.team,
+    m.company,
+  ].join('\n');
+}
 
-We look forward to the opportunity to partner with ${p.customer.customerName || 'you'} on this journey towards clean, sustainable energy.
-
-For any queries or clarifications, please feel free to contact us:
-
-📞 +91 7907 369 304
-📧 sales@rayenna.energy
-🌐 www.rayennaenergy.com
-
-Thank you for considering Rayenna Energy as your solar partner.
-
-Warm regards,
-Sales Team
-Rayenna Energy Private Limited`;
+/**
+ * True when a saved override collapsed newlines into a single "log export" blob
+ * (Warm regards glued to Sales Team, etc.). Prefer structured layout instead.
+ */
+export function isCollapsedClosingNote(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const t = text.trim();
+  if (!t) return false;
+  const newlineCount = (t.match(/\n/g) ?? []).length;
+  if (newlineCount >= 4) return false;
+  return (
+    /Warm regards/i.test(t) &&
+    /Sales Team/i.test(t) &&
+    /Rayenna Energy Private Limited/i.test(t)
+  );
 }

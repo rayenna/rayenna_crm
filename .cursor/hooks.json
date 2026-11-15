@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "true"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/pe-export-visual-qa-stop.sh",
+        "loop_limit": 1
+      }
+    ]
+  }
+}
