@@ -1619,33 +1619,47 @@ export default function ProposalPreview() {
                 <Divider />
                 <FinancialBenefitsBlock proposal={proposalForDoc ?? proposal} />
                 {canWrite && (
-                  <div className="print-hide mb-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="print-hide mb-6 rounded-xl border-2 border-sky-400 bg-sky-50 shadow-sm px-4 py-3.5">
                     <button
                       type="button"
-                      className="w-full flex items-center justify-between gap-2 text-left"
+                      className="w-full flex items-center justify-between gap-3 text-left"
                       onClick={() => setOptionalSectionsOpen((o) => !o)}
                     >
-                      <span>
-                        <span className="text-xs font-semibold text-slate-800">Optional sections</span>
-                        <span className="block text-[10px] text-slate-500 mt-0.5 font-normal">
-                          Include or exclude narrative sections. Click Save to keep this on the server for every device.
-                          AI Roof Layout and custom sections keep their own controls.
+                      <span className="min-w-0 flex items-start gap-2.5">
+                        <span
+                          className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-sky-700 text-white text-sm font-bold shadow-sm"
+                          aria-hidden
+                        >
+                          ≡
+                        </span>
+                        <span>
+                          <span className="text-sm font-bold text-sky-950">Optional sections</span>
+                          <span className="block text-[11px] text-sky-900/75 mt-0.5 font-normal leading-snug">
+                            Include or exclude narrative sections. Click Save to keep this on the server for every device.
+                            AI Roof Layout and custom sections keep their own controls.
+                          </span>
                         </span>
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+                      <span
+                        className={`flex-shrink-0 rounded-lg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-sm ${
+                          optionalSectionsOpen
+                            ? 'bg-amber-500 text-white ring-1 ring-amber-600/40'
+                            : 'bg-emerald-600 text-white ring-1 ring-emerald-700/40'
+                        }`}
+                      >
                         {optionalSectionsOpen ? 'Hide' : 'Show'}
                       </span>
                     </button>
                     {optionalSectionsOpen && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 rounded-lg border border-sky-200 bg-white p-2 shadow-inner">
                         {OPTIONAL_PROPOSAL_SECTIONS.map((sec) => (
                           <label
                             key={sec.id}
-                            className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/80"
+                            className="flex items-start gap-2 text-xs text-slate-800 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-sky-50"
                           >
                             <input
                               type="checkbox"
-                              className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-sky-700 focus:ring-sky-500"
+                              className="mt-0.5 h-3.5 w-3.5 rounded border-sky-400 text-sky-700 focus:ring-sky-500"
                               checked={isOptionalSectionIncluded(sec.id, includedOptionalSections)}
                               onChange={() => {
                                 const id = sec.id as OptionalProposalSectionId;

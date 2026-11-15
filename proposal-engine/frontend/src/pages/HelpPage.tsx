@@ -816,6 +816,20 @@ export default function HelpPage() {
           </div>
 
           <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Optional sections (include / exclude)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              While you have write access on the Proposal page, a sky-blue <strong>Optional sections</strong> panel appears in the document (after Financial Benefits). Use it to include or exclude narrative sections such as Environmental Impact, Our Process, Responsibility Matrix, Technical Details, Warranty, Offer Validity, Service Details, Key Points, Exclusions, and the Subsidy Disclaimer.
+            </p>
+            <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
+              <li>Click the bright green <strong>SHOW</strong> button to expand the checklist; click the amber <strong>HIDE</strong> button to collapse it.</li>
+              <li>Tick or untick sections — excluded sections disappear from the live proposal and from PDF, DOCX, PPT, and Share exports.</li>
+              <li>Click <strong>💾 Save</strong> so the choices sync to the CRM server and reopen the same way on any device.</li>
+              <li><strong>AI Roof Layout</strong> and <strong>Custom sections</strong> keep their own include / add controls — they are not in this checklist.</li>
+            </ul>
+            <Tip>By default every optional section is included until you turn one off. Saving after a change is required for cross-device continuity.</Tip>
+          </div>
+
+          <div>
             <h3 className="font-semibold text-gray-800 mb-2">Adding BOM Comments</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. These are saved when you click <strong>💾 Save</strong> in the header and will be included in DOCX and PDF exports.
@@ -1364,6 +1378,10 @@ export default function HelpPage() {
 
           <FaqItem q="How do I edit the text in a generated proposal?">
             Click the <strong>✏️ Edit</strong> button in the proposal header. The document turns editable (amber border appears). Click on any text and type your changes. When done, click <strong>💾 Save</strong> in the header — this saves your edits, BOM comments, and all artifacts together. The PDF export will capture your inline edits automatically since it renders the live document.
+          </FaqItem>
+
+          <FaqItem q="How do I hide sections I do not want in this proposal?">
+            On the Proposal page, open the sky-blue <strong>Optional sections</strong> panel (green <strong>SHOW</strong> / amber <strong>HIDE</strong>). Untick sections you want to omit, then click <strong>💾 Save</strong>. The choice applies to preview and all exports, and reloads on other devices after Save. AI Roof Layout and custom sections use their own controls.
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
