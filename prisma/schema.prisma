@@ -757,6 +757,8 @@ model PEProposal {
   textOverrides Json?
   /// Rich custom sections (title + HTML body + optional media URLs) inserted before the Bill of Quantities
   customSectionsBeforeBoq Json?
+  /// Which optional narrative sections are included (JSON map of sectionId → boolean)
+  includedOptionalSections Json?
   /// Full Proposal Engine view snapshot (costing/BOM/ROI-backed) for reopening on any device
   proposalView  Json?
   summary       String?

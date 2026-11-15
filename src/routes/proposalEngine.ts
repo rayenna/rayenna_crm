@@ -105,8 +105,8 @@ async function ensureProjectAccess(project: any, req: Request, res: Response): P
 }
 
 /**
- * Latest saved PE proposal row. If the DB was not migrated with `proposalView` on `pe_proposals`,
- * a full-model read throws P2022; we retry without that column so list/detail APIs keep working.
+ * Latest saved PE proposal row. If the DB is missing newer columns (e.g. proposalView,
+ * includedOptionalSections), a full-model read throws P2022; retry without those columns.
  */
 async function findLatestPeProposal(projectId: string) {
   try {
@@ -116,7 +116,11 @@ async function findLatestPeProposal(projectId: string) {
     });
   } catch (e: unknown) {
     const err = e as { code?: string; meta?: { column?: string } };
-    if (err?.code === 'P2022' && String(err?.meta?.column ?? '').includes('proposalView')) {
+    const missingCol = String(err?.meta?.column ?? '');
+    if (
+      err?.code === 'P2022' &&
+      (missingCol.includes('proposalView') || missingCol.includes('includedOptionalSections'))
+    ) {
       return prisma.pEProposal.findFirst({
         where: { projectId },
         orderBy: { savedAt: 'desc' },
@@ -1196,19 +1200,35 @@ router.put(
         }
       }
 
+      const includedOptionalPatch: {
+        includedOptionalSections?: Prisma.InputJsonValue | typeof Prisma.DbNull;
+      } = {};
+      if (Object.prototype.hasOwnProperty.call(req.body, 'includedOptionalSections')) {
+        const raw = req.body.includedOptionalSections;
+        if (raw == null) {
+          includedOptionalPatch.includedOptionalSections = Prisma.DbNull;
+        } else if (typeof raw !== 'object' || Array.isArray(raw)) {
+          return res.status(400).json({ error: 'includedOptionalSections must be an object or null' });
+        } else {
+          includedOptionalPatch.includedOptionalSections = raw as Prisma.InputJsonValue;
+        }
+      }
+
       const includeRoofLayout: boolean =
         typeof req.body.includeRoofLayout === 'boolean'
           ? req.body.includeRoofLayout
           : existing?.includeRoofLayout ?? false;
 
-      const data = {
-        projectId: req.params.id,
+      // Shared scalar fields. Do NOT put projectId on update — Prisma rejects
+      // FK scalars here (Unknown argument `projectId`; use nested `project` only).
+      const artifactFields = {
         refNumber: req.body.refNumber,
         generatedAt: new Date(req.body.generatedAt),
         bomComments: req.body.bomComments ?? null,
         editedHtml,
         textOverrides: req.body.textOverrides ?? null,
         ...customSectionsPatch,
+        ...includedOptionalPatch,
         summary: req.body.summary ?? null,
         includeRoofLayout,
         ...(Object.prototype.hasOwnProperty.call(req.body, 'proposalView')
@@ -1220,12 +1240,13 @@ router.put(
       if (existing) {
         proposal = await prisma.pEProposal.update({
           where: { id: existing.id },
-          data,
+          data: artifactFields,
         });
       } else {
         proposal = await prisma.pEProposal.create({
           data: {
-            ...data,
+            ...artifactFields,
+            projectId: req.params.id,
             createdById: req.user!.id,
           },
         });
