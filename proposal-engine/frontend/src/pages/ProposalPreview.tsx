@@ -1166,8 +1166,8 @@ export default function ProposalPreview() {
             }
           />
         ) : roofLayoutLoading ? (
-          <div className="mb-8 pdf-section">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="mb-0 pdf-section">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
               <span className="text-lg leading-none">🛰️</span>
               <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
@@ -1179,8 +1179,8 @@ export default function ProposalPreview() {
             </div>
           </div>
         ) : roofLayoutError ? (
-          <div className="mb-8 pdf-section">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="mb-0 pdf-section">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
               <span className="text-lg leading-none">🛰️</span>
               <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
@@ -1192,8 +1192,8 @@ export default function ProposalPreview() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 pdf-section">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="mb-0 pdf-section">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
               <span className="text-lg leading-none">🛰️</span>
               <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
@@ -1373,13 +1373,8 @@ export default function ProposalPreview() {
       case 'commercials':
         return wrapSectionChrome(id, <><Divider /><CommercialsBlock proposal={doc} /></>);
       case 'payment-milestones':
-        return wrapSectionChrome(
-          id,
-          <>
-            <div className="print-hide"><Divider /></div>
-            <PaymentMilestonesBlock />
-          </>,
-        );
+        // Visible Divider in PDF/Share too — print-hide left Commercials jammed against Payment Terms.
+        return wrapSectionChrome(id, <><Divider /><PaymentMilestonesBlock /></>);
       case 'account-details':
         return wrapSectionChrome(id, <><Divider /><AccountDetailsBlock /></>);
       case 'warranty':
@@ -1492,7 +1487,7 @@ export default function ProposalPreview() {
     }
     if (kind === 'pdf') {
       if (!base) return;
-      exportToPdf('proposal-print-root');
+      void exportToPdf('proposal-print-root');
       return;
     }
     if (!base) return;
@@ -1602,6 +1597,13 @@ export default function ProposalPreview() {
           n.style.setProperty('background-color', 'transparent', 'important');
           n.classList.remove('shadow-sm', 'shadow', 'shadow-md', 'shadow-lg', 'shadow-xl');
         });
+      // Bake cover wash into pixels for WhatsApp/Android-safe share HTML
+      const { applyCompositedCoverToClone } = await import('../proposal/coverHero');
+      await applyCompositedCoverToClone(clone);
+      clone.querySelectorAll<HTMLElement>('[data-pdf-cover-client]').forEach((n) => {
+        n.style.setProperty('background', '#0d1b3a', 'important');
+        n.style.setProperty('background-color', '#0d1b3a', 'important');
+      });
       // Ensure BOM notes are visible in the shared HTML (remove Tailwind's `hidden` utility on note paragraphs)
       clone.querySelectorAll<HTMLElement>('tr[data-bom-note] p').forEach((p) => {
         p.classList.remove('hidden');

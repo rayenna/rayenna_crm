@@ -364,9 +364,14 @@ export async function exportToDocx(
 // Sub-components
 // ─────────────────────────────────────────────
 
+/**
+ * Standard gap after a section ends and before the next section heading:
+ * one full line above the hairline + one full line below (padding, not margin —
+ * margins collapse and looked like “no spacing”).
+ */
 export function Divider() {
   return (
-    <div className="my-8 flex items-center gap-3 pdf-divider" data-pdf-keep="divider">
+    <div className="my-0 py-[1em] flex items-center gap-3 pdf-divider" data-pdf-keep="divider">
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #e0e7ff, #c7d2fe40)' }} />
       <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#0d1b3a30' }} />
       <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, #e0e7ff, #c7d2fe40)' }} />
@@ -394,7 +399,7 @@ export function SectionBlock({ title, content }: { title: string; content: strin
   const edit = useUncontrolledDocSection(text, isEditing);
   return (
     <div
-      className="mb-8 pdf-section"
+      className="mb-0 pdf-section"
       data-pdf-section={sectionKey}
     >
       <div
@@ -501,7 +506,7 @@ export function ClosingNoteBlock({ proposal }: { proposal: ProposalData }) {
       </div>
       <p className="mb-4">{m.thankYou}</p>
       <p className="mb-1">{m.regards}</p>
-      <div className="h-8 sm:h-10" aria-hidden />
+      <div className="closing-note-sign-spacer h-8 sm:h-10" aria-hidden />
       <p className="mb-0.5 font-medium text-secondary-800">{m.team}</p>
       <p className="mb-0 text-secondary-800">{m.company}</p>
     </div>
@@ -521,11 +526,11 @@ export function ClosingNoteBlock({ proposal }: { proposal: ProposalData }) {
 
   return (
     <div
-      className="mb-8 pdf-section"
+      className="mb-0 pdf-section"
       data-pdf-section={sectionKey}
     >
       <div
-        className="flex items-center gap-3 mb-5 pdf-section-heading"
+        className="flex items-center gap-3 mb-4 pdf-section-heading"
         data-pdf-keep="section-heading"
       >
         <div
@@ -587,7 +592,7 @@ export function EnvironmentalImpactBlock({ proposal }: { proposal: ProposalData 
   ];
 
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       {/* Section heading */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
@@ -662,9 +667,9 @@ export function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) 
   ];
 
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       {/* Heading */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
         <span className="text-lg leading-none">📝</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
@@ -723,9 +728,9 @@ export function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) 
 export function AboutRayennaBlock() {
   const accent = '#0369a1';
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       {/* Heading */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
         <span className="text-lg leading-none">🏢</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
@@ -787,9 +792,9 @@ export function WhatWeOfferBlock({
   const accent = '#0891b2';
   const diagramSrc = systemTypeDiagramSrc(systemType);
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       {/* Section heading */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
         <span className="text-lg leading-none">✨</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
@@ -858,7 +863,7 @@ export function OurProcessBlock() {
   const accent = '#7c3aed';
   const stepColors = ['#0369a1', '#0891b2', '#059669', '#d97706', '#7c3aed'];
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       {/* Section heading */}
       <div className="flex items-start sm:items-center gap-3 mb-4 min-w-0">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
@@ -927,7 +932,7 @@ export function RoofLayoutBlock({ layout, systemSizeKw }: { layout: AiRoofLayout
   }
 
   return (
-    <div className="mb-8 pdf-section">
+    <div className="mb-0 pdf-section">
       {/* Section heading */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
@@ -1081,8 +1086,8 @@ export function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
   const sections = scopeSectionsFor(proposal.systemType);
 
   return (
-    <div className="mb-8">
-      <div className="flex items-center gap-3 mb-2">
+    <div className="mb-0 pdf-section">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0369a1', height: '28px' }} />
         <span className="text-lg leading-none">🔩</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Scope of Work</h2>
@@ -1140,7 +1145,7 @@ export function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData })
   }
 
   return (
-    <div className="mb-8">
+    <div className="mb-0 pdf-section">
       <div className="flex items-start sm:items-center gap-3 mb-4 min-w-0">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
         <span className="text-lg leading-none flex-shrink-0">📊</span>
@@ -1444,7 +1449,7 @@ export function BOMGroupedTable({
   let serial = 0;
 
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="bom">
+    <div className="mb-0 pdf-section" data-pdf-section="bom">
       {/* Collapse-all only (category summary lives in <caption> so PDF pagination keeps it with the BOQ title) */}
       <div className="flex items-center justify-end mb-3 px-1 print-hide">
         <button
@@ -1607,7 +1612,7 @@ export function CommercialsBlock({ proposal }: { proposal: ProposalData }) {
   const creditNote = subsidyCreditNote(map);
 
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="commercials">
+    <div className="mb-0 pdf-section" data-pdf-section="commercials">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
         <span className="text-lg leading-none">💰</span>
@@ -1681,9 +1686,11 @@ export function CommercialsBlock({ proposal }: { proposal: ProposalData }) {
         {creditNote}
       </EditableText>
 
-      <div className="mt-5">
+      {/* Keep fees table + footnote together in PDF (avoid orphan note above Payment Terms). */}
+      <div className="mt-4 mb-0 pdf-authority-fees" data-pdf-keep="authority-fees">
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-sky-800 mb-2">Authority / DISCOM fees</h3>
-        <div className="bg-sky-50/60 border border-sky-100 rounded-xl overflow-hidden">
+        {/* No overflow-hidden: Chromium stretches bordered shells into empty framed gaps on page splits. */}
+        <div className="bg-sky-50/60 border border-sky-100 rounded-xl">
           <table className="w-full text-sm">
             <tbody>
               {fees.map((fee) => (
@@ -1703,7 +1710,7 @@ export function CommercialsBlock({ proposal }: { proposal: ProposalData }) {
             </tbody>
           </table>
         </div>
-        <p className="mt-1.5 text-[10px] text-secondary-500">
+        <p className="mt-2 text-[10px] text-secondary-500 leading-snug">
           Authority fees are typically paid to the DISCOM / utility and are separate from the payable to Rayenna above.
         </p>
       </div>
@@ -1715,8 +1722,8 @@ export function PaymentMilestonesBlock() {
   const map = React.useContext(ProposalTextOverridesContext);
   const milestones = resolvePaymentMilestones(map);
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="payment-milestones">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="mb-0 pdf-section" data-pdf-section="payment-milestones">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#b45309', height: '28px' }} />
         <span className="text-lg leading-none">💳</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#b45309' }}>Payment Terms</h2>
@@ -1765,7 +1772,7 @@ export function TechnicalDetailsBlock({
   const footnote = techDetailsFootnote(map);
 
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="technical-details">
+    <div className="mb-0 pdf-section" data-pdf-section="technical-details">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0369a1', height: '28px' }} />
         <span className="text-lg leading-none">🔩</span>
@@ -1835,28 +1842,31 @@ export function WarrantyTableBlock({
   const map = React.useContext(ProposalTextOverridesContext);
   const rows = buildWarrantyRows(proposal, map, bomComments);
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="warranty-table">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="mb-0 pdf-section" data-pdf-section="warranty-table" data-pdf-keep="warranty-block">
+      <div className="flex items-center gap-3 mb-4 pdf-section-heading" data-pdf-keep="section-heading">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#7c3aed', height: '28px' }} />
         <span className="text-lg leading-none">🛡️</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#7c3aed' }}>Warranty</h2>
       </div>
-      <div className="rounded-xl border border-violet-200 overflow-hidden bg-violet-50/30">
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-violet-100 last:border-b-0">
-                <td className="px-4 py-2.5 font-semibold text-violet-950 w-[34%] align-top">
-                  <EditableText sectionKey={`warranty-row-${r.id}-label`} as="span">{r.label}</EditableText>
-                </td>
-                <td className="px-4 py-2.5 text-secondary-700">
-                  <EditableText sectionKey={`warranty-row-${r.id}-detail`} as="span">{r.detail}</EditableText>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/*
+        Plain bordered table — never wrap in overflow-hidden/rounded shell.
+        Chromium print stretches those shells into empty “rows” when a split occurs.
+        Print CSS keeps this whole block on one page (short table).
+      */}
+      <table className="pdf-warranty-table w-full text-sm border-collapse border border-violet-200 bg-violet-50/30">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id} className="border-b border-violet-100 last:border-b-0">
+              <td className="px-4 py-2.5 font-semibold text-violet-950 w-[34%] align-top border-0">
+                <EditableText sectionKey={`warranty-row-${r.id}-label`} as="span">{r.label}</EditableText>
+              </td>
+              <td className="px-4 py-2.5 text-secondary-700 border-0">
+                <EditableText sectionKey={`warranty-row-${r.id}-detail`} as="span">{r.detail}</EditableText>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1961,7 +1971,7 @@ export function ResponsibilityMatrixBlock() {
   };
 
   return (
-    <div className="mb-8 pdf-section" data-pdf-section="responsibility-matrix">
+    <div className="mb-0 pdf-section" data-pdf-section="responsibility-matrix">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0369a1', height: '28px' }} />
         <span className="text-lg leading-none">📋</span>
@@ -2060,7 +2070,7 @@ export function OfferValidityBlock() {
   const map = React.useContext(ProposalTextOverridesContext);
   const text = resolveOfferValidity(map);
   return (
-    <div className="mb-6 pdf-section" data-pdf-section="offer-validity">
+    <div className="mb-0 pdf-section" data-pdf-section="offer-validity">
       <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3">
         <p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-800 mb-1">Offer validity</p>
         <EditableText sectionKey="offer-validity" as="p" className="text-sm text-secondary-800 m-0">
@@ -2079,6 +2089,19 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
     year: 'numeric',
   });
   const heading = proposalForHeading(sizeKw, proposal.systemType);
+  // Bake navy wash into the hero so Preview / Share / PDF match WhatsApp-safe pixels.
+  const [heroSrc, setHeroSrc] = React.useState('/proposal_cover_hero.jpg');
+  React.useEffect(() => {
+    let cancelled = false;
+    void import('./coverHero').then(({ loadCoverHeroComposited }) =>
+      loadCoverHeroComposited().then((c) => {
+        if (!cancelled && c?.dataUrl) setHeroSrc(c.dataUrl);
+      }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div
@@ -2086,21 +2109,22 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
       data-pdf-section="cover"
       style={{ backgroundColor: '#0d1b3a' }}
     >
-      {/* Title-page wallpaper — same asset in PDF/DOCX/PPT (see coverHero.ts). */}
+      {/* Title-page wallpaper — composited navy wash (see coverHero.ts). */}
       <img
         data-docx-image="cover-hero"
-        src="/proposal_cover_hero.jpg"
+        src={heroSrc}
         alt=""
         aria-hidden
         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
       />
-      {/* Navy wash (~58%) so white cover copy stays readable — cue from rayennaenergy.com */}
+      {/* CSS wash fallback until composited JPEG loads; stripped from PDF/Share clones. */}
       <div
+        data-pdf-cover-wash
         className="pointer-events-none absolute inset-0"
         aria-hidden
         style={{
           background:
-            'linear-gradient(135deg, rgba(13,27,58,0.82) 0%, rgba(13,27,58,0.55) 48%, rgba(13,27,58,0.72) 100%)',
+            'linear-gradient(135deg, rgba(13,27,58,0.88) 0%, rgba(13,27,58,0.68) 48%, rgba(13,27,58,0.8) 100%)',
         }}
       />
       <div className="relative z-10 px-5 sm:px-8 py-8 sm:py-10 text-white">
@@ -2117,13 +2141,13 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
             </div>
             <div>
               <p className="font-extrabold text-sm sm:text-base tracking-tight drop-shadow">Rayenna Energy Private Limited</p>
-              <p className="text-white/80 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
+              <p className="text-white/90 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
             </div>
           </div>
           <div className="sm:text-right">
-            <p className="text-[10px] text-white/60 uppercase tracking-widest">Reference</p>
+            <p className="text-[10px] text-amber-300/90 uppercase tracking-widest">Reference</p>
             <p className="font-mono text-sm font-semibold break-all drop-shadow">{proposal.refNumber}</p>
-            <p className="text-[10px] text-white/60 uppercase tracking-widest mt-2">Date</p>
+            <p className="text-[10px] text-amber-300/90 uppercase tracking-widest mt-2">Date</p>
             <p className="text-sm font-medium">{dateStr}</p>
           </div>
         </div>
@@ -2132,14 +2156,24 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
           <div className="flex-1 min-w-0">
             <p className="text-amber-300 text-xs font-bold uppercase tracking-[0.2em] mb-2">Proposal for</p>
             <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight drop-shadow mb-3">{heading}</h2>
-            <div className="rounded-xl bg-white/15 border border-white/20 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] text-white/70 uppercase tracking-widest mb-1">Client</p>
-              <p className="font-bold text-lg">{proposal.customer.customerName || 'Valued Customer'}</p>
+            {/* Opaque navy CLIENT panel — glass fails on WhatsApp/Android PDF viewers. */}
+            <div
+              data-pdf-cover-client
+              className="rounded-xl border border-white/50 px-4 py-3.5"
+              style={{
+                backgroundColor: '#0d1b3a',
+                boxShadow: 'inset 3px 0 0 0 #fbbf24',
+              }}
+            >
+              <p className="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-1">Client</p>
+              <p className="font-extrabold text-xl leading-snug text-white">
+                {proposal.customer.customerName || 'Valued Customer'}
+              </p>
               {proposal.customer.location && (
-                <p className="text-white/80 text-sm mt-1">{proposal.customer.location}</p>
+                <p className="text-white text-sm mt-1.5 leading-snug">{proposal.customer.location}</p>
               )}
               {(proposal.projectNumber != null || proposal.customerNumber) && (
-                <p className="text-white/70 text-[11px] font-mono mt-2">
+                <p className="text-white/90 text-[11px] font-mono mt-2">
                   {proposal.projectNumber != null ? `Project #${proposal.projectNumber}` : ''}
                   {proposal.projectNumber != null && proposal.customerNumber ? ' · ' : ''}
                   {proposal.customerNumber ? `Customer #${proposal.customerNumber}` : ''}
@@ -2206,7 +2240,7 @@ export function ListBlock({ title, items }: { title: string; items: string[] }) 
   wasEditingRef.current = isEditing;
   const displayItems = isEditing ? seedItemsRef.current : resolvedItems;
   return (
-    <div className="mb-8 pdf-section">
+    <div className="mb-0 pdf-section">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: meta.accent, height: '28px' }} />
         <span className="text-lg leading-none">{meta.icon}</span>
@@ -2247,7 +2281,7 @@ export function AccountDetailsBlock() {
     { label: 'IFSC Code',      value: 'UTIB0000827',                    key: 'account-ifsc' },
   ];
   return (
-    <div className="mb-8 pdf-section">
+    <div className="mb-0 pdf-section">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0d1b3a', height: '28px' }} />
         <span className="text-lg leading-none">🏦</span>

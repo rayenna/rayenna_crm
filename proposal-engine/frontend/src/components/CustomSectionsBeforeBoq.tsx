@@ -2086,14 +2086,15 @@ export const CustomSectionsBeforeBoq = forwardRef<CustomSectionsBeforeBoqHandle,
 
   return (
     <div
-      className="mb-8 pdf-section"
+      className="mb-0 pdf-section"
       {...{ [PE_MANAGED_SECTION_ATTR]: PE_MANAGED_BEFORE_BOQ }}
       contentEditable={false}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="space-y-8">
+      {/* Same rhythm as Dividers: one line after a section, one line before the next heading. */}
+      <div className="space-y-[2em]">
         {sections.map((s, index) => (
-          <div key={s.id} className="mb-8">
+          <div key={s.id} className="mb-0">
             <div className="flex flex-col sm:flex-row sm:items-start gap-3 justify-between mb-3">
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div

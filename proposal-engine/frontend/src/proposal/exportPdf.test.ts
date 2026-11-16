@@ -82,7 +82,8 @@ describe('PROPOSAL_PRINT_CSS', () => {
     );
   });
 
-  it('starts Closing Note on a new page via the section UNIT (never orphans the Divider)', () => {
+  it('does not force a page break before Closing Note (flows after prior section)', () => {
+    // Unit-level break stamp still exists for BOM only.
     expect(PROPOSAL_PRINT_CSS).toMatch(
       /\.pdf-section-unit\[data-pdf-break-before="page"\][\s\S]{0,200}break-before:\s*page\s*!important/,
     );
@@ -141,4 +142,60 @@ describe('PROPOSAL_PRINT_CSS', () => {
     expect(techRule).toMatch(/page-break-before:\s*auto\s*!important/);
     expect(techRule).not.toMatch(/page-break-before:\s*always/);
   });
+
+  it('avoids a trailing blank page after the last section unit', () => {
+    // break-after:avoid on the LAST unit makes Chromium emit a blank sheet —
+    // last unit must use auto + zero bottom margin instead.
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-section-unit:last-of-type[\s\S]{0,220}page-break-after:\s*auto\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-section-unit:last-of-type[\s\S]{0,220}margin-bottom:\s*0\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.closing-note-sign-spacer[\s\S]{0,120}height:\s*0\.5rem\s*!important/,
+    );
+  });
+
+  it('forces an opaque cover CLIENT panel and hides CSS wash in print', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-cover-wash\][\s\S]{0,80}display:\s*none\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-cover-client\][\s\S]{0,200}background(?:-color)?:\s*#0d1b3a\s*!important/,
+    );
+  });
+
+  it('keeps Warranty table and Authority fees footnote from splitting into empty framed gaps', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="warranty-table"\][\s\S]{0,160}page-break-inside:\s*avoid\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /table\.pdf-warranty-table[\s\S]{0,200}page-break-inside:\s*avoid\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-authority-fees[\s\S]{0,120}page-break-inside:\s*avoid\s*!important/,
+    );
+  });
+
+  it('uses a standard one-line gap after each section and before the next heading', () => {
+    // Padding (not margin) — one line above + one line below the hairline.
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-divider[\s\S]{0,240}padding-top:\s*1em\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-divider[\s\S]{0,320}padding-bottom:\s*1em\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-divider[\s\S]{0,200}margin-top:\s*0\s*!important/,
+    );
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\.pdf-section,\s*\n\s*\.pdf-section-unit\s*\{[\s\S]{0,200}margin-bottom:\s*0\s*!important/,
+    );
+    // Payment must not add a special larger gap.
+    expect(PROPOSAL_PRINT_CSS).toMatch(
+      /\[data-pdf-section="payment-milestones"\][\s\S]{0,200}padding-top:\s*0\s*!important/,
+    );
+  });
 });
+

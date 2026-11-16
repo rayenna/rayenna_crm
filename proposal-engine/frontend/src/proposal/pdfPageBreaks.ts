@@ -15,7 +15,6 @@ import type { ReorderableSectionId } from './sectionOrder';
  */
 export const PDF_BREAK_BEFORE_PAGE = new Set<ReorderableSectionId>([
   'bom',
-  'closing-note',
 ]);
 
 export function sectionBreaksBeforePage(id: ReorderableSectionId): boolean {

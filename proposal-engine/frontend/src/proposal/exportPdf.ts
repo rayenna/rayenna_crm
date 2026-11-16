@@ -86,6 +86,26 @@ export const PROPOSAL_PRINT_CSS = `
       position: relative !important;
       z-index: 10 !important;
     }
+    /* CSS wash is removed from the print clone after baking; hide if leftover. */
+    [data-pdf-cover-wash] {
+      display: none !important;
+    }
+    /* Opaque CLIENT panel — never glass/translucent (WhatsApp drops rgba panels). */
+    [data-pdf-cover-client] {
+      background-color: #0d1b3a !important;
+      background: #0d1b3a !important;
+      border: 1px solid rgba(255, 255, 255, 0.5) !important;
+      box-shadow: inset 3px 0 0 0 #fbbf24 !important;
+      -webkit-box-shadow: inset 3px 0 0 0 #fbbf24 !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    [data-pdf-cover-client] p {
+      color: #ffffff !important;
+    }
+    [data-pdf-cover-client] p:first-child {
+      color: #fcd34d !important;
+    }
     [data-pdf-section="contact-strip"] {
       break-before: avoid !important;
       page-break-before: avoid !important;
@@ -194,11 +214,11 @@ export const PROPOSAL_PRINT_CSS = `
       min-width: 0 !important;
     }
     /*
-     * Forced new pages (BOM, Closing Note): break ONLY on the section unit
-     * stamped with data-pdf-break-before="page". Breaking on the inner
-     * [data-pdf-section] leaves the leading .pdf-divider alone on a blank
-     * sheet — unacceptable for client PDFs. Never pair break-before:page with
-     * break-after:page on adjacent sections (Chromium blank-page pattern).
+     * Forced new pages (BOM only — Closing Note flows with prior content):
+     * break ONLY on the section unit stamped with data-pdf-break-before="page".
+     * Breaking on the inner [data-pdf-section] leaves the leading .pdf-divider
+     * alone on a blank sheet. Never pair break-before:page with break-after:page
+     * on adjacent sections (Chromium blank-page pattern).
      */
     .pdf-section-unit[data-pdf-break-before="page"] {
       break-before: page !important;
@@ -208,7 +228,7 @@ export const PROPOSAL_PRINT_CSS = `
       break-after: auto !important;
       page-break-after: auto !important;
     }
-    /* Closing Note body: no own page break — unit owns it. */
+    /* Closing Note: no forced page break — continues after the prior section. */
     [data-pdf-section="section-closing-note"] {
       break-before: auto !important;
       page-break-before: auto !important;
@@ -284,6 +304,106 @@ export const PROPOSAL_PRINT_CSS = `
       color: #0369a1 !important;
       text-decoration: underline !important;
     }
+    /* Shrink letter signature spacer in print — large empty gap invited a trailing blank page. */
+    [data-pdf-section="section-closing-note"] .closing-note-sign-spacer {
+      height: 0.5rem !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    /*
+     * Standard inter-section rhythm (every section, same):
+     * after section body ends → one line → hairline → one line → next heading.
+     * Use padding (not margin) so Chromium/Tailwind margin-collapse cannot eat the gap.
+     */
+    .pdf-divider,
+    [data-pdf-keep="divider"] {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-top: 1em !important;
+      padding-bottom: 1em !important;
+      box-sizing: content-box !important;
+    }
+    .pdf-section,
+    .pdf-section-unit {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    /*
+     * Never leave a trailing blank sheet after the last body section.
+     * Chromium emits a blank page when the LAST block uses break-after:avoid
+     * (engine reserves a following page). Zero margins; keep break-after:auto.
+     */
+    .pdf-section-unit:last-of-type,
+    #proposal-print-root .pdf-section-unit:last-child,
+    #proposal-print-root {
+      break-after: auto !important;
+      page-break-after: auto !important;
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    .pdf-section-unit:last-of-type .pdf-section,
+    .pdf-section-unit:last-of-type [data-pdf-section],
+    #proposal-print-root > .px-3:last-child,
+    #proposal-print-root [data-pdf-section]:last-of-type {
+      break-after: auto !important;
+      page-break-after: auto !important;
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+    }
+    /* Authority fees table + footnote stay together (no orphan note above Payment Terms). */
+    .pdf-authority-fees,
+    [data-pdf-keep="authority-fees"] {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      margin-bottom: 0 !important;
+    }
+    .pdf-authority-fees > h3,
+    .pdf-authority-fees > div {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+    .pdf-authority-fees > p {
+      break-before: avoid !important;
+      page-break-before: avoid !important;
+      margin-top: 0.35rem !important;
+      margin-bottom: 0 !important;
+    }
+    /* Payment Terms uses the same one-line Divider rhythm as every other section. */
+    [data-pdf-section="payment-milestones"] {
+      break-before: auto !important;
+      page-break-before: auto !important;
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
+    /*
+     * Warranty: keep the short table as one block — splitting a bordered shell
+     * leaves a huge empty framed region on the prior page (amateur PDF defect).
+     * Must override the global [data-pdf-section]/table { break-inside:auto }.
+     */
+    [data-pdf-section="warranty-table"],
+    [data-pdf-keep="warranty-block"] {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      overflow: visible !important;
+    }
+    table.pdf-warranty-table,
+    table.pdf-warranty-table tbody,
+    table.pdf-warranty-table tr {
+      border-collapse: collapse !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      height: auto !important;
+    }
+    table.pdf-warranty-table td {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      height: auto !important;
+    }
     /* Ordered-section wrapper: keep divider glued to the section that follows. */
     .pdf-section-unit {
       break-inside: auto !important;
@@ -347,7 +467,7 @@ export const PROPOSAL_PRINT_CSS = `
     }
 `;
 
-export function exportToPdf(printRootId: string): void {
+export async function exportToPdf(printRootId: string): Promise<void> {
   const el = document.getElementById(printRootId);
   if (!el) return;
 
@@ -385,6 +505,41 @@ export function exportToPdf(printRootId: string): void {
       n.style.setProperty('border', 'none', 'important');
       n.classList.remove('shadow-sm', 'shadow', 'shadow-md', 'shadow-lg', 'shadow-xl');
     });
+
+  // Bake navy wash into cover pixels; remove CSS wash (WhatsApp/Android-safe).
+  const { applyCompositedCoverToClone, stripEmptyPrintWrappers } = await import('./coverHero');
+  await applyCompositedCoverToClone(clone);
+  stripEmptyPrintWrappers(clone);
+  // Drop empty ordered-section shells left when renderOrderedSection returns null.
+  clone.querySelectorAll(':scope div').forEach((n) => {
+    const el = n as HTMLElement;
+    if (el.children.length === 0 && !(el.textContent ?? '').trim()) {
+      if (!el.hasAttribute('data-pdf-section') && !el.hasAttribute('data-pdf-keep') && !el.hasAttribute('data-docx-section')) {
+        el.remove();
+      }
+    }
+  });
+  // Force opaque CLIENT panel inline (some mobile PDF engines ignore class CSS).
+  clone.querySelectorAll<HTMLElement>('[data-pdf-cover-client]').forEach((n) => {
+    n.style.setProperty('background', '#0d1b3a', 'important');
+    n.style.setProperty('background-color', '#0d1b3a', 'important');
+    n.style.setProperty('backdrop-filter', 'none', 'important');
+  });
+  // Kill residual bottom margin on the true last printed section.
+  // Do NOT set page-break-after:avoid on the last unit — Chromium then emits a blank sheet.
+  const units = clone.querySelectorAll('.pdf-section-unit');
+  const lastUnit = units[units.length - 1] as HTMLElement | undefined;
+  if (lastUnit) {
+    lastUnit.style.setProperty('margin-bottom', '0', 'important');
+    lastUnit.style.setProperty('padding-bottom', '0', 'important');
+    lastUnit.style.setProperty('page-break-after', 'auto', 'important');
+    lastUnit.style.setProperty('break-after', 'auto', 'important');
+  }
+  // Drop a trailing divider if it somehow became the last child (empty sheet bait).
+  const lastChild = clone.lastElementChild as HTMLElement | null;
+  if (lastChild?.classList.contains('pdf-divider') || lastChild?.getAttribute('data-pdf-keep') === 'divider') {
+    lastChild.remove();
+  }
 
   const html = `<!DOCTYPE html>
 <html>

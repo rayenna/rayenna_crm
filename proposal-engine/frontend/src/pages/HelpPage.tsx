@@ -797,7 +797,7 @@ export default function HelpPage() {
                 ['Service Details',         'Optional post-commissioning service bullets'],
                 ['Key Points & Exclusions', 'Commissioning caveats and out-of-scope items'],
                 ['Material Delivery',       '7–15 working days from confirmed PO'],
-                ['Closing Note',            'Letter-style sign-off with contact links + side solar image — PDF opens Closing Note on a fresh page'],
+                ['Closing Note',            'Letter-style sign-off with contact links + side solar image — flows after the prior section in PDF (no forced page break)'],
                 ['Subsidy Disclaimer',      'Optional DISCOM / payment disclaimer after Closing Note by default'],
               ].map(([section, desc]) => (
                 <div key={section} className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
@@ -895,7 +895,7 @@ export default function HelpPage() {
             </p>
             <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
               <li><strong>Page 1</strong> — Cover and the Rayenna contact strip stay together and are centred on the first sheet; the cover uses a branded photo wallpaper with a navy transparency wash (same cue as rayennaenergy.com) so white text stays readable. Preview, Share, PDF, and PPT use the full wallpaper; DOCX shows the same image as a title banner.</li>
-              <li><strong>Fresh pages</strong> — Bill of Quantities and Closing Note each start on a new page <em>with</em> their section divider (no blank sheet that only shows a line).</li>
+              <li><strong>Fresh page</strong> — Bill of Quantities starts on a new page <em>with</em> its section divider (no blank sheet that only shows a line). Closing Note continues after the prior section (no forced break).</li>
               <li><strong>Kept whole</strong> — the Financial Benefits 25-year chart and the About Rayenna <em>Key Highlights</em> table do not split across pages.</li>
               <li><strong>No forced break</strong> — Responsibility Matrix flows into Technical Details; Bill of Quantities flows into Commercials.</li>
               <li><strong>Images</strong> — Closing Note side image and What We Offer diagrams print without grey shadow boxes; enable Background graphics so colours render correctly.</li>
@@ -1405,10 +1405,10 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
-            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups — the PDF opens in a new tab. Page 1 is intentionally Cover + contact strip only (centred); body content starts on page 2. A sheet that shows <em>only</em> a thin divider line with no section heading is a defect — hard-refresh Proposal Engine and re-export; BOQ and Closing Note should open on a fresh page <em>with</em> their content, not leave the divider alone.
+            Make sure you have generated the proposal first (click <strong>Generate Proposal</strong> before clicking <strong>⬇ PDF</strong>). Also ensure your browser is not blocking pop-ups — the PDF opens in a new tab. Page 1 is intentionally Cover + contact strip only (centred); body content starts on page 2. A sheet that shows <em>only</em> a thin divider line with no section heading is a defect — hard-refresh Proposal Engine and re-export; BOQ should open on a fresh page <em>with</em> its content, not leave the divider alone.
           </FaqItem>
           <FaqItem q="Why do some proposal sections share a page in the PDF while others start fresh?">
-            PDF pagination is intentional: Cover + contact strip share page 1; Bill of Quantities and Closing Note each start on a new page (with their divider); Commercials continue after BOQ; Responsibility Matrix continues into Technical Details. Charts and the Key Highlights table are kept from splitting mid-block. Tall BOQ tables still paginate normally so content is not clipped.
+            PDF pagination is intentional: Cover + contact strip share page 1; Bill of Quantities starts on a new page (with its divider); Closing Note and Commercials continue after the prior section; Responsibility Matrix continues into Technical Details. Charts and the Key Highlights table are kept from splitting mid-block. Tall BOQ tables still paginate normally so content is not clipped.
           </FaqItem>
           <FaqItem q="Why does What We Offer show a different diagram for Hybrid or Off-Grid?">
             The diagram follows the CRM project <strong>System Type</strong> (On-Grid, Hybrid, or Off-Grid). The written description beside it is the same for all three — only the picture changes. Preview, Share, PDF, DOCX, and PPT all use that rule.

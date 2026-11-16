@@ -3,10 +3,10 @@ import { PDF_BREAK_BEFORE_PAGE, sectionBreaksBeforePage } from './pdfPageBreaks'
 import { PROPOSAL_PRINT_CSS } from './exportPdf';
 
 describe('pdfPageBreaks', () => {
-  it('only BOQ and Closing Note force a new PDF page', () => {
-    expect([...PDF_BREAK_BEFORE_PAGE].sort()).toEqual(['bom', 'closing-note']);
+  it('only BOQ forces a new PDF page (Closing Note flows with prior content)', () => {
+    expect([...PDF_BREAK_BEFORE_PAGE]).toEqual(['bom']);
     expect(sectionBreaksBeforePage('bom')).toBe(true);
-    expect(sectionBreaksBeforePage('closing-note')).toBe(true);
+    expect(sectionBreaksBeforePage('closing-note')).toBe(false);
     expect(sectionBreaksBeforePage('commercials')).toBe(false);
     expect(sectionBreaksBeforePage('subsidy-disclaimer')).toBe(false);
   });
