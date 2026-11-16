@@ -39,7 +39,7 @@ Use existing PE touch / responsive patterns (`min-h-[44px]`, flex wrap, no stick
 
 Blank sheets with only a divider/rule are a **P0 client-facing defect**.
 
-1. **Forced new pages** (BOM, Closing Note) must use `data-pdf-break-before="page"` on the **`.pdf-section-unit` wrapper** (`pdfPageBreaks.ts` + `wrapSectionChrome`). Never put `break-before: page` on an inner `[data-pdf-section]` that has a sibling leading `Divider`.
+1. **Forced new pages** (currently BOM only — Closing Note flows continuously) must use `data-pdf-break-before="page"` on the **`.pdf-section-unit` wrapper** (`pdfPageBreaks.ts` + `wrapSectionChrome`). Never put `break-before: page` on an inner `[data-pdf-section]` that has a sibling leading `Divider`.
 2. **Never pair** `break-before:page` on section N with `break-after:page` on section N−1 (Chromium inserts a blank sheet).
 3. Keep leading `.pdf-divider` glued with `break-after: avoid` on the unit’s divider child.
 4. After any page-break change, re-export PDF and confirm **no empty pages** (especially before BOQ and Closing Note). Update `exportPdf.test.ts` / `pdfPageBreaks.test.ts`.
