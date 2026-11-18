@@ -113,3 +113,34 @@ export function shiftMonth(year: number, month: number, delta: number) {
   const d = new Date(year, month - 1 + delta, 1)
   return { year: d.getFullYear(), month: d.getMonth() + 1 }
 }
+
+export function parseNetMeterYmd(ymd: string | null | undefined): {
+  year: number
+  month: number
+  day: number
+} | null {
+  if (!ymd) return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim())
+  if (!m) return null
+  const year = Number(m[1])
+  const month = Number(m[2])
+  const day = Number(m[3])
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null
+  return { year, month, day }
+}
+
+export function formatNetMeterLabel(ymd: string | null | undefined): string | null {
+  const parsed = parseNetMeterYmd(ymd)
+  if (!parsed) return null
+  return `${MONTHS[parsed.month - 1]} ${parsed.day}, ${parsed.year}`
+}
+
+export function isMonthOnOrAfterNetMeter(
+  year: number,
+  month: number,
+  netMeterYmd: string | null | undefined,
+): boolean {
+  const parsed = parseNetMeterYmd(netMeterYmd)
+  if (!parsed) return false
+  return year * 12 + month >= parsed.year * 12 + parsed.month
+}

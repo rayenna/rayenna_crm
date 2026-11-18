@@ -186,15 +186,23 @@ export default function Home() {
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Zap className="h-4 w-4 text-[color:var(--accent-green)]" />
                 <h2 className="text-sm font-bold text-[color:var(--text-primary)]">
-                  {home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
-                    ? 'This month · live'
-                    : home.energy.isEstimated
-                      ? 'Expected this month'
-                      : 'This month'}
+                  {home.energy.generationActive === false
+                    ? 'Awaiting generation'
+                    : home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
+                      ? 'This month · live'
+                      : home.energy.isEstimated
+                        ? 'Expected this month'
+                        : 'This month'}
                 </h2>
-                {home.energy.liveFromSolis ? <HubLiveSolisPill /> : null}
-                {home.energy.liveFromDeye ? <HubLiveDeyePill /> : null}
-                {home.energy.liveFromSunways ? <HubLiveSunwaysPill /> : null}
+                {home.energy.generationActive !== false && home.energy.liveFromSolis ? (
+                  <HubLiveSolisPill />
+                ) : null}
+                {home.energy.generationActive !== false && home.energy.liveFromDeye ? (
+                  <HubLiveDeyePill />
+                ) : null}
+                {home.energy.generationActive !== false && home.energy.liveFromSunways ? (
+                  <HubLiveSunwaysPill />
+                ) : null}
               </div>
               <Link
                 to="/track"
@@ -206,34 +214,44 @@ export default function Home() {
             </div>
             <p className="mt-0.5 text-[10px] text-[color:var(--text-tertiary)]">
               {home.energy.monthLabel}
-              {home.energy.liveFromSolis
-                ? ' · from your Solis inverter'
-                : home.energy.liveFromDeye
-                  ? ' · from your Deye inverter'
-                  : home.energy.liveFromSunways
-                    ? ' · from your Sunways inverter'
-                  : home.energy.isEstimated
-                  ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
-                  : ' · logged from inverter'}
+              {home.energy.generationActive === false
+                ? ' · starts after net meter installation'
+                : home.energy.liveFromSolis
+                  ? ' · from your Solis inverter'
+                  : home.energy.liveFromDeye
+                    ? ' · from your Deye inverter'
+                    : home.energy.liveFromSunways
+                      ? ' · from your Sunways inverter'
+                    : home.energy.isEstimated
+                    ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
+                    : ' · logged from inverter'}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div>
                 <p className="text-[10px] text-[color:var(--text-tertiary)]">
-                  {home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
-                    ? 'Generated live'
-                    : home.energy.isEstimated
-                      ? 'Expected generation'
-                      : 'Generated'}
+                  {home.energy.generationActive === false
+                    ? 'Generated'
+                    : home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
+                      ? 'Generated live'
+                      : home.energy.isEstimated
+                        ? 'Expected generation'
+                        : 'Generated'}
                 </p>
                 <p className="zenith-kpi-value text-base font-bold text-[color:var(--text-primary)]">
-                  {formatKwh(home.energy.totalGenerated)}
+                  {home.energy.generationActive === false ? '—' : formatKwh(home.energy.totalGenerated)}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] text-[color:var(--text-tertiary)]">Typical savings</p>
                 <p className="zenith-kpi-value flex items-center gap-0.5 text-base font-bold text-[color:var(--accent-green)]">
-                  <IndianRupee className="h-3.5 w-3.5" aria-hidden />
-                  {formatRupee(home.energy.totalSavings).replace('₹', '')}
+                  {home.energy.generationActive === false ? (
+                    '—'
+                  ) : (
+                    <>
+                      <IndianRupee className="h-3.5 w-3.5" aria-hidden />
+                      {formatRupee(home.energy.totalSavings).replace('₹', '')}
+                    </>
+                  )}
                 </p>
               </div>
             </div>

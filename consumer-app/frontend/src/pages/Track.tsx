@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactElement } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react'
 import toast from 'react-hot-toast'
 import {
   Bar,
@@ -22,8 +22,11 @@ import { useAnnualEnergy, useLogMonthlyEnergy, useMonthlyEnergy } from '@/hooks/
 import {
   distributionFromReading,
   formatKwh,
+  formatNetMeterLabel,
   formatRupee,
+  isMonthOnOrAfterNetMeter,
   monthLabel,
+  parseNetMeterYmd,
   shiftMonth,
   SHORT_MONTHS,
 } from '@/utils/energyCharts'
@@ -128,6 +131,15 @@ export default function Track() {
 
   const reading = monthlyQuery.data
   const annualMonths = annualQuery.data?.months
+  const netMeterInstalledAt =
+    reading?.netMeterInstalledAt ?? annualQuery.data?.netMeterInstalledAt ?? null
+  const netMeterParsed = parseNetMeterYmd(netMeterInstalledAt)
+  const generationActive =
+    viewMode === 'year'
+      ? Boolean(annualQuery.data?.generationActive && (annualMonths?.length ?? 0) > 0)
+      : reading?.generationActive !== false &&
+        Boolean(netMeterInstalledAt) &&
+        isMonthOnOrAfterNetMeter(year, month, netMeterInstalledAt)
 
   const ytd = useMemo(() => {
     if (!annualMonths?.length) return null
@@ -142,7 +154,7 @@ export default function Track() {
     )
   }, [annualMonths])
 
-  const stats = viewMode === 'year' && ytd ? ytd : reading
+  const stats = generationActive ? (viewMode === 'year' && ytd ? ytd : reading) : null
   const monthIsEstimated = reading?.isEstimated !== false
   const liveFromSolis =
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSolis) : Boolean(reading?.liveFromSolis)
@@ -150,44 +162,73 @@ export default function Track() {
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromDeye) : Boolean(reading?.liveFromDeye)
   const liveFromSunways =
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSunways) : Boolean(reading?.liveFromSunways)
-  const liveFromCloud = liveFromSolis || liveFromDeye || liveFromSunways
-  const canLog = viewMode === 'month' && isCurrentOrPastMonth(year, month)
+  const liveFromCloud = generationActive && (liveFromSolis || liveFromDeye || liveFromSunways)
+  const canLog =
+    viewMode === 'month' &&
+    generationActive &&
+    isCurrentOrPastMonth(year, month) &&
+    isMonthOnOrAfterNetMeter(year, month, netMeterInstalledAt)
 
-  const distribution = useMemo(
-    () => (reading ? distributionFromReading(reading) : []),
-    [reading],
-  )
+  const distribution = useMemo(() => {
+    if (!generationActive || !reading || reading.totalGenerated <= 0) return []
+    return distributionFromReading(reading)
+  }, [generationActive, reading])
 
   const monthlyStack = useMemo(
     () =>
-      (annualMonths ?? []).map((m) => {
-        const generated = Math.max(0, m.totalGenerated)
-        const selfUse = Math.min(Math.max(0, m.totalConsumed), generated)
-        const exportKwh = Math.min(Math.max(0, m.gridExport), Math.max(0, generated - selfUse))
-        return {
-          name: SHORT_MONTHS[m.month - 1],
-          generated,
-          selfUse,
-          exportKwh,
-          rest: Math.max(0, generated - selfUse - exportKwh),
-        }
-      }),
+      (annualMonths ?? [])
+        .filter((m) => m.generationActive !== false)
+        .map((m) => {
+          const generated = Math.max(0, m.totalGenerated)
+          const selfUse = Math.min(Math.max(0, m.totalConsumed), generated)
+          const exportKwh = Math.min(Math.max(0, m.gridExport), Math.max(0, generated - selfUse))
+          return {
+            name: SHORT_MONTHS[m.month - 1],
+            generated,
+            selfUse,
+            exportKwh,
+            rest: Math.max(0, generated - selfUse - exportKwh),
+          }
+        }),
     [annualMonths],
   )
   const stackHasRest = monthlyStack.some((m) => m.rest > 0)
 
   const savingsTrend = useMemo(
     () =>
-      (annualMonths ?? []).map((m) => ({
-        name: SHORT_MONTHS[m.month - 1],
-        savings: m.totalSavings,
-      })),
+      (annualMonths ?? [])
+        .filter((m) => m.generationActive !== false)
+        .map((m) => ({
+          name: SHORT_MONTHS[m.month - 1],
+          savings: m.totalSavings,
+        })),
     [annualMonths],
   )
 
   const disclaimer = viewMode === 'year' ? annualQuery.data?.disclaimer : reading?.disclaimer
+  const netMeterLabel = formatNetMeterLabel(netMeterInstalledAt)
+  const canGoPrev = (() => {
+    if (!netMeterParsed) return false
+    if (viewMode === 'year') return year > netMeterParsed.year
+    const prev = shiftMonth(year, month, -1)
+    return isMonthOnOrAfterNetMeter(prev.year, prev.month, netMeterInstalledAt)
+  })()
+
+  useEffect(() => {
+    if (!netMeterParsed) return
+    if (viewMode === 'year') {
+      if (year < netMeterParsed.year) setYear(netMeterParsed.year)
+      return
+    }
+    if (!isMonthOnOrAfterNetMeter(year, month, netMeterInstalledAt)) {
+      setYear(netMeterParsed.year)
+      setMonth(netMeterParsed.month)
+      setKwhInput('')
+    }
+  }, [netMeterParsed, netMeterInstalledAt, viewMode, year, month])
 
   const goPrev = () => {
+    if (!canGoPrev) return
     if (viewMode === 'year') setYear((y) => y - 1)
     else {
       const next = shiftMonth(year, month, -1)
@@ -240,25 +281,31 @@ export default function Track() {
           {liveFromSunways ? <HubLiveSunwaysPill /> : null}
         </div>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-          {viewMode === 'year'
-            ? annualQuery.data?.liveFromSolis
-              ? 'Year so far — live from your Solis inverter'
-              : annualQuery.data?.liveFromDeye
-                ? 'Year so far — live from your Deye inverter'
-              : annualQuery.data?.liveFromSunways
-                ? 'Year so far — live from your Sunways inverter'
-              : annualQuery.data?.isEstimated
-                ? 'Year so far — expected months until you log inverter kWh'
-                : 'Year so far — logged inverter generation'
-            : reading?.liveFromSolis
-              ? 'Live monthly generation from SolisCloud'
-              : reading?.liveFromDeye
-                ? 'Live monthly generation from Deye Cloud'
-              : reading?.liveFromSunways
-                ? 'Live monthly generation from Sunways Portal'
-              : monthIsEstimated
-                ? 'Expected generation for your plant size'
-                : 'Monthly generation from your inverter log'}
+          {!netMeterInstalledAt
+            ? 'Figures start after your net meter is installed'
+            : !generationActive
+              ? netMeterLabel
+                ? `Generation starts from net meter install · ${netMeterLabel}`
+                : 'Generation starts from your net meter installation date'
+              : viewMode === 'year'
+                ? annualQuery.data?.liveFromSolis
+                  ? 'Year so far — live from your Solis inverter'
+                  : annualQuery.data?.liveFromDeye
+                    ? 'Year so far — live from your Deye inverter'
+                  : annualQuery.data?.liveFromSunways
+                    ? 'Year so far — live from your Sunways inverter'
+                  : annualQuery.data?.isEstimated
+                    ? 'Year so far — expected months until you log inverter kWh'
+                    : 'Year so far — logged inverter generation'
+                : reading?.liveFromSolis
+                  ? 'Live monthly generation from SolisCloud'
+                  : reading?.liveFromDeye
+                    ? 'Live monthly generation from Deye Cloud'
+                  : reading?.liveFromSunways
+                    ? 'Live monthly generation from Sunways Portal'
+                  : monthIsEstimated
+                    ? 'Expected generation for your plant size'
+                    : 'Monthly generation from your inverter log'}
         </p>
       </header>
 
@@ -284,7 +331,8 @@ export default function Track() {
           <button
             type="button"
             onClick={goPrev}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-badge)]"
+            disabled={!canGoPrev}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-badge)] disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Previous period"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -327,6 +375,17 @@ export default function Track() {
         <div className="flex justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--accent-gold)] border-t-transparent" />
         </div>
+      ) : !generationActive ? (
+        <section className="zenith-glass rounded-2xl p-5 text-center">
+          <h2 className="text-sm font-bold text-[color:var(--text-primary)]">
+            {netMeterInstalledAt ? 'Before net meter installation' : 'Awaiting net meter installation'}
+          </h2>
+          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            {netMeterInstalledAt
+              ? `Month/Year, generation, energy split, and savings are shown only from ${netMeterLabel ?? 'your net meter installation date'} — when generation begins.`
+              : 'Month/Year, generation, energy split, and savings appear only after Rayenna records your net meter installation date.'}
+          </p>
+        </section>
       ) : (
         <>
           <div className="mb-4 grid min-w-0 grid-cols-2 gap-3">
@@ -413,7 +472,7 @@ export default function Track() {
             <section className="zenith-glass mb-4 min-w-0 overflow-hidden rounded-2xl p-4">
               <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Monthly generation</h2>
               <p className="mb-3 text-xs text-[color:var(--text-muted)]">
-                Each column is generated kWh — live or expected. Typical self-use and export sit inside that total
+                From net meter install onward — live or expected. Typical self-use and export sit inside that total
               </p>
               <HubChart height={STACK_CHART_H}>
                 <BarChart data={monthlyStack} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
@@ -490,26 +549,28 @@ export default function Track() {
             </section>
           ) : null}
 
-          <section className="zenith-glass min-w-0 overflow-hidden rounded-2xl p-4">
-            <h2 className="mb-1 text-sm font-bold text-[color:var(--text-primary)]">
-              Monthly savings trend
-            </h2>
-            <p className="mb-3 text-xs text-[color:var(--text-muted)]">
-              Typical rupee estimate from generation — not your KSEB bill
-            </p>
-            <HubChart height={BAR_CHART_H}>
-              <BarChart data={savingsTrend} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
-                <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
-                <XAxis dataKey="name" interval={0} tick={MONTH_TICK} />
-                <YAxis tick={{ fill: 'var(--chart-axis-text)', fontSize: 10 }} width={40} />
-                <Tooltip
-                  formatter={(v) => [formatRupee(Number(v) || 0), 'Savings']}
-                  contentStyle={chartTooltipStyle}
-                />
-                <Bar dataKey="savings" name="Savings" fill={CHART_GREEN} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </HubChart>
-          </section>
+          {savingsTrend.length > 0 ? (
+            <section className="zenith-glass min-w-0 overflow-hidden rounded-2xl p-4">
+              <h2 className="mb-1 text-sm font-bold text-[color:var(--text-primary)]">
+                Monthly savings trend
+              </h2>
+              <p className="mb-3 text-xs text-[color:var(--text-muted)]">
+                From net meter install onward — typical rupee estimate, not your KSEB bill
+              </p>
+              <HubChart height={BAR_CHART_H}>
+                <BarChart data={savingsTrend} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" interval={0} tick={MONTH_TICK} />
+                  <YAxis tick={{ fill: 'var(--chart-axis-text)', fontSize: 10 }} width={40} />
+                  <Tooltip
+                    formatter={(v) => [formatRupee(Number(v) || 0), 'Savings']}
+                    contentStyle={chartTooltipStyle}
+                  />
+                  <Bar dataKey="savings" name="Savings" fill={CHART_GREEN} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </HubChart>
+            </section>
+          ) : null}
         </>
       )}
     </div>

@@ -3,7 +3,9 @@ import {
   derivedTotalsFromGeneration,
   estimateMonthlyEnergy,
   estimateMonthlyGenerationKw,
+  isEnergyMonthBeforeNetMeter,
   isEnergyPeriodInFuture,
+  netMeterMonthProrateFactor,
 } from './consumerEnergyEstimate';
 
 describe('consumerEnergyEstimate', () => {
@@ -33,5 +35,23 @@ describe('consumerEnergyEstimate', () => {
     expect(isEnergyPeriodInFuture(2099, 1, new Date('2026-09-06'))).toBe(true);
     expect(isEnergyPeriodInFuture(2026, 9, new Date('2026-09-06'))).toBe(false);
     expect(isEnergyPeriodInFuture(2026, 8, new Date('2026-09-06'))).toBe(false);
+  });
+
+  it('blocks every month when net meter date is missing', () => {
+    expect(isEnergyMonthBeforeNetMeter(2026, 11, null)).toBe(true);
+    expect(netMeterMonthProrateFactor(2026, 11, null)).toBe(0);
+  });
+
+  it('only allows months from net meter install month onward', () => {
+    expect(isEnergyMonthBeforeNetMeter(2026, 5, '2026-06-15')).toBe(true);
+    expect(isEnergyMonthBeforeNetMeter(2026, 6, '2026-06-15')).toBe(false);
+    expect(isEnergyMonthBeforeNetMeter(2026, 7, '2026-06-15')).toBe(false);
+  });
+
+  it('prorates the install month from the install day inclusive', () => {
+    // June has 30 days; install on 16th → 15 days remaining inclusive = 15/30
+    expect(netMeterMonthProrateFactor(2026, 6, '2026-06-16')).toBeCloseTo(0.5);
+    expect(netMeterMonthProrateFactor(2026, 7, '2026-06-16')).toBe(1);
+    expect(netMeterMonthProrateFactor(2026, 5, '2026-06-16')).toBe(0);
   });
 });

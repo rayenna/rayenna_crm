@@ -18,6 +18,8 @@ export interface HomeEnergySummary {
   liveFromDeye?: boolean
   liveFromSunways?: boolean
   systemKw: number
+  generationActive?: boolean
+  netMeterInstalledAt?: string | null
 }
 
 export interface ConsumerHome {

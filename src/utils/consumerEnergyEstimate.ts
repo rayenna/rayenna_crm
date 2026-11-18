@@ -104,6 +104,56 @@ export function isEnergyPeriodInFuture(year: number, month: number, now = new Da
   return year * 12 + month > nowKey;
 }
 
+/** Calendar month key for compare (year*12 + month). */
+export function energyMonthKey(year: number, month: number): number {
+  return year * 12 + month;
+}
+
+/** Parse YYYY-MM-DD (IST calendar) into year/month/day. */
+export function yearMonthDayFromYmd(ymd: string): { year: number; month: number; day: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { year, month, day };
+}
+
+/**
+ * True when the Track month is before the net-meter install calendar month (IST YMD).
+ * With no net-meter date, every month is treated as not yet generating.
+ */
+export function isEnergyMonthBeforeNetMeter(
+  year: number,
+  month: number,
+  netMeterYmd: string | null | undefined,
+): boolean {
+  if (!netMeterYmd) return true;
+  const parsed = yearMonthDayFromYmd(netMeterYmd);
+  if (!parsed) return true;
+  return energyMonthKey(year, month) < energyMonthKey(parsed.year, parsed.month);
+}
+
+/**
+ * Fraction of the month that counts after net-meter install (inclusive of install day).
+ * Full months after install → 1. Install month → remaining days / days-in-month.
+ */
+export function netMeterMonthProrateFactor(
+  year: number,
+  month: number,
+  netMeterYmd: string | null | undefined,
+): number {
+  if (!netMeterYmd) return 0;
+  const parsed = yearMonthDayFromYmd(netMeterYmd);
+  if (!parsed) return 0;
+  if (energyMonthKey(year, month) < energyMonthKey(parsed.year, parsed.month)) return 0;
+  if (energyMonthKey(year, month) > energyMonthKey(parsed.year, parsed.month)) return 1;
+  const dim = daysInMonth(year, month);
+  const remaining = Math.max(0, dim - parsed.day + 1);
+  return Math.min(1, remaining / dim);
+}
+
 export function estimateMonthlyEnergy(
   systemKw: number,
   year: number,

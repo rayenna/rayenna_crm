@@ -19,6 +19,8 @@ export type HomeEnergySummaryDto = {
   liveFromDeye: boolean;
   liveFromSunways: boolean;
   systemKw: number;
+  generationActive: boolean;
+  netMeterInstalledAt: string | null;
 };
 
 export type ConsumerHomeDto = {
@@ -106,7 +108,8 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
   const notifications = await listConsumerNotifications(consumerUserId);
 
   const days = daysInMonth(year, month);
-  const estimatedTodayKwh = days > 0 ? Math.round(energy.totalGenerated / days) : 0;
+  const estimatedTodayKwh =
+    energy.generationActive && days > 0 ? Math.round(energy.totalGenerated / days) : 0;
 
   const projectStatus = buildConsumerProjectStatus(
     consumer.project.projectStage,
@@ -147,14 +150,16 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
       year,
       month,
       monthLabel: monthLabel(month, year),
-      totalGenerated: energy.totalGenerated,
-      totalSavings: energy.totalSavings,
+      totalGenerated: energy.generationActive ? energy.totalGenerated : 0,
+      totalSavings: energy.generationActive ? energy.totalSavings : 0,
       estimatedTodayKwh,
       isEstimated: energy.isEstimated,
-      liveFromSolis: energy.liveFromSolis,
-      liveFromDeye: energy.liveFromDeye,
-      liveFromSunways: energy.liveFromSunways,
+      liveFromSolis: energy.generationActive && energy.liveFromSolis,
+      liveFromDeye: energy.generationActive && energy.liveFromDeye,
+      liveFromSunways: energy.generationActive && energy.liveFromSunways,
       systemKw: energy.systemKw,
+      generationActive: energy.generationActive,
+      netMeterInstalledAt: energy.netMeterInstalledAt,
     },
     systemHealth: {
       status: health.status,

@@ -19,6 +19,10 @@ export interface EnergyReading {
   liveFromSunways?: boolean
   disclaimer: string | null
   systemKw: number
+  /** IST YYYY-MM-DD — CRM net meter installation date */
+  netMeterInstalledAt?: string | null
+  /** False before net meter date (or when that date is not set yet) */
+  generationActive?: boolean
 }
 
 export interface AnnualEnergyResponse {
@@ -29,6 +33,8 @@ export interface AnnualEnergyResponse {
   liveFromDeye?: boolean
   liveFromSunways?: boolean
   disclaimer: string | null
+  netMeterInstalledAt?: string | null
+  generationActive?: boolean
 }
 
 export interface DistributionSlice {

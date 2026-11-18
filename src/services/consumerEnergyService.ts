@@ -3,10 +3,15 @@ import prisma from '../prisma';
 import {
   buildHourlyReadings,
   derivedTotalsFromGeneration,
+  energyMonthKey,
   estimateMonthlyEnergy,
+  isEnergyMonthBeforeNetMeter,
   isEnergyPeriodInFuture,
+  netMeterMonthProrateFactor,
+  yearMonthDayFromYmd,
   type HourlyEnergyPoint,
 } from '../utils/consumerEnergyEstimate';
+import { calendarYmdInTimeZone } from '../utils/istCalendar';
 import { normalizeCapacityKw, sanitizeStoredMonthlyKwh } from '../utils/solisEnergyUnits';
 
 export const ENERGY_ESTIMATE_DISCLAIMER =
@@ -36,6 +41,12 @@ export const ENERGY_SUNWAYS_DISCLAIMER =
 export const ENERGY_SUNWAYS_MIXED_YEAR_DISCLAIMER =
   'Some months are live from Sunways Portal. Others are expected Kerala typical. Splits are still typical, not the bill.';
 
+export const ENERGY_AWAITING_NET_METER_DISCLAIMER =
+  'Generation and savings start after your net meter is installed. Rayenna will show Track figures from that date.';
+
+export const ENERGY_BEFORE_NET_METER_DISCLAIMER =
+  'This month is before your net meter installation — generation for Track starts from that date.';
+
 export class EnergyPeriodError extends Error {
   constructor(message: string) {
     super(message);
@@ -57,6 +68,10 @@ export type EnergyReadingDto = {
   liveFromSunways: boolean;
   disclaimer: string | null;
   systemKw: number;
+  /** IST YYYY-MM-DD from CRM Project.subsidyRequestDate (Net meter installation date). */
+  netMeterInstalledAt: string | null;
+  /** False when net meter is missing or this month is before that date. */
+  generationActive: boolean;
 };
 
 export type AnnualEnergyDto = {
@@ -67,6 +82,8 @@ export type AnnualEnergyDto = {
   liveFromDeye: boolean;
   liveFromSunways: boolean;
   disclaimer: string | null;
+  netMeterInstalledAt: string | null;
+  generationActive: boolean;
 };
 
 const DEFAULT_SYSTEM_KW = 5.5;
@@ -76,6 +93,7 @@ async function resolveEnergyMeta(consumerUserId: string): Promise<{
   solisLinked: boolean;
   deyeLinked: boolean;
   sunwaysLinked: boolean;
+  netMeterInstalledAt: string | null;
 }> {
   const consumer = await prisma.consumerUser.findUnique({
     where: { id: consumerUserId },
@@ -86,16 +104,19 @@ async function resolveEnergyMeta(consumerUserId: string): Promise<{
           solisStationId: true,
           deyeStationId: true,
           sunwaysStationId: true,
+          subsidyRequestDate: true,
         },
       },
     },
   });
   const kw = consumer?.project?.systemCapacity;
+  const subsidyRequestDate = consumer?.project?.subsidyRequestDate ?? null;
   return {
     systemKw: kw && kw > 0 ? normalizeCapacityKw(kw) : DEFAULT_SYSTEM_KW,
     solisLinked: Boolean(consumer?.project?.solisStationId),
     deyeLinked: Boolean(consumer?.project?.deyeStationId),
     sunwaysLinked: Boolean(consumer?.project?.sunwaysStationId),
+    netMeterInstalledAt: subsidyRequestDate ? calendarYmdInTimeZone(subsidyRequestDate) : null,
   };
 }
 
@@ -149,6 +170,67 @@ function assertUsablePeriod(year: number, month: number): void {
   }
 }
 
+function assertGenerationPeriod(year: number, month: number, netMeterInstalledAt: string | null): void {
+  if (!netMeterInstalledAt) {
+    throw new EnergyPeriodError(
+      'Net meter installation date is not set yet — Track figures start from that date',
+    );
+  }
+  if (isEnergyMonthBeforeNetMeter(year, month, netMeterInstalledAt)) {
+    throw new EnergyPeriodError(
+      'Cannot log generation before the net meter installation month',
+    );
+  }
+}
+
+function inactiveReadingDto(
+  year: number,
+  month: number,
+  systemKw: number,
+  netMeterInstalledAt: string | null,
+): EnergyReadingDto {
+  return {
+    year,
+    month,
+    totalGenerated: 0,
+    totalConsumed: 0,
+    gridExport: 0,
+    totalSavings: 0,
+    dailyReadings: [],
+    isEstimated: true,
+    liveFromSolis: false,
+    liveFromDeye: false,
+    liveFromSunways: false,
+    disclaimer: netMeterInstalledAt
+      ? ENERGY_BEFORE_NET_METER_DISCLAIMER
+      : ENERGY_AWAITING_NET_METER_DISCLAIMER,
+    systemKw,
+    netMeterInstalledAt,
+    generationActive: false,
+  };
+}
+
+function scaleEstimate(
+  estimate: ReturnType<typeof estimateMonthlyEnergy>,
+  factor: number,
+): ReturnType<typeof estimateMonthlyEnergy> {
+  if (factor >= 0.999) return estimate;
+  if (factor <= 0) {
+    return {
+      totalGenerated: 0,
+      totalConsumed: 0,
+      gridExport: 0,
+      totalSavings: 0,
+      dailyReadings: [],
+    };
+  }
+  const totals = derivedTotalsFromGeneration(estimate.totalGenerated * factor);
+  return {
+    ...totals,
+    dailyReadings: buildHourlyReadings(totals.totalGenerated, totals.totalConsumed),
+  };
+}
+
 function rowToDto(
   row: {
     year: number;
@@ -165,6 +247,7 @@ function rowToDto(
   solisLinked: boolean,
   deyeLinked: boolean,
   sunwaysLinked: boolean,
+  netMeterInstalledAt: string | null,
 ): EnergyReadingDto {
   const dailyReadings = Array.isArray(row.dailyReadings)
     ? (row.dailyReadings as HourlyEnergyPoint[])
@@ -186,6 +269,8 @@ function rowToDto(
     liveFromSunways,
     disclaimer: disclaimerFor(isEstimated, liveFromSolis, liveFromDeye, liveFromSunways),
     systemKw,
+    netMeterInstalledAt,
+    generationActive: true,
   };
 }
 
@@ -196,7 +281,12 @@ export async function getOrCreateMonthlyReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const { systemKw, solisLinked, deyeLinked, sunwaysLinked } = await resolveEnergyMeta(consumerUserId);
+  const { systemKw, solisLinked, deyeLinked, sunwaysLinked, netMeterInstalledAt } =
+    await resolveEnergyMeta(consumerUserId);
+
+  if (isEnergyMonthBeforeNetMeter(year, month, netMeterInstalledAt)) {
+    return inactiveReadingDto(year, month, systemKw, netMeterInstalledAt);
+  }
 
   const existing = await prisma.energyReading.findUnique({
     where: {
@@ -204,16 +294,43 @@ export async function getOrCreateMonthlyReading(
     },
   });
 
+  const factor = netMeterMonthProrateFactor(year, month, netMeterInstalledAt);
+
   if (existing) {
-    const repaired = await repairInflatedSolisReading(
+    let row = await repairInflatedSolisReading(
       existing,
       systemKw,
       solisLinked || deyeLinked || sunwaysLinked,
     );
-    return rowToDto(repaired, systemKw, repaired.isEstimated, solisLinked, deyeLinked, sunwaysLinked);
+    // Re-prorate stale full-month expected rows for the net-meter install month.
+    if (row.isEstimated && factor < 0.999) {
+      const full = estimateMonthlyEnergy(systemKw, year, month);
+      const scaled = scaleEstimate(full, factor);
+      if (scaled.totalGenerated < row.totalGenerated) {
+        row = await prisma.energyReading.update({
+          where: { id: row.id },
+          data: {
+            totalGenerated: scaled.totalGenerated,
+            totalConsumed: scaled.totalConsumed,
+            gridExport: scaled.gridExport,
+            totalSavings: scaled.totalSavings,
+            dailyReadings: scaled.dailyReadings as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+    }
+    return rowToDto(
+      row,
+      systemKw,
+      row.isEstimated,
+      solisLinked,
+      deyeLinked,
+      sunwaysLinked,
+      netMeterInstalledAt,
+    );
   }
 
-  const estimate = estimateMonthlyEnergy(systemKw, year, month);
+  const estimate = scaleEstimate(estimateMonthlyEnergy(systemKw, year, month), factor);
 
   const created = await prisma.energyReading.create({
     data: {
@@ -229,25 +346,60 @@ export async function getOrCreateMonthlyReading(
     },
   });
 
-  return rowToDto(created, systemKw, true, solisLinked, deyeLinked, sunwaysLinked);
+  return rowToDto(created, systemKw, true, solisLinked, deyeLinked, sunwaysLinked, netMeterInstalledAt);
 }
 
 export async function getAnnualReadings(
   consumerUserId: string,
   year: number,
 ): Promise<AnnualEnergyDto> {
+  const { netMeterInstalledAt } = await resolveEnergyMeta(consumerUserId);
+
   const months: EnergyReadingDto[] = [];
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const lastMonth = year < currentYear ? 12 : year === currentYear ? currentMonth : 0;
 
+  const parsedNet = netMeterInstalledAt ? yearMonthDayFromYmd(netMeterInstalledAt) : null;
+  let firstMonth = 1;
+  if (!parsedNet) {
+    return {
+      year,
+      months: [],
+      isEstimated: true,
+      liveFromSolis: false,
+      liveFromDeye: false,
+      liveFromSunways: false,
+      disclaimer: ENERGY_AWAITING_NET_METER_DISCLAIMER,
+      netMeterInstalledAt: null,
+      generationActive: false,
+    };
+  }
+  if (energyMonthKey(year, 12) < energyMonthKey(parsedNet.year, parsedNet.month)) {
+    return {
+      year,
+      months: [],
+      isEstimated: true,
+      liveFromSolis: false,
+      liveFromDeye: false,
+      liveFromSunways: false,
+      disclaimer: ENERGY_BEFORE_NET_METER_DISCLAIMER,
+      netMeterInstalledAt,
+      generationActive: false,
+    };
+  }
+  if (parsedNet.year === year) {
+    firstMonth = parsedNet.month;
+  }
+
   let estimatedCount = 0;
   let liveSolisCount = 0;
   let liveDeyeCount = 0;
   let liveSunwaysCount = 0;
-  for (let month = 1; month <= lastMonth; month++) {
+  for (let month = firstMonth; month <= lastMonth; month++) {
     const reading = await getOrCreateMonthlyReading(consumerUserId, year, month);
+    if (!reading.generationActive) continue;
     if (reading.isEstimated) estimatedCount += 1;
     if (reading.liveFromSolis) liveSolisCount += 1;
     if (reading.liveFromDeye) liveDeyeCount += 1;
@@ -256,12 +408,14 @@ export async function getAnnualReadings(
   }
 
   const anyEstimated = estimatedCount > 0;
-  const allEstimated = lastMonth > 0 && estimatedCount === months.length;
+  const allEstimated = months.length > 0 && estimatedCount === months.length;
   const liveFromSolis = liveSolisCount > 0;
   const liveFromDeye = liveDeyeCount > 0;
   const liveFromSunways = liveSunwaysCount > 0;
   let disclaimer: string | null = null;
-  if (allEstimated) disclaimer = ENERGY_ESTIMATE_DISCLAIMER;
+  if (months.length === 0) {
+    disclaimer = ENERGY_AWAITING_NET_METER_DISCLAIMER;
+  } else if (allEstimated) disclaimer = ENERGY_ESTIMATE_DISCLAIMER;
   else if (liveFromSolis && anyEstimated) disclaimer = ENERGY_SOLIS_MIXED_YEAR_DISCLAIMER;
   else if (liveFromDeye && anyEstimated) disclaimer = ENERGY_DEYE_MIXED_YEAR_DISCLAIMER;
   else if (liveFromSunways && anyEstimated) disclaimer = ENERGY_SUNWAYS_MIXED_YEAR_DISCLAIMER;
@@ -269,16 +423,18 @@ export async function getAnnualReadings(
   else if (liveFromDeye) disclaimer = ENERGY_DEYE_DISCLAIMER;
   else if (liveFromSunways) disclaimer = ENERGY_SUNWAYS_DISCLAIMER;
   else if (anyEstimated) disclaimer = ENERGY_MIXED_YEAR_DISCLAIMER;
-  else if (months.length > 0) disclaimer = ENERGY_MANUAL_DISCLAIMER;
+  else disclaimer = ENERGY_MANUAL_DISCLAIMER;
 
   return {
     year,
     months,
-    isEstimated: anyEstimated,
+    isEstimated: anyEstimated || months.length === 0,
     liveFromSolis,
     liveFromDeye,
     liveFromSunways,
     disclaimer,
+    netMeterInstalledAt,
+    generationActive: months.length > 0,
   };
 }
 
@@ -288,7 +444,8 @@ export async function upsertLoggedGeneration(
   month: number,
   totalGenerated: number,
 ): Promise<EnergyReadingDto> {
-  const { systemKw } = await resolveEnergyMeta(consumerUserId);
+  const { systemKw, netMeterInstalledAt } = await resolveEnergyMeta(consumerUserId);
+  assertGenerationPeriod(year, month, netMeterInstalledAt);
   const kwh = sanitizeStoredMonthlyKwh(totalGenerated, systemKw);
   return upsertManualReading(consumerUserId, year, month, derivedTotalsFromGeneration(kwh));
 }
@@ -306,7 +463,9 @@ export async function upsertManualReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const { systemKw, solisLinked, deyeLinked, sunwaysLinked } = await resolveEnergyMeta(consumerUserId);
+  const { systemKw, solisLinked, deyeLinked, sunwaysLinked, netMeterInstalledAt } =
+    await resolveEnergyMeta(consumerUserId);
+  assertGenerationPeriod(year, month, netMeterInstalledAt);
   const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
 
   const row = await prisma.energyReading.upsert({
@@ -328,5 +487,5 @@ export async function upsertManualReading(
     },
   });
 
-  return rowToDto(row, systemKw, false, solisLinked, deyeLinked, sunwaysLinked);
+  return rowToDto(row, systemKw, false, solisLinked, deyeLinked, sunwaysLinked, netMeterInstalledAt);
 }
