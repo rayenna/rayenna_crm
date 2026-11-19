@@ -6,9 +6,25 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import '../styles/zenith.css'
 import { CRM_DEFAULT_HOME } from '../constants/defaultHomeRoute'
+import { ServerWakeupLoader } from '../components/serverWakeup'
+
+/**
+ * Set to false to restore the previous inline wake-up banners on Login
+ * (and skip ServerWakeupLoader). Prefer git revert of this file +
+ * client/src/components/serverWakeup/ if you want a full rollback.
+ */
+const USE_SERVER_WAKEUP_LOADER = true
+
+/** Local preview: /login?wakeup=1 simulates a cold boot for this long after Sign in. */
+const PREVIEW_COLD_MS = 15_000
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
+
+/** Open /login?wakeup=1 → enter credentials → Sign in → 15s animation → auto-enter app. */
+const forceWakeupPreview =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('wakeup') === '1'
 
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
 
@@ -18,23 +34,32 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [serverStatus, setServerStatus] = useState<ServerStatus>('unknown')
+  /** When set, wake overlay is up and we will auto-login with these creds once API is live. */
+  const [pendingWakeLogin, setPendingWakeLogin] = useState<{
+    email: string
+    password: string
+  } | null>(null)
   const { login } = useAuth()
   const navigate = useNavigate()
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const autoLoginInFlight = useRef(false)
 
-  // Pre-warm the backend as soon as the login page loads.
-  // Guard against setting state after unmount (abort fires the catch).
+  const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
+
+  // Legacy pre-warm only (USE_SERVER_WAKEUP_LOADER false).
   useEffect(() => {
+    if (USE_SERVER_WAKEUP_LOADER) return
     if (!apiBaseUrl || !isProd) return
     let mounted = true
     setServerStatus('checking')
     const controller = new AbortController()
     axios
       .get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
-      .then(() => { if (mounted) setServerStatus('ready') })
+      .then(() => {
+        if (mounted) setServerStatus('ready')
+      })
       .catch((err) => {
         if (!mounted) return
-        // AbortError means the component unmounted — not a real failure
         if (axios.isCancel(err) || err?.code === 'ERR_CANCELED') return
         setServerStatus('slow')
       })
@@ -44,7 +69,6 @@ const Login = () => {
     }
   }, [])
 
-  // Clean up the elapsed interval on unmount (e.g. if user navigates away mid-login)
   useEffect(() => {
     return () => {
       if (elapsedRef.current) clearInterval(elapsedRef.current)
@@ -53,27 +77,79 @@ const Login = () => {
 
   const startElapsedCounter = () => {
     setElapsed(0)
-    elapsedRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
+    elapsedRef.current = setInterval(() => setElapsed((s) => s + 1), 1000)
   }
 
   const stopElapsedCounter = () => {
-    if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null }
+    if (elapsedRef.current) {
+      clearInterval(elapsedRef.current)
+      elapsedRef.current = null
+    }
     setElapsed(0)
+  }
+
+  const finishLoginSuccess = () => {
+    stopElapsedCounter()
+    setPendingWakeLogin(null)
+    setIsLoading(false)
+    toast.success('Login successful')
+    navigate(CRM_DEFAULT_HOME)
+  }
+
+  const completeLoginWithCredentials = async (creds: { email: string; password: string }) => {
+    if (autoLoginInFlight.current) return
+    autoLoginInFlight.current = true
+    try {
+      await login(creds.email, creds.password)
+      finishLoginSuccess()
+    } catch (error: unknown) {
+      autoLoginInFlight.current = false
+      // API woke but auth failed — drop back to the form with the same fields filled.
+      setPendingWakeLogin(null)
+      setIsLoading(false)
+      stopElapsedCounter()
+      toast.error(getFriendlyApiErrorMessage(error))
+      setServerStatus('slow')
+    }
+  }
+
+  const handleWakeReady = () => {
+    if (!pendingWakeLogin) return
+    void completeLoginWithCredentials(pendingWakeLogin)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     startElapsedCounter()
+    autoLoginInFlight.current = false
+
+    // Local preview of the cold-start path: keep credentials, animate 15s, then auto-login.
+    if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
+      setPendingWakeLogin({ email, password })
+      return
+    }
 
     try {
       await login(email, password)
-      stopElapsedCounter()
-      toast.success('Login successful')
-      navigate(CRM_DEFAULT_HOME)
+      finishLoginSuccess()
     } catch (error: unknown) {
-      stopElapsedCounter()
       const err = error as { response?: { status?: number } }
+      const coldStart =
+        USE_SERVER_WAKEUP_LOADER &&
+        isProd &&
+        Boolean(apiBaseUrl) &&
+        err?.response == null &&
+        isTimeoutOrNetworkError(error)
+
+      if (coldStart) {
+        // Keep credentials; show wake UI until API is live, then enter the app (no re-login).
+        setPendingWakeLogin({ email, password })
+        return
+      }
+
+      stopElapsedCounter()
+      setIsLoading(false)
       const msg =
         err?.response != null
           ? getFriendlyApiErrorMessage(error)
@@ -84,13 +160,13 @@ const Login = () => {
               : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
       toast.error(msg)
       setServerStatus('slow')
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const fieldCls =
     'block w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] shadow-inner transition-all focus:border-[color:var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm'
+
+  const signInBlocked = isLoading || showWakeupLoader
 
   return (
     <div
@@ -100,6 +176,17 @@ const Login = () => {
         paddingBottom: 'max(3rem, env(safe-area-inset-bottom, 0px))',
       }}
     >
+      {showWakeupLoader && pendingWakeLogin ? (
+        <ServerWakeupLoader
+          apiUrl={apiBaseUrl}
+          healthEndpoint="/api/health"
+          appMode="crm"
+          initialDelayMs={0}
+          previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+          onReady={handleWakeReady}
+        />
+      ) : null}
+
       <div
         className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/background.jpg)' }}
@@ -109,35 +196,62 @@ const Login = () => {
         {apiNotConfigured && (
           <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
             <strong className="text-[color:var(--accent-gold)]">API not configured.</strong> Set{' '}
-            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g.{' '}
-            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
+            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">
+              VITE_API_BASE_URL
+            </code>{' '}
+            in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment
+            Variables) to your backend URL (e.g.{' '}
+            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">
+              https://rayenna-crm.onrender.com
+            </code>
+            ), then <strong>redeploy</strong>. Login will not work until then.
           </div>
         )}
 
-        {isProd && !apiNotConfigured && serverStatus === 'checking' && (
+        {!USE_SERVER_WAKEUP_LOADER && isProd && !apiNotConfigured && serverStatus === 'checking' && (
           <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,transparent)] p-3 text-sm text-[color:var(--nav-text)]">
-            <svg className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-gold)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg
+              className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-gold)]"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
-            <span>Connecting to server — this can take up to 60 s after a period of inactivity. Please wait before signing in.</span>
+            <span>
+              Connecting to server — this can take up to 60 s after a period of inactivity. Please wait
+              before signing in.
+            </span>
           </div>
         )}
-        {isProd && !apiNotConfigured && serverStatus === 'ready' && (
+        {!USE_SERVER_WAKEUP_LOADER && isProd && !apiNotConfigured && serverStatus === 'ready' && (
           <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-teal)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
-            <svg className="h-4 w-4 shrink-0 text-[color:var(--accent-teal)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="h-4 w-4 shrink-0 text-[color:var(--accent-teal)]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span>Server is ready.</span>
           </div>
         )}
-        {isProd && !apiNotConfigured && serverStatus === 'slow' && !isLoading && (
-          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
-            Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or wait a few more seconds and try again.
-          </div>
-        )}
+        {( !USE_SERVER_WAKEUP_LOADER || isProd ) &&
+          !apiNotConfigured &&
+          serverStatus === 'slow' &&
+          !isLoading &&
+          !showWakeupLoader && (
+            <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
+              Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or wait
+              a few more seconds and try again.
+            </div>
+          )}
+
         <div className="text-center">
-          <div className="flex items-center justify-center px-2 pt-4 pb-0 sm:pt-6 sm:pb-0">
+          <div className="flex items-center justify-center px-2 pb-0 pt-4 sm:pb-0 sm:pt-6">
             <img
               src="/CRM_Logo.jpg"
               alt="Rayenna CRM"
@@ -188,38 +302,52 @@ const Login = () => {
           <div className="pt-1">
             <button
               type="submit"
-              disabled={isLoading || serverStatus === 'checking'}
-              className="relative flex w-full justify-center rounded-xl bg-[color:var(--accent-gold)] py-3 px-4 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={signInBlocked}
+              className="relative flex w-full justify-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-3 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? (
+              {isLoading || showWakeupLoader ? (
                 <span className="flex items-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                  {elapsed > 10 ? `Waking server up… ${elapsed}s — please wait` : 'Signing in…'}
+                  {showWakeupLoader
+                    ? 'Waking server… signing you in'
+                    : elapsed > 10
+                      ? `Waking server up… ${elapsed}s — please wait`
+                      : 'Signing in…'}
                 </span>
-              ) : serverStatus === 'checking' ? (
-                'Connecting to server…'
               ) : (
                 'Sign in'
               )}
             </button>
-            {isLoading && elapsed > 5 && (
+            {isLoading && !showWakeupLoader && elapsed > 5 && (
               <p className="mt-2 text-center text-xs text-[color:var(--nav-text)]">
-                The server may be waking from sleep. <strong className="text-[color:var(--nav-text-active)]">Please do not press the button again</strong> — your request is in progress.
+                The server may be waking from sleep.{' '}
+                <strong className="text-[color:var(--nav-text-active)]">
+                  Please do not press the button again
+                </strong>{' '}
+                — your request is in progress.
               </p>
             )}
           </div>
         </form>
 
         <div className="text-center">
-          <p className="text-xs text-[color:var(--nav-text)]">Forgot your Password? Contact your administrator</p>
+          <p className="text-xs text-[color:var(--nav-text)]">
+            Forgot your Password? Contact your administrator
+          </p>
         </div>
 
         <div className="border-t border-[color:var(--border-default)] pt-6">
           <p className="text-center text-xs leading-relaxed text-[color:var(--nav-text)]">
-            By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
+            By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and
+            Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>
       </div>

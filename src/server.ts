@@ -103,11 +103,11 @@ function setCorsHeaders(req: express.Request, res: express.Response): void {
 // Must set CORS here because these routes run before the CORS middleware.
 app.get('/health', (req, res) => {
   setCorsHeaders(req, res);
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'awake', timestamp: new Date().toISOString() });
 });
 app.get('/api/health', (req, res) => {
   setCorsHeaders(req, res);
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'awake', timestamp: new Date().toISOString() });
 });
 
 // Middleware (lightweight; no DB or heavy imports)
