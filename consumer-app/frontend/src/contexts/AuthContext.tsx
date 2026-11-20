@@ -3,18 +3,29 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance, {
   clearConsumerToken,
+  isTimeoutOrNetworkError,
   persistConsumerToken,
   readConsumerToken,
   setConsumerAuthToken,
+  apiBaseUrl,
 } from '@/utils/axios'
 import { unsubscribeHubPush } from '@/utils/hubPush'
+import { isHubProdApiConfigured, probeHubHealthOk } from '@/utils/hubHealth'
+import { ServerWakeupLoader } from '@/components/serverWakeup'
 import type { ConsumerAuthResponse, ConsumerUser } from '@/types'
+
+/** Local preview: with a saved session, `/?wakeup=1` forces the wake animation for 15s. */
+const PREVIEW_COLD_MS = 15_000
+const forceWakeupPreview =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('wakeup') === '1'
 
 interface AuthContextType {
   user: ConsumerUser | null
@@ -32,6 +43,8 @@ export function useAuth() {
   return ctx
 }
 
+type MeResult = 'ok' | 'unauthorized' | 'network' | 'other'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [user, setUser] = useState<ConsumerUser | null>(null)
@@ -41,10 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored
   })
   const [isLoading, setIsLoading] = useState(() => Boolean(readConsumerToken()))
+  /** Saved-session cold start: wake overlay until API is live, then /me → app. */
+  const [sessionWake, setSessionWake] = useState(false)
+  const [wakeEpoch, setWakeEpoch] = useState(0)
+  const restoreGen = useRef(0)
 
   const clearAuth = useCallback(() => {
     setToken(null)
     setUser(null)
+    setSessionWake(false)
     clearConsumerToken()
     setConsumerAuthToken(null)
     queryClient.clear()
@@ -55,22 +73,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAuth()
   }, [clearAuth])
 
+  const fetchMe = useCallback(async (): Promise<MeResult> => {
+    try {
+      const res = await axiosInstance.get<ConsumerUser>('/api/consumer/auth/me')
+      setUser(res.data)
+      return 'ok'
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status
+      if (status === 401) return 'unauthorized'
+      if (isTimeoutOrNetworkError(error) && !(error as { response?: unknown }).response) {
+        return 'network'
+      }
+      return 'other'
+    }
+  }, [])
+
   useEffect(() => {
     if (!token) {
       setIsLoading(false)
+      setSessionWake(false)
       return
     }
 
-    axiosInstance
-      .get<ConsumerUser>('/api/consumer/auth/me')
-      .then((res) => {
-        setUser(res.data)
-      })
-      .catch(() => {
+    const gen = ++restoreGen.current
+    let cancelled = false
+
+    async function restore() {
+      setIsLoading(true)
+      try {
+        // Dev/prod preview: force wake UI even when API is already warm.
+        if (forceWakeupPreview) {
+          setSessionWake(true)
+          return
+        }
+
+        if (isHubProdApiConfigured()) {
+          const awake = await probeHubHealthOk(apiBaseUrl)
+          if (cancelled || gen !== restoreGen.current) return
+          if (!awake) {
+            setSessionWake(true)
+            return
+          }
+        }
+
+        const result = await fetchMe()
+        if (cancelled || gen !== restoreGen.current) return
+
+        if (result === 'ok') {
+          setSessionWake(false)
+          setIsLoading(false)
+          return
+        }
+        if (result === 'network' && isHubProdApiConfigured()) {
+          setSessionWake(true)
+          return
+        }
         clearAuth()
-      })
-      .finally(() => setIsLoading(false))
-  }, [clearAuth, token])
+        setIsLoading(false)
+      } catch {
+        if (cancelled || gen !== restoreGen.current) return
+        if (isHubProdApiConfigured()) {
+          setSessionWake(true)
+          return
+        }
+        clearAuth()
+        setIsLoading(false)
+      }
+    }
+
+    void restore()
+    return () => {
+      cancelled = true
+    }
+  }, [token, clearAuth, fetchMe])
+
+  const handleSessionWakeReady = useCallback(async () => {
+    const result = await fetchMe()
+    if (result === 'ok') {
+      setSessionWake(false)
+      setIsLoading(false)
+      return
+    }
+    if (result === 'network') {
+      setWakeEpoch((n) => n + 1)
+      return
+    }
+    clearAuth()
+    setIsLoading(false)
+  }, [clearAuth, fetchMe])
 
   const login = async (username: string, password: string, remember = true) => {
     const { data } = await axiosInstance.post<ConsumerAuthResponse>('/api/consumer/auth/login', {
@@ -81,10 +171,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setConsumerAuthToken(data.token)
     setToken(data.token)
     setUser(data.user)
+    setSessionWake(false)
+    setIsLoading(false)
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading: isLoading || sessionWake }}>
+      {sessionWake ? (
+        <ServerWakeupLoader
+          key={wakeEpoch}
+          apiUrl={apiBaseUrl || 'http://localhost:3000'}
+          healthEndpoint="/api/health"
+          appMode="consumer"
+          initialDelayMs={0}
+          previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+          onReady={() => {
+            void handleSessionWakeReady()
+          }}
+        />
+      ) : null}
       {children}
     </AuthContext.Provider>
   )

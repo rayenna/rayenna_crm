@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
-import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -9,11 +8,44 @@ import {
   isTimeoutOrNetworkError,
   readRememberPreference,
 } from '@/utils/axios'
+import {
+  HUB_HEALTH_PROBE_MS,
+  isHubProdApiConfigured,
+  probeHubHealthOk,
+} from '@/utils/hubHealth'
+import { ServerWakeupLoader } from '@/components/serverWakeup'
+
+/**
+ * Set to false to restore the previous inline wake-up banners on Login
+ * (and skip ServerWakeupLoader). Prefer git revert of this file +
+ * consumer-app/frontend/src/components/serverWakeup/ if you want a full rollback.
+ */
+const USE_SERVER_WAKEUP_LOADER = true
+
+/** Local preview: /login?wakeup=1 simulates a cold boot for this long after Sign in. */
+const PREVIEW_COLD_MS = 15_000
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
 
+/** Open /login?wakeup=1 → enter credentials → Sign in → 15s animation → auto-enter app. */
+const forceWakeupPreview =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('wakeup') === '1'
+
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
+
+function credentialsFromSubmit(
+  form: HTMLFormElement,
+  stateUsername: string,
+  statePassword: string,
+): { username: string; password: string } {
+  // iOS Chrome/Safari autofill often fills the DOM without firing React onChange.
+  const fd = new FormData(form)
+  const username = String(fd.get('username') ?? stateUsername).trim()
+  const password = String(fd.get('password') ?? statePassword)
+  return { username, password }
+}
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -22,29 +54,37 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [serverStatus, setServerStatus] = useState<ServerStatus>('unknown')
+  /** When set, wake overlay is up and we will auto-login with these creds once API is live. */
+  const [pendingWakeLogin, setPendingWakeLogin] = useState<{
+    username: string
+    password: string
+    remember: boolean
+  } | null>(null)
+  /** Remount wake loader to resume health polling after a flaky auto-login. */
+  const [wakeEpoch, setWakeEpoch] = useState(0)
   const { login, token, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
   /** After sign-in, always open Home — not Profile or the page that triggered re-auth. */
   const postLoginPath = '/'
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const autoLoginInFlight = useRef(false)
+  const submitLockRef = useRef(false)
 
+  const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
+
+  // Legacy pre-warm only (USE_SERVER_WAKEUP_LOADER false).
   useEffect(() => {
+    if (USE_SERVER_WAKEUP_LOADER) return
     if (!apiBaseUrl || !isProd) return
     let mounted = true
     const controller = new AbortController()
     queueMicrotask(() => {
       if (mounted) setServerStatus('checking')
     })
-    axios
-      .get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
-      .then(() => {
-        if (mounted) setServerStatus('ready')
-      })
-      .catch((err) => {
-        if (!mounted) return
-        if (axios.isCancel(err) || err?.code === 'ERR_CANCELED') return
-        setServerStatus('slow')
-      })
+    void probeHubHealthOk(apiBaseUrl, 90_000).then((ok) => {
+      if (!mounted) return
+      setServerStatus(ok ? 'ready' : 'slow')
+    })
     return () => {
       mounted = false
       controller.abort()
@@ -74,19 +114,112 @@ export default function Login() {
     setElapsed(0)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const finishLoginSuccess = () => {
+    stopElapsedCounter()
+    setPendingWakeLogin(null)
+    setIsLoading(false)
+    submitLockRef.current = false
+    toast.success('Login successful')
+    navigate(postLoginPath, { replace: true })
+  }
+
+  const failLogin = (message: string) => {
+    stopElapsedCounter()
+    setPendingWakeLogin(null)
+    setIsLoading(false)
+    submitLockRef.current = false
+    toast.error(message)
+    setServerStatus('slow')
+  }
+
+  const completeLoginWithCredentials = async (creds: {
+    username: string
+    password: string
+    remember: boolean
+  }) => {
+    if (autoLoginInFlight.current) return
+    autoLoginInFlight.current = true
+    try {
+      await login(creds.username, creds.password, creds.remember)
+      finishLoginSuccess()
+    } catch (error: unknown) {
+      autoLoginInFlight.current = false
+      // Still flaky / waking — keep the overlay and resume health polling (no flicker back to form).
+      if (isTimeoutOrNetworkError(error) && (error as { response?: unknown }).response == null) {
+        setWakeEpoch((n) => n + 1)
+        return
+      }
+      failLogin(getFriendlyApiErrorMessage(error))
+    }
+  }
+
+  const handleWakeReady = () => {
+    if (!pendingWakeLogin) return
+    void completeLoginWithCredentials(pendingWakeLogin)
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (submitLockRef.current || showWakeupLoader) return
+
+    const creds = credentialsFromSubmit(e.currentTarget, username, password)
+    if (!creds.username || !creds.password) {
+      toast.error('Enter your username and password to sign in.')
+      return
+    }
+    // Keep controlled inputs in sync with autofill for later wake auto-login.
+    setUsername(creds.username)
+    setPassword(creds.password)
+
+    const remember = rememberMe
+    submitLockRef.current = true
     setIsLoading(true)
     startElapsedCounter()
+    autoLoginInFlight.current = false
+
+    // Local preview: keep credentials, animate 15s, then auto-login.
+    if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
+      setPendingWakeLogin({ ...creds, remember })
+      return
+    }
+
+    // Production: probe health FIRST. If Render is cold, show the wake animation
+    // immediately (do not sit on the old 90s login spinner).
+    if (USE_SERVER_WAKEUP_LOADER && isHubProdApiConfigured()) {
+      const awake = await probeHubHealthOk(apiBaseUrl, HUB_HEALTH_PROBE_MS)
+      if (!awake) {
+        setPendingWakeLogin({ ...creds, remember })
+        setWakeEpoch((n) => n + 1)
+        return
+      }
+    }
 
     try {
-      await login(username.trim(), password, rememberMe)
-      stopElapsedCounter()
-      toast.success('Login successful')
-      navigate(postLoginPath, { replace: true })
+      await login(creds.username, creds.password, remember)
+      finishLoginSuccess()
     } catch (error: unknown) {
-      stopElapsedCounter()
       const err = error as { response?: { status?: number } }
+      const looksLikeNetwork = err?.response == null && isTimeoutOrNetworkError(error)
+
+      // Login failed with network error even though the earlier probe passed —
+      // confirm again; if down now, switch to wake UI instead of a raw error.
+      if (USE_SERVER_WAKEUP_LOADER && isHubProdApiConfigured() && looksLikeNetwork) {
+        const awake = await probeHubHealthOk(apiBaseUrl, HUB_HEALTH_PROBE_MS)
+        if (!awake) {
+          setPendingWakeLogin({ ...creds, remember })
+          setWakeEpoch((n) => n + 1)
+          return
+        }
+        try {
+          await login(creds.username, creds.password, remember)
+          finishLoginSuccess()
+          return
+        } catch (retryErr: unknown) {
+          failLogin(getFriendlyApiErrorMessage(retryErr))
+          return
+        }
+      }
+
       const msg =
         err?.response != null
           ? getFriendlyApiErrorMessage(error)
@@ -95,18 +228,35 @@ export default function Login() {
             : isTimeoutOrNetworkError(error)
               ? 'Server took too long to respond. It may still be waking up — please try again.'
               : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
-      toast.error(msg)
-      setServerStatus('slow')
-    } finally {
-      setIsLoading(false)
+      failLogin(msg)
     }
   }
 
   const fieldCls =
     'block w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] shadow-inner transition-all focus:border-[color:var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm'
 
+  const signInBlocked = isLoading || showWakeupLoader
+
   return (
-    <div className="relative flex min-h-screen min-h-[100dvh] items-center justify-center overflow-auto bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]">
+    <div
+      className="relative flex min-h-screen min-h-[100dvh] items-center justify-center overflow-auto bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]"
+      style={{
+        paddingTop: 'max(3rem, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(3rem, env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      {showWakeupLoader && pendingWakeLogin ? (
+        <ServerWakeupLoader
+          key={wakeEpoch}
+          apiUrl={apiBaseUrl}
+          healthEndpoint="/api/health"
+          appMode="consumer"
+          initialDelayMs={0}
+          previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+          onReady={handleWakeReady}
+        />
+      ) : null}
+
       <div
         className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/background.jpg)' }}
@@ -127,7 +277,7 @@ export default function Login() {
           </div>
         )}
 
-        {isProd && !apiNotConfigured && serverStatus === 'checking' && (
+        {!USE_SERVER_WAKEUP_LOADER && isProd && !apiNotConfigured && serverStatus === 'checking' && (
           <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,transparent)] p-3 text-sm text-[color:var(--nav-text)]">
             <svg
               className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-gold)]"
@@ -152,7 +302,7 @@ export default function Login() {
             </span>
           </div>
         )}
-        {isProd && !apiNotConfigured && serverStatus === 'ready' && (
+        {!USE_SERVER_WAKEUP_LOADER && isProd && !apiNotConfigured && serverStatus === 'ready' && (
           <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-teal)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
             <svg
               className="h-4 w-4 shrink-0 text-[color:var(--accent-teal)]"
@@ -167,12 +317,16 @@ export default function Login() {
             <span>Server is ready.</span>
           </div>
         )}
-        {isProd && !apiNotConfigured && serverStatus === 'slow' && !isLoading && (
-          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
-            Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or
-            wait a few more seconds and try again.
-          </div>
-        )}
+        {(!USE_SERVER_WAKEUP_LOADER || isProd) &&
+          !apiNotConfigured &&
+          serverStatus === 'slow' &&
+          !isLoading &&
+          !showWakeupLoader && (
+            <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
+              Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or
+              wait a few more seconds and try again.
+            </div>
+          )}
 
         <div className="text-center">
           <div className="flex items-center justify-center px-2 pt-4 pb-0 sm:pt-6 sm:pb-0">
@@ -201,6 +355,8 @@ export default function Login() {
                 name="username"
                 type="text"
                 autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
                 required
                 className={fieldCls}
                 placeholder="Username"
@@ -239,10 +395,10 @@ export default function Login() {
           <div className="pt-1">
             <button
               type="submit"
-              disabled={isLoading || serverStatus === 'checking'}
+              disabled={signInBlocked}
               className="relative flex w-full justify-center rounded-xl bg-[color:var(--accent-gold)] py-3 px-4 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading ? (
+              {isLoading || showWakeupLoader ? (
                 <span className="flex items-center gap-2">
                   <svg
                     className="h-4 w-4 animate-spin"
@@ -261,17 +417,17 @@ export default function Login() {
                     />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                  {elapsed > 10
-                    ? `Waking server up… ${elapsed}s — please wait`
-                    : 'Signing in…'}
+                  {showWakeupLoader
+                    ? 'Waking server… signing you in'
+                    : elapsed > 10
+                      ? `Waking server up… ${elapsed}s — please wait`
+                      : 'Signing in…'}
                 </span>
-              ) : serverStatus === 'checking' ? (
-                'Connecting to server…'
               ) : (
                 'Sign in'
               )}
             </button>
-            {isLoading && elapsed > 5 && (
+            {isLoading && !showWakeupLoader && elapsed > 5 && (
               <p className="mt-2 text-center text-xs text-[color:var(--nav-text)]">
                 The server may be waking from sleep.{' '}
                 <strong className="text-[color:var(--nav-text-active)]">
