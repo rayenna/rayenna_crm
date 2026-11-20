@@ -18,6 +18,9 @@ const USE_SERVER_WAKEUP_LOADER = true
 /** Local preview: /login?wakeup=1 simulates a cold boot for this long after Sign in. */
 const PREVIEW_COLD_MS = 15_000
 
+/** How long to wait for a health probe before treating the API as cold. */
+const HEALTH_PROBE_MS = 3_000
+
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
 
@@ -27,6 +30,32 @@ const forceWakeupPreview =
   new URLSearchParams(window.location.search).get('wakeup') === '1'
 
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
+
+async function probeHealthOk(baseUrl: string, timeoutMs = HEALTH_PROBE_MS): Promise<boolean> {
+  const url = `${baseUrl.replace(/\/$/, '')}/api/health`
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { method: 'GET', signal: controller.signal, cache: 'no-store' })
+    return res.ok
+  } catch {
+    return false
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
+function credentialsFromSubmit(
+  form: HTMLFormElement,
+  stateEmail: string,
+  statePassword: string,
+): { email: string; password: string } {
+  // iOS Chrome/Safari autofill often fills the DOM without firing React onChange.
+  const fd = new FormData(form)
+  const email = String(fd.get('email') ?? stateEmail).trim()
+  const password = String(fd.get('password') ?? statePassword)
+  return { email, password }
+}
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -39,10 +68,13 @@ const Login = () => {
     email: string
     password: string
   } | null>(null)
+  /** Remount wake loader to resume health polling after a flaky auto-login. */
+  const [wakeEpoch, setWakeEpoch] = useState(0)
   const { login } = useAuth()
   const navigate = useNavigate()
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoLoginInFlight = useRef(false)
+  const submitLockRef = useRef(false)
 
   const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
 
@@ -92,8 +124,18 @@ const Login = () => {
     stopElapsedCounter()
     setPendingWakeLogin(null)
     setIsLoading(false)
+    submitLockRef.current = false
     toast.success('Login successful')
     navigate(CRM_DEFAULT_HOME)
+  }
+
+  const failLogin = (message: string) => {
+    stopElapsedCounter()
+    setPendingWakeLogin(null)
+    setIsLoading(false)
+    submitLockRef.current = false
+    toast.error(message)
+    setServerStatus('slow')
   }
 
   const completeLoginWithCredentials = async (creds: { email: string; password: string }) => {
@@ -104,12 +146,12 @@ const Login = () => {
       finishLoginSuccess()
     } catch (error: unknown) {
       autoLoginInFlight.current = false
-      // API woke but auth failed — drop back to the form with the same fields filled.
-      setPendingWakeLogin(null)
-      setIsLoading(false)
-      stopElapsedCounter()
-      toast.error(getFriendlyApiErrorMessage(error))
-      setServerStatus('slow')
+      // Still flaky / waking — keep the overlay and resume health polling (no flicker back to form).
+      if (isTimeoutOrNetworkError(error) && (error as { response?: unknown }).response == null) {
+        setWakeEpoch((n) => n + 1)
+        return
+      }
+      failLogin(getFriendlyApiErrorMessage(error))
     }
   }
 
@@ -118,38 +160,57 @@ const Login = () => {
     void completeLoginWithCredentials(pendingWakeLogin)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (submitLockRef.current || showWakeupLoader) return
+
+    const creds = credentialsFromSubmit(e.currentTarget, email, password)
+    if (!creds.email || !creds.password) {
+      toast.error('Enter your email and password to sign in.')
+      return
+    }
+    // Keep controlled inputs in sync with autofill for later wake auto-login.
+    setEmail(creds.email)
+    setPassword(creds.password)
+
+    submitLockRef.current = true
     setIsLoading(true)
     startElapsedCounter()
     autoLoginInFlight.current = false
 
     // Local preview of the cold-start path: keep credentials, animate 15s, then auto-login.
     if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
-      setPendingWakeLogin({ email, password })
+      setPendingWakeLogin(creds)
       return
     }
 
     try {
-      await login(email, password)
+      await login(creds.email, creds.password)
       finishLoginSuccess()
     } catch (error: unknown) {
       const err = error as { response?: { status?: number } }
-      const coldStart =
-        USE_SERVER_WAKEUP_LOADER &&
-        isProd &&
-        Boolean(apiBaseUrl) &&
-        err?.response == null &&
-        isTimeoutOrNetworkError(error)
+      const looksLikeNetwork =
+        err?.response == null && isTimeoutOrNetworkError(error)
 
-      if (coldStart) {
-        // Keep credentials; show wake UI until API is live, then enter the app (no re-login).
-        setPendingWakeLogin({ email, password })
+      // Only show the wake animation when the API is actually unreachable.
+      // iPhone autofill / transient ERR_NETWORK must not flicker the overlay on a live server.
+      if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl && looksLikeNetwork) {
+        const awake = await probeHealthOk(apiBaseUrl)
+        if (awake) {
+          try {
+            await login(creds.email, creds.password)
+            finishLoginSuccess()
+            return
+          } catch (retryErr: unknown) {
+            failLogin(getFriendlyApiErrorMessage(retryErr))
+            return
+          }
+        }
+        setPendingWakeLogin(creds)
+        setWakeEpoch((n) => n + 1)
         return
       }
 
-      stopElapsedCounter()
-      setIsLoading(false)
       const msg =
         err?.response != null
           ? getFriendlyApiErrorMessage(error)
@@ -158,8 +219,7 @@ const Login = () => {
             : isTimeoutOrNetworkError(error)
               ? 'Server took too long to respond. It may still be waking up — please try again.'
               : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
-      toast.error(msg)
-      setServerStatus('slow')
+      failLogin(msg)
     }
   }
 
@@ -178,6 +238,7 @@ const Login = () => {
     >
       {showWakeupLoader && pendingWakeLogin ? (
         <ServerWakeupLoader
+          key={wakeEpoch}
           apiUrl={apiBaseUrl}
           healthEndpoint="/api/health"
           appMode="crm"
@@ -273,7 +334,10 @@ const Login = () => {
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="username"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
                 required
                 className={fieldCls}
                 placeholder="Email address"

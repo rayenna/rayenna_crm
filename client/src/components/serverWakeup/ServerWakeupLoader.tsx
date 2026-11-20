@@ -329,7 +329,8 @@ export default function ServerWakeupLoader({
   previewDelayMs = 0,
   backgroundImageUrl = '/background.jpg',
 }: ServerWakeupLoaderProps) {
-  const [showOverlay, setShowOverlay] = useState(previewDelayMs > 0)
+  // Cold-start path passes initialDelayMs=0 — show immediately (no null flash / flicker).
+  const [showOverlay, setShowOverlay] = useState(previewDelayMs > 0 || initialDelayMs <= 0)
   const [isReady, setIsReady] = useState(false)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [messageIndex, setMessageIndex] = useState(0)
@@ -368,10 +369,10 @@ export default function ServerWakeupLoader({
     return () => window.clearInterval(tick)
   }, [retryToken])
 
-  // Reveal overlay only after initialDelayMs if still not ready (skip delay in preview).
+  // Reveal overlay only after initialDelayMs if still not ready (skip delay in preview / cold-start).
   useEffect(() => {
     if (isReady) return
-    if (previewDelayMs > 0) {
+    if (previewDelayMs > 0 || initialDelayMs <= 0) {
       setShowOverlay(true)
       return
     }
