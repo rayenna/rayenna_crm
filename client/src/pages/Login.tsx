@@ -178,10 +178,21 @@ const Login = () => {
     startElapsedCounter()
     autoLoginInFlight.current = false
 
-    // Local preview of the cold-start path: keep credentials, animate 15s, then auto-login.
+    // Local preview: keep credentials, animate 15s, then auto-login.
     if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
       setPendingWakeLogin(creds)
       return
+    }
+
+    // Production: probe health FIRST. If Render is cold, show the wake animation
+    // immediately (do not sit on the old 90s login spinner).
+    if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl) {
+      const awake = await probeHealthOk(apiBaseUrl, HEALTH_PROBE_MS)
+      if (!awake) {
+        setPendingWakeLogin(creds)
+        setWakeEpoch((n) => n + 1)
+        return
+      }
     }
 
     try {
@@ -192,23 +203,23 @@ const Login = () => {
       const looksLikeNetwork =
         err?.response == null && isTimeoutOrNetworkError(error)
 
-      // Only show the wake animation when the API is actually unreachable.
-      // iPhone autofill / transient ERR_NETWORK must not flicker the overlay on a live server.
+      // Login failed with network error even though the earlier probe passed —
+      // confirm again; if down now, switch to wake UI instead of a raw error.
       if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl && looksLikeNetwork) {
-        const awake = await probeHealthOk(apiBaseUrl)
-        if (awake) {
-          try {
-            await login(creds.email, creds.password)
-            finishLoginSuccess()
-            return
-          } catch (retryErr: unknown) {
-            failLogin(getFriendlyApiErrorMessage(retryErr))
-            return
-          }
+        const awake = await probeHealthOk(apiBaseUrl, HEALTH_PROBE_MS)
+        if (!awake) {
+          setPendingWakeLogin(creds)
+          setWakeEpoch((n) => n + 1)
+          return
         }
-        setPendingWakeLogin(creds)
-        setWakeEpoch((n) => n + 1)
-        return
+        try {
+          await login(creds.email, creds.password)
+          finishLoginSuccess()
+          return
+        } catch (retryErr: unknown) {
+          failLogin(getFriendlyApiErrorMessage(retryErr))
+          return
+        }
       }
 
       const msg =
