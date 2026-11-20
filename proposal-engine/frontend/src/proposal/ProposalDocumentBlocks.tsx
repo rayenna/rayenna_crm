@@ -2140,8 +2140,12 @@ export function ProposalCoverBlock({ proposal }: { proposal: ProposalData }) {
               />
             </div>
             <div>
-              <p className="font-extrabold text-sm sm:text-base tracking-tight drop-shadow">Rayenna Energy Private Limited</p>
-              <p className="text-white/90 text-[10px] mt-0.5">www.rayennaenergy.com · +91 7907 369 304</p>
+              <p className="font-extrabold text-sm sm:text-base tracking-tight drop-shadow">
+                Rayenna Energy Private Limited
+              </p>
+              {/* Website + phone on separate lines so PDF print does not mid-wrap the number. */}
+              <p className="text-white/90 text-[10px] mt-0.5 leading-snug">www.rayennaenergy.com</p>
+              <p className="text-white/90 text-[10px] leading-snug">+91 7907 369 304</p>
             </div>
           </div>
           <div className="sm:text-right">

@@ -378,11 +378,21 @@ export async function exportToPpt(
       fontSize: 11,
       color: 'CBD5E1',
     });
-    s.addText('sales@rayenna.energy  ·  +91 7907 369 304  ·  www.rayennaenergy.com', {
+    s.addText('sales@rayenna.energy  ·  www.rayennaenergy.com', {
       x: 2.3,
       y: 1.14,
       w: 9.8,
-      h: 0.2,
+      h: 0.18,
+      fontFace: FONT,
+      fontSize: 10,
+      color: '94A3B8',
+    });
+    // Phone on its own line — matches preview/PDF cover; avoids mid-number wrap.
+    s.addText('+91 7907 369 304', {
+      x: 2.3,
+      y: 1.32,
+      w: 9.8,
+      h: 0.18,
       fontFace: FONT,
       fontSize: 10,
       color: '94A3B8',
