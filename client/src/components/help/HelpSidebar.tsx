@@ -68,10 +68,10 @@ const HelpSidebar = ({
                   onSectionSelect(section)
                   onNavigate?.()
                 }}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 touch-manipulation min-h-[44px] ${
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all duration-200 touch-manipulation min-h-[44px] ${
                   isSelected
                     ? 'border-l-4 border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
-                    : 'border-l-4 border-transparent text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
+                    : 'border-l-4 border-transparent text-[color:var(--text-primary)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--accent-gold)]'
                 }`}
               >
                 <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-base leading-none" aria-hidden>
@@ -81,7 +81,7 @@ const HelpSidebar = ({
               </button>
               {subItems && subItems.length > 0 ? (
                 <ul
-                  className="ml-2 space-y-0.5 border-l border-[color:var(--border-default)] pl-2.5"
+                  className="ml-2 space-y-0.5 border-l border-[color:var(--border-strong)] pl-2.5"
                   aria-label={`${section.title} in this page`}
                 >
                   {subItems.map((item) => {
@@ -97,7 +97,7 @@ const HelpSidebar = ({
                           className={`flex w-full rounded-lg px-2 py-2 text-left text-xs font-medium leading-snug transition-colors touch-manipulation min-h-[40px] items-center ${
                             hashActive
                               ? 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] ring-1 ring-[color:var(--accent-teal-border)]'
-                              : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
+                              : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
                           }`}
                         >
                           {item.label}
@@ -114,7 +114,7 @@ const HelpSidebar = ({
           <Link
             to="/about"
             onClick={() => onNavigate?.()}
-            className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-transparent px-3 py-2.5 text-left text-sm font-medium text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)] touch-manipulation min-h-[44px]"
+            className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-transparent px-3 py-2.5 text-left text-sm font-semibold text-[color:var(--text-primary)] transition-all duration-200 hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--accent-gold)] touch-manipulation min-h-[44px]"
           >
             <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-base leading-none" aria-hidden>
               ℹ️

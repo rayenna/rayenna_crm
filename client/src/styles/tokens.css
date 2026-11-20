@@ -29,11 +29,11 @@
   --border-focus:      rgba(245,166,35,0.5);
   --border-card:       rgba(255,255,255,0.09);
 
-  /* Text */
+  /* Text — keep secondary/muted high enough for nav + labels on near-black */
   --text-primary:      #FFFFFF;
-  --text-secondary:    rgba(255,255,255,0.55);
-  --text-muted:        rgba(255,255,255,0.28);
-  --text-placeholder:  rgba(255,255,255,0.22);
+  --text-secondary:    rgba(255,255,255,0.78);
+  --text-muted:        rgba(255,255,255,0.55);
+  --text-placeholder:  rgba(255,255,255,0.40);
   --text-inverse:      #0A0A0F;
 
   /* Brand accents — these stay consistent */
