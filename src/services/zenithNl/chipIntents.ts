@@ -17,6 +17,7 @@ import { matchWhoToCallIntent } from './whoToCallAsk';
 import { matchProjectsListFilterIntent } from './listFilterAsk';
 import { matchHelpLookupIntent } from './helpLookupAsk';
 import { matchReportAskIntent } from './reportPackAsk';
+import { matchLatestPaymentsIntent } from './latestPaymentsAsk';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -177,6 +178,24 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     viz: 'table',
     filters: { detailSlice: 'loan' },
     insightHints: 'collections loan',
+  },
+  [norm('List the last five payments received')]: {
+    metric: 'latest_payments_received',
+    viz: 'table',
+    filters: { detailSlice: '5' },
+    insightHints: 'latest 5 payments received',
+  },
+  [norm('Latest payments received')]: {
+    metric: 'latest_payments_received',
+    viz: 'table',
+    filters: { detailSlice: '10' },
+    insightHints: 'latest 10 payments received',
+  },
+  [norm('Show latest payments')]: {
+    metric: 'latest_payments_received',
+    viz: 'table',
+    filters: { detailSlice: '10' },
+    insightHints: 'latest 10 payments received',
   },
   [norm('Thin margin jobs')]: {
     metric: 'margin_mix',
@@ -482,12 +501,68 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
   [norm('Which customers have the highest profit?')]: {
     metric: 'top_customers_by_profit',
     viz: 'table',
+    filters: { detailSlice: 'top' },
     insightHints: 'top customers by profit',
   },
   [norm('Top customers by profit')]: {
     metric: 'top_customers_by_profit',
     viz: 'table',
+    filters: { detailSlice: 'top' },
     insightHints: 'top customers by profit',
+  },
+  [norm('Who is my most profitable customer')]: {
+    metric: 'top_customers_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'top' },
+    insightHints: 'top customers by profit',
+  },
+  [norm('Who is my least profitable customer')]: {
+    metric: 'top_customers_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable customers',
+  },
+  [norm('Least profitable customers')]: {
+    metric: 'top_customers_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable customers',
+  },
+  [norm('List my least profitable customers')]: {
+    metric: 'top_customers_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable customers',
+  },
+  [norm('Which customers have the lowest profit?')]: {
+    metric: 'top_customers_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable customers',
+  },
+  [norm('List my most profitable projects')]: {
+    metric: 'top_projects_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'top' },
+    insightHints: 'most profitable projects',
+  },
+  [norm('List my least profitable projects')]: {
+    metric: 'top_projects_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable projects',
+  },
+  [norm('Most profitable projects')]: {
+    metric: 'top_projects_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'top' },
+    insightHints: 'most profitable projects',
+  },
+  [norm('Least profitable projects')]: {
+    metric: 'top_projects_by_profit',
+    viz: 'table',
+    filters: { detailSlice: 'least' },
+    insightHints: 'least profitable projects',
   },
   [norm('Panel brand mix')]: {
     metric: 'panel_brand_mix',
@@ -1393,13 +1468,56 @@ const PHRASE_SALVAGE: PhraseSalvage[] = [
     },
   },
   {
+    // Projects before customers — “least profitable projects” must not become a customer list.
     test: (q) =>
-      /\b(top\s+customers?\s+by\s+profit|highest\s+profit\s+customers?|most\s+profitable\s+customers?)\b/.test(
-        q,
-      ),
+      (/\b(least|lowest|worst)\s+profitable\b/.test(q) ||
+        /\bbottom\s+projects?\s+by\s+profit\b/.test(q)) &&
+      /\b(projects?|deals?)\b/.test(q),
+    intent: {
+      metric: 'top_projects_by_profit',
+      viz: 'table',
+      filters: { detailSlice: 'least' },
+      insightHints: 'least profitable projects',
+    },
+  },
+  {
+    test: (q) =>
+      (/\b(most|highest|top)\s+profitable\b/.test(q) ||
+        /\btop\s+projects?\s+by\s+profit\b/.test(q)) &&
+      /\b(projects?|deals?)\b/.test(q),
+    intent: {
+      metric: 'top_projects_by_profit',
+      viz: 'table',
+      filters: { detailSlice: 'top' },
+      insightHints: 'most profitable projects',
+    },
+  },
+  {
+    // Least / lowest before “most/top” so “least profitable customer” never flips to top.
+    test: (q) =>
+      /\b(least|lowest|worst)\s+profitable\s+customers?\b/.test(q) ||
+      /\b(lowest|least|worst)\s+(gross\s+)?profits?\b/.test(q) ||
+      /\bbottom\s+customers?\s+by\s+profit\b/.test(q) ||
+      /\bwho\s+is\s+my\s+least\s+profitable\s+customer\b/.test(q) ||
+      (/\b(least|lowest|worst)\s+profitable\b/.test(q) && /\bcustomers?\b/.test(q)),
     intent: {
       metric: 'top_customers_by_profit',
       viz: 'table',
+      filters: { detailSlice: 'least' },
+      insightHints: 'least profitable customers',
+    },
+  },
+  {
+    test: (q) =>
+      /\b(top\s+customers?\s+by\s+profit|highest\s+profit\s+customers?|most\s+profitable\s+customers?)\b/.test(
+        q,
+      ) ||
+      /\bwho\s+is\s+my\s+most\s+profitable\s+customer\b/.test(q) ||
+      (/\bmost\s+profitable\b/.test(q) && /\bcustomers?\b/.test(q)),
+    intent: {
+      metric: 'top_customers_by_profit',
+      viz: 'table',
+      filters: { detailSlice: 'top' },
       insightHints: 'top customers by profit',
     },
   },
@@ -1562,6 +1680,7 @@ export function matchExactChipIntent(
       matchCustomersListIntent(question, role) ||
       matchProjectDetailLookupIntent(question, role) ||
       matchProjectsOpsDetailIntent(question, role) ||
+      matchLatestPaymentsIntent(question, role) ||
       matchProjectsListFilterIntent(question, role) ||
       matchSupportTicketIntent(question, role) ||
       matchEquipmentMixIntent(question, role) ||

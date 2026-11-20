@@ -58,6 +58,11 @@ import {
   resolveAskProjectsHref,
   type ZenithNlDateFilter,
 } from './zenithNl/projectsHref';
+import {
+  execLatestPaymentsReceived,
+  matchLatestPaymentsIntent,
+  parseLatestPaymentsLimit,
+} from './zenithNl/latestPaymentsAsk';
 import { supportTicketCreatedAtWhere } from './zenithNl/ticketDateFilter';
 import {
   applyZenithDimensionFilters,
@@ -242,6 +247,22 @@ function getRevenueWhere(baseWhere: Prisma.ProjectWhereInput): Prisma.ProjectWhe
   };
   revenueFilter.AND = [...baseAndConditions, stageCondition];
   return revenueFilter as Prisma.ProjectWhereInput;
+}
+
+/** Profit rankings — Completed book only (never Proposal / Lost / early pipeline). */
+function getCompletedProfitWhere(baseWhere: Prisma.ProjectWhereInput): Prisma.ProjectWhereInput {
+  const base = baseWhere as Record<string, unknown>;
+  const baseAndConditions = Array.isArray(base.AND) ? [...base.AND] : [];
+  const { AND: _a, projectStatus: _ps, ...baseWhereWithoutAnd } = base;
+  return {
+    ...baseWhereWithoutAnd,
+    projectCost: { not: null },
+    grossProfit: { not: null },
+    projectStatus: {
+      in: [ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED],
+    },
+    AND: baseAndConditions,
+  } as Prisma.ProjectWhereInput;
 }
 
 function toPositiveNumber(value: unknown): number {
@@ -642,6 +663,10 @@ Rules:
   - "payment timeline", "feasibility pending", "missing documents", "PE missing BOM", "hub station IDs", "550W panels", "lost deal details" → projects_ops_detail with filters.detailSlice
   - "stalled pipeline", "ageing/aging/aeging pipeline", "pipeline analysis", "pipeline health" → pipeline_health with filters.detailSlice stalled|ageing|analysis
   - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
+  - "most profitable customer" / "top customers by profit" → top_customers_by_profit with filters.detailSlice=top (Completed projects only)
+  - "least profitable customer" / "lowest profit customers" → top_customers_by_profit with filters.detailSlice=least
+  - "list/show my most|least profitable projects" → top_projects_by_profit with filters.detailSlice=top|least (Completed / Completed–Subsidy Credited only — never Proposal, Lost, or a generic projects_list_slice)
+  - "list the last five payments received" / "latest payments" / "recent payments received" → latest_payments_received with filters.detailSlice = count (same as Payment Radar → Latest payments received). Not unpaid_invoices or clarify.
   - "Where do I add the Panel and Inverter brand in CRM?" / "How do I change my password?" / "What is Ask Zenith?" → help_lookup
   - Weekly Reports packs (same numbers as Reports): "Sales Review achievement/forecast" → sales_review; "Funnel Velocity SLA / median days / win rate" → funnel_velocity; "Delivery Control blockers / subsidy clock" → delivery_control; "Collections outstanding / aging / loan-stuck" → collections_cash; "thin margin / missing cost / Margin & Mix" → margin_mix. Use filters.detailSlice = summary|achievement|forecast|deals|sla|sla_red|sla_amber|conversion|blockers|subsidy_clock|outstanding|aging|loan|thin|missing_cost|mix. Do not use help_lookup for live report numbers.
   - Pair detail lists with "for salesperson X" / "for ops Y" via filters.salespersonName / opsName
@@ -1010,51 +1035,128 @@ async function execOutstandingBalance(
   };
 }
 
+function isLeastProfitSlice(intent: ZenithNlIntent): boolean {
+  const slice = (intent.filters?.detailSlice || '').toLowerCase();
+  return slice === 'least' || slice === 'lowest' || slice === 'bottom';
+}
+
 async function execTopCustomersByProfit(
   where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
 ): Promise<{ viz: ZenithNlViz; insight: string }> {
-  const revenueWhere = getRevenueWhere(where);
+  const least = isLeastProfitSlice(intent);
+  const completedWhere = getCompletedProfitWhere(where);
   const projects = await prisma.project.findMany({
-    where: { ...revenueWhere, grossProfit: { not: null } },
+    where: completedWhere,
     select: {
+      id: true,
       grossProfit: true,
       projectCost: true,
       customer: { select: { customerName: true, firstName: true } },
     },
     take: 5000,
   });
-  const map = new Map<string, { customer: string; profit: number; revenue: number; count: number }>();
+  const map = new Map<
+    string,
+    { customer: string; profit: number; revenue: number; count: number; projectIds: string[] }
+  >();
   for (const p of projects) {
     const name = p.customer?.customerName?.trim() || p.customer?.firstName?.trim() || 'Unknown';
-    const cur = map.get(name) || { customer: name, profit: 0, revenue: 0, count: 0 };
+    const cur = map.get(name) || {
+      customer: name,
+      profit: 0,
+      revenue: 0,
+      count: 0,
+      projectIds: [],
+    };
     cur.profit += Number(p.grossProfit) || 0;
     cur.revenue += Number(p.projectCost) || 0;
     cur.count += 1;
+    if (p.id) cur.projectIds.push(p.id);
     map.set(name, cur);
   }
   const rows = Array.from(map.values())
-    .sort((a, b) => b.profit - a.profit)
+    .sort((a, b) => (least ? a.profit - b.profit : b.profit - a.profit))
     .slice(0, 10);
-  const top = rows[0];
+  const head = rows[0];
   const insight = rows.length
-    ? `Top customer by gross profit: ${top.customer} at ${formatInr(top.profit)} (${top.count} deals). Showing top ${rows.length}.`
-    : 'No profitability data matches your filters.';
+    ? least
+      ? `Least profitable customer (Completed projects only): ${head.customer} at ${formatInr(head.profit)} (${head.count} deals). Showing lowest ${rows.length}.`
+      : `Top customer by gross profit (Completed projects only): ${head.customer} at ${formatInr(head.profit)} (${head.count} deals). Showing top ${rows.length}.`
+    : 'No Completed-project profitability data matches your filters.';
   return {
     insight,
     viz: {
       kind: 'table',
-      title: 'Top customers by profit',
+      title: least ? 'Least profitable customers (Completed)' : 'Top customers by profit (Completed)',
       columns: [
         { key: 'customer', label: 'Customer' },
         { key: 'deals', label: 'Deals' },
         { key: 'revenue', label: 'Revenue (₹)' },
         { key: 'profit', label: 'Gross profit (₹)' },
       ],
-      rows: rows.map((r) => ({
-        customer: r.customer,
-        deals: r.count,
-        revenue: Math.round(r.revenue),
-        profit: Math.round(r.profit),
+      rows: rows.map((r) => {
+        const projectIds = [...new Set(r.projectIds)].slice(0, 200);
+        return {
+          customer: r.customer,
+          deals: r.count,
+          revenue: Math.round(r.revenue),
+          profit: Math.round(r.profit),
+          projectIds,
+          ...(projectIds.length === 1 ? { projectId: projectIds[0] } : {}),
+        };
+      }),
+    },
+  };
+}
+
+async function execTopProjectsByProfit(
+  where: Prisma.ProjectWhereInput,
+  intent: ZenithNlIntent,
+): Promise<{ viz: ZenithNlViz; insight: string }> {
+  const least = isLeastProfitSlice(intent);
+  const completedWhere = getCompletedProfitWhere(where);
+  const projects = await prisma.project.findMany({
+    where: completedWhere,
+    select: {
+      id: true,
+      slNo: true,
+      grossProfit: true,
+      projectCost: true,
+      projectStatus: true,
+      customer: { select: { customerName: true, firstName: true, city: true } },
+    },
+    orderBy: { grossProfit: least ? 'asc' : 'desc' },
+    take: TABLE_ROW_CAP,
+  });
+  const head = projects[0];
+  const insight = projects.length
+    ? least
+      ? `Least profitable Completed project: SL ${head!.slNo} (${head!.customer?.firstName?.trim() || head!.customer?.customerName?.trim() || 'Unknown'}) at ${formatInr(Number(head!.grossProfit) || 0)}. Showing lowest ${projects.length} (Completed / Completed–Subsidy Credited only).`
+      : `Most profitable Completed project: SL ${head!.slNo} (${head!.customer?.firstName?.trim() || head!.customer?.customerName?.trim() || 'Unknown'}) at ${formatInr(Number(head!.grossProfit) || 0)}. Showing top ${projects.length} (Completed / Completed–Subsidy Credited only).`
+    : 'No Completed projects with gross profit match your filters.';
+  return {
+    insight,
+    viz: {
+      kind: 'table',
+      title: least ? 'Least profitable projects (Completed)' : 'Most profitable projects (Completed)',
+      columns: [
+        { key: 'slNo', label: 'SL No' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'city', label: 'City' },
+        { key: 'stage', label: 'Stage' },
+        { key: 'revenue', label: 'Order value (₹)' },
+        { key: 'profit', label: 'Gross profit (₹)' },
+      ],
+      rows: projects.map((p) => ({
+        slNo: p.slNo,
+        customer: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
+        city: p.customer?.city?.trim() || '—',
+        stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+        revenue: Math.round(Number(p.projectCost) || 0),
+        profit: Math.round(Number(p.grossProfit) || 0),
+        projectId: p.id,
+        href: `/projects/${p.id}`,
       })),
     },
   };
@@ -2413,7 +2515,9 @@ async function executeMetric(
     case 'outstanding_balance':
       return execOutstandingBalance(where);
     case 'top_customers_by_profit':
-      return execTopCustomersByProfit(where);
+      return execTopCustomersByProfit(where, intent);
+    case 'top_projects_by_profit':
+      return execTopProjectsByProfit(where, intent);
     case 'lost_deals_summary':
       return execLostDealsSummary(where);
     case 'proposal_engine_buckets':
@@ -2504,6 +2608,8 @@ async function executeMetric(
       return execPaymentModeMix(where);
     case 'unpaid_invoices':
       return execUnpaidInvoices(where);
+    case 'latest_payments_received':
+      return execLatestPaymentsReceived(where, intent);
     case 'amc_expiring':
       return execAmcExpiring(where);
     case 'ticket_resolution_time':
@@ -2759,6 +2865,67 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
     const ticketIntent = matchSupportTicketIntent(question, input.role);
     if (ticketIntent) {
       intent = normalizeIntent(ticketIntent, input.role);
+    }
+  }
+
+  // Latest payments received (Payment Radar) — never clarify / unpaid invoices.
+  {
+    const paymentsAsk = matchLatestPaymentsIntent(question, input.role);
+    if (paymentsAsk) {
+      const limit = parseLatestPaymentsLimit(question);
+      intent = normalizeIntent(
+        {
+          ...paymentsAsk,
+          filters: { ...paymentsAsk.filters, detailSlice: String(limit) },
+        },
+        input.role,
+      );
+    }
+  }
+
+  // Most/least profitable projects vs customers — never a generic project list, never flip least→top.
+  {
+    const asksProfitRank =
+      /\b(most|least|lowest|highest|worst|top|bottom)\s+profitable\b/.test(qLower) ||
+      /\b(top|bottom)\s+(customers?|projects?|deals?)\s+by\s+profit\b/.test(qLower);
+    const asksProjects = /\b(projects?|deals?)\b/.test(qLower);
+    const asksCustomers = /\bcustomers?\b/.test(qLower);
+    const asksLeast =
+      /\b(least|lowest|worst)\s+profitable\b/.test(qLower) ||
+      /\b(lowest|least|worst)\s+(gross\s+)?profits?\b/.test(qLower) ||
+      /\bbottom\s+(customers?|projects?|deals?)\s+by\s+profit\b/.test(qLower);
+    const slice = asksLeast ? 'least' : 'top';
+    if (
+      asksProfitRank &&
+      asksProjects &&
+      !asksCustomers &&
+      metricAllowedForRole('top_projects_by_profit', input.role)
+    ) {
+      intent = normalizeIntent(
+        {
+          metric: 'top_projects_by_profit',
+          viz: 'table',
+          filters: { ...intent.filters, detailSlice: slice },
+          insightHints:
+            slice === 'least' ? 'least profitable projects' : 'most profitable projects',
+        },
+        input.role,
+      );
+    } else if (
+      (intent.metric === 'top_customers_by_profit' ||
+        (asksProfitRank && asksCustomers && !asksProjects)) &&
+      metricAllowedForRole('top_customers_by_profit', input.role)
+    ) {
+      intent = normalizeIntent(
+        {
+          metric: 'top_customers_by_profit',
+          viz: 'table',
+          filters: { ...intent.filters, detailSlice: slice },
+          insightHints:
+            slice === 'least' ? 'least profitable customers' : 'top customers by profit',
+        },
+        input.role,
+      );
     }
   }
 

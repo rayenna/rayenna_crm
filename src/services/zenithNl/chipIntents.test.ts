@@ -9,6 +9,29 @@ import {
 import { extractZenithDimensions, mergeDimensionsIntoIntent } from './dimensionFilters';
 
 describe('matchExactChipIntent', () => {
+  it('matches least vs most profitable customer without Claude', () => {
+    const least = matchExactChipIntent('who is my least profitable customer', UserRole.MANAGEMENT);
+    expect(least?.metric).toBe('top_customers_by_profit');
+    expect(least?.filters?.detailSlice).toBe('least');
+
+    const most = matchExactChipIntent('who is my most profitable customer', UserRole.ADMIN);
+    expect(most?.metric).toBe('top_customers_by_profit');
+    expect(most?.filters?.detailSlice).toBe('top');
+
+    const lowest = matchExactChipIntent('Which customers have the lowest profit?', UserRole.ADMIN);
+    expect(lowest?.filters?.detailSlice).toBe('least');
+  });
+
+  it('matches most/least profitable projects (not a generic project list)', () => {
+    const most = matchExactChipIntent('list my most profitable projects', UserRole.MANAGEMENT);
+    expect(most?.metric).toBe('top_projects_by_profit');
+    expect(most?.filters?.detailSlice).toBe('top');
+
+    const least = matchExactChipIntent('list my least profitable projects', UserRole.ADMIN);
+    expect(least?.metric).toBe('top_projects_by_profit');
+    expect(least?.filters?.detailSlice).toBe('least');
+  });
+
   it('matches Management panel mix chip without Claude', () => {
     const intent = matchExactChipIntent('Which panel brands sold most?', UserRole.MANAGEMENT);
     expect(intent?.metric).toBe('panel_brand_mix');

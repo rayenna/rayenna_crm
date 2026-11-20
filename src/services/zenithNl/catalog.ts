@@ -11,6 +11,7 @@ export const ZENITH_NL_METRICS = [
   'capacity_sold',
   'outstanding_balance',
   'top_customers_by_profit',
+  'top_projects_by_profit',
   'lost_deals_summary',
   'proposal_engine_buckets',
   'projects_list_slice',
@@ -43,6 +44,7 @@ export const ZENITH_NL_METRICS = [
   'installation_model_status',
   'payment_mode_mix',
   'unpaid_invoices',
+  'latest_payments_received',
   'amc_expiring',
   'ticket_resolution_time',
   'hub_plant_link_summary',
@@ -154,10 +156,13 @@ export type ZenithNlPriorContext = {
 };
 
 export type ZenithNlTableColumn = { key: string; label: string };
-/** Row cells plus optional drill-down `href` (not rendered as a column). */
+/** Row cells plus optional drill-down `href` / project pin ids (not rendered as columns). */
 export type ZenithNlTableRow = {
   href?: string;
-  [key: string]: string | number | null | undefined;
+  projectId?: string;
+  /** Ask “Open in Projects” / row drill when a row spans multiple deals. */
+  projectIds?: string[];
+  [key: string]: string | number | null | undefined | string[];
 };
 
 export type ZenithNlChartSeriesPoint = {
@@ -359,7 +364,15 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   },
   {
     metric: 'top_customers_by_profit',
-    description: 'Top customers by gross profit',
+    description:
+      'Customers ranked by gross profit on Completed / Completed–Subsidy Credited projects only — filters.detailSlice=top|least. Default top. Never include Proposal or Lost.',
+    defaultViz: 'table',
+    roles: EXEC,
+  },
+  {
+    metric: 'top_projects_by_profit',
+    description:
+      'Individual projects ranked by gross profit on Completed / Completed–Subsidy Credited only — filters.detailSlice=top|least. Use for “most/least profitable projects”. Never Proposal/Lost/Confirmed-only.',
     defaultViz: 'table',
     roles: EXEC,
   },
@@ -581,6 +594,13 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: FINANCE_PLUS,
   },
   {
+    metric: 'latest_payments_received',
+    description:
+      'Latest installment receipts (Advance / P1 / P2 / P3 / Last) — same as Zenith Payment Radar → Latest payments received. filters.detailSlice = count (e.g. 5).',
+    defaultViz: 'table',
+    roles: FINANCE_PLUS,
+  },
+  {
     metric: 'amc_expiring',
     description: 'AMC contracts ending in the next 90 days',
     defaultViz: 'table',
@@ -716,22 +736,22 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
+    'List the last five payments received',
     'Which lead sources drove the most revenue?',
-    'Summarise my lost deals by reason',
     'Customer details for {customer}',
   ],
   MANAGEMENT: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
-    'Subsidy vs non-subsidy revenue',
+    'List the last five payments received',
     'Show open support tickets',
     'Customer details for {customer}',
   ],
   ADMIN: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
+    'List the last five payments received',
     'Show open support tickets',
-    'List pending subsidy projects',
     'Customer details for {customer}',
   ],
   OPERATIONS: [
@@ -743,10 +763,10 @@ export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   ],
   FINANCE: [
     'Who should I call today?',
+    'List the last five payments received',
     'Unpaid invoices',
     'Payment status breakdown',
     'Profit summary this quarter',
-    'Payment mode mix',
   ],
 };
 
@@ -779,7 +799,7 @@ export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
     'Where do I add the Panel and Inverter brand in CRM?',
     'Collections outstanding',
     'Thin margin jobs',
-    'Payment timeline',
+    'Payment mode mix',
   ],
 };
 
@@ -794,6 +814,7 @@ const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
   capacity_sold: 'Capacity sold',
   outstanding_balance: 'Show projects with outstanding balance',
   top_customers_by_profit: 'Show top customers by profit',
+  top_projects_by_profit: 'List my most profitable projects',
   lost_deals_summary: 'Summarise my lost deals by reason',
   proposal_engine_buckets: 'Proposal Engine buckets',
   projects_list_slice: 'List under installation projects not fully paid',
@@ -826,6 +847,7 @@ const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
   installation_model_status: 'Show installation status breakdown',
   payment_mode_mix: 'Payment mode mix',
   unpaid_invoices: 'Unpaid invoices',
+  latest_payments_received: 'List the last five payments received',
   amc_expiring: 'AMCs expiring',
   ticket_resolution_time: 'Ticket resolution time',
   hub_plant_link_summary: 'Hub plant link status',
@@ -975,9 +997,14 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Which projects are availing loan?',
     ],
     top_customers_by_profit: [
+      'List my most profitable projects',
+      'List my least profitable projects',
       'Revenue by salesperson',
-      'Revenue by lead source',
-      'Show capacity sold',
+    ],
+    top_projects_by_profit: [
+      'Show top customers by profit',
+      'List my least profitable customers',
+      'Revenue by salesperson',
     ],
     lost_deals_summary: [
       'List lost deals with active PE proposals',
@@ -1140,9 +1167,14 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'Outstanding by salesperson',
     ],
     unpaid_invoices: [
+      'List the last five payments received',
       'Payment mode mix',
       'Projects with outstanding balance',
-      'Profit summary',
+    ],
+    latest_payments_received: [
+      'Show projects with outstanding balance',
+      'Payment status breakdown',
+      'Collections outstanding',
     ],
     amc_expiring: [
       'Ops workload',

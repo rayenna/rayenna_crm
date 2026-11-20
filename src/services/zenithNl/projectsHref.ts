@@ -135,21 +135,35 @@ export function projectIdsFromAskViz(viz: ZenithNlViz): string[] {
   if (viz.kind !== 'table') return [];
   const seen = new Set<string>();
   const ids: string[] = [];
+  const push = (raw: unknown) => {
+    const id = typeof raw === 'string' ? raw.trim() : '';
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  };
   for (const row of viz.rows) {
     const rec = row as Record<string, unknown>;
+    if (Array.isArray(rec.projectIds)) {
+      for (const raw of rec.projectIds) push(raw);
+      continue;
+    }
     let id = typeof rec.projectId === 'string' ? rec.projectId.trim() : '';
     if (!id && typeof rec.href === 'string') {
       const m = rec.href.match(/^\/projects\/([a-z0-9_-]{16,40})\/?$/i);
       if (m?.[1]) id = m[1];
     }
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    ids.push(id);
+    push(id);
   }
   return ids;
 }
 
-const PIN_ASK_HREF_TO_ROW_IDS = new Set<ZenithNlMetric>(['pipeline_health', 'who_to_call']);
+const PIN_ASK_HREF_TO_ROW_IDS = new Set<ZenithNlMetric>([
+  'pipeline_health',
+  'who_to_call',
+  'top_customers_by_profit',
+  'top_projects_by_profit',
+  'latest_payments_received',
+]);
 
 function isBroadProjectsHref(href: string | null | undefined): boolean {
   if (href == null || href === '' || href === '/projects') return true;
@@ -380,15 +394,17 @@ export function projectsHrefForIntent(
         { paymentStatus: ['PENDING', 'PARTIAL'] },
         dateFilter,
       );
-    case 'top_customers_by_profit': {
+    case 'top_customers_by_profit':
+    case 'top_projects_by_profit': {
+      // Completed profit book — Open in Projects should not include Proposal/Lost.
       const search = intent.filters?.search?.trim();
-      if (search) {
-        return buildZenithNlProjectsHref(
-          { search, zenithSlice: 'revenue' },
-          dateFilter,
-        );
-      }
-      return buildZenithNlProjectsHref({ zenithSlice: 'revenue' }, dateFilter);
+      return buildZenithNlProjectsHref(
+        {
+          status: ['COMPLETED', 'COMPLETED_SUBSIDY_CREDITED'],
+          ...(search ? { search } : {}),
+        },
+        dateFilter,
+      );
     }
     case 'lost_deals_summary': {
       // Lost Deals page preserves the same FY/Q/M filters.
@@ -605,6 +621,8 @@ export function projectsHrefForIntent(
     case 'payment_mode_mix':
     case 'unpaid_invoices':
       return buildZenithNlProjectsHref({}, dateFilter);
+    case 'latest_payments_received':
+      return '/zenith#zenith-payment-radar';
     case 'support_tickets_summary': {
       const status = intent.filters?.ticketStatus?.trim().toUpperCase() || '';
       const source = intent.filters?.ticketSource?.trim().toUpperCase() || '';
@@ -743,6 +761,7 @@ const PROJECT_LIST_ROW_METRICS = new Set<ZenithNlMetric>([
   'unpaid_invoices',
   'amc_expiring',
   'top_customers_by_profit',
+  'top_projects_by_profit',
 ]);
 
 function rowCount(row: Record<string, unknown>): number {
@@ -1017,7 +1036,8 @@ export function attachAskDrillHrefs(
     metric === 'funnel_velocity' ||
     metric === 'delivery_control' ||
     metric === 'collections_cash' ||
-    metric === 'margin_mix'
+    metric === 'margin_mix' ||
+    metric === 'latest_payments_received'
   ) {
     return viz;
   }
@@ -1087,8 +1107,21 @@ export function attachAskDrillHrefs(
           };
         }
 
-        // 5) Project list rows (slNo / customer)
+        // 5) Project list rows (slNo / customer) — prefer pinned ids when present
         if (PROJECT_LIST_ROW_METRICS.has(metric)) {
+          const fromIds: string[] = [];
+          if (Array.isArray(asRec.projectIds)) {
+            for (const v of asRec.projectIds) {
+              if (typeof v === 'string' && v.trim()) fromIds.push(v.trim());
+            }
+          }
+          if (fromIds.length === 0 && typeof asRec.projectId === 'string' && asRec.projectId.trim()) {
+            fromIds.push(asRec.projectId.trim());
+          }
+          if (fromIds.length > 0) {
+            const pinned = projectsHrefForAskProjectIds(fromIds);
+            if (pinned) return { ...row, href: pinned };
+          }
           const q = projectSearchFromRow(asRec);
           if (!q) return cohortHref ? { ...row, href: cohortHref } : row;
           return {

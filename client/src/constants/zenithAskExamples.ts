@@ -6,20 +6,23 @@ export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   SALES: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
+    'List the last five payments received',
     'Which lead sources drove the most revenue?',
-    'Summarise my lost deals by reason',
+    'Customer details for {customer}',
   ],
   MANAGEMENT: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
-    'Subsidy vs non-subsidy revenue',
+    'List the last five payments received',
     'Show open support tickets',
+    'Customer details for {customer}',
   ],
   ADMIN: [
     'Who should I call today?',
     'Why is my pipeline stalling?',
+    'List the last five payments received',
     'Show open support tickets',
-    'List pending subsidy projects',
+    'Customer details for {customer}',
   ],
   OPERATIONS: [
     'Who should I call today?',
@@ -30,10 +33,10 @@ export const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
   ],
   FINANCE: [
     'Who should I call today?',
+    'List the last five payments received',
     'Unpaid invoices',
     'Payment status breakdown',
     'Profit summary this quarter',
-    'Payment mode mix',
   ],
 }
 
@@ -66,7 +69,7 @@ export const ZENITH_ASK_MORE_EXAMPLES: Record<string, string[]> = {
     'Where do I add the Panel and Inverter brand in CRM?',
     'Collections outstanding',
     'Thin margin jobs',
-    'Payment timeline',
+    'Payment mode mix',
   ],
 }
 

@@ -10,6 +10,7 @@ import {
   type ZenithAskActionMatch,
   type ZenithAskActionId,
 } from './askActions';
+import { isConfidentNameMatch, rankNameMatches } from './nameFuzzy';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -83,7 +84,7 @@ export async function matchAskEditActionIntent(
         .replace(/\b(for|on|of|project|engine)\b/g, '')
         .replace(/\bsl\s*\d+\b/g, '')
         .trim() || null;
-    const project = sl
+    let project = sl
       ? await prisma.project.findFirst({ where: { slNo: sl }, select: { id: true, slNo: true } })
       : name && name.length >= 2
         ? await prisma.project.findFirst({
@@ -97,6 +98,39 @@ export async function matchAskEditActionIntent(
             select: { id: true, slNo: true },
           })
         : null;
+    if (!project && name && name.length >= 2) {
+      const pool = await prisma.project.findMany({
+        select: {
+          id: true,
+          slNo: true,
+          customer: { select: { firstName: true, customerName: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 800,
+      });
+      const ranked = rankNameMatches(
+        name,
+        pool,
+        (p) => p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || '',
+        {
+          getNames: (p) => [p.customer?.customerName, p.customer?.firstName],
+        },
+      );
+      if (isConfidentNameMatch(ranked)) {
+        project = { id: ranked[0]!.item.id, slNo: ranked[0]!.item.slNo };
+      } else if (ranked.length > 0) {
+        const tip = ranked
+          .slice(0, 3)
+          .map((r) => (r.item.slNo != null ? `SL ${r.item.slNo} (${r.name})` : r.name))
+          .join(', ');
+        return build(
+          'open_proposal',
+          `/projects?search=${encodeURIComponent(ranked[0]!.name)}`,
+          'Open proposal',
+          `No exact match for “${name}”. Did you mean: ${tip}?`,
+        );
+      }
+    }
     if (!project) {
       return build(
         'open_proposal',
@@ -318,7 +352,7 @@ export async function matchAskEditActionIntent(
         'Ask “edit customer Ramesh” or open Customers to edit.',
       );
     }
-    const c = await prisma.customer.findFirst({
+    let c = await prisma.customer.findFirst({
       where: {
         OR: [
           { customerId: { equals: name, mode: 'insensitive' } },
@@ -330,12 +364,40 @@ export async function matchAskEditActionIntent(
       orderBy: { updatedAt: 'desc' },
     });
     if (!c) {
-      return build(
-        'edit_customer',
-        `/customers?q=${encodeURIComponent(name)}`,
-        'Edit customer',
-        `No customer found for “${name}”.`,
+      const pool = await prisma.customer.findMany({
+        select: { id: true, customerName: true, firstName: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 800,
+      });
+      const ranked = rankNameMatches(
+        name,
+        pool,
+        (row) => row.firstName?.trim() || row.customerName?.trim() || '',
+        {
+          getNames: (row) => [row.customerName, row.firstName],
+        },
       );
+      if (isConfidentNameMatch(ranked)) {
+        c = ranked[0]!.item;
+      } else if (ranked.length > 0) {
+        const tip = ranked
+          .slice(0, 3)
+          .map((r) => r.name)
+          .join(', ');
+        return build(
+          'edit_customer',
+          `/customers?q=${encodeURIComponent(ranked[0]!.name)}`,
+          'Edit customer',
+          `No exact match for “${name}”. Did you mean: ${tip}?`,
+        );
+      } else {
+        return build(
+          'edit_customer',
+          `/customers?q=${encodeURIComponent(name)}`,
+          'Edit customer',
+          `No customer found for “${name}”.`,
+        );
+      }
     }
     return build(
       'edit_customer',

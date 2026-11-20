@@ -31,7 +31,7 @@ export function matchProjectsListFilterIntent(
   // PE + hybrid/customers is still a project list even if they said “customers”.
   if (!projectNoun && !peCohort) return null;
   if (
-    /\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|workload|analys[ei]s|customer\s+details?|project\s+details?)\b/.test(
+    /\b(vs|versus|mix|breakdown|share|funnel|how\s+many|revenue|profit|margin|profitable|workload|analys[ei]s|customer\s+details?|project\s+details?)\b/.test(
       q,
     )
   ) {

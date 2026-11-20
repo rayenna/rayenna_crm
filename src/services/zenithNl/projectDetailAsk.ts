@@ -16,6 +16,7 @@ import {
   buildLifecycleInstallationStatus,
   formatProjectStatusLifecycleLabel,
 } from './lifecycleInstallationStatus';
+import { isConfidentNameMatch, rankNameMatches } from './nameFuzzy';
 
 const TABLE_CAP = 25;
 const ALL_ASK: UserRole[] = [
@@ -365,40 +366,124 @@ export async function execProjectDetailLookup(
       : null;
 
   if (!project && raw && !slMatch) {
+    const tokens = raw
+      .split(/[\s.,'-]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 4);
+    const nameOr: Prisma.ProjectWhereInput[] = [
+      { customer: { customerName: { contains: raw, mode: 'insensitive' } } },
+      { customer: { firstName: { contains: raw, mode: 'insensitive' } } },
+      { customer: { lastName: { contains: raw, mode: 'insensitive' } } },
+    ];
+    // Also try significant tokens ("Ahmed", "Unni") — full "Ahmed Unni" rarely matches Ahammedunni.
+    for (const t of tokens) {
+      nameOr.push(
+        { customer: { customerName: { contains: t, mode: 'insensitive' } } },
+        { customer: { firstName: { contains: t, mode: 'insensitive' } } },
+        { customer: { lastName: { contains: t, mode: 'insensitive' } } },
+      );
+    }
     const matches = await prisma.project.findMany({
-      where: {
-        ...where,
-        OR: [
-          { customer: { customerName: { contains: raw, mode: 'insensitive' } } },
-          { customer: { firstName: { contains: raw, mode: 'insensitive' } } },
-          { customer: { lastName: { contains: raw, mode: 'insensitive' } } },
-        ],
-      },
+      where: { ...where, OR: nameOr },
       include: projectDetailInclude(role),
       orderBy: { updatedAt: 'desc' },
-      take: 5,
+      take: 25,
     });
-    if (matches.length === 1) project = matches[0]!;
-    else if (matches.length > 1) {
+    if (matches.length === 1) {
+      project = matches[0]!;
+    } else if (matches.length > 1) {
+      // Re-rank token hits so a lone "Unni" / initial "N" does not win over Ahammedunni.
+      const rankedHits = rankNameMatches(raw, matches, (p) => customerLabel(p.customer), {
+        minScore: 0.55,
+        limit: 5,
+        getNames: (p) => [
+          p.customer?.customerName,
+          p.customer?.firstName,
+          p.customer?.lastName,
+          customerLabel(p.customer),
+        ],
+      });
+      if (rankedHits.length === 1 || isConfidentNameMatch(rankedHits)) {
+        project = rankedHits[0]!.item;
+      } else if (rankedHits.length > 1) {
+        return {
+          insight: `Found ${rankedHits.length} close matches for “${raw}”. Pick one by SL No (e.g. “status of SL ${rankedHits[0]!.item.slNo}”).`,
+          viz: {
+            kind: 'table',
+            title: 'Matching projects',
+            columns: [
+              { key: 'slNo', label: 'SL No' },
+              { key: 'customer', label: 'Customer' },
+              { key: 'stage', label: 'Status' },
+              { key: 'value', label: 'Order (₹)' },
+            ],
+            rows: rankedHits.map((r) => ({
+              slNo: r.item.slNo,
+              customer: r.name,
+              stage: r.item.projectStatus,
+              value: Math.round(Number(r.item.projectCost) || 0),
+              projectId: r.item.id,
+              href: `/projects/${r.item.id}`,
+            })),
+          },
+          projectsHref: `/projects?search=${encodeURIComponent(rankedHits[0]!.name)}`,
+        };
+      } else {
+        // Token hits were all weak (e.g. only "N") — fall through to fuzzy pool.
+      }
+    }
+  }
+
+  if (!project && raw && !slMatch) {
+    // Exact/contains missed — fuzzy nearest neighbour on customer names in scope.
+    const pool = await prisma.project.findMany({
+      where,
+      select: {
+        id: true,
+        slNo: true,
+        customer: { select: { firstName: true, customerName: true, lastName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 800,
+    });
+    const ranked = rankNameMatches(raw, pool, (p) => customerLabel(p.customer), {
+      minScore: 0.62,
+      limit: 5,
+      // Score all name fields — firstName may be an initial ("N") while customerName is real.
+      getNames: (p) => [
+        p.customer?.customerName,
+        p.customer?.firstName,
+        p.customer?.lastName,
+        customerLabel(p.customer),
+      ],
+    });
+    if (ranked.length > 0 && isConfidentNameMatch(ranked)) {
+      const hit = await prisma.project.findFirst({
+        where: { ...where, id: ranked[0]!.item.id },
+        include: projectDetailInclude(role),
+      });
+      if (hit) project = hit;
+    } else if (ranked.length > 0) {
+      // Keep as a real answer table (not lookupMiss) so Ask shows “Did you mean?” rows.
       return {
-        insight: `Found ${matches.length} projects matching “${raw}”. Pick one by SL No (e.g. “status of SL ${matches[0]!.slNo}”).`,
+        insight: `No exact match for “${raw}”. Did you mean one of these? Tap a row or ask “status of SL …” / “status of {name}”.`,
         viz: {
           kind: 'table',
-          title: 'Matching projects',
+          title: 'Similar names',
           columns: [
             { key: 'slNo', label: 'SL No' },
             { key: 'customer', label: 'Customer' },
-            { key: 'stage', label: 'Status' },
-            { key: 'value', label: 'Order (₹)' },
+            { key: 'score', label: 'Match' },
           ],
-          rows: matches.map((p) => ({
-            slNo: p.slNo,
-            customer: customerLabel(p.customer),
-            stage: p.projectStatus,
-            value: Math.round(Number(p.projectCost) || 0),
+          rows: ranked.map((r) => ({
+            slNo: r.item.slNo,
+            customer: r.name,
+            score: `${Math.round(r.score * 100)}%`,
+            projectId: r.item.id,
+            href: `/projects/${r.item.id}`,
           })),
         },
-        projectsHref: `/projects?search=${encodeURIComponent(raw)}`,
+        projectsHref: `/projects?search=${encodeURIComponent(ranked[0]!.name)}`,
       };
     }
   }

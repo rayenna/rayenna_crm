@@ -175,4 +175,45 @@ describe('Ask Open in Projects pins deal lists', () => {
       ),
     ).toBe('/projects?systemType=HYBRID');
   });
+
+  it('pins top customers by profit to row project ids, not all revenue', () => {
+    const { viz, intent } = (() => {
+      const metric = 'top_customers_by_profit' as const;
+      return {
+        intent: { metric, filters: {} },
+        viz: {
+          kind: 'table' as const,
+          title: 'Top customers by profit',
+          columns: [{ key: 'customer', label: 'Customer' }],
+          rows: [
+            {
+              customer: 'SESSY ANTONY',
+              deals: 1,
+              projectIds: ['cmkxknrqr0004xc1bzozlo19j'],
+              projectId: 'cmkxknrqr0004xc1bzozlo19j',
+            },
+            {
+              customer: 'SABU K F',
+              deals: 2,
+              projectIds: ['cmu27mizh002wm7uu413s4nj9', 'cmu27mizh002wm7uu413s4nk0'],
+            },
+          ],
+        },
+      };
+    })();
+    const withHref = attachAskDrillHrefs('top_customers_by_profit', viz, intent, emptyDates);
+    if (withHref.kind !== 'table') throw new Error('expected table');
+    expect(withHref.rows[0]?.href).toContain('id=cmkxknrqr0004xc1bzozlo19j');
+    expect(withHref.rows[1]?.href).toContain('id=cmu27mizh002wm7uu413s4nj9');
+    expect(withHref.rows[1]?.href).toContain('id=cmu27mizh002wm7uu413s4nk0');
+
+    const href = resolveAskProjectsHref({
+      metric: 'top_customers_by_profit',
+      viz: withHref,
+      fallbackHref: '/projects?zenithSlice=revenue',
+    });
+    expect(href).toContain('id=cmkxknrqr0004xc1bzozlo19j');
+    expect(href).toContain('id=cmu27mizh002wm7uu413s4nj9');
+    expect(href).not.toContain('zenithSlice=');
+  });
 });

@@ -54,10 +54,13 @@ export type ZenithNlPriorContext = {
 }
 
 export type ZenithNlTableColumn = { key: string; label: string }
-/** Row cells plus optional drill-down `href` (not rendered as a column). */
+/** Row cells plus optional drill-down `href` / project pin ids (not rendered as columns). */
 export type ZenithNlTableRow = {
   href?: string
-  [key: string]: string | number | null | undefined
+  projectId?: string
+  /** Ask “Open in Projects” / row drill when a row spans multiple deals. */
+  projectIds?: string[]
+  [key: string]: string | number | null | undefined | string[]
 }
 
 export type ZenithNlChartSeriesPoint = {

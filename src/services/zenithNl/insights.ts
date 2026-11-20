@@ -33,6 +33,7 @@ export function enrichInsight(
     metric === 'outstanding_balance' ||
     metric === 'pending_subsidy' ||
     metric === 'top_customers_by_profit' ||
+    metric === 'top_projects_by_profit' ||
     metric === 'support_tickets_summary' ||
     metric === 'capacity_by_band' ||
     metric === 'service_type_mix' ||
@@ -55,6 +56,7 @@ export function enrichInsight(
     metric === 'installation_model_status' ||
     metric === 'payment_mode_mix' ||
     metric === 'unpaid_invoices' ||
+    metric === 'latest_payments_received' ||
     metric === 'amc_expiring' ||
     metric === 'ticket_resolution_time' ||
     metric === 'hub_plant_link_summary' ||

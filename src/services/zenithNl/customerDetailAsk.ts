@@ -20,6 +20,7 @@ import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { metricAllowedForRole } from './catalog';
 import { mentionsProposalEngineAsk, systemTypeLabel } from './dimensionFilters';
 import { formatProjectStatusLifecycleLabel } from './lifecycleInstallationStatus';
+import { isConfidentNameMatch, rankNameMatches } from './nameFuzzy';
 
 const TABLE_CAP = 25;
 
@@ -386,29 +387,49 @@ export async function execCustomerDetailLookup(
   });
 
   if (matches.length === 0) {
-    const nearby = await prisma.customer.findMany({
+    const pool = await prisma.customer.findMany({
       where: opts?.salespersonId ? { salespersonId: opts.salespersonId } : {},
-      select: { firstName: true, customerName: true },
+      select: customerDetailSelect,
       orderBy: { updatedAt: 'desc' },
-      take: 12,
+      take: 800,
     });
-    const needle = raw.toLowerCase();
-    const names = nearby
-      .map((c) => displayName(c))
-      .filter((n) => n && n !== 'Unknown')
-      .filter((n, i, arr) => arr.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i);
-    const ranked = names.sort((a, b) => {
-      const as = a.toLowerCase().startsWith(needle.slice(0, 1)) ? 0 : 1;
-      const bs = b.toLowerCase().startsWith(needle.slice(0, 1)) ? 0 : 1;
-      return as - bs;
+    const ranked = rankNameMatches(raw, pool, (c) => displayName(c), {
+      minScore: 0.62,
+      limit: 5,
+      getNames: (c) => [c.customerName, c.firstName, c.lastName, displayName(c)],
     });
-    const suggestions = ranked.slice(0, 3).map((n) => `Customer details for ${n}`);
-    return {
-      insight: `No customer found for “${raw}”.`,
-      viz: emptyCustomerTable('Customer detail'),
-      projectsHref: `/customers?q=${encodeURIComponent(raw)}`,
-      lookupMiss: { query: raw, suggestions },
-    };
+    if (ranked.length > 0 && isConfidentNameMatch(ranked)) {
+      matches.push(ranked[0]!.item);
+    } else if (ranked.length > 0) {
+      return {
+        insight: `No exact match for “${raw}”. Did you mean one of these? Tap a row or ask “customer details for {name}”.`,
+        viz: {
+          kind: 'table',
+          title: 'Similar names',
+          columns: [
+            { key: 'customerId', label: 'Customer ID' },
+            { key: 'name', label: 'Name' },
+            { key: 'city', label: 'City' },
+            { key: 'score', label: 'Match' },
+          ],
+          rows: ranked.map((r) => ({
+            customerId: r.item.customerId,
+            name: r.name,
+            city: r.item.city || '—',
+            score: `${Math.round(r.score * 100)}%`,
+            href: `/customers/${r.item.id}`,
+          })),
+        },
+        projectsHref: `/customers?q=${encodeURIComponent(ranked[0]!.name)}`,
+      };
+    } else {
+      return {
+        insight: `No customer found for “${raw}”.`,
+        viz: emptyCustomerTable('Customer detail'),
+        projectsHref: `/customers?q=${encodeURIComponent(raw)}`,
+        lookupMiss: { query: raw, suggestions: [] },
+      };
+    }
   }
 
   if (matches.length > 1) {

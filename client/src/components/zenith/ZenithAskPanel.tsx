@@ -82,8 +82,9 @@ function AskClarifyCatalog({
   )
 }
 
-function formatCell(v: string | number | null): string {
+function formatCell(v: string | number | null | undefined | string[]): string {
   if (v == null) return '—'
+  if (Array.isArray(v)) return '—'
   if (typeof v === 'number') {
     return Number.isInteger(v)
       ? v.toLocaleString('en-IN')
@@ -356,6 +357,8 @@ type Props = {
   role?: string
   mappedLabel?: string | null
   onClose: () => void
+  /** Floating Ask dock: close when leaving for Projects / Help / etc. */
+  onNavigateAway?: () => void
   onAskSuggestion: (q: string, source?: 'follow_up' | 'catalog') => void
   onReplayHistory: (item: ZenithAskHistoryItem) => void
 }
@@ -369,10 +372,15 @@ export default function ZenithAskPanel({
   role,
   mappedLabel = null,
   onClose,
+  onNavigateAway,
   onAskSuggestion,
   onReplayHistory,
 }: Props) {
   const navigate = useNavigate()
+  const leaveTo = (href: string) => {
+    onNavigateAway?.()
+    navigate(href)
+  }
   if (!result && !error && !loading && history.length === 0) return null
 
   const datePhrase =
@@ -511,14 +519,15 @@ export default function ZenithAskPanel({
               <Link
                 to={result.href}
                 className="zenith-ask-result__cta"
-                onClick={() =>
+                onClick={() => {
                   trackZenithAskEvent('ask_action', {
                     role,
                     action: result.action,
                     href: result.href,
                     chipMatch: result.chipMatch,
                   })
-                }
+                  onNavigateAway?.()
+                }}
               >
                 {result.label} →
               </Link>
@@ -538,13 +547,17 @@ export default function ZenithAskPanel({
                   metric: result.intent.metric,
                   chipMatch: result.chipMatch,
                 })
-                navigate(href)
+                leaveTo(href)
               }}
             />
             {result.intent.metric === 'support_tickets_summary' &&
             result.viz.kind === 'table' &&
             result.viz.rows.length === 0 ? (
-              <Link to="/support-tickets?new=1" className="zenith-ask-result__cta">
+              <Link
+                to="/support-tickets?new=1"
+                className="zenith-ask-result__cta"
+                onClick={() => onNavigateAway?.()}
+              >
                 Create a support ticket →
               </Link>
             ) : null}
@@ -569,13 +582,14 @@ export default function ZenithAskPanel({
               <Link
                 to={result.projectsHref}
                 className="zenith-ask-result__cta"
-                onClick={() =>
+                onClick={() => {
                   trackZenithAskEvent('ask_open_projects', {
                     role,
                     metric: result.intent.metric,
                     chipMatch: result.chipMatch,
                   })
-                }
+                  onNavigateAway?.()
+                }}
               >
                 {result.projectsHref.startsWith('/support-tickets')
                   ? 'Open Support Tickets →'

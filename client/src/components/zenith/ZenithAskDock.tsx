@@ -523,6 +523,7 @@ export default function ZenithAskDock() {
               setAskResult(null)
               setAskError(null)
             }}
+            onNavigateAway={close}
             onAskSuggestion={(q, source) => void runAsk(q, source === 'catalog' ? 'catalog' : 'follow_up')}
             onReplayHistory={(item) => void runAsk(item.question, 'history')}
           />
