@@ -120,8 +120,11 @@ const Login = () => {
     setElapsed(0)
   }
 
+  const pendingWakeRef = useRef<{ email: string; password: string } | null>(null)
+
   const finishLoginSuccess = () => {
     stopElapsedCounter()
+    pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
     submitLockRef.current = false
@@ -131,11 +134,26 @@ const Login = () => {
 
   const failLogin = (message: string) => {
     stopElapsedCounter()
+    pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
     submitLockRef.current = false
     toast.error(message)
     setServerStatus('slow')
+  }
+
+  /** 503/502 while routes mount after cold start — keep animating, do not bounce to login. */
+  const isStillWakingError = (error: unknown): boolean => {
+    const err = error as { response?: { status?: number }; code?: string; message?: string }
+    const status = err?.response?.status
+    if (status === 503 || status === 502 || status === 504) return true
+    if (err?.response == null && isTimeoutOrNetworkError(error)) return true
+    return false
+  }
+
+  const isWrongCredentialsError = (error: unknown): boolean => {
+    const status = (error as { response?: { status?: number } })?.response?.status
+    return status === 401 || status === 400
   }
 
   const completeLoginWithCredentials = async (creds: { email: string; password: string }) => {
@@ -146,9 +164,14 @@ const Login = () => {
       finishLoginSuccess()
     } catch (error: unknown) {
       autoLoginInFlight.current = false
-      // Still flaky / waking — keep the overlay and resume health polling (no flicker back to form).
-      if (isTimeoutOrNetworkError(error) && (error as { response?: unknown }).response == null) {
-        setWakeEpoch((n) => n + 1)
+      // API process is up but routes not ready yet, or network flake — stay on wake UI.
+      if (isStillWakingError(error)) {
+        window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
+        return
+      }
+      // Only return to the login form for bad credentials (or other hard failures).
+      if (isWrongCredentialsError(error)) {
+        failLogin('Incorrect email or password. Please try again.')
         return
       }
       failLogin(getFriendlyApiErrorMessage(error))
@@ -156,8 +179,9 @@ const Login = () => {
   }
 
   const handleWakeReady = () => {
-    if (!pendingWakeLogin) return
-    void completeLoginWithCredentials(pendingWakeLogin)
+    const creds = pendingWakeRef.current ?? pendingWakeLogin
+    if (!creds) return
+    void completeLoginWithCredentials(creds)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -178,19 +202,24 @@ const Login = () => {
     startElapsedCounter()
     autoLoginInFlight.current = false
 
+    const beginWake = (c: { email: string; password: string }) => {
+      pendingWakeRef.current = c
+      setPendingWakeLogin(c)
+      setWakeEpoch((n) => n + 1)
+    }
+
     // Local preview: keep credentials, animate 15s, then auto-login.
     if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
-      setPendingWakeLogin(creds)
+      beginWake(creds)
       return
     }
 
-    // Production: probe health FIRST. If Render is cold, show the wake animation
-    // immediately (do not sit on the old 90s login spinner).
+    // Production: probe health FIRST. If Render is cold / still mounting routes,
+    // show the wake animation immediately (do not sit on the old 90s login spinner).
     if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl) {
       const awake = await probeHealthOk(apiBaseUrl, HEALTH_PROBE_MS)
       if (!awake) {
-        setPendingWakeLogin(creds)
-        setWakeEpoch((n) => n + 1)
+        beginWake(creds)
         return
       }
     }
@@ -200,26 +229,17 @@ const Login = () => {
       finishLoginSuccess()
     } catch (error: unknown) {
       const err = error as { response?: { status?: number } }
-      const looksLikeNetwork =
-        err?.response == null && isTimeoutOrNetworkError(error)
 
-      // Login failed with network error even though the earlier probe passed —
-      // confirm again; if down now, switch to wake UI instead of a raw error.
-      if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl && looksLikeNetwork) {
-        const awake = await probeHealthOk(apiBaseUrl, HEALTH_PROBE_MS)
-        if (!awake) {
-          setPendingWakeLogin(creds)
-          setWakeEpoch((n) => n + 1)
-          return
-        }
-        try {
-          await login(creds.email, creds.password)
-          finishLoginSuccess()
-          return
-        } catch (retryErr: unknown) {
-          failLogin(getFriendlyApiErrorMessage(retryErr))
-          return
-        }
+      // Login failed because API is still waking (503) or network flake —
+      // keep credentials and open/continue the wake UI; never ask to log in again.
+      if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl && isStillWakingError(error)) {
+        beginWake(creds)
+        return
+      }
+
+      if (isWrongCredentialsError(error)) {
+        failLogin('Incorrect email or password. Please try again.')
+        return
       }
 
       const msg =

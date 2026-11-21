@@ -106,15 +106,27 @@ function setCorsHeaders(req: express.Request, res: express.Response): void {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
+// Flipped true after Prisma + /api/* routes finish mounting (see listen callback below).
+let routesLoaded = false;
+
 // Health check FIRST — before heavy middleware, for Render deploy health checks (5s timeout).
 // Must set CORS here because these routes run before the CORS middleware.
+// `/health` stays always-200 so Render's platform probe passes while the process boots.
+// `/api/health` is for Hub/CRM clients and only reports awake after auth routes are mounted
+// (otherwise wake UI would sign in too early and get 503 → bounced back to login).
 app.get('/health', (req, res) => {
   setCorsHeaders(req, res);
   res.status(200).json({ status: 'awake', timestamp: new Date().toISOString() });
 });
 app.get('/api/health', (req, res) => {
   setCorsHeaders(req, res);
-  res.status(200).json({ status: 'awake', timestamp: new Date().toISOString() });
+  if (!routesLoaded) {
+    return res.status(503).set('Retry-After', '5').json({
+      status: 'starting',
+      timestamp: new Date().toISOString(),
+    });
+  }
+  return res.status(200).json({ status: 'awake', timestamp: new Date().toISOString() });
 });
 
 // Middleware (lightweight; no DB or heavy imports)
@@ -186,7 +198,6 @@ const apiRouter = express.Router();
 app.use('/api', apiRouter);
 
 // Until routes are loaded, non-health requests get 503 so clients can retry. After load, next().
-let routesLoaded = false;
 app.use((req, res, next) => {
   if (routesLoaded) return next();
   res.status(503).set('Retry-After', '15').json({
