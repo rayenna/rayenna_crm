@@ -5,7 +5,22 @@
  * visually stretches scrollports (and sometimes the whole frame) at edges.
  * A non-passive touchmove that preventDefaults when no scroller can absorb
  * the gesture is the reliable fix used by solid mobile PWAs.
+ *
+ * Important: chart touches often land on SVG / Text nodes (Recharts), not
+ * HTMLElement. Those must walk up to an HTML parent or the guard wrongly
+ * preventDefaults and vertical scroll only works in gaps beside the chart.
  */
+
+/** Resolve touch target to an HTMLElement (SVG paths, text nodes, etc.). */
+function resolveTouchHtmlElement(target: EventTarget | null): HTMLElement | null {
+  if (!target || !(target instanceof Node)) return null
+  let node: Node | null = target
+  while (node) {
+    if (node instanceof HTMLElement) return node
+    node = node.parentNode
+  }
+  return null
+}
 
 function isVerticallyScrollable(el: HTMLElement): boolean {
   const style = window.getComputedStyle(el)
@@ -22,7 +37,7 @@ function canScrollVertically(el: HTMLElement, dy: number): boolean {
 }
 
 function findScrollableThatCanAbsorb(target: EventTarget | null, dy: number): HTMLElement | null {
-  let cur: HTMLElement | null = target instanceof HTMLElement ? target : null
+  let cur: HTMLElement | null = resolveTouchHtmlElement(target)
   while (cur && cur !== document.body && cur !== document.documentElement) {
     if (cur.dataset.iosScrollLock === 'off') return cur
     if (isVerticallyScrollable(cur) && canScrollVertically(cur, dy)) return cur

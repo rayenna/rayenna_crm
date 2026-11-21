@@ -527,6 +527,14 @@
     overflow: visible;
   }
 
+  /* Let vertical page scroll win over Recharts SVG hit targets on iPhone PWA (Charts / More tabs).
+     Drill-down still uses click/tap; pan-y tells WebKit the finger gesture is for scrolling. */
+  .zenith-root .recharts-wrapper,
+  .zenith-root .recharts-responsive-container,
+  .zenith-root .recharts-surface {
+    touch-action: pan-y;
+  }
+
   /* Segment donuts: keep charts off isolated layers; glass blur already off mobile-wide */
   .zenith-root .zenith-segment-donut-card .recharts-responsive-container {
     transform: none !important;
