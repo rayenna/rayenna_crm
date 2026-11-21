@@ -33,8 +33,10 @@
   --text-primary:      #FFFFFF;
   --text-secondary:    rgba(255,255,255,0.55);
   --text-muted:        rgba(255,255,255,0.28);
+  --text-tertiary:     rgba(255,255,255,0.42);
   --text-placeholder:  rgba(255,255,255,0.22);
   --text-inverse:      #0A0A0F;
+  --bg-muted:          rgba(255,255,255,0.08);
 
   /* Brand accents — these stay consistent */
   --accent-gold:       #F5A623;
@@ -175,8 +177,10 @@
   --text-primary:      #1A1A2E;
   --text-secondary:    rgba(26,26,46,0.74);
   --text-muted:        rgba(26,26,46,0.50);
+  --text-tertiary:     rgba(26,26,46,0.58);
   --text-placeholder:  rgba(26,26,46,0.42);
   --text-inverse:      #FFFFFF;
+  --bg-muted:          rgba(26,26,46,0.08);
 
   /* Brand accents — vivid orange for clear contrast on light surfaces */
   --accent-gold:       #EA580C;

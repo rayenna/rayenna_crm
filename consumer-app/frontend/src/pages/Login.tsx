@@ -15,6 +15,7 @@ import {
   probeHubHealthOk,
 } from '@/utils/hubHealth'
 import { ServerWakeupLoader } from '@/components/serverWakeup'
+import HubHomeMascot from '@/components/HubHomeMascot'
 
 /**
  * Set to false to restore the previous inline wake-up banners on Login
@@ -351,6 +352,7 @@ export default function Login() {
               className="mx-auto h-36 max-h-[44vh] w-auto max-w-[85vw] object-contain drop-shadow-lg sm:h-40 md:h-44"
             />
           </div>
+          <HubHomeMascot size="login" />
           <p className="mt-0.5 text-base font-semibold tracking-wide text-[color:var(--accent-gold)] sm:mt-1 sm:text-lg">
             v1.0.0
           </p>

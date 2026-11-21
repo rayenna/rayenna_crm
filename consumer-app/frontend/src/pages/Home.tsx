@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -15,10 +15,12 @@ import {
 } from 'lucide-react'
 import NotificationsModal from '@/components/NotificationsModal'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
+import HubHomeMascot from '@/components/HubHomeMascot'
 import HubLiveSolisPill from '@/components/HubLiveSolisPill'
 import HubLiveDeyePill from '@/components/HubLiveDeyePill'
 import HubLiveSunwaysPill from '@/components/HubLiveSunwaysPill'
 import { useConsumerHome } from '@/hooks/useConsumerHome'
+import { useCountUp } from '@/hooks/useCountUp'
 import { formatKwh, formatRupee } from '@/utils/energyCharts'
 import type { ProjectStep } from '@/types/home'
 
@@ -64,7 +66,7 @@ function ProjectStepper({ steps }: { steps: ProjectStep[] }) {
                 step.state === 'complete'
                   ? 'bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)]'
                   : step.state === 'current'
-                    ? 'border-2 border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                    ? 'hub-home-step--current border-2 border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
                     : 'border border-[color:var(--border-default)] bg-[color:var(--bg-muted)] text-[color:var(--text-tertiary)]'
               }`}
             >
@@ -100,45 +102,66 @@ function ProjectStepper({ steps }: { steps: ProjectStep[] }) {
 export default function Home() {
   const homeQuery = useConsumerHome()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [progressReady, setProgressReady] = useState(false)
 
   const home = homeQuery.data
   const loading = homeQuery.isLoading
+  const ready = Boolean(home) && !loading
 
   const unread = home?.unreadNotifications ?? 0
+  const generationActive = home?.energy.generationActive !== false
+  const showEnergyNumbers = ready && generationActive
+
+  const kwhAnimated = useCountUp(home?.energy.totalGenerated ?? 0, showEnergyNumbers)
+  const savingsAnimated = useCountUp(home?.energy.totalSavings ?? 0, showEnergyNumbers)
+
+  useEffect(() => {
+    if (!ready) {
+      setProgressReady(false)
+      return
+    }
+    const id = window.requestAnimationFrame(() => setProgressReady(true))
+    return () => window.cancelAnimationFrame(id)
+  }, [ready, home?.project.progressPercent])
 
   return (
-    <div className="px-4 py-6">
+    <div className="hub-home px-4 py-6">
       {loading || !home ? (
-        <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--accent-gold)] border-t-transparent" />
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <HubHomeMascot size="loading" />
+          <p className="text-xs font-medium text-[color:var(--text-tertiary)]">Warming up your Hub…</p>
         </div>
       ) : (
         <>
-          {/* Header with notification bell */}
-          <header className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm text-[color:var(--text-secondary)]">{home.greeting},</p>
-              <h1 className="zenith-display text-2xl font-bold text-[color:var(--text-primary)]">
-                {home.displayName}
-              </h1>
+          <header className="hub-home-hero hub-home-stagger hub-home-stagger--1">
+            <HubHomeMascot isLive={home.project.isLive} size="hero" />
+            <div className="hub-home-hero__copy flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm text-[color:var(--text-secondary)]">{home.greeting},</p>
+                <h1 className="zenith-display text-2xl font-bold text-[color:var(--text-primary)]">
+                  {home.displayName}
+                </h1>
+                <p className="mt-1 text-[11px] font-medium tracking-wide text-[color:var(--accent-gold)]">
+                  {home.project.isLive ? 'Your solar grid is online' : 'Your solar journey with Rayenna'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(true)}
+                className="relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5 text-[color:var(--text-secondary)]" />
+                {unread > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:var(--accent-gold)] px-1 text-[9px] font-bold text-[color:var(--text-inverse)]">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                ) : null}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setNotificationsOpen(true)}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]"
-              aria-label="Notifications"
-            >
-              <Bell className="h-5 w-5 text-[color:var(--text-secondary)]" />
-              {unread > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[color:var(--accent-gold)] px-1 text-[9px] font-bold text-[color:var(--text-inverse)]">
-                  {unread > 9 ? '9+' : unread}
-                </span>
-              ) : null}
-            </button>
           </header>
 
-          {/* Project status */}
-          <section className="zenith-glass mb-4 overflow-hidden rounded-2xl p-4">
+          <section className="zenith-glass hub-home-stagger hub-home-stagger--2 mb-4 overflow-hidden rounded-2xl p-4">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent-teal-muted)]">
                 {home.project.isLive ? (
@@ -171,17 +194,20 @@ export default function Home() {
                 {home.project.systemKw} kW
               </span>
             </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[color:var(--bg-muted)]">
+            <div className="hub-home-progress">
               <div
-                className="h-full rounded-full bg-[color:var(--accent-gold)] transition-all"
-                style={{ width: `${home.project.progressPercent}%` }}
+                className={`hub-home-progress__bar ${progressReady ? 'is-ready' : ''}`}
+                style={
+                  {
+                    ['--hub-progress']: `${Math.max(0, Math.min(100, home.project.progressPercent))}%`,
+                  } as CSSProperties
+                }
               />
             </div>
             <ProjectStepper steps={home.project.steps} />
           </section>
 
-          {/* Energy summary */}
-          <section className="mb-4 overflow-hidden rounded-2xl border border-[color:var(--accent-green-border)] bg-gradient-to-br from-[color:var(--accent-green-muted)] to-transparent p-4">
+          <section className="hub-home-stagger hub-home-stagger--3 mb-4 overflow-hidden rounded-2xl border border-[color:var(--accent-green-border)] bg-gradient-to-br from-[color:var(--accent-green-muted)] to-transparent p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Zap className="h-4 w-4 text-[color:var(--accent-green)]" />
@@ -222,9 +248,9 @@ export default function Home() {
                     ? ' · from your Deye inverter'
                     : home.energy.liveFromSunways
                       ? ' · from your Sunways inverter'
-                    : home.energy.isEstimated
-                    ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
-                    : ' · logged from inverter'}
+                      : home.energy.isEstimated
+                        ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
+                        : ' · logged from inverter'}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div>
@@ -238,7 +264,7 @@ export default function Home() {
                         : 'Generated'}
                 </p>
                 <p className="zenith-kpi-value text-base font-bold text-[color:var(--text-primary)]">
-                  {home.energy.generationActive === false ? '—' : formatKwh(home.energy.totalGenerated)}
+                  {home.energy.generationActive === false ? '—' : formatKwh(kwhAnimated)}
                 </p>
               </div>
               <div>
@@ -249,7 +275,7 @@ export default function Home() {
                   ) : (
                     <>
                       <IndianRupee className="h-3.5 w-3.5" aria-hidden />
-                      {formatRupee(home.energy.totalSavings).replace('₹', '')}
+                      {formatRupee(savingsAnimated).replace('₹', '')}
                     </>
                   )}
                 </p>
@@ -257,9 +283,8 @@ export default function Home() {
             </div>
           </section>
 
-          {/* System health */}
           <section
-            className={`mb-4 flex items-start gap-3 rounded-2xl border p-4 ${healthStyles(home.systemHealth.status).border} ${healthStyles(home.systemHealth.status).bg}`}
+            className={`hub-home-stagger hub-home-stagger--4 mb-4 flex items-start gap-3 rounded-2xl border p-4 ${healthStyles(home.systemHealth.status).border} ${healthStyles(home.systemHealth.status).bg}`}
           >
             {home.systemHealth.status === 'OPTIMAL' ? (
               <CheckCircle2
@@ -289,12 +314,13 @@ export default function Home() {
             </div>
           </section>
 
-          <HelpContextSuggestions screen="home" className="mb-4" />
+          <div className="hub-home-stagger hub-home-stagger--5">
+            <HelpContextSuggestions screen="home" className="mb-4" />
+          </div>
 
-          {/* Member strip */}
           <Link
             to="/profile"
-            className="zenith-glass mb-4 flex items-center justify-between rounded-2xl p-4 transition hover:opacity-95"
+            className="zenith-glass hub-home-stagger hub-home-stagger--6 mb-4 flex items-center justify-between rounded-2xl p-4 transition hover:opacity-95"
           >
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--accent-gold)]">
@@ -307,8 +333,7 @@ export default function Home() {
             <ChevronRight className="h-5 w-5 text-[color:var(--text-tertiary)]" />
           </Link>
 
-          {/* Quick links */}
-          <section className="space-y-3">
+          <section className="hub-home-stagger hub-home-stagger--7 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-tertiary)]">
               Quick actions
             </h2>

@@ -17,6 +17,7 @@ export default defineConfig({
         'favicon.svg',
         'manifest.json',
         'Rayenna_Hub.png',
+        'rayenna-mascot.jpg',
         'background.jpg',
         'icons.svg',
       ],

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App'
 import './styles/zenith.css'
+import './styles/hub-home.css'
 import './index.css'
 
 const updateSW = registerSW({
