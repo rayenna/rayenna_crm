@@ -22,10 +22,20 @@ import { getZenithAskDateFilters } from '../../utils/zenithAskDateFilters'
 import { formatZenithFilterSummary } from '../../utils/zenithFilterSummary'
 import {
   clampAskDockFrame,
+  getAskDockViewport,
   readAskDockFrame,
   writeAskDockFrame,
   type ZenithAskDockFrame,
 } from '../../utils/zenithAskDockFrame'
+
+function isAskDockInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest(
+      'button, a, input, textarea, select, label, [role="button"], [contenteditable="true"], .zenith-ask-dock__resize',
+    ),
+  )
+}
 import { useZenithNarrowLayout } from '../../hooks/useZenithNarrowLayout'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
 import type {
@@ -114,6 +124,10 @@ export default function ZenithAskDock() {
     startY: number
     startW: number
     startH: number
+    /** Move waits for a small threshold so vertical scrolls still work in the answer body. */
+    armed?: boolean
+    originClientX?: number
+    originClientY?: number
   } | null>(null)
   const [frame, setFrame] = useState<ZenithAskDockFrame | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -313,15 +327,22 @@ export default function ZenithAskDock() {
   }, [open, applyFrame])
 
   useEffect(() => {
-    if (!open || !frame) return
-    const onWinResize = () => {
+    if (!open) return
+    const reclamp = () => {
       const el = dockRef.current
       if (!el) return
       commitFrame(rectToFrame(el, frameRef.current?.sized === true))
     }
-    window.addEventListener('resize', onWinResize)
-    return () => window.removeEventListener('resize', onWinResize)
-  }, [open, frame, commitFrame, rectToFrame])
+    window.addEventListener('resize', reclamp)
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', reclamp)
+    vv?.addEventListener('scroll', reclamp)
+    return () => {
+      window.removeEventListener('resize', reclamp)
+      vv?.removeEventListener('resize', reclamp)
+      vv?.removeEventListener('scroll', reclamp)
+    }
+  }, [open, commitFrame, rectToFrame])
 
   useEffect(() => {
     if (!open || !frameRef.current) return
@@ -335,8 +356,7 @@ export default function ZenithAskDock() {
 
   const onMovePointerDown = (e: ReactPointerEvent<HTMLElement>) => {
     if (e.button !== 0) return
-    const target = e.target as HTMLElement
-    if (target.closest('button')) return
+    if (isAskDockInteractiveTarget(e.target)) return
     const el = dockRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
@@ -346,6 +366,7 @@ export default function ZenithAskDock() {
       r.width,
       r.height,
       frameRef.current?.sized === true,
+      getAskDockViewport(),
     )
     applyFrame(current)
     dragRef.current = {
@@ -357,10 +378,11 @@ export default function ZenithAskDock() {
       startY: r.top,
       startW: r.width,
       startH: r.height,
+      armed: true,
+      originClientX: e.clientX,
+      originClientY: e.clientY,
     }
-    setDragging(true)
     el.setPointerCapture(e.pointerId)
-    e.preventDefault()
   }
 
   const onResizePointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -368,7 +390,7 @@ export default function ZenithAskDock() {
     const el = dockRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
-    const current = clampAskDockFrame(r.left, r.top, r.width, r.height, true)
+    const current = clampAskDockFrame(r.left, r.top, r.width, r.height, true, getAskDockViewport())
     applyFrame(current)
     dragRef.current = {
       mode: 'resize',
@@ -390,6 +412,33 @@ export default function ZenithAskDock() {
     const drag = dragRef.current
     const el = dockRef.current
     if (!drag || !el || e.pointerId !== drag.pointerId) return
+    const vp = getAskDockViewport()
+
+    if (drag.mode === 'move' && drag.armed) {
+      const dx = e.clientX - (drag.originClientX ?? e.clientX)
+      const dy = e.clientY - (drag.originClientY ?? e.clientY)
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      // Prefer native vertical scroll inside the answer body when the gesture is mostly vertical.
+      const inScrollBody = Boolean(
+        (e.target as Element | null)?.closest?.(
+          '.zenith-ask-dock__body, .zenith-ask-result__body, .zenith-ask-table__body',
+        ),
+      )
+      if (inScrollBody && Math.abs(dy) >= Math.abs(dx) * 1.15) {
+        dragRef.current = null
+        setDragging(false)
+        try {
+          el.releasePointerCapture(e.pointerId)
+        } catch {
+          /* ignore */
+        }
+        return
+      }
+      drag.armed = false
+      setDragging(true)
+      e.preventDefault()
+    }
+
     if (drag.mode === 'move') {
       paintFrame(
         clampAskDockFrame(
@@ -398,6 +447,7 @@ export default function ZenithAskDock() {
           drag.startW,
           drag.startH,
           frameRef.current?.sized === true,
+          vp,
         ),
       )
       return
@@ -409,6 +459,7 @@ export default function ZenithAskDock() {
         drag.startW + (e.clientX - (drag.startX + drag.startW)),
         drag.startH + (e.clientY - (drag.startY + drag.startH)),
         true,
+        vp,
       ),
     )
   }
@@ -416,10 +467,13 @@ export default function ZenithAskDock() {
   const onDockPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
     if (!drag || e.pointerId !== drag.pointerId) return
+    const wasDragging = !drag.armed
     dragRef.current = null
     setDragging(false)
-    applyFrame(frameRef.current)
-    writeAskDockFrame(frameRef.current)
+    if (wasDragging || drag.mode === 'resize') {
+      applyFrame(frameRef.current)
+      writeAskDockFrame(frameRef.current)
+    }
     try {
       dockRef.current?.releasePointerCapture(e.pointerId)
     } catch {
@@ -453,16 +507,17 @@ export default function ZenithAskDock() {
         role="dialog"
         aria-modal="false"
         aria-label="Ask Zenith"
+        onPointerDown={onMovePointerDown}
         onPointerMove={onDockPointerMove}
         onPointerUp={onDockPointerUp}
         onPointerCancel={onDockPointerUp}
+        onDoubleClick={(e) => {
+          if (isAskDockInteractiveTarget(e.target)) return
+          resetFrame()
+        }}
+        title="Drag anywhere to move · double-click empty area to reset"
       >
-        <div
-          className="zenith-ask-dock__bar"
-          onPointerDown={onMovePointerDown}
-          onDoubleClick={resetFrame}
-          title="Drag to move · double-click to reset"
-        >
+        <div className="zenith-ask-dock__bar">
           <p className="zenith-ask-dock__title">
             <ZenithAskIcon className="h-4 w-4 text-[color:var(--accent-gold)]" aria-hidden />
             Ask Zenith

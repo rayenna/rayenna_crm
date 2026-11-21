@@ -307,8 +307,8 @@ const Layout = () => {
 
   return (
     <MyDayProvider>
-    <div className="min-h-screen min-h-[100dvh] bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
-      <nav className="sticky top-0 z-50 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
+    <div className="crm-app-shell min-h-full bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
+      <nav className="crm-top-nav sticky top-0 z-50 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
         <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex min-h-[3.5rem] items-center justify-between gap-2 py-2 sm:min-h-[3.75rem] lg:h-20 lg:min-h-0 lg:gap-4 lg:py-0">
             <div className="flex min-w-0 flex-1 items-center">

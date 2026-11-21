@@ -12,15 +12,39 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Readable by JS for Ask Zenith clamp + layout (viewport-fit=cover) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/*
+ * iOS Safari / Home Screen PWA: pin the document so rubber-band drag does not
+ * move the sticky header / bottom nav. Scroll lives on #root instead.
+ */
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: fixed;
+  inset: 0;
   background-color: var(--bg-page);
   color: var(--text-primary);
   user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color 0.25s ease,
     color 0.2s ease;
@@ -53,7 +77,16 @@ textarea,
 
 #root {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Keep sticky CRM chrome below Ask Zenith while the dock is open (iOS stacking). */
+body.zenith-ask-dock-open .crm-top-nav {
+  z-index: 40;
 }
 
 /* Touch scrolling and no backdrop-blur on mobile/tablet */
