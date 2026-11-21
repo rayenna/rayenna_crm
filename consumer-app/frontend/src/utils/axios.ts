@@ -55,16 +55,30 @@ export function isTimeoutOrNetworkError(error: unknown): boolean {
   )
 }
 
+/** 502/504 / boot 503 while Render mounts — keep wake UI; do not clear session / bounce to form. */
+export function isStillWakingError(error: unknown): boolean {
+  const err = error as {
+    response?: { status?: number; data?: { error?: string; status?: string } }
+  }
+  const status = err?.response?.status
+  if (status === 502 || status === 504) return true
+  if (status === 503) {
+    const apiError = err?.response?.data?.error
+    // Real misconfig (missing CONSUMER_JWT_SECRET) — not a cold start.
+    if (typeof apiError === 'string' && /not configured/i.test(apiError)) return false
+    return true
+  }
+  if (err?.response == null && isTimeoutOrNetworkError(error)) return true
+  return false
+}
+
 export function getFriendlyApiErrorMessage(error: unknown): string {
-  if (isTimeoutOrNetworkError(error)) {
+  if (isStillWakingError(error)) {
     return 'The server may be waking up. Please try again in a moment.'
   }
   const err = error as { response?: { status?: number; data?: { error?: string } } }
-  if (err?.response?.status === 401) {
+  if (err?.response?.status === 401 || err?.response?.status === 400) {
     return 'Invalid username or password.'
-  }
-  if (err?.response?.status === 503) {
-    return 'Consumer login is not configured on the API yet. Add CONSUMER_JWT_SECRET to the repo root .env and restart the backend (npm run dev:server).'
   }
   if (err?.response?.data?.error && typeof err.response.data.error === 'string') {
     return err.response.data.error

@@ -10,7 +10,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance, {
   clearConsumerToken,
-  isTimeoutOrNetworkError,
+  isStillWakingError,
   persistConsumerToken,
   readConsumerToken,
   setConsumerAuthToken,
@@ -81,9 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status
       if (status === 401) return 'unauthorized'
-      if (isTimeoutOrNetworkError(error) && !(error as { response?: unknown }).response) {
-        return 'network'
-      }
+      // API up but still mounting routes (503) or network flake — keep saved token + wake UI.
+      if (isStillWakingError(error)) return 'network'
       return 'other'
     }
   }, [])
@@ -154,10 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
       return
     }
+    // Still waking — remount loader; never clear a remembered session for 503/network.
     if (result === 'network') {
-      setWakeEpoch((n) => n + 1)
+      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
       return
     }
+    // Only drop remembered login for real auth failure (401) / hard errors.
     clearAuth()
     setIsLoading(false)
   }, [clearAuth, fetchMe])
