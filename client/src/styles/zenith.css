@@ -1196,7 +1196,8 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 
   .zenith-root .zenith-myday-plan-scroll {
     overflow: visible;
-    overscroll-behavior: auto;
+    /* Was `auto` — re-enabled iOS rubber-band chaining into the page shell. */
+    overscroll-behavior: none;
   }
 
   .zenith-scroll-x-wrap {

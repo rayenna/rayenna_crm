@@ -261,7 +261,7 @@ const Login = () => {
 
   return (
     <div
-      className="relative flex h-full min-h-0 items-center justify-center overflow-y-auto overscroll-contain bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]"
+      className="relative flex h-full min-h-0 items-center justify-center overflow-y-auto overscroll-none bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent] [touch-action:pan-y]"
       style={{
         paddingTop: 'max(3rem, env(safe-area-inset-top, 0px))',
         paddingBottom: 'max(3rem, env(safe-area-inset-bottom, 0px))',

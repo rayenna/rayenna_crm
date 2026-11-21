@@ -21,15 +21,18 @@
 }
 
 /*
- * iOS Safari / Home Screen PWA: pin the document so rubber-band drag does not
- * move app chrome. Scroll lives on .crm-main-scroll (inside Layout), not #root —
- * a sticky header inside a scrolling #root still rubber-bands on iPhone.
+ * iOS Safari / Home Screen PWA: pin the document frame.
+ * Scroll lives on .crm-main-scroll (Layout) — never on html/body/#root.
+ * JS installCrmIosOverscrollGuard() blocks remaining WebKit edge bounce.
  */
 html {
-  height: 100%;
   width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -37,8 +40,11 @@ body {
   min-width: 320px;
   width: 100%;
   height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
+  overscroll-behavior-y: none;
   position: fixed;
   inset: 0;
   background-color: var(--bg-page);
@@ -110,7 +116,10 @@ textarea,
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
   overscroll-behavior-y: none;
+  /* Prefer vertical pan only — reduces diagonal rubber-band feel on iPhone */
+  touch-action: pan-y;
 }
 
 /* Keep CRM chrome below Ask Zenith while the dock is open (iOS stacking). */
@@ -120,10 +129,8 @@ body.zenith-ask-dock-open .crm-top-nav {
 
 /* Touch scrolling and no backdrop-blur on mobile/tablet */
 @media (max-width: 1024px) {
-  html {
-    -webkit-overflow-scrolling: touch;
-    overflow-scrolling: touch;
-  }
+  /* Do NOT enable -webkit-overflow-scrolling on html — it fights overflow:hidden
+   * and reintroduces whole-frame rubber-band on iOS Safari / PWA. */
   /* Dashboard: don’t clip donut charts when scrolling */
   .page-card-no-clip-mobile {
     overflow: visible !important;

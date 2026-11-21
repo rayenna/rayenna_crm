@@ -14,6 +14,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import PageLoader from './components/PageLoader'
 import Layout from './components/Layout'
 import { CRM_DEFAULT_HOME } from './constants/defaultHomeRoute'
+import { installCrmIosOverscrollGuard } from './utils/lockIosEdgeOverscroll'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -64,6 +65,9 @@ function App() {
     return () =>
       window.removeEventListener(RAYENNA_BROWSER_STORAGE_ERROR_EVENT, onStorageError as EventListener)
   }, [])
+
+  // Kill iOS Safari / PWA rubber-band at top + bottom (Android does not need this).
+  useEffect(() => installCrmIosOverscrollGuard(), [])
 
   useEffect(() => {
     const isEditable = (el: EventTarget | null): boolean => {
