@@ -101,6 +101,7 @@ function App() {
   }, [])
 
   return (
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
     <ThemeProvider>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ModalEscapeProvider>
@@ -127,6 +128,7 @@ function App() {
             },
           }}
         />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Routes>
           <Route
             path="/login"
@@ -449,10 +451,12 @@ function App() {
             />
           </Route>
         </Routes>
+        </div>
       </AuthProvider>
       </ModalEscapeProvider>
     </BrowserRouter>
     </ThemeProvider>
+    </div>
   )
 }
 

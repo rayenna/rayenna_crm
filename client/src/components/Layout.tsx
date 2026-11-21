@@ -20,6 +20,7 @@ import MyDayUrlBridge from './my-day/MyDayUrlBridge'
 import ZenithAskDock, { ZenithAskNavButton } from './zenith/ZenithAskDock'
 import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
 import { openProposalEngine } from '../lib/openProposalEngine'
+import { attachIosEdgeOverscrollLock } from '../utils/lockIosEdgeOverscroll'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -305,10 +306,18 @@ const Layout = () => {
     }
   }, [helpDropdownOpen, moreDropdownOpen, profileDropdownOpen])
 
+  const mainScrollRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    const el = mainScrollRef.current
+    if (!el) return
+    return attachIosEdgeOverscrollLock(el)
+  }, [])
+
   return (
     <MyDayProvider>
-    <div className="crm-app-shell min-h-full bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
-      <nav className="crm-top-nav sticky top-0 z-50 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
+    <div className="crm-app-shell bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
+      {/* Not sticky inside a page scroller — pinned in the flex shell so iOS cannot rubber-band it. */}
+      <nav className="crm-top-nav z-50 shrink-0 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
         <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex min-h-[3.5rem] items-center justify-between gap-2 py-2 sm:min-h-[3.75rem] lg:h-20 lg:min-h-0 lg:gap-4 lg:py-0">
             <div className="flex min-w-0 flex-1 items-center">
@@ -704,8 +713,9 @@ const Layout = () => {
         </div>
       </nav>
 
-      {/* Zenith + Users admin: avoid overflow-x clip/hidden on main — CSS pairs it with overflow-y: auto and breaks document scroll in Chrome/Edge */}
+      {/* Sole vertical scrollport — header stays outside so iOS pull-down cannot drag chrome. */}
       <main
+        ref={mainScrollRef}
         className={
           location.pathname.startsWith('/zenith') ||
           location.pathname.startsWith('/users') ||
@@ -721,8 +731,8 @@ const Layout = () => {
           location.pathname.startsWith('/customers') ||
           location.pathname.startsWith('/projects') ||
           location.pathname.startsWith('/dashboard')
-            ? 'w-full max-w-none mx-auto py-0 px-0'
-            : 'mx-auto w-full max-w-[1600px] py-6 px-2 sm:px-4 md:px-6 lg:px-8'
+            ? 'crm-main-scroll w-full max-w-none mx-auto py-0 px-0'
+            : 'crm-main-scroll mx-auto w-full max-w-[1600px] py-6 px-2 sm:px-4 md:px-6 lg:px-8'
         }
       >
         <Outlet />

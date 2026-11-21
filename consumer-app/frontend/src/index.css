@@ -112,7 +112,8 @@ body {
   overflow-x: clip;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  /* none (not contain): stop iOS rubber-band gap above content when pulling from the top */
+  overscroll-behavior-y: none;
   /* Room above bottom nav (nav is in-flow; this is content breathing room only) */
   padding-bottom: 0.5rem;
 }
