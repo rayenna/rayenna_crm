@@ -7,7 +7,7 @@ export default function PrivateRoute({ children }: { children: React.ReactNode }
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-[color:var(--bg-page)]">
+      <div className="flex h-full min-h-0 items-center justify-center bg-[color:var(--bg-page)]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--accent-gold)] border-t-transparent" />
       </div>
     )
@@ -17,5 +17,5 @@ export default function PrivateRoute({ children }: { children: React.ReactNode }
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  return <>{children}</>
+  return <div className="flex h-full min-h-0 flex-col overflow-hidden">{children}</div>
 }

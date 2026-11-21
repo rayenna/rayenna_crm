@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Phone, Send, X } from 'lucide-react'
 import { useConsumerChat } from '@/hooks/useConsumerSupport'
+import HubModal from '@/components/HubModal'
 import type { ChatEscalate } from '@/types/support'
 
 function telHref(phone: string) {
@@ -54,8 +55,6 @@ export default function SupportChatSheet({
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [open, lines])
 
-  if (!open) return null
-
   const send = async (text: string) => {
     const message = text.trim()
     if (!message || chat.isPending) return
@@ -93,8 +92,11 @@ export default function SupportChatSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] sm:items-center sm:p-4">
-      <div className="flex h-[min(86dvh,640px)] w-full max-w-md flex-col rounded-t-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] sm:rounded-2xl">
+    <HubModal
+      open={open}
+      onClose={onClose}
+      panelClassName="flex h-[min(86dvh,640px)] max-h-[min(86dvh,100%)] flex-col overflow-hidden rounded-t-2xl p-0 sm:rounded-2xl"
+    >
         <div className="flex items-center justify-between border-b border-[color:var(--border-default)] px-4 py-3">
           <div>
             <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Live Chat</h2>
@@ -103,14 +105,14 @@ export default function SupportChatSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-[color:var(--text-tertiary)]"
+            className="min-h-[44px] min-w-[44px] rounded-lg p-1 text-[color:var(--text-tertiary)]"
             aria-label="Close chat"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
           {lines.map((line) => (
             <div
               key={line.id}
@@ -181,23 +183,25 @@ export default function SupportChatSheet({
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex gap-2 p-3">
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"
+        >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about your solar system…"
-            className="min-w-0 flex-1 rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
+            className="min-w-0 flex-1 rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-base text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm"
           />
           <button
             type="submit"
             disabled={chat.isPending || !input.trim()}
-            className="rounded-xl bg-[color:var(--accent-green)] px-3 text-white disabled:opacity-50"
+            className="min-h-[44px] min-w-[44px] rounded-xl bg-[color:var(--accent-green)] px-3 text-white disabled:opacity-50"
             aria-label="Send"
           >
             <Send className="h-4 w-4" />
           </button>
         </form>
-      </div>
-    </div>
+    </HubModal>
   )
 }

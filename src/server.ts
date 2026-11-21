@@ -78,6 +78,13 @@ function isOriginAllowed(origin: string | undefined): boolean {
     try {
       const u = new URL(origin);
       if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+      // LAN phones/tablets hitting Vite over Wi‑Fi (e.g. Solar Hub iOS PWA testing)
+      if (
+        /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(u.hostname) ||
+        u.hostname.endsWith('.local')
+      ) {
+        return true;
+      }
     } catch {
       return false;
     }

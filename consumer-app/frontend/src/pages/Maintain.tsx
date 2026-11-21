@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useConsumerMaintain'
 import SystemSpecCard from '@/components/SystemSpecCard'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
+import HubModal from '@/components/HubModal'
 import type { MaintenanceRequestType } from '@/types/maintain'
 
 function healthBadgeClass(status: string) {
@@ -63,66 +64,64 @@ function RequestModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
-      <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
-        <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">{heading}</h2>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+    <HubModal open={open} onClose={onClose} panelClassName="p-5">
+      <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">{heading}</h2>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
+            Subject
+          </label>
+          <input
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={isIssue ? 'e.g. Inverter showing error code' : 'e.g. Annual panel cleaning'}
+            className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-base text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
+            Details
+          </label>
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the issue or service needed…"
+            className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-base text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm"
+          />
+        </div>
+        {!isIssue && (
           <div>
             <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-              Subject
+              Preferred date (optional)
             </label>
             <input
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={isIssue ? 'e.g. Inverter showing error code' : 'e.g. Annual panel cleaning'}
-              className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
+              type="date"
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+              className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-base text-[color:var(--text-primary)] sm:text-sm"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-              Details
-            </label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the issue or service needed…"
-              className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
-            />
-          </div>
-          {!isIssue && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-                Preferred date (optional)
-              </label>
-              <input
-                type="date"
-                value={preferredDate}
-                onChange={(e) => setPreferredDate(e.target.value)}
-                className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)]"
-              />
-            </div>
-          )}
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-[color:var(--border-default)] py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending}
-              className="flex-1 rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-60"
-            >
-              {mutation.isPending ? 'Submitting…' : 'Submit'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        )}
+        <div className="flex gap-2 pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-[44px] flex-1 rounded-xl border border-[color:var(--border-default)] py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className="min-h-[44px] flex-1 rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-60"
+          >
+            {mutation.isPending ? 'Submitting…' : 'Submit'}
+          </button>
+        </div>
+      </form>
+    </HubModal>
   )
 }
 

@@ -14,22 +14,47 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * Lock the document so iOS Safari / Home Screen PWA does not rubber-band the
+ * whole app chrome. Scrolling stays inside .hub-shell > main (and login).
+ */
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   background-color: var(--bg-page);
   color: var(--text-primary);
   transition:
     background-color 0.25s ease,
     color 0.2s ease;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  /* iOS PWA: pin body so drag gestures don't move the frame */
+  position: fixed;
+  inset: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #root {
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure the app flex shell fills the pinned viewport on iOS */
+#root > div {
+  height: 100%;
+  min-height: 0;
 }
 
 ::-webkit-scrollbar {
@@ -61,15 +86,79 @@ body {
   max-width: 28rem;
   margin-left: auto;
   margin-right: auto;
-  min-height: 100dvh;
-  height: 100dvh;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Override CRM Zenith root min-height / safe-area padding — Hub nav owns the inset. */
+.hub-shell.zenith-root {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  padding-bottom: 0;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .hub-shell > main {
   width: 100%;
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: clip;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  /* Room above bottom nav (nav is in-flow; this is content breathing room only) */
+  padding-bottom: 0.5rem;
+}
+
+/* Full-viewport overlays portaled to body — above bottom nav (z-45) */
+.hub-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0.75rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  background: var(--bg-overlay);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) {
+  .hub-modal-root {
+    align-items: center;
+  }
+}
+
+.hub-modal-panel {
+  width: 100%;
+  max-width: 28rem;
+  max-height: min(88dvh, calc(100% - 0.5rem));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  border-radius: 1rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-modal);
+  box-shadow: var(--shadow-modal);
+}
+
+html.hub-modal-open,
+html.hub-modal-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Clip chart cards horizontally without breaking Recharts sizing */
@@ -84,7 +173,8 @@ body {
   z-index: 45;
   flex-shrink: 0;
   width: 100%;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Home indicator clearance — critical for iPhone PWA */
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border-default);
   background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
   backdrop-filter: blur(12px);

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import NotificationsModal from '@/components/NotificationsModal'
+import HubModal from '@/components/HubModal'
 import SystemSpecCard from '@/components/SystemSpecCard'
 import { useThemeContext } from '@/hooks/useTheme'
 import {
@@ -112,8 +113,7 @@ function PersonalInfoModal({
     .join(', ')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
+    <HubModal open={open} onClose={onClose} panelClassName="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">
@@ -126,7 +126,7 @@ function PersonalInfoModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-semibold text-[color:var(--accent-gold)]"
+            className="min-h-[44px] min-w-[44px] text-sm font-semibold text-[color:var(--accent-gold)]"
           >
             Done
           </button>
@@ -169,17 +169,15 @@ function PersonalInfoModal({
             </div>
           ) : null}
         </div>
-      </div>
-    </div>
+    </HubModal>
   )
 }
 
 function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null
-  return <ChangePasswordForm onClose={onClose} />
+  return <ChangePasswordForm open={open} onClose={onClose} />
 }
 
-function ChangePasswordForm({ onClose }: { onClose: () => void }) {
+function ChangePasswordForm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -205,11 +203,10 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
   }
 
   const inputCls =
-    'w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]'
+    'w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-base text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
-      <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
+    <HubModal open={open} onClose={onClose} panelClassName="p-5">
         <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">
           Change password
         </h2>
@@ -259,32 +256,28 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-[color:var(--border-default)] py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
+              className="min-h-[44px] flex-1 rounded-xl border border-[color:var(--border-default)] py-2.5 text-sm font-semibold text-[color:var(--text-secondary)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-60"
+              className="min-h-[44px] flex-1 rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-60"
             >
               {mutation.isPending ? 'Saving…' : 'Update password'}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </HubModal>
   )
 }
 
 function AppSettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { theme, setDark, setLight } = useThemeContext()
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
-      <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
+    <HubModal open={open} onClose={onClose} panelClassName="p-5">
         <div className="flex items-center justify-between">
           <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">
             App settings
@@ -292,7 +285,7 @@ function AppSettingsModal({ open, onClose }: { open: boolean; onClose: () => voi
           <button
             type="button"
             onClick={onClose}
-            className="text-sm font-semibold text-[color:var(--accent-gold)]"
+            className="min-h-[44px] min-w-[44px] text-sm font-semibold text-[color:var(--accent-gold)]"
           >
             Done
           </button>
@@ -352,8 +345,7 @@ function AppSettingsModal({ open, onClose }: { open: boolean; onClose: () => voi
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </HubModal>
   )
 }
 

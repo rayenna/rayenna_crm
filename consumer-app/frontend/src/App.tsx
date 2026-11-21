@@ -25,33 +25,37 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <BrowserRouter>
-            <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                element={
-                  <PrivateRoute>
-                    <Layout />
-                  </PrivateRoute>
-                }
-              >
-                <Route index element={<Home />} />
-                <Route path="track" element={<Track />} />
-                <Route path="maintain" element={<Maintain />} />
-                <Route path="support" element={<Support />} />
-                <Route path="help" element={<Help />} />
-                <Route path="help/:articleId" element={<HelpArticle />} />
-                <Route path="profile" element={<Profile />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <BrowserRouter>
+              <Toaster position="top-center" toastOptions={{ duration: 4000, style: { zIndex: 300 } }} />
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route
+                    element={
+                      <PrivateRoute>
+                        <Layout />
+                      </PrivateRoute>
+                    }
+                  >
+                    <Route index element={<Home />} />
+                    <Route path="track" element={<Track />} />
+                    <Route path="maintain" element={<Maintain />} />
+                    <Route path="support" element={<Support />} />
+                    <Route path="help" element={<Help />} />
+                    <Route path="help/:articleId" element={<HelpArticle />} />
+                    <Route path="profile" element={<Profile />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </BrowserRouter>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </div>
   )
 }
