@@ -32,8 +32,10 @@ const CONSUMER_MESSAGES = [
 const POLL_INTERVAL_MS = 2500
 const REQUEST_TIMEOUT_MS = 5000
 const MESSAGE_ROTATE_MS = 4500
-const PROGRESS_ASYMPTOTE_MS = 55_000
-const SLOW_FALLBACK_MS = 65_000
+/** Progress eases toward 95% over this window (bar should still be moving when try-again appears). */
+const PROGRESS_ASYMPTOTE_MS = 110_000
+/** After this long without a healthy API, show the “try again” fallback (polling still continues). */
+const SLOW_FALLBACK_MS = 120_000
 const DEFAULT_INITIAL_DELAY_MS = 1200
 const DEFAULT_HEALTH_ENDPOINT = '/api/health'
 
@@ -70,7 +72,7 @@ function formatElapsed(totalSeconds: number): string {
 function asymptoticProgress(elapsedMs: number, ready: boolean): number {
   if (ready) return 100
   const t = Math.min(1, elapsedMs / PROGRESS_ASYMPTOTE_MS)
-  // Ease toward 95% over ~55s so the bar never looks stuck at 100 before wake.
+  // Ease toward 95% over PROGRESS_ASYMPTOTE_MS so the bar never looks stuck at 100 before wake.
   return Math.min(95, Math.round((1 - Math.pow(1 - t, 1.55)) * 95))
 }
 
@@ -380,7 +382,7 @@ export default function ServerWakeupLoader({
     return () => window.clearTimeout(t)
   }, [initialDelayMs, isReady, previewDelayMs, retryToken])
 
-  // Slow fallback after 65s.
+  // Slow fallback after SLOW_FALLBACK_MS (currently 120s).
   useEffect(() => {
     if (isReady) return
     const t = window.setTimeout(() => setShowSlowFallback(true), SLOW_FALLBACK_MS)
