@@ -43,7 +43,7 @@ export function useAuth() {
   return ctx
 }
 
-type MeResult = 'ok' | 'unauthorized' | 'network' | 'other'
+type MeResult = 'ok' | 'unauthorized' | 'transient'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -58,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionWake, setSessionWake] = useState(false)
   const [wakeEpoch, setWakeEpoch] = useState(0)
   const restoreGen = useRef(0)
+  const userRef = useRef<ConsumerUser | null>(null)
+  userRef.current = user
 
   const clearAuth = useCallback(() => {
     setToken(null)
@@ -81,14 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status
       if (status === 401) return 'unauthorized'
-      // API up but still mounting routes (503) or network flake — keep saved token + wake UI.
-      if (isStillWakingError(error)) return 'network'
-      return 'other'
+      // Anything else while booting (503/500/network) — keep remembered session + wake UI.
+      if (isStillWakingError(error) || status === 500 || status == null) return 'transient'
+      return 'transient'
     }
+  }, [])
+
+  const continueWake = useCallback(() => {
+    setSessionWake(true)
+    window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
   }, [])
 
   useEffect(() => {
     if (!token) {
+      setIsLoading(false)
+      setSessionWake(false)
+      return
+    }
+
+    // Fresh login already hydrated user — do not re-run /me (avoids clearAuth race).
+    if (userRef.current) {
       setIsLoading(false)
       setSessionWake(false)
       return
@@ -123,7 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false)
           return
         }
-        if (result === 'network' && isHubProdApiConfigured()) {
+        if (result === 'unauthorized') {
+          clearAuth()
+          setIsLoading(false)
+          return
+        }
+        // Transient boot failure — keep token, show wake, never bounce to login.
+        if (isHubProdApiConfigured() || forceWakeupPreview) {
           setSessionWake(true)
           return
         }
@@ -131,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false)
       } catch {
         if (cancelled || gen !== restoreGen.current) return
-        if (isHubProdApiConfigured()) {
+        if (isHubProdApiConfigured() || forceWakeupPreview) {
           setSessionWake(true)
           return
         }
@@ -147,21 +167,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, clearAuth, fetchMe])
 
   const handleSessionWakeReady = useCallback(async () => {
+    // Login may have completed while the loader was green.
+    if (userRef.current) {
+      setSessionWake(false)
+      setIsLoading(false)
+      return
+    }
+
     const result = await fetchMe()
     if (result === 'ok') {
       setSessionWake(false)
       setIsLoading(false)
       return
     }
-    // Still waking — remount loader; never clear a remembered session for 503/network.
-    if (result === 'network') {
-      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
+    if (result === 'unauthorized') {
+      clearAuth()
+      setIsLoading(false)
       return
     }
-    // Only drop remembered login for real auth failure (401) / hard errors.
-    clearAuth()
-    setIsLoading(false)
-  }, [clearAuth, fetchMe])
+    // Health green but /me not ready yet — keep animating; never ask to re-login.
+    continueWake()
+  }, [clearAuth, continueWake, fetchMe])
 
   const login = async (username: string, password: string, remember = true) => {
     const { data } = await axiosInstance.post<ConsumerAuthResponse>('/api/consumer/auth/login', {
@@ -170,8 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     persistConsumerToken(data.token, remember)
     setConsumerAuthToken(data.token)
-    setToken(data.token)
+    // Set user before token so the token-effect skip sees a hydrated session.
     setUser(data.user)
+    setToken(data.token)
     setSessionWake(false)
     setIsLoading(false)
   }

@@ -55,13 +55,14 @@ export function isTimeoutOrNetworkError(error: unknown): boolean {
   )
 }
 
-/** 502/504 / boot 503 while Render mounts — keep wake UI; do not clear session / bounce to form. */
+/** Boot / cold-start failures — keep wake UI; do not clear session / bounce to form. */
 export function isStillWakingError(error: unknown): boolean {
   const err = error as {
     response?: { status?: number; data?: { error?: string; status?: string } }
   }
   const status = err?.response?.status
-  if (status === 502 || status === 504) return true
+  // Process up but DB/routes still mounting after Render wake.
+  if (status === 500 || status === 502 || status === 504) return true
   if (status === 503) {
     const apiError = err?.response?.data?.error
     // Real misconfig (missing CONSUMER_JWT_SECRET) — not a cold start.
@@ -100,7 +101,11 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    const status = err?.response?.status
+    const url = String(err?.config?.url ?? '')
+    // Wrong password on the login form must not wipe / hard-redirect; Login handles it.
+    const isLoginAttempt = url.includes('/api/consumer/auth/login')
+    if (status === 401 && !isLoginAttempt) {
       clearConsumerToken()
       delete axiosInstance.defaults.headers.common.Authorization
       if (!window.location.pathname.startsWith('/login')) {

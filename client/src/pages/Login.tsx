@@ -142,11 +142,11 @@ const Login = () => {
     setServerStatus('slow')
   }
 
-  /** 503/502 while routes mount after cold start — keep animating, do not bounce to login. */
+  /** Process / DB still mounting after cold start — keep animating, do not bounce to login. */
   const isStillWakingError = (error: unknown): boolean => {
     const err = error as { response?: { status?: number }; code?: string; message?: string }
     const status = err?.response?.status
-    if (status === 503 || status === 502 || status === 504) return true
+    if (status === 500 || status === 503 || status === 502 || status === 504) return true
     if (err?.response == null && isTimeoutOrNetworkError(error)) return true
     return false
   }
@@ -164,17 +164,13 @@ const Login = () => {
       finishLoginSuccess()
     } catch (error: unknown) {
       autoLoginInFlight.current = false
-      // API process is up but routes not ready yet, or network flake — stay on wake UI.
-      if (isStillWakingError(error)) {
-        window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
-        return
-      }
-      // Only return to the login form for bad credentials (or other hard failures).
+      // After the wake animation turns green, never bounce back to the form unless
+      // credentials are actually wrong. Health can be up while DB/routes still fail (500 etc).
       if (isWrongCredentialsError(error)) {
         failLogin('Incorrect email or password. Please try again.')
         return
       }
-      failLogin(getFriendlyApiErrorMessage(error))
+      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
     }
   }
 

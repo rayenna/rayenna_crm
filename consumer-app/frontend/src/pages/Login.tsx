@@ -158,16 +158,13 @@ export default function Login() {
       finishLoginSuccess()
     } catch (error: unknown) {
       autoLoginInFlight.current = false
-      // API process is up but routes not ready yet, or network flake — stay on wake UI.
-      if (isStillWakingError(error)) {
-        window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
-        return
-      }
+      // After the wake animation turns green, never bounce back to the form unless
+      // credentials are actually wrong. Health can be up while DB/routes still fail (500 etc).
       if (isWrongCredentialsError(error)) {
         failLogin('Invalid username or password.')
         return
       }
-      failLogin(getFriendlyApiErrorMessage(error))
+      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
     }
   }
 
