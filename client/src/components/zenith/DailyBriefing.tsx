@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { useMyDayContext } from '../../contexts/MyDayContext'
 import { motion } from 'framer-motion'
-import { Binoculars, Sun } from 'lucide-react'
+import { Binoculars, Sun, X } from 'lucide-react'
 import { UserRole } from '../../types'
 import MyDayButton from '../my-day/MyDayButton'
 import type { MyDayTabId } from '../my-day/types'
@@ -306,19 +307,20 @@ export default function DailyBriefing({
 
   if (!isVisible) return null
 
-  return (
+  // Portal to body so Layout's top nav (z-50 sibling stacking context) cannot cover the X on iPhone.
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[950] flex items-start sm:items-center justify-center backdrop-blur-md"
+      className="fixed inset-0 z-[7000] flex items-start sm:items-center justify-center backdrop-blur-md"
       style={{
         background: 'var(--bg-overlay)',
-        paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))',
-        paddingRight: 'max(0.75rem, env(safe-area-inset-right, 0px))',
-        paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
-        paddingLeft: 'max(0.75rem, env(safe-area-inset-left, 0px))',
+        paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
       }}
       onClick={close}
       role="presentation"
@@ -328,7 +330,7 @@ export default function DailyBriefing({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="relative flex w-full min-w-0 max-w-[560px] max-h-[calc(100dvh-24px)] flex-col overflow-hidden rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-4 sm:p-7"
+        className="relative flex w-full min-w-0 max-w-[560px] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-4 sm:p-7"
         style={{ boxShadow: 'var(--shadow-modal)' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -337,23 +339,24 @@ export default function DailyBriefing({
         <button
           type="button"
           onClick={close}
-          className="absolute z-10"
+          className="absolute z-20 flex items-center justify-center rounded-full border-2 border-[color:var(--accent-gold)] bg-[color:var(--bg-card)] text-[color:var(--text-primary)] shadow-md touch-manipulation hover:bg-[color:color-mix(in_srgb,var(--accent-gold)_18%,var(--bg-card))] active:scale-95"
           style={{
-            top: 16,
-            right: 16,
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            background: 'var(--bg-badge)',
-            color: 'var(--text-secondary)',
+            top: 12,
+            right: 12,
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
+            boxShadow:
+              '0 0 0 1px color-mix(in srgb, var(--accent-gold) 35%, transparent), 0 4px 14px color-mix(in srgb, var(--text-primary) 18%, transparent)',
           }}
           aria-label="Close briefing"
         >
-          ×
+          <X className="h-5 w-5 stroke-[2.5]" aria-hidden />
         </button>
 
         <div className="min-h-0 overflow-y-auto pr-1 pb-1">
-          <div className="pb-4 mb-5 border-b border-[color:var(--border-default)]">
+          <div className="pb-4 mb-5 border-b border-[color:var(--border-default)] pr-12">
             <div className="flex items-center gap-2">
               <Binoculars className="w-5 h-5 text-[color:var(--accent-gold)]" aria-hidden />
               <span
@@ -537,7 +540,8 @@ export default function DailyBriefing({
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 
