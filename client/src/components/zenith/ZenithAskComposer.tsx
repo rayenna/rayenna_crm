@@ -121,7 +121,7 @@ export default function ZenithAskComposer({
         </label>
         <textarea
           id={inputId}
-          rows={compact ? 1 : 3}
+          rows={3}
           value={value}
           onChange={(e) => {
             askSpeech.markManualEdit()
