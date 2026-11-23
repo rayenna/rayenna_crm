@@ -3319,6 +3319,75 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   }
 }
 
+.zenith-ask-launcher-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.zenith-ask-launcher-hint {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: min(17.5rem, calc(100vw - 1.5rem));
+  padding: 0.85rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--accent-gold-border);
+  background: var(--bg-dropdown);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 22%, transparent),
+    0 12px 28px color-mix(in srgb, var(--accent-gold) 28%, transparent),
+    var(--shadow-dropdown);
+  pointer-events: none;
+  transform-origin: top right;
+  animation: zenith-ask-launcher-hint-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.zenith-ask-launcher-hint::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 1.15rem;
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid var(--accent-gold-border);
+  border-top: 1px solid var(--accent-gold-border);
+  background: var(--bg-dropdown);
+  transform: rotate(45deg);
+}
+
+.zenith-ask-launcher-hint__title {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: var(--accent-gold);
+}
+
+.zenith-ask-launcher-hint__body {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+@keyframes zenith-ask-launcher-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .zenith-ask-dock-launcher {
   display: inline-flex;
   align-items: center;
@@ -3379,6 +3448,12 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 @media (prefers-reduced-motion: reduce) {
   .zenith-ask-dock-launcher {
     animation: none;
+  }
+
+  .zenith-ask-launcher-hint {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 
