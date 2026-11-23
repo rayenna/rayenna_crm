@@ -73,6 +73,11 @@ describe('PROPOSAL_PRINT_CSS', () => {
     );
   });
 
+  it('includes custom-section Numbering Library parenthesis list markers', () => {
+    expect(PROPOSAL_PRINT_CSS).toMatch(/\[data-pe-list="decimal-paren"\]/);
+    expect(PROPOSAL_PRINT_CSS).toMatch(/\[data-pe-list="lower-alpha-paren"\]/);
+  });
+
   it('keeps section heading icon–title gap consistent (flex gap-3, not table-cell)', () => {
     expect(PROPOSAL_PRINT_CSS).toMatch(
       /\.pdf-section-heading[\s\S]*gap:\s*0\.75rem\s*!important/,

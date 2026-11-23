@@ -8,6 +8,9 @@ const ALLOWED_TAGS = [
   'em',
   'i',
   'u',
+  's',
+  'strike',
+  'del',
   'ul',
   'ol',
   'li',
@@ -26,6 +29,8 @@ const ALLOWED_TAGS = [
   'th',
   'td',
   'caption',
+  'sub',
+  'sup',
 ];
 
 const ALLOWED_ATTR = [
@@ -41,6 +46,8 @@ const ALLOWED_ATTR = [
   'colspan',
   'rowspan',
   'scope',
+  /** Numbering Library parenthesis styles on custom-section lists */
+  'data-pe-list',
 ];
 
 /** ~450 KB decoded image — keeps pasted screenshots reasonable vs proposal JSON limits */

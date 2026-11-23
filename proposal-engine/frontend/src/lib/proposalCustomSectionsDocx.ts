@@ -95,13 +95,34 @@ function bodyHtmlToParagraphs(html: string, docx: DocxNs): import('docx').Paragr
     }
     if (tag === 'br') return;
     if (tag === 'ul' || tag === 'ol') {
-      node.querySelectorAll<HTMLElement>(':scope > li').forEach((li) => {
+      const ordered = tag === 'ol';
+      const peList = node.getAttribute('data-pe-list') || '';
+      const cssType = (node.style.listStyleType || '').toLowerCase();
+      const items = Array.from(node.children).filter(
+        (c): c is HTMLElement => c instanceof HTMLElement && c.tagName === 'LI',
+      );
+      items.forEach((li, idx) => {
         const t = li.innerText.trim();
         if (!t) return;
+        const n = idx + 1;
+        let marker = '• ';
+        if (ordered) {
+          if (peList === 'decimal-paren') marker = `${n}) `;
+          else if (peList === 'lower-alpha-paren') marker = `${String.fromCharCode(96 + ((n - 1) % 26) + 1)}) `;
+          else if (cssType === 'upper-roman' || cssType === 'lower-roman') {
+            const romans = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+            const r = romans[n - 1] ?? String(n);
+            marker = `${cssType === 'upper-roman' ? r.toUpperCase() : r}. `;
+          } else if (cssType === 'upper-alpha') marker = `${String.fromCharCode(64 + ((n - 1) % 26) + 1)}. `;
+          else if (cssType === 'lower-alpha') marker = `${String.fromCharCode(96 + ((n - 1) % 26) + 1)}. `;
+          else marker = `${n}. `;
+        } else if (cssType === 'circle') marker = '○ ';
+        else if (cssType === 'square') marker = '■ ';
+        else marker = '• ';
         out.push(
           new Paragraph({
             children: [
-              new TextRun({ text: '• ', bold: true, size: 22, color: '0d1b3a' }),
+              new TextRun({ text: marker, bold: true, size: 22, color: '0d1b3a' }),
               new TextRun({ text: t, size: 22, color: '374151' }),
             ],
             spacing: { after: 60 },

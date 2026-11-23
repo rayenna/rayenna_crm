@@ -1,5 +1,10 @@
+import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
+
 /** Print CSS injected into the PDF export window. Exported for regression tests. */
 export const PROPOSAL_PRINT_CSS = `
+    /* Custom-section parenthesis list markers (Numbering Library). */
+    ${PE_CUSTOM_LIST_STYLE_CSS}
+
     /* Proposal letterhead stays in the document. Browser date/title lines in the PDF are from the print dialog — turn off “Headers and footers” (Chrome) or equivalent to remove them; they cannot be removed by CSS alone. */
     @page { size: A4 portrait; margin: 18mm 18mm; }
     html, body { margin:0; padding:0; background:#fff; height:auto !important; overflow:visible !important; }

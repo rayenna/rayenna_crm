@@ -1239,13 +1239,25 @@ export default function ProposalPreview() {
            * Static bar (not sticky): parent #proposal-print-root uses overflow-hidden,
            * which breaks position:sticky on iOS Safari / Chrome Android.
            * Touch targets ≥44px on phone/iPad; compact on sm+ laptops.
+           * Color coding: indigo = required (always included); amber = optional (Include).
            */
-          <div className="print-hide mb-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 sm:py-1 shadow-sm">
+          <div
+            className={
+              optionalId
+                ? 'print-hide mb-1.5 flex flex-wrap items-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 px-2.5 py-2 sm:py-1.5 shadow-sm'
+                : 'print-hide mb-1.5 flex flex-wrap items-center gap-2 rounded-lg border-2 border-indigo-400 bg-indigo-50 px-2.5 py-2 sm:py-1.5 shadow-sm'
+            }
+            title={
+              optionalId
+                ? 'Optional section — tick Include to keep it in the proposal, or uncheck to exclude. Use ↑ / ↓ to move this section.'
+                : 'Required section — always included in the proposal. Use ↑ / ↓ to move this section. Cover and Executive Summary stay first.'
+            }
+          >
             {optionalId ? (
-              <label className="mr-auto flex min-h-[44px] sm:min-h-0 cursor-pointer select-none items-center gap-2 px-1 text-xs sm:text-[10px] font-bold uppercase tracking-wide text-sky-900 touch-manipulation">
+              <label className="mr-auto flex min-h-[44px] sm:min-h-0 min-w-0 max-w-[75%] cursor-pointer select-none items-center gap-2 px-1 text-sm sm:text-xs font-bold tracking-wide text-amber-950 touch-manipulation">
                 <input
                   type="checkbox"
-                  className="h-5 w-5 sm:h-3.5 sm:w-3.5 flex-shrink-0 rounded border-sky-400 text-sky-700 accent-sky-700 focus:ring-sky-500"
+                  className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0 rounded border-amber-500 text-amber-700 accent-amber-600 focus:ring-amber-500"
                   checked={included}
                   onChange={() => {
                     setIncludedOptionalSections((prev) => ({
@@ -1254,28 +1266,47 @@ export default function ProposalPreview() {
                     }));
                   }}
                 />
-                Include
+                <span className="uppercase text-amber-800">Include</span>
+                <span className="min-w-0 truncate font-extrabold uppercase text-amber-950">
+                  {meta?.label ?? id}
+                </span>
+                <span className="flex-shrink-0 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-900">
+                  Optional
+                </span>
               </label>
             ) : (
-              <span className="mr-auto min-w-0 max-w-[55%] truncate px-1 text-xs sm:text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                {meta?.label ?? id}
+              <span className="mr-auto flex min-w-0 max-w-[75%] items-center gap-2 truncate px-1 text-sm sm:text-xs font-extrabold uppercase tracking-wide text-indigo-950">
+                <span className="min-w-0 truncate">{meta?.label ?? id}</span>
+                <span className="flex-shrink-0 rounded bg-indigo-200 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-indigo-900">
+                  Required
+                </span>
               </span>
             )}
-            <div className="flex flex-shrink-0 items-center gap-1">
+            <div className="flex flex-shrink-0 items-center gap-1.5">
               <button
                 type="button"
-                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center rounded-md px-3 sm:px-2 py-2 sm:py-0.5 text-sm sm:text-[11px] font-bold bg-white text-sky-800 ring-1 ring-sky-200 touch-manipulation active:bg-sky-100 disabled:opacity-30"
+                className={
+                  optionalId
+                    ? 'inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-md px-3 sm:px-2.5 py-2 sm:py-1 text-lg sm:text-base font-black bg-amber-600 text-white shadow-sm ring-1 ring-amber-700/40 touch-manipulation hover:bg-amber-500 active:bg-amber-700 disabled:bg-amber-200 disabled:text-amber-400 disabled:ring-amber-200 disabled:shadow-none'
+                    : 'inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-md px-3 sm:px-2.5 py-2 sm:py-1 text-lg sm:text-base font-black bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-700/40 touch-manipulation hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-200 disabled:text-indigo-400 disabled:ring-indigo-200 disabled:shadow-none'
+                }
                 disabled={idx <= 0}
                 aria-label={`Move ${meta?.label ?? id} up`}
+                title={`Move “${meta?.label ?? id}” up`}
                 onClick={() => setSectionOrder((prev) => moveSection(prev, id, 'up'))}
               >
                 ↑
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center rounded-md px-3 sm:px-2 py-2 sm:py-0.5 text-sm sm:text-[11px] font-bold bg-white text-sky-800 ring-1 ring-sky-200 touch-manipulation active:bg-sky-100 disabled:opacity-30"
+                className={
+                  optionalId
+                    ? 'inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-md px-3 sm:px-2.5 py-2 sm:py-1 text-lg sm:text-base font-black bg-amber-600 text-white shadow-sm ring-1 ring-amber-700/40 touch-manipulation hover:bg-amber-500 active:bg-amber-700 disabled:bg-amber-200 disabled:text-amber-400 disabled:ring-amber-200 disabled:shadow-none'
+                    : 'inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-md px-3 sm:px-2.5 py-2 sm:py-1 text-lg sm:text-base font-black bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-700/40 touch-manipulation hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-200 disabled:text-indigo-400 disabled:ring-indigo-200 disabled:shadow-none'
+                }
                 disabled={idx < 0 || idx >= orderedSectionIds.length - 1}
                 aria-label={`Move ${meta?.label ?? id} down`}
+                title={`Move “${meta?.label ?? id}” down`}
                 onClick={() => setSectionOrder((prev) => moveSection(prev, id, 'down'))}
               >
                 ↓
@@ -1935,7 +1966,7 @@ export default function ProposalPreview() {
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="flex-shrink-0">✏️</span>
                       <span>
-                        Edit mode — edit blue-outlined text, use <strong>Include</strong> checkboxes on optional sections (unchecked stay grey until Save), and <strong>↑ / ↓</strong> to reorder. Cover and Executive Summary stay first. Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
+                        Edit mode — edit blue-outlined text. <strong className="text-indigo-800">Indigo</strong> bars are required sections; <strong className="text-amber-800">amber</strong> bars are optional (Include). Hover a bar for tips; use <strong>↑ / ↓</strong> to reorder. Cover and Executive Summary stay first. Click <strong>Save</strong> when done, or <strong>Cancel</strong> to leave without saving.
                       </span>
                     </div>
                     <button

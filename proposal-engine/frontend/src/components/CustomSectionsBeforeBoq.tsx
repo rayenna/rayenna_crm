@@ -47,6 +47,7 @@ import {
   getSelectionTypography,
   normalizePastedEditorTypography,
 } from '../lib/proposalEditorFont';
+import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
 
 /**
  * Detect which Office app copied to the clipboard by scanning the HTML header.
@@ -344,7 +345,8 @@ function applyInlineStyle(property: string, value: string, _editorEl: HTMLElemen
     } else if (property === 'font-style') {
       document.execCommand('italic', false);
     } else if (property === 'text-decoration') {
-      document.execCommand('underline', false);
+      if (value === 'line-through') document.execCommand('strikeThrough', false);
+      else document.execCommand('underline', false);
     } else if (property === 'color') {
       document.execCommand('foreColor', false, value);
     } else if (property === 'background-color') {
@@ -374,7 +376,10 @@ function applyInlineStyle(property: string, value: string, _editorEl: HTMLElemen
     document.execCommand('styleWithCSS', false, 'true');
     if (property === 'font-weight')         document.execCommand('bold', false);
     else if (property === 'font-style')     document.execCommand('italic', false);
-    else if (property === 'text-decoration') document.execCommand('underline', false);
+    else if (property === 'text-decoration') {
+      if (value === 'line-through') document.execCommand('strikeThrough', false);
+      else document.execCommand('underline', false);
+    }
     else if (property === 'color')          document.execCommand('foreColor', false, value);
     else if (property === 'background-color') document.execCommand('hiliteColor', false, value);
     document.execCommand('styleWithCSS', false, 'false');
@@ -387,10 +392,115 @@ function cmd(command: string, value?: string) {
   document.execCommand(command, false, value ?? '');
 }
 
+export type OrderedListStyleId =
+  | 'none'
+  | 'decimal'
+  | 'decimal-paren'
+  | 'upper-roman'
+  | 'upper-alpha'
+  | 'lower-alpha-paren'
+  | 'lower-alpha'
+  | 'lower-roman';
+
+export type BulletListStyleId = 'none' | 'disc' | 'circle' | 'square';
+
+export type ChangeCaseMode = 'sentence' | 'lower' | 'upper' | 'title' | 'toggle';
+
+function findNearestList(editorEl: HTMLElement, tag: 'UL' | 'OL'): HTMLElement | null {
+  const sel = window.getSelection();
+  let node: Node | null = sel && sel.rangeCount > 0 ? sel.anchorNode : null;
+  while (node && node !== editorEl) {
+    if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === tag) {
+      return node as HTMLElement;
+    }
+    node = node.parentNode;
+  }
+  return editorEl.querySelector(tag);
+}
+
+function applyOrderedListStyle(style: OrderedListStyleId, editorEl: HTMLElement): void {
+  if (style === 'none') {
+    if (document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList', false);
+    return;
+  }
+  if (document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList', false);
+  if (!document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList', false);
+  const list = findNearestList(editorEl, 'OL');
+  if (!list) return;
+  list.removeAttribute('data-pe-list');
+  if (style === 'decimal-paren' || style === 'lower-alpha-paren') {
+    list.style.listStyleType = 'none';
+    list.setAttribute('data-pe-list', style);
+  } else {
+    const map: Record<string, string> = {
+      decimal: 'decimal',
+      'upper-roman': 'upper-roman',
+      'upper-alpha': 'upper-alpha',
+      'lower-alpha': 'lower-alpha',
+      'lower-roman': 'lower-roman',
+    };
+    list.style.listStyleType = map[style] ?? 'decimal';
+  }
+}
+
+function applyBulletListStyle(style: BulletListStyleId, editorEl: HTMLElement): void {
+  if (style === 'none') {
+    if (document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList', false);
+    return;
+  }
+  if (document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList', false);
+  if (!document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList', false);
+  const list = findNearestList(editorEl, 'UL');
+  if (!list) return;
+  list.removeAttribute('data-pe-list');
+  list.style.listStyleType = style;
+}
+
+function transformChangeCase(text: string, mode: ChangeCaseMode): string {
+  switch (mode) {
+    case 'lower':
+      return text.toLowerCase();
+    case 'upper':
+      return text.toUpperCase();
+    case 'title':
+      return text.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    case 'toggle':
+      return text
+        .split('')
+        .map((ch) => (ch === ch.toUpperCase() ? ch.toLowerCase() : ch.toUpperCase()))
+        .join('');
+    case 'sentence': {
+      const lower = text.toLowerCase();
+      return lower.replace(/(^\s*[a-z]|[.!?]\s+[a-z])/g, (m) => m.toUpperCase());
+    }
+    default:
+      return text;
+  }
+}
+
+/** Replace the current selection's text with a case-transformed version (preserves one text node). */
+function applyChangeCase(mode: ChangeCaseMode, editorEl: HTMLElement): void {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  if (!editorEl.contains(range.commonAncestorContainer)) return;
+  const raw = range.toString();
+  if (!raw) return;
+  const next = transformChangeCase(raw, mode);
+  range.deleteContents();
+  const node = document.createTextNode(next);
+  range.insertNode(node);
+  const restore = document.createRange();
+  restore.selectNodeContents(node);
+  sel.removeAllRanges();
+  sel.addRange(restore);
+}
+
 interface FormatState {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  strikethrough: boolean;
   orderedList: boolean;
   unorderedList: boolean;
   alignLeft: boolean;
@@ -409,6 +519,7 @@ function getFormatState(): FormatState {
     bold:          document.queryCommandState('bold'),
     italic:        document.queryCommandState('italic'),
     underline:     document.queryCommandState('underline'),
+    strikethrough: document.queryCommandState('strikeThrough'),
     orderedList:   document.queryCommandState('insertOrderedList'),
     unorderedList: document.queryCommandState('insertUnorderedList'),
     alignLeft:     document.queryCommandState('justifyLeft'),
@@ -599,6 +710,218 @@ function TablePicker({
     document.body,
   );
 }
+
+// ─── List style / change-case library popovers ─────────────────────────────────
+
+const ORDERED_LIST_OPTIONS: { id: OrderedListStyleId; label: string; preview: string }[] = [
+  { id: 'none', label: 'None', preview: 'None' },
+  { id: 'decimal', label: '1. 2. 3.', preview: '1.\n2.\n3.' },
+  { id: 'decimal-paren', label: '1) 2) 3)', preview: '1)\n2)\n3)' },
+  { id: 'upper-roman', label: 'I. II. III.', preview: 'I.\nII.\nIII.' },
+  { id: 'upper-alpha', label: 'A. B. C.', preview: 'A.\nB.\nC.' },
+  { id: 'lower-alpha-paren', label: 'a) b) c)', preview: 'a)\nb)\nc)' },
+  { id: 'lower-alpha', label: 'a. b. c.', preview: 'a.\nb.\nc.' },
+  { id: 'lower-roman', label: 'i. ii. iii.', preview: 'i.\nii.\niii.' },
+];
+
+const BULLET_LIST_OPTIONS: { id: BulletListStyleId; label: string; glyph: string }[] = [
+  { id: 'none', label: 'None', glyph: '' },
+  { id: 'disc', label: 'Solid circle', glyph: '●' },
+  { id: 'circle', label: 'Hollow circle', glyph: '○' },
+  { id: 'square', label: 'Solid square', glyph: '■' },
+];
+
+const CHANGE_CASE_OPTIONS: { id: ChangeCaseMode; label: string }[] = [
+  { id: 'sentence', label: 'Sentence case.' },
+  { id: 'lower', label: 'lowercase' },
+  { id: 'upper', label: 'UPPERCASE' },
+  { id: 'title', label: 'Capitalise Each Word' },
+  { id: 'toggle', label: 'tOGGLE cASE' },
+];
+
+function useFixedPopoverPosition(
+  anchorRef: React.RefObject<HTMLElement | null>,
+  width: number,
+) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const left = Math.max(8, Math.min(
+      window.innerWidth - width - 8,
+      rect.left + rect.width / 2 - width / 2,
+    ));
+    setPos({ top: rect.bottom + 6, left });
+  }, [anchorRef, width]);
+  return pos;
+}
+
+function NumberingLibrary({
+  anchorRef,
+  onSelect,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  onSelect: (id: OrderedListStyleId) => void;
+  onClose: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const pos = useFixedPopoverPosition(anchorRef, 280);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [onClose]);
+  if (!pos) return null;
+  return createPortal(
+    <div
+      ref={wrapRef}
+      role="menu"
+      aria-label="Numbering Library"
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 280 }}
+      className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl select-none"
+      onPointerDown={(e) => e.preventDefault()}
+    >
+      <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        Numbering Library
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {ORDERED_LIST_OPTIONS.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            role="menuitem"
+            title={opt.label}
+            className="flex h-[72px] flex-col items-start justify-center rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left text-[11px] font-semibold leading-tight text-slate-800 hover:border-indigo-400 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+            onClick={() => { onSelect(opt.id); onClose(); }}
+          >
+            {opt.id === 'none' ? (
+              <span className="w-full text-center text-slate-500">None</span>
+            ) : (
+              opt.preview.split('\n').map((line) => (
+                <span key={line} className="flex w-full items-center gap-1.5">
+                  <span className="w-5 shrink-0 text-slate-700">{line}</span>
+                  <span className="h-0.5 flex-1 rounded bg-slate-300" />
+                </span>
+              ))
+            )}
+          </button>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function BulletLibrary({
+  anchorRef,
+  onSelect,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  onSelect: (id: BulletListStyleId) => void;
+  onClose: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const pos = useFixedPopoverPosition(anchorRef, 220);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [onClose]);
+  if (!pos) return null;
+  return createPortal(
+    <div
+      ref={wrapRef}
+      role="menu"
+      aria-label="Bullet Library"
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 220 }}
+      className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl select-none"
+      onPointerDown={(e) => e.preventDefault()}
+    >
+      <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500">
+        Bullet Library
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {BULLET_LIST_OPTIONS.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            role="menuitem"
+            title={opt.label}
+            className="flex h-16 flex-col items-center justify-center gap-1 rounded-md border border-slate-200 bg-white text-[12px] font-semibold text-slate-800 hover:border-indigo-400 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+            onClick={() => { onSelect(opt.id); onClose(); }}
+          >
+            {opt.id === 'none' ? (
+              <span className="text-slate-500">None</span>
+            ) : (
+              <>
+                <span className="text-base leading-none text-slate-900" aria-hidden>{opt.glyph}</span>
+                <span className="h-0.5 w-10 rounded bg-slate-300" />
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ChangeCaseMenu({
+  anchorRef,
+  onSelect,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  onSelect: (mode: ChangeCaseMode) => void;
+  onClose: () => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const pos = useFixedPopoverPosition(anchorRef, 200);
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [onClose]);
+  if (!pos) return null;
+  return createPortal(
+    <div
+      ref={wrapRef}
+      role="menu"
+      aria-label="Change case"
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 200 }}
+      className="overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl select-none"
+      onPointerDown={(e) => e.preventDefault()}
+    >
+      {CHANGE_CASE_OPTIONS.map((opt) => (
+        <button
+          key={opt.id}
+          type="button"
+          role="menuitem"
+          className="block w-full px-3 py-2 text-left text-[13px] text-slate-800 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+          onClick={() => { onSelect(opt.id); onClose(); }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>,
+    document.body,
+  );
+}
+
+const ChevronDown = () => (
+  <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" aria-hidden className="opacity-80">
+    <path d="M1.2 2.6 4 5.4 6.8 2.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 // ─── Table context bar (shown when cursor is inside a table) ───────────────────
 
@@ -964,6 +1287,9 @@ function EditorToolbar({
 }) {
   const [fontColorOpen, setFontColorOpen]       = useState(false);
   const [highlightOpen, setHighlightOpen]       = useState(false);
+  const [numberingOpen, setNumberingOpen]       = useState(false);
+  const [bulletLibOpen, setBulletLibOpen]       = useState(false);
+  const [changeCaseOpen, setChangeCaseOpen]     = useState(false);
   const [lastFontColor, setLastFontColor]       = useState('#000000');
   const [lastHighlight, setLastHighlight]       = useState('#fef08a');
 
@@ -971,23 +1297,37 @@ function EditorToolbar({
   const fontColorBtnRef  = useRef<HTMLButtonElement>(null);
   const highlightBtnRef  = useRef<HTMLButtonElement>(null);
   const tableBtnRef      = useRef<HTMLButtonElement>(null);
+  const numberingBtnRef  = useRef<HTMLButtonElement>(null);
+  const bulletBtnRef     = useRef<HTMLButtonElement>(null);
+  const changeCaseBtnRef = useRef<HTMLButtonElement>(null);
+
+  const closeOtherPickers = (except?: 'font' | 'highlight' | 'numbering' | 'bullet' | 'case' | 'table') => {
+    if (except !== 'font') setFontColorOpen(false);
+    if (except !== 'highlight') setHighlightOpen(false);
+    if (except !== 'numbering') setNumberingOpen(false);
+    if (except !== 'bullet') setBulletLibOpen(false);
+    if (except !== 'case') setChangeCaseOpen(false);
+    if (except !== 'table' && tablePickerOpen) onTablePickerToggle();
+  };
 
   /* ── styling helpers ── */
-  // Icon button — 36px tall on mobile, 28px on sm+; no border, bg on hover/active
+  // Icon button — 36px tall on mobile, 28px on sm+; high-contrast on light toolbar wash
   const ib = (active: boolean, extra = '') =>
     `relative h-9 sm:h-7 min-w-[36px] sm:min-w-[28px] px-2 sm:px-1.5 rounded-md flex items-center
      justify-center text-[13px] select-none transition-all duration-100 flex-shrink-0
      [touch-action:manipulation] ${extra} ${
       active
-        ? 'bg-blue-100 text-blue-700 shadow-inner'
-        : 'text-slate-600 hover:bg-slate-100 active:bg-slate-200 hover:text-slate-900'
+        ? 'bg-indigo-200 text-indigo-950 ring-1 ring-indigo-400/70'
+        : 'text-slate-800 hover:bg-white hover:text-slate-950 active:bg-indigo-100'
     }`;
   // Separator — taller on mobile to match button height
-  const Sep = () => <span className="w-px h-7 sm:h-5 bg-slate-200 mx-0.5 flex-shrink-0" />;
+  const Sep = () => <span className="w-px h-7 sm:h-5 bg-indigo-200/80 mx-0.5 flex-shrink-0" />;
   // Tiny group label (image size)
   const GLabel = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 select-none flex-shrink-0">{children}</span>
+    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500 select-none flex-shrink-0">{children}</span>
   );
+  // Group chip behind related controls — keeps icons readable on the gradient
+  const groupChip = 'flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-white/90 ring-1 ring-indigo-200/70 px-0.5 py-0.5 shadow-sm';
 
   return (
     // On mobile: single row with horizontal scroll (no wrap) so toolbar stays compact.
@@ -999,12 +1339,15 @@ function EditorToolbar({
     // the entire toolbar div and calling preventDefault() tells the browser "this
     // is an intentional touch on a control, not a tap-to-dismiss", keeping the
     // keyboard up and the selection intact.
+    //
+    // Keep a light document-editor wash even when the app shell is dark mode —
+    // the canvas below is white paper; a near-black toolbar made icons illegible.
     <div
-      className="flex flex-nowrap sm:flex-wrap items-center gap-x-1 gap-y-1
+      className="flex flex-nowrap sm:flex-wrap items-center gap-x-1.5 gap-y-1.5
                     overflow-x-auto sm:overflow-x-visible
-                    rounded-t-lg border border-b-0 border-slate-200
-                    bg-gradient-to-b from-slate-50 to-white dark:from-white/5 dark:to-[#14141C]
-                    px-2.5 py-2 print-hide shadow-sm
+                    rounded-t-lg border border-b-0 border-indigo-200
+                    bg-gradient-to-b from-indigo-100 via-sky-50 to-white
+                    px-2.5 py-2 print-hide
                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       onTouchStart={(e) => e.preventDefault()}
     >
@@ -1014,7 +1357,7 @@ function EditorToolbar({
         <select
           title="Font family"
           aria-label="Font family"
-          className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
+          className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-indigo-200 bg-white px-2 text-[12px] font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer hover:border-indigo-300 transition-colors [touch-action:manipulation]"
           value={formatState.fontFamily}
           onMouseDown={(e) => e.stopPropagation()}
           onChange={(e) => {
@@ -1037,7 +1380,7 @@ function EditorToolbar({
         <select
           title="Font size"
           aria-label="Font size"
-          className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
+          className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-indigo-200 bg-white px-1.5 text-[12px] font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer hover:border-indigo-300 transition-colors [touch-action:manipulation]"
           value={formatState.fontSize}
           onMouseDown={(e) => e.stopPropagation()}
           onChange={(e) => {
@@ -1061,7 +1404,7 @@ function EditorToolbar({
           Chrome when the element gained focus programmatically rather than by a direct
           tap inside the editor itself. applyInlineStyle works via the Range API and is
           fully reliable on all browsers including Android Chrome. */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className={groupChip}>
         <BtnTooltip label="Bold (Ctrl+B)">
           <button
             type="button"
@@ -1095,6 +1438,25 @@ function EditorToolbar({
             }}
           >U</button>
         </BtnTooltip>
+        <BtnTooltip label="Strikethrough">
+          <button
+            type="button"
+            className={ib(formatState.strikethrough, 'line-through')}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!editorRef.current) return;
+              onFormat(() =>
+                applyInlineStyle(
+                  'text-decoration',
+                  formatState.strikethrough ? 'none' : 'line-through',
+                  editorRef.current!,
+                ),
+              );
+            }}
+          >
+            <span className="text-[12px] font-bold leading-none">ab</span>
+          </button>
+        </BtnTooltip>
         <BtnTooltip label="Subscript">
           <button type="button" className={ib(formatState.subscript)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
             <span className="text-[11px] leading-none">x<sub className="text-[8px]">2</sub></span>
@@ -1109,76 +1471,116 @@ function EditorToolbar({
 
       <Sep />
 
-      {/* ── Font colour ── */}
-      <div className="flex-shrink-0">
-        <BtnTooltip label="Font colour">
-          <button
-            ref={fontColorBtnRef}
-            type="button"
-            className={ib(fontColorOpen)}
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={() => { setFontColorOpen((v) => !v); setHighlightOpen(false); }}
-          >
-            <span className="flex flex-col items-center leading-none gap-[2px]">
-              <span className="text-[12px] font-black leading-none" style={{ color: lastFontColor === '#ffffff' ? '#000' : lastFontColor }}>A</span>
-              <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastFontColor }} />
-            </span>
-          </button>
-        </BtnTooltip>
-        {fontColorOpen && (
-          <ColorPicker
-            anchorRef={fontColorBtnRef}
-            colors={FONT_COLORS}
-            onSelect={(c) => {
-              setLastFontColor(c);
-              if (editorRef.current) {
-                onFormat(() => applyInlineStyle('color', c || '#000000', editorRef.current!));
-              }
-            }}
-            onClose={() => setFontColorOpen(false)}
-          />
-        )}
+      {/* ── Change case ── */}
+      <div className={groupChip}>
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Change case">
+            <button
+              ref={changeCaseBtnRef}
+              type="button"
+              className={ib(changeCaseOpen, 'gap-0.5 px-2')}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('case');
+                setChangeCaseOpen((v) => !v);
+              }}
+            >
+              <span className="text-[12px] font-extrabold leading-none tracking-tight">Aa</span>
+              <ChevronDown />
+            </button>
+          </BtnTooltip>
+          {changeCaseOpen && (
+            <ChangeCaseMenu
+              anchorRef={changeCaseBtnRef}
+              onSelect={(mode) => {
+                if (!editorRef.current) return;
+                onFormat(() => applyChangeCase(mode, editorRef.current!));
+              }}
+              onClose={() => setChangeCaseOpen(false)}
+            />
+          )}
+        </div>
       </div>
 
-      {/* ── Highlight colour ── */}
-      <div className="flex-shrink-0">
-        <BtnTooltip label="Highlight colour">
-          <button
-            ref={highlightBtnRef}
-            type="button"
-            className={ib(highlightOpen)}
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={() => { setHighlightOpen((v) => !v); setFontColorOpen(false); }}
-          >
-            <span className="flex flex-col items-center leading-none gap-[2px]">
-              <span className="text-[11px] font-bold leading-none px-0.5 rounded-sm" style={{ background: lastHighlight, color: '#1e293b' }}>ab</span>
-              <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastHighlight }} />
-            </span>
-          </button>
-        </BtnTooltip>
-        {highlightOpen && (
-          <ColorPicker
-            anchorRef={highlightBtnRef}
-            colors={HIGHLIGHT_COLORS}
-            onSelect={(c) => {
-              setLastHighlight(c || '#fef08a');
-              if (editorRef.current) {
-                onFormat(() =>
-                  applyInlineStyle('background-color', c || 'transparent', editorRef.current!),
-                );
-              }
-            }}
-            onClose={() => setHighlightOpen(false)}
-            allowRemove
-            removeLabel="Remove"
-          />
-        )}
+      <Sep />
+
+      {/* ── Font colour / Highlight ── */}
+      <div className={groupChip}>
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Font colour">
+            <button
+              ref={fontColorBtnRef}
+              type="button"
+              className={ib(fontColorOpen)}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('font');
+                setFontColorOpen((v) => !v);
+              }}
+            >
+              <span className="flex flex-col items-center leading-none gap-[2px]">
+                <span className="text-[12px] font-black leading-none" style={{ color: lastFontColor === '#ffffff' ? '#000' : lastFontColor }}>A</span>
+                <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastFontColor }} />
+              </span>
+            </button>
+          </BtnTooltip>
+          {fontColorOpen && (
+            <ColorPicker
+              anchorRef={fontColorBtnRef}
+              colors={FONT_COLORS}
+              onSelect={(c) => {
+                setLastFontColor(c);
+                if (editorRef.current) {
+                  onFormat(() => applyInlineStyle('color', c || '#000000', editorRef.current!));
+                }
+              }}
+              onClose={() => setFontColorOpen(false)}
+            />
+          )}
+        </div>
+
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Highlight colour">
+            <button
+              ref={highlightBtnRef}
+              type="button"
+              className={ib(highlightOpen)}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('highlight');
+                setHighlightOpen((v) => !v);
+              }}
+            >
+              <span className="flex flex-col items-center leading-none gap-[2px]">
+                <span className="text-[11px] font-bold leading-none px-0.5 rounded-sm" style={{ background: lastHighlight, color: '#1e293b' }}>ab</span>
+                <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastHighlight }} />
+              </span>
+            </button>
+          </BtnTooltip>
+          {highlightOpen && (
+            <ColorPicker
+              anchorRef={highlightBtnRef}
+              colors={HIGHLIGHT_COLORS}
+              onSelect={(c) => {
+                setLastHighlight(c || '#fef08a');
+                if (editorRef.current) {
+                  onFormat(() =>
+                    applyInlineStyle('background-color', c || 'transparent', editorRef.current!),
+                  );
+                }
+              }}
+              onClose={() => setHighlightOpen(false)}
+              allowRemove
+              removeLabel="Remove"
+            />
+          )}
+        </div>
       </div>
 
       <Sep />
 
       {/* ── Indent ── */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className={groupChip}>
         <BtnTooltip label="Decrease indent">
           <button type="button" className={ib(false)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
             <span className="text-[14px] leading-none">⇤</span>
@@ -1196,7 +1598,7 @@ function EditorToolbar({
       {/* ── Alignment ── */}
       {/* onAlign() handles both cases: image selected → auto margins on <img>;
           no image → execCommand justifyLeft/Center/Right on text. */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className={groupChip}>
         <BtnTooltip label="Align left">
           <button
             type="button"
@@ -1231,82 +1633,132 @@ function EditorToolbar({
 
       <Sep />
 
-      {/* ── Lists ── */}
-      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
-        <BtnTooltip label="Bullet list">
-          <button type="button" className={ib(formatState.unorderedList)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
-          </button>
-        </BtnTooltip>
-        <BtnTooltip label="Numbered list">
-          <button type="button" className={ib(formatState.orderedList)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/><text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/><text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/></svg>
-          </button>
-        </BtnTooltip>
+      {/* ── Lists (with style libraries) ── */}
+      <div className={groupChip}>
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Bullet list styles">
+            <button
+              ref={bulletBtnRef}
+              type="button"
+              className={ib(formatState.unorderedList || bulletLibOpen, 'gap-0.5')}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('bullet');
+                setBulletLibOpen((v) => !v);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/>
+                <circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/>
+                <circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/>
+              </svg>
+              <ChevronDown />
+            </button>
+          </BtnTooltip>
+          {bulletLibOpen && (
+            <BulletLibrary
+              anchorRef={bulletBtnRef}
+              onSelect={(id) => {
+                if (!editorRef.current) return;
+                onFormat(() => applyBulletListStyle(id, editorRef.current!));
+              }}
+              onClose={() => setBulletLibOpen(false)}
+            />
+          )}
+        </div>
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Numbered list styles">
+            <button
+              ref={numberingBtnRef}
+              type="button"
+              className={ib(formatState.orderedList || numberingOpen, 'gap-0.5')}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('numbering');
+                setNumberingOpen((v) => !v);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/>
+                <text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/>
+                <text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/>
+              </svg>
+              <ChevronDown />
+            </button>
+          </BtnTooltip>
+          {numberingOpen && (
+            <NumberingLibrary
+              anchorRef={numberingBtnRef}
+              onSelect={(id) => {
+                if (!editorRef.current) return;
+                onFormat(() => applyOrderedListStyle(id, editorRef.current!));
+              }}
+              onClose={() => setNumberingOpen(false)}
+            />
+          )}
+        </div>
       </div>
 
       <Sep />
 
-      {/* ── Hyperlink ── */}
-      <BtnTooltip label="Insert hyperlink">
-        <button
-          type="button"
-          className={ib(false)}
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={() => {
-            setFontColorOpen(false);
-            setHighlightOpen(false);
-            onLinkClick();
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.35" aria-hidden>
-            <path d="M6.2 8.8a3.2 3.2 0 0 0 4.5 0l1.6-1.6a3.2 3.2 0 0 0-4.5-4.5L6.8 3.6" strokeLinecap="round" />
-            <path d="M8.8 6.2a3.2 3.2 0 0 0-4.5 0L2.7 7.8a3.2 3.2 0 0 0 4.5 4.5l1-1" strokeLinecap="round" />
-          </svg>
-        </button>
-      </BtnTooltip>
-
-      <Sep />
-
-      {/* ── Table ── */}
-      <div className="flex-shrink-0">
-        <BtnTooltip label="Insert table">
+      {/* ── Hyperlink / Table / Image ── */}
+      <div className={groupChip}>
+        <BtnTooltip label="Insert hyperlink">
           <button
-            ref={tableBtnRef}
             type="button"
-            className={ib(tablePickerOpen)}
+            className={ib(false)}
             onPointerDown={(e) => e.preventDefault()}
-            onClick={() => { onTablePickerToggle(); setFontColorOpen(false); setHighlightOpen(false); }}
+            onClick={() => {
+              closeOtherPickers();
+              onLinkClick();
+            }}
           >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
-              <rect x="1" y="1" width="13" height="13" rx="1.5"/>
-              <line x1="1" y1="5" x2="14" y2="5"/><line x1="1" y1="9" x2="14" y2="9"/>
-              <line x1="5" y1="1" x2="5" y2="14"/><line x1="9" y1="1" x2="9" y2="14"/>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+              <path d="M6.2 8.8a3.2 3.2 0 0 0 4.5 0l1.6-1.6a3.2 3.2 0 0 0-4.5-4.5L6.8 3.6" strokeLinecap="round" />
+              <path d="M8.8 6.2a3.2 3.2 0 0 0-4.5 0L2.7 7.8a3.2 3.2 0 0 0 4.5 4.5l1-1" strokeLinecap="round" />
             </svg>
           </button>
         </BtnTooltip>
-        {tablePickerOpen && (
-          <TablePicker anchorRef={tableBtnRef} onInsert={onTableInsert} onClose={onTablePickerToggle} />
-        )}
+
+        <div className="relative flex-shrink-0">
+          <BtnTooltip label="Insert table">
+            <button
+              ref={tableBtnRef}
+              type="button"
+              className={ib(tablePickerOpen)}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('table');
+                onTablePickerToggle();
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.55">
+                <rect x="1" y="1" width="13" height="13" rx="1.5"/>
+                <line x1="1" y1="5" x2="14" y2="5"/><line x1="1" y1="9" x2="14" y2="9"/>
+                <line x1="5" y1="1" x2="5" y2="14"/><line x1="9" y1="1" x2="9" y2="14"/>
+              </svg>
+            </button>
+          </BtnTooltip>
+          {tablePickerOpen && (
+            <TablePicker anchorRef={tableBtnRef} onInsert={onTableInsert} onClose={onTablePickerToggle} />
+          )}
+        </div>
+
+        <BtnTooltip label="Insert image">
+          <button
+            type="button"
+            className={ib(false)}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={onImageClick}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.55">
+              <rect x="1" y="2" width="13" height="11" rx="1.5"/>
+              <circle cx="5" cy="5.5" r="1.2"/>
+              <polyline points="1,11 5,7 8,10 10,8 14,12"/>
+            </svg>
+          </button>
+        </BtnTooltip>
       </div>
-
-      <Sep />
-
-      {/* ── Image ── */}
-      <BtnTooltip label="Insert image">
-        <button
-          type="button"
-          className={ib(false)}
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={onImageClick}
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
-            <rect x="1" y="2" width="13" height="11" rx="1.5"/>
-            <circle cx="5" cy="5.5" r="1.2"/>
-            <polyline points="1,11 5,7 8,10 10,8 14,12"/>
-          </svg>
-        </button>
-      </BtnTooltip>
 
       {/* Image width controls — only when an image is clicked */}
       {selectedImg && (
@@ -1392,6 +1844,7 @@ function CustomBodyEditor({
     bold: false,
     italic: false,
     underline: false,
+    strikethrough: false,
     orderedList: false,
     unorderedList: false,
     alignLeft: false,
@@ -1918,6 +2371,9 @@ function CustomBodyEditor({
           onTableWidth={applyTableWidth}
         />
       )}
+
+      {/* Paren list markers for Numbering Library — also in PROPOSAL_PRINT_CSS for PDF. */}
+      <style>{PE_CUSTOM_LIST_STYLE_CSS}</style>
 
       <div
         ref={ref}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSharedProposal } from '../lib/apiClient';
+import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
 
 export default function SharedProposalViewer() {
   const { token } = useParams<{ token: string }>();
@@ -101,6 +102,8 @@ export default function SharedProposalViewer() {
           .proposal-shared-content .print-hide { display: none !important; }
           /* Show BOM notes that were styled as hidden print-only in the original proposal */
           .proposal-shared-content .hidden.print\\:block { display: block !important; }
+          /* Custom-section Numbering Library parenthesis markers */
+          ${PE_CUSTOM_LIST_STYLE_CSS}
         `}</style>
         <div className="max-w-4xl mx-auto">
           {refNumber && (

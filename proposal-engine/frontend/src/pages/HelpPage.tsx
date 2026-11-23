@@ -821,10 +821,10 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Sections (include / exclude and reorder)</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              Click <strong>✏️ Edit</strong> on the Proposal page. Each body section shows a slim control bar: optional sections get an <strong>Include</strong> checkbox; every body section gets <strong>↑</strong> / <strong>↓</strong> to reorder. <strong>Cover</strong> and <strong>Executive Summary</strong> always stay first and cannot be moved.
+              Click <strong>✏️ Edit</strong> on the Proposal page. Each body section shows a bright control bar: <strong className="text-indigo-800">indigo</strong> bars are <strong>Required</strong> (always included); <strong className="text-amber-800">amber</strong> bars are <strong>Optional</strong> with an <strong>Include</strong> checkbox and the section title. Every body section gets solid <strong>↑</strong> / <strong>↓</strong> buttons to reorder. Hover a bar for a short tip. <strong>Cover</strong> and <strong>Executive Summary</strong> always stay first and cannot be moved.
             </p>
             <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-2">
-              <li><strong>Include</strong> — uncheck an optional section (Environmental Impact, Our Process, Responsibility Matrix, Technical Details, Warranty, Offer Validity, Service Details, Key Points, Exclusions, Subsidy Disclaimer). It greys out in Edit so you can still see it and re-check before saving.</li>
+              <li><strong>Include</strong> — on amber/optional bars, uncheck to exclude (Environmental Impact, Our Process, Responsibility Matrix, Technical Details, Warranty, Offer Validity, Service Details, Key Points, Exclusions, Subsidy Disclaimer). It greys out in Edit so you can still see it and re-check before saving.</li>
               <li><strong>↑ / ↓</strong> — move any body section in place (About, Financial Benefits, Scope, BOQ, Commercials, custom sections as a group, roof layout slot, closing note, and the rest). The live proposal reorders immediately so you can preview before Save.</li>
               <li>After <strong>💾 Save</strong>, unchecked optionals disappear from view and from PDF, DOCX, PPT, and Share. Re-open <strong>Edit</strong> to bring them back (they reappear greyed with Include off).</li>
               <li>Use <strong>Reset sections</strong> in the Edit banner to restore default includes and the default section order (local until you Save).</li>
@@ -857,12 +857,13 @@ export default function HelpPage() {
               {[
                 ['Font Family', 'Arial, Calibri, Courier New, Garamond, Georgia, Sans Serif, Times New Roman, Trebuchet MS, Verdana'],
                 ['Font Size', '8 pt through 36 pt'],
-                ['Text Style', 'Bold, Italic, Underline'],
+                ['Text Style', 'Bold, Italic, Underline, Strikethrough'],
+                ['Change Case', 'Aa menu — Sentence case, lowercase, UPPERCASE, Capitalise Each Word, tOGGLE cASE (select text first)'],
                 ['Script', 'Subscript, Superscript'],
                 ['Colour', 'Font colour (24 swatches + custom), Highlight colour (12 swatches + remove)'],
                 ['Indent', 'Increase and Decrease indent'],
                 ['Alignment', 'Left, Centre, Right'],
-                ['Lists', 'Bullet list, Numbered list'],
+                ['Lists', 'Bullet Library (disc / circle / square / None) and Numbering Library (1. 1) I. A. a) a. i. / None) via the chevron on each list button'],
                 ['Table', 'Pick rows × columns from a hover grid; context bar inside the table for insert/delete rows or columns, column width, and border style (All, Outer, Inner, None)'],
                 ['Image', 'Upload any image; resize to Small, Medium, Large, or Full width after insertion'],
               ].map(([cap, desc]) => (
@@ -873,8 +874,8 @@ export default function HelpPage() {
               ))}
             </div>
             <div className="space-y-2">
-              <Tip>Click on any toolbar button while text is selected to apply that format. On mobile the toolbar scrolls horizontally — swipe left to reach alignment, list, and table buttons.</Tip>
-              <Note>All custom section content — including tables, images, and colours — is preserved in both PDF and DOCX exports. Custom sections are saved when you click 💾 Save in the proposal header.</Note>
+              <Tip>Click on any toolbar button while text is selected to apply that format. Use the list chevrons to open Bullet / Numbering libraries. On mobile the toolbar scrolls horizontally — swipe left to reach alignment, lists, and table buttons.</Tip>
+              <Note>Custom section content — including tables, images, colours, strikethrough, and list styles — is preserved in Preview, Share, and PDF. DOCX keeps list items and text (ordered lists export with markers); PPT includes custom-section text as plain slides. Save with 💾 Save in the proposal header.</Note>
             </div>
           </div>
 
@@ -1401,7 +1402,7 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="How do I hide or reorder proposal sections?">
-            Click <strong>✏️ Edit</strong>. Use the <strong>Include</strong> checkbox on optional section headings (unchecked sections grey out until Save) and <strong>↑</strong> / <strong>↓</strong> on each body section to reorder in place. Cover and Executive Summary stay first. Click <strong>💾 Save</strong> — choices apply to preview and all exports and reload on other devices. <strong>Reset sections</strong> restores defaults; Cancel undoes unsaved include/order changes. AI Roof Layout include and custom-section editors keep their own controls; custom sections move as one group.
+            Click <strong>✏️ Edit</strong>. <strong className="text-indigo-800">Indigo</strong> bars are required; <strong className="text-amber-800">amber</strong> bars are optional — use <strong>Include</strong> there (unchecked sections grey out until Save). Use <strong>↑</strong> / <strong>↓</strong> on each body section to reorder. Cover and Executive Summary stay first. Click <strong>💾 Save</strong> — choices apply to preview and all exports and reload on other devices. <strong>Reset sections</strong> restores defaults; Cancel undoes unsaved include/order changes. AI Roof Layout include and custom-section editors keep their own controls; custom sections move as one group.
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
@@ -1431,7 +1432,7 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="How do I add custom content like a case study or site photo between Scope of Work and the BOQ?">
-            On the <Link to="/proposal" className="text-indigo-600 underline">Proposal page</Link>, click <strong>+ Add section</strong>. Give the section a title, then type or paste content into the rich-text editor. You can format text, insert a table, or upload an image using the toolbar. When finished, click <strong>💾 Save</strong> in the proposal header — the section is included in both PDF and DOCX exports.
+            On the <Link to="/proposal" className="text-indigo-600 underline">Proposal page</Link>, click <strong>+ Add section</strong>. Give the section a title, then type or paste content into the rich-text editor. Use Bold / Italic / Underline / Strikethrough, the <strong>Aa</strong> change-case menu, Bullet / Numbering libraries (chevron), tables, and images. When finished, click <strong>💾 Save</strong> in the proposal header — content appears in Preview, Share, PDF, DOCX, and PPT.
           </FaqItem>
 
           <FaqItem q="The table I inserted in a custom section has no borders. How do I add them?">
