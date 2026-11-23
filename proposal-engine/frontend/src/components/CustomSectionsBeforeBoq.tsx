@@ -581,7 +581,7 @@ function ColorPicker({
     <div
       ref={wrapRef}
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
-      className="bg-white border border-slate-200 rounded-xl shadow-2xl p-3"
+      className="pe-force-light pe-editor-popover rounded-xl p-3"
       onPointerDown={(e) => e.preventDefault()}
     >
       {/* Swatches — 24px on mobile for easy tapping */}
@@ -591,8 +591,8 @@ function ColorPicker({
             key={color}
             type="button"
             title={color}
-            className="w-6 h-6 rounded-md border border-slate-200 active:scale-90 hover:scale-110
-                       transition-transform ring-offset-1 hover:ring-2 hover:ring-slate-400
+            className="w-6 h-6 rounded-md border border-slate-400 active:scale-90 hover:scale-110
+                       transition-transform ring-offset-1 hover:ring-2 hover:ring-indigo-500
                        focus:outline-none [touch-action:manipulation]"
             style={{ background: color }}
             onPointerDown={(e) => e.preventDefault()}
@@ -604,17 +604,17 @@ function ColorPicker({
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="color"
-            className="w-7 h-7 sm:w-6 sm:h-6 rounded border border-slate-200 cursor-pointer p-0"
+            className="w-7 h-7 sm:w-6 sm:h-6 rounded border border-slate-400 cursor-pointer p-0"
             defaultValue="#000000"
             onChange={(e) => onSelect(e.target.value)}
             title="Custom colour"
           />
-          <span className="text-xs sm:text-[10px] text-slate-500 font-medium">Custom</span>
+          <span className="pe-editor-popover-muted text-xs sm:text-[10px] font-medium">Custom</span>
         </label>
         {allowRemove && (
           <button
             type="button"
-            className="text-xs sm:text-[10px] text-slate-500 hover:text-red-500 font-medium ml-auto
+            className="pe-editor-popover-muted text-xs sm:text-[10px] hover:text-red-600 font-medium ml-auto
                        [touch-action:manipulation]"
             onPointerDown={(e) => e.preventDefault()}
             onClick={() => { onSelect(''); onClose(); }}
@@ -670,40 +670,47 @@ function TablePicker({
   if (!pos) return null;
 
   return createPortal(
+    /*
+     * Portaled to document.body — use pe-editor-popover CSS (!important light
+     * chrome) so dark-mode remaps cannot wash out the size grid.
+     */
     <div
       ref={wrapRef}
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
-      className="bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none"
+      className="pe-force-light pe-editor-popover rounded-xl p-3 select-none"
       onPointerDown={(e) => e.preventDefault()}
     >
-      <p className="text-xs font-semibold text-secondary-500 mb-2 text-center min-w-[140px]">
+      <p className="pe-editor-popover-title mb-2 min-w-[140px] text-center text-xs font-extrabold tracking-wide">
         {hover.r > 0 && hover.c > 0
           ? `${hover.c} col${hover.c > 1 ? 's' : ''} × ${hover.r} row${hover.r > 1 ? 's' : ''}`
           : 'Tap to choose size'}
       </p>
       {/* Cells 28px on mobile for easy tapping */}
       <div
-        className="grid gap-1"
+        className="pe-editor-table-grid grid gap-1.5 rounded-lg p-1.5"
         style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 28px)` }}
       >
         {Array.from({ length: PICKER_MAX }, (_, r) =>
-          Array.from({ length: PICKER_MAX }, (_, c) => (
-            <div
-              key={`${r}-${c}`}
-              className={`w-7 h-7 rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
-                r < hover.r && c < hover.c
-                  ? 'bg-primary-300 border-primary-500'
-                  : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
-              }`}
-              onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
-              onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
-              onPointerDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onInsert(r + 1, c + 1);
-                onClose();
-              }}
-            />
-          )),
+          Array.from({ length: PICKER_MAX }, (_, c) => {
+            const selected = r < hover.r && c < hover.c;
+            return (
+              <div
+                key={`${r}-${c}`}
+                role="button"
+                aria-label={`${c + 1} by ${r + 1} table`}
+                className={`pe-editor-table-cell h-7 w-7 cursor-pointer rounded-md transition-colors [touch-action:manipulation]${
+                  selected ? ' is-selected' : ''
+                }`}
+                onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+                onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onInsert(r + 1, c + 1);
+                  onClose();
+                }}
+              />
+            );
+          }),
         )}
       </div>
     </div>,
@@ -782,10 +789,10 @@ function NumberingLibrary({
       role="menu"
       aria-label="Numbering Library"
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 280 }}
-      className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl select-none"
+      className="pe-force-light pe-editor-popover rounded-xl p-3 select-none"
       onPointerDown={(e) => e.preventDefault()}
     >
-      <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500">
+      <p className="pe-editor-popover-title mb-2 text-center text-[11px] font-bold uppercase tracking-wide">
         Numbering Library
       </p>
       <div className="grid grid-cols-3 gap-2">
@@ -795,16 +802,16 @@ function NumberingLibrary({
             type="button"
             role="menuitem"
             title={opt.label}
-            className="flex h-[72px] flex-col items-start justify-center rounded-md border border-slate-200 bg-white px-2 py-1.5 text-left text-[11px] font-semibold leading-tight text-slate-800 hover:border-indigo-400 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+            className="pe-editor-popover-item flex h-[72px] flex-col items-start justify-center rounded-md px-2 py-1.5 text-left text-[11px] font-semibold leading-tight [touch-action:manipulation]"
             onClick={() => { onSelect(opt.id); onClose(); }}
           >
             {opt.id === 'none' ? (
-              <span className="w-full text-center text-slate-500">None</span>
+              <span className="pe-editor-popover-muted w-full text-center">None</span>
             ) : (
               opt.preview.split('\n').map((line) => (
                 <span key={line} className="flex w-full items-center gap-1.5">
-                  <span className="w-5 shrink-0 text-slate-700">{line}</span>
-                  <span className="h-0.5 flex-1 rounded bg-slate-300" />
+                  <span className="pe-editor-popover-marker w-5 shrink-0">{line}</span>
+                  <span className="pe-editor-popover-rule h-0.5 flex-1 rounded" />
                 </span>
               ))
             )}
@@ -841,10 +848,10 @@ function BulletLibrary({
       role="menu"
       aria-label="Bullet Library"
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 220 }}
-      className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl select-none"
+      className="pe-force-light pe-editor-popover rounded-xl p-3 select-none"
       onPointerDown={(e) => e.preventDefault()}
     >
-      <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500">
+      <p className="pe-editor-popover-title mb-2 text-center text-[11px] font-bold uppercase tracking-wide">
         Bullet Library
       </p>
       <div className="grid grid-cols-2 gap-2">
@@ -854,15 +861,15 @@ function BulletLibrary({
             type="button"
             role="menuitem"
             title={opt.label}
-            className="flex h-16 flex-col items-center justify-center gap-1 rounded-md border border-slate-200 bg-white text-[12px] font-semibold text-slate-800 hover:border-indigo-400 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+            className="pe-editor-popover-item flex h-16 flex-col items-center justify-center gap-1 rounded-md text-[12px] font-semibold [touch-action:manipulation]"
             onClick={() => { onSelect(opt.id); onClose(); }}
           >
             {opt.id === 'none' ? (
-              <span className="text-slate-500">None</span>
+              <span className="pe-editor-popover-muted">None</span>
             ) : (
               <>
-                <span className="text-base leading-none text-slate-900" aria-hidden>{opt.glyph}</span>
-                <span className="h-0.5 w-10 rounded bg-slate-300" />
+                <span className="pe-editor-popover-marker text-base leading-none" aria-hidden>{opt.glyph}</span>
+                <span className="pe-editor-popover-rule h-0.5 w-10 rounded" />
               </>
             )}
           </button>
@@ -898,7 +905,7 @@ function ChangeCaseMenu({
       role="menu"
       aria-label="Change case"
       style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, width: 200 }}
-      className="overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl select-none"
+      className="pe-force-light pe-editor-popover overflow-hidden rounded-xl py-1 select-none"
       onPointerDown={(e) => e.preventDefault()}
     >
       {CHANGE_CASE_OPTIONS.map((opt) => (
@@ -906,7 +913,7 @@ function ChangeCaseMenu({
           key={opt.id}
           type="button"
           role="menuitem"
-          className="block w-full px-3 py-2 text-left text-[13px] text-slate-800 hover:bg-indigo-50 active:bg-indigo-100 [touch-action:manipulation]"
+          className="pe-editor-popover-row block w-full px-3 py-2 text-left text-[13px] [touch-action:manipulation]"
           onClick={() => { onSelect(opt.id); onClose(); }}
         >
           {opt.label}
@@ -1099,18 +1106,18 @@ function LinkDialog({
         onClick={onClose}
       />
       <div
-        className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl
-                   border border-slate-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="pe-force-light pe-editor-popover relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl
+                   pb-[max(1rem,env(safe-area-inset-bottom))]"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-slate-300 sm:hidden" aria-hidden />
         <div className="px-4 pt-3 pb-4 sm:px-5 sm:pt-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 id="pe-link-dialog-title" className="text-base font-semibold text-slate-900">
+              <h3 id="pe-link-dialog-title" className="pe-editor-popover-title text-base font-semibold">
                 Insert hyperlink
               </h3>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="pe-editor-popover-muted mt-0.5 text-xs">
                 Highlight text first, or leave display text blank to use the URL or email.
               </p>
             </div>

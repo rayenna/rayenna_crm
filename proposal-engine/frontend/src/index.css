@@ -123,7 +123,7 @@
  * Remap chrome surfaces in Dark Mode, stopping at the proposal document
  * and any .pe-force-light region so Light letterhead / share HTML stay as-is.
  */
-@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-map-overlay, .pe-app-nav, .pe-margin-field, .pe-gst-btn) {
+@scope ([data-theme='dark']) to (#proposal-print-root, .pe-force-light, .pe-editor-popover, .pe-map-overlay, .pe-app-nav, .pe-margin-field, .pe-gst-btn) {
   .bg-white,
   .bg-white\/80,
   .bg-white\/90,
@@ -786,6 +786,100 @@
   color-scheme: light;
   background-color: #fff;
   color: #1a1a2e;
+}
+
+/*
+ * Custom-section editor popovers are portaled to document.body. Dark-mode
+ * @scope remaps can still wash hover (light bg + white text). These rules sit
+ * outside @scope and use !important so Insert Table / list libraries / Aa /
+ * colour pickers stay high-contrast in both themes.
+ */
+.pe-editor-popover {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 2px solid #a5b4fc !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22) !important;
+}
+.pe-editor-popover-title {
+  color: #3730a3 !important;
+}
+.pe-editor-popover-muted {
+  color: #64748b !important;
+}
+.pe-editor-popover-item {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.pe-editor-popover-item:hover,
+.pe-editor-popover-item:focus-visible {
+  background-color: #e0e7ff !important;
+  color: #1e1b4b !important;
+  border-color: #6366f1 !important;
+}
+.pe-editor-popover-item:active {
+  background-color: #c7d2fe !important;
+  color: #1e1b4b !important;
+}
+.pe-editor-popover-item .pe-editor-popover-marker {
+  color: #334155 !important;
+}
+.pe-editor-popover-item:hover .pe-editor-popover-marker,
+.pe-editor-popover-item:focus-visible .pe-editor-popover-marker,
+.pe-editor-popover-item:active .pe-editor-popover-marker {
+  color: #1e1b4b !important;
+}
+.pe-editor-popover-item .pe-editor-popover-rule {
+  background-color: #94a3b8 !important;
+}
+.pe-editor-popover-item:hover .pe-editor-popover-rule,
+.pe-editor-popover-item:focus-visible .pe-editor-popover-rule {
+  background-color: #6366f1 !important;
+}
+
+/* Dark mode: keep these popovers light even if @scope remaps leak. */
+[data-theme='dark'] .pe-editor-popover {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+[data-theme='dark'] .pe-editor-popover-item,
+[data-theme='dark'] .pe-editor-popover-row,
+[data-theme='dark'] .pe-editor-popover-title,
+[data-theme='dark'] .pe-editor-popover-marker {
+  color: #1e293b !important;
+}
+[data-theme='dark'] .pe-editor-popover-item:hover,
+[data-theme='dark'] .pe-editor-popover-item:focus-visible,
+[data-theme='dark'] .pe-editor-popover-row:hover,
+[data-theme='dark'] .pe-editor-popover-row:focus-visible {
+  background-color: #e0e7ff !important;
+  color: #1e1b4b !important;
+}
+.pe-editor-popover-row:hover,
+.pe-editor-popover-row:focus-visible {
+  background-color: #e0e7ff !important;
+  color: #1e1b4b !important;
+}
+.pe-editor-popover-row {
+  color: #1e293b !important;
+  background-color: transparent !important;
+}
+.pe-editor-table-grid {
+  background-color: #eef2ff !important;
+}
+.pe-editor-table-cell {
+  background-color: #ffffff !important;
+  border: 2px solid #a5b4fc !important;
+}
+.pe-editor-table-cell:hover {
+  background-color: #e0e7ff !important;
+  border-color: #6366f1 !important;
+}
+.pe-editor-table-cell.is-selected,
+.pe-editor-table-cell.is-selected:hover {
+  background-color: #4f46e5 !important;
+  border-color: #312e81 !important;
 }
 
 /* Navy app bar stays white-on-navy in both themes (hamburger, logo plate). */
