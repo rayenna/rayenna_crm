@@ -1,6 +1,7 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import type { SolarHubUserListResponse } from '../types/solarHub'
 import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
@@ -16,6 +17,7 @@ import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import {
   applySolarHubUserListStateToSearchParams,
   buildSolarHubUserListQueryParams,
+  DEFAULT_SOLAR_HUB_USER_SORT,
   defaultSolarHubUserListState,
   parseSolarHubUserListStateFromSearchParams,
   type SolarHubActiveFilter,
@@ -157,6 +159,10 @@ export default function SolarHub() {
     setNeverLoggedIn(defaults.neverLoggedIn)
   }
 
+  const toggleTableSort = (next: Extract<SolarHubUserSortBy, 'username_asc' | 'lastLogin_desc'>) => {
+    setSortBy((prev) => (prev === next ? DEFAULT_SOLAR_HUB_USER_SORT : next))
+  }
+
   const emptySlot = (
     <div className="mx-auto max-w-md text-center">
       <p className="font-semibold text-[color:var(--text-primary)]">No accounts match your filters.</p>
@@ -269,13 +275,43 @@ export default function SolarHub() {
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-                    <th className="px-4 py-3">Username</th>
+                    <th className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleTableSort('username_asc')}
+                        className={`inline-flex min-h-[44px] touch-manipulation items-center gap-1 rounded-lg px-1 py-1 transition-colors hover:text-[color:var(--text-primary)] ${
+                          sortBy === 'username_asc' ? 'text-[color:var(--accent-gold)]' : ''
+                        }`}
+                        aria-label="Sort by username"
+                        title="Sort by username A–Z"
+                      >
+                        Username
+                        {sortBy === 'username_asc' ? (
+                          <ArrowUp className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        ) : null}
+                      </button>
+                    </th>
                     <th className="px-4 py-3">Customer / Project</th>
                     <th className="px-4 py-3">Inverter</th>
                     <th className="px-4 py-3">Plant</th>
                     <th className="px-4 py-3">Phone</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Last login</th>
+                    <th className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleTableSort('lastLogin_desc')}
+                        className={`inline-flex min-h-[44px] touch-manipulation items-center gap-1 rounded-lg px-1 py-1 transition-colors hover:text-[color:var(--text-primary)] ${
+                          sortBy === 'lastLogin_desc' ? 'text-[color:var(--accent-gold)]' : ''
+                        }`}
+                        aria-label="Sort by last login"
+                        title="Sort by last login"
+                      >
+                        Last login
+                        {sortBy === 'lastLogin_desc' ? (
+                          <ArrowDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        ) : null}
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

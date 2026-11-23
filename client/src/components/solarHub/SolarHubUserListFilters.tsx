@@ -70,8 +70,8 @@ export default function SolarHubUserListFilters({
   resultTotal,
   onClearAll,
 }: SolarHubUserListFiltersProps) {
-  // Collapsed by default — mobile-first declutter (same pattern as Projects).
-  const [showFilters, setShowFilters] = useState(false)
+  // Open by default so Status / Inverter / Plant filters are obvious on the list.
+  const [showFilters, setShowFilters] = useState(true)
 
   // Sort does not inflate the Show Filters (N) badge.
   const moreFiltersActiveCount = useMemo(() => {
@@ -148,7 +148,7 @@ export default function SolarHubUserListFilters({
   return (
     <div className="mb-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
       <div className="space-y-2 sm:space-y-3">
-        {/* Always visible: search + Show/Hide + Clear (when idle Clear hides) */}
+        {/* Always visible: search + Sort + Show/Hide + Clear */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative w-full sm:min-w-0 sm:flex-1">
             <Search
@@ -179,6 +179,21 @@ export default function SolarHubUserListFilters({
               </button>
             ) : null}
           </div>
+          <label className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[11.5rem]">
+            <span className="sr-only">Sort</span>
+            <select
+              className="zenith-native-filter-input min-h-[44px] w-full rounded-xl px-3 text-sm"
+              value={sortBy}
+              onChange={(e) => onSortByChange(e.target.value as SolarHubUserSortBy)}
+              aria-label="Sort Solar Hub users"
+            >
+              {SOLAR_HUB_USER_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  Sort: {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="flex w-full gap-2 sm:w-auto">
             <button
               type="button"
@@ -399,24 +414,6 @@ export default function SolarHubUserListFilters({
                 </button>
               </div>
             </div>
-
-            <label className="flex w-full flex-col gap-1 sm:max-w-xs">
-              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
-                Sort
-              </span>
-              <select
-                className="zenith-native-filter-input h-[44px] w-full rounded-xl px-3 text-sm"
-                value={sortBy}
-                onChange={(e) => onSortByChange(e.target.value as SolarHubUserSortBy)}
-                aria-label="Sort Solar Hub users"
-              >
-                {SOLAR_HUB_USER_SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
         </div>
       </div>
