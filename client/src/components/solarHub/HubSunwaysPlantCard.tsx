@@ -59,9 +59,12 @@ function kwhStatusLabel(opts: {
 export default function HubSunwaysPlantCard({
   user,
   canManage,
+  embedded = false,
 }: {
   user: SolarHubUser
   canManage: boolean
+  /** When true, omit card chrome/title/intro (used inside Inverter Cloud Plant Hub). */
+  embedded?: boolean
 }) {
   const queryClient = useQueryClient()
   const linked = user.project.sunwaysStationId ?? ''
@@ -148,32 +151,21 @@ export default function HubSunwaysPlantCard({
           ? 'border-[color:var(--border-default)] bg-[color:var(--bg-muted)] text-[color:var(--text-primary)]'
           : 'border-[color:var(--border-default)] bg-[color:var(--bg-muted)] text-[color:var(--text-muted)]'
 
-  return (
-    <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
-      <div className="flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-[color:var(--accent-gold)]" />
-        <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-          Sunways Portal plant
-        </h2>
-      </div>
-      <p className="mt-2 text-xs text-[color:var(--text-muted)]">
-        One cloud per project. Pick a Sunways plant, then Save — that also pulls kWh once. Hub refreshes
-        about every 6 hours. Splits are typical, not the KSEB bill.
-      </p>
-
+  const body = (
+    <>
       {otherCloudLinked ? (
-        <p className="mt-3 text-sm text-[color:var(--text-primary)]">
+        <p className={`${embedded ? 'mt-0' : 'mt-3'} text-sm text-[color:var(--text-primary)]`}>
           This project is linked to another inverter cloud. Unlink Solis or Deye first if this inverter
           is on Sunways Portal.
         </p>
       ) : !configured ? (
-        <p className="mt-3 text-sm text-[color:var(--text-primary)]">
+        <p className={`${embedded ? 'mt-0' : 'mt-3'} text-sm text-[color:var(--text-primary)]`}>
           Sunways Portal credentials are not on the CRM API yet. Add <code>SUNWAYS_EMAIL</code>,{' '}
           <code>SUNWAYS_PASSWORD</code>, and optionally <code>SUNWAYS_DISTRIBUTOR_CODES</code> on
           Render, then redeploy the API.
         </p>
       ) : (
-        <p className="mt-3 text-xs text-[color:var(--text-muted)]">
+        <p className={`${embedded ? 'mt-0' : 'mt-3'} text-xs text-[color:var(--text-muted)]`}>
           API host: {statusQuery.data?.apiHost}
           {linked ? (
             <>
@@ -192,7 +184,7 @@ export default function HubSunwaysPlantCard({
             <label className="block text-xs font-semibold text-[color:var(--text-muted)]">
               Plant on this Sunways account
               <select
-                className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
+                className="mt-1 min-h-[44px] w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
                 value={selectedId}
                 onChange={(e) => {
                   const v = e.target.value
@@ -236,7 +228,7 @@ export default function HubSunwaysPlantCard({
                 setSelectedId(e.target.value.trim())
               }}
               placeholder="Filled from the list above, or paste from Sunways Portal"
-              className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 font-mono text-sm text-[color:var(--text-primary)]"
+              className="mt-1 min-h-[44px] w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 font-mono text-sm text-[color:var(--text-primary)]"
             />
           </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -244,7 +236,7 @@ export default function HubSunwaysPlantCard({
               type="button"
               disabled={busy}
               onClick={() => saveMutation.mutate(pendingId)}
-              className="rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-50"
+              className="min-h-[44px] rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-50"
             >
               {saveMutation.isPending ? 'Saving…' : pendingId ? 'Save plant' : 'Unlink plant'}
             </button>
@@ -252,7 +244,7 @@ export default function HubSunwaysPlantCard({
               type="button"
               disabled={!savedOnServer || busy || !configured}
               onClick={() => syncMutation.mutate()}
-              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] disabled:opacity-50"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[color:var(--border-default)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] disabled:opacity-50"
             >
               <RefreshCw className="h-4 w-4 text-[color:var(--accent-teal)]" />
               {syncMutation.isPending ? 'Pulling…' : 'Pull latest kWh'}
@@ -267,12 +259,36 @@ export default function HubSunwaysPlantCard({
         </div>
       ) : (
         <div className="mt-3 space-y-2">
-          <p className="text-sm text-[color:var(--text-primary)]">{linked ? `Linked plant ${linked}` : 'Not linked'}</p>
           {!otherCloudLinked ? (
-            <p className={`inline-block rounded-xl border px-3 py-2 text-xs font-semibold ${toneClass}`}>{status.text}</p>
+            <>
+              <p className="text-sm text-[color:var(--text-primary)]">
+                {linked ? `Linked plant ${linked}` : 'Not linked'}
+              </p>
+              <p className={`inline-block rounded-xl border px-3 py-2 text-xs font-semibold ${toneClass}`}>
+                {status.text}
+              </p>
+            </>
           ) : null}
         </div>
       )}
+    </>
+  )
+
+  if (embedded) return <div>{body}</div>
+
+  return (
+    <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
+      <div className="flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-[color:var(--accent-gold)]" />
+        <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+          Sunways Portal plant
+        </h2>
+      </div>
+      <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+        One cloud per project. Pick a Sunways plant, then Save — that also pulls kWh once. Hub refreshes
+        about every 6 hours. Splits are typical, not the KSEB bill.
+      </p>
+      {body}
     </section>
   )
 }
