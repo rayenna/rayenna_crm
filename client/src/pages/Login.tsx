@@ -21,7 +21,10 @@ const PREVIEW_COLD_MS = 15_000
 /** How long to wait for a health probe before treating the API as cold. */
 const HEALTH_PROBE_MS = 3_000
 
-/** iOS Safari may discard the tab during a long wake; restore auto-login from here. */
+/**
+ * Persist wake auto-login across tab discard / process death (common on Android Chrome)
+ * and CRM `sessionStorage.clear()` on auth errors. localStorage survives both.
+ */
 const PENDING_WAKE_KEY = 'rayenna_crm_pending_wake_login'
 const PENDING_WAKE_MAX_AGE_MS = 10 * 60 * 1000
 
@@ -35,15 +38,16 @@ const forceWakeupPreview =
 
 function readPendingWake(): { email: string; password: string } | null {
   try {
-    const raw = sessionStorage.getItem(PENDING_WAKE_KEY)
+    const raw =
+      localStorage.getItem(PENDING_WAKE_KEY) || sessionStorage.getItem(PENDING_WAKE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as { email?: string; password?: string; at?: number }
     if (!parsed?.email || !parsed?.password || typeof parsed.at !== 'number') {
-      sessionStorage.removeItem(PENDING_WAKE_KEY)
+      clearPendingWake()
       return null
     }
     if (Date.now() - parsed.at > PENDING_WAKE_MAX_AGE_MS) {
-      sessionStorage.removeItem(PENDING_WAKE_KEY)
+      clearPendingWake()
       return null
     }
     return { email: parsed.email, password: parsed.password }
@@ -53,17 +57,29 @@ function readPendingWake(): { email: string; password: string } | null {
 }
 
 function writePendingWake(creds: { email: string; password: string }) {
+  const payload = JSON.stringify({
+    email: creds.email,
+    password: creds.password,
+    at: Date.now(),
+  })
   try {
-    sessionStorage.setItem(
-      PENDING_WAKE_KEY,
-      JSON.stringify({ email: creds.email, password: creds.password, at: Date.now() }),
-    )
+    localStorage.setItem(PENDING_WAKE_KEY, payload)
+  } catch {
+    /* ignore quota */
+  }
+  try {
+    sessionStorage.setItem(PENDING_WAKE_KEY, payload)
   } catch {
     /* ignore quota */
   }
 }
 
 function clearPendingWake() {
+  try {
+    localStorage.removeItem(PENDING_WAKE_KEY)
+  } catch {
+    /* ignore */
+  }
   try {
     sessionStorage.removeItem(PENDING_WAKE_KEY)
   } catch {
@@ -87,15 +103,27 @@ async function probeHealthOk(baseUrl: string, timeoutMs = HEALTH_PROBE_MS): Prom
   }
 }
 
+function readInputValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  if (el instanceof HTMLInputElement) return el.value
+  return ''
+}
+
 function credentialsFromSubmit(
   form: HTMLFormElement,
   stateEmail: string,
   statePassword: string,
 ): { email: string; password: string } {
-  // iOS Chrome/Safari autofill often fills the DOM without firing React onChange.
+  // Mobile autofill often fills the DOM without React onChange. Prefer non-empty
+  // FormData / input.value over state; do not let "" from FormData win via ??.
   const fd = new FormData(form)
-  const email = String(fd.get('email') ?? stateEmail).trim()
-  const password = String(fd.get('password') ?? statePassword)
+  const email = (
+    String(fd.get('email') || '').trim() ||
+    readInputValue(form, 'email').trim() ||
+    stateEmail.trim()
+  )
+  const password =
+    String(fd.get('password') || '') || readInputValue(form, 'password') || statePassword
   return { email, password }
 }
 
@@ -121,17 +149,33 @@ const Login = () => {
   const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
   const pendingWakeRef = useRef<{ email: string; password: string } | null>(null)
 
-  // Resume wake auto-login if iOS discarded the tab mid-animation.
+  // Resume wake auto-login if the mobile browser discarded the tab mid-animation.
   useEffect(() => {
     if (!USE_SERVER_WAKEUP_LOADER) return
-    const saved = readPendingWake()
-    if (!saved) return
-    pendingWakeRef.current = saved
-    setEmail(saved.email)
-    setPassword(saved.password)
-    setPendingWakeLogin(saved)
-    setIsLoading(true)
-    submitLockRef.current = true
+
+    const resumePendingWake = () => {
+      const saved = readPendingWake()
+      if (!saved) return
+      pendingWakeRef.current = saved
+      setEmail(saved.email)
+      setPassword(saved.password)
+      setPendingWakeLogin(saved)
+      setIsLoading(true)
+      submitLockRef.current = true
+    }
+
+    resumePendingWake()
+
+    const onPageShow = () => resumePendingWake()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') resumePendingWake()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   // Legacy pre-warm only (USE_SERVER_WAKEUP_LOADER false).

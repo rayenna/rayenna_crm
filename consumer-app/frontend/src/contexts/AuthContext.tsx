@@ -76,15 +76,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuth])
 
   const fetchMe = useCallback(async (): Promise<MeResult> => {
+    // Android Chrome can drop in-memory axios defaults after process freeze — re-apply.
+    const stored = readConsumerToken()
+    if (stored) setConsumerAuthToken(stored)
+
     try {
       const res = await axiosInstance.get<ConsumerUser>('/api/consumer/auth/me')
       setUser(res.data)
       return 'ok'
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status
-      if (status === 401) return 'unauthorized'
+      if (status === 401) {
+        // One retry after re-binding the token header (common after Android tab restore).
+        const again = readConsumerToken()
+        if (again) {
+          setConsumerAuthToken(again)
+          try {
+            const res = await axiosInstance.get<ConsumerUser>('/api/consumer/auth/me')
+            setUser(res.data)
+            return 'ok'
+          } catch (retryErr: unknown) {
+            const retryStatus = (retryErr as { response?: { status?: number } })?.response?.status
+            if (retryStatus === 401) return 'unauthorized'
+            return 'transient'
+          }
+        }
+        return 'unauthorized'
+      }
       // Anything else while booting (503/500/network) — keep remembered session + wake UI.
-      if (isStillWakingError(error) || status === 500 || status == null) return 'transient'
       return 'transient'
     }
   }, [])
@@ -194,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username,
       password,
     })
+    // Prefer durable localStorage on mobile — sessionStorage is often lost on Android process death.
     persistConsumerToken(data.token, remember)
     setConsumerAuthToken(data.token)
     // Set user before token so the token-effect skip sees a hydrated session.

@@ -27,6 +27,13 @@ const USE_SERVER_WAKEUP_LOADER = true
 /** Local preview: /login?wakeup=1 simulates a cold boot for this long after Sign in. */
 const PREVIEW_COLD_MS = 15_000
 
+/**
+ * Persist wake auto-login across Android Chrome tab/process discard during long cold starts.
+ * localStorage survives process death better than in-memory refs alone.
+ */
+const PENDING_WAKE_KEY = 'rayenna_hub_pending_wake_login'
+const PENDING_WAKE_MAX_AGE_MS = 10 * 60 * 1000
+
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
 
@@ -37,15 +44,94 @@ const forceWakeupPreview =
 
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
 
+type PendingWakeCreds = {
+  username: string
+  password: string
+  remember: boolean
+}
+
+function clearPendingWake() {
+  try {
+    localStorage.removeItem(PENDING_WAKE_KEY)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.removeItem(PENDING_WAKE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function readPendingWake(): PendingWakeCreds | null {
+  try {
+    const raw =
+      localStorage.getItem(PENDING_WAKE_KEY) || sessionStorage.getItem(PENDING_WAKE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as {
+      username?: string
+      password?: string
+      remember?: boolean
+      at?: number
+    }
+    if (!parsed?.username || !parsed?.password || typeof parsed.at !== 'number') {
+      clearPendingWake()
+      return null
+    }
+    if (Date.now() - parsed.at > PENDING_WAKE_MAX_AGE_MS) {
+      clearPendingWake()
+      return null
+    }
+    return {
+      username: parsed.username,
+      password: parsed.password,
+      remember: parsed.remember !== false,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writePendingWake(creds: PendingWakeCreds) {
+  const payload = JSON.stringify({
+    username: creds.username,
+    password: creds.password,
+    remember: creds.remember,
+    at: Date.now(),
+  })
+  try {
+    localStorage.setItem(PENDING_WAKE_KEY, payload)
+  } catch {
+    /* ignore quota */
+  }
+  try {
+    sessionStorage.setItem(PENDING_WAKE_KEY, payload)
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function readInputValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  if (el instanceof HTMLInputElement) return el.value
+  return ''
+}
+
 function credentialsFromSubmit(
   form: HTMLFormElement,
   stateUsername: string,
   statePassword: string,
 ): { username: string; password: string } {
-  // iOS Chrome/Safari autofill often fills the DOM without firing React onChange.
+  // Android/iOS autofill often fills the DOM without React onChange. Prefer non-empty
+  // FormData / input.value over state; do not let "" from FormData win via ??.
   const fd = new FormData(form)
-  const username = String(fd.get('username') ?? stateUsername).trim()
-  const password = String(fd.get('password') ?? statePassword)
+  const username = (
+    String(fd.get('username') || '').trim() ||
+    readInputValue(form, 'username').trim() ||
+    stateUsername.trim()
+  )
+  const password =
+    String(fd.get('password') || '') || readInputValue(form, 'password') || statePassword
   return { username, password }
 }
 
@@ -71,13 +157,39 @@ export default function Login() {
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const autoLoginInFlight = useRef(false)
   const submitLockRef = useRef(false)
-  const pendingWakeRef = useRef<{
-    username: string
-    password: string
-    remember: boolean
-  } | null>(null)
+  const pendingWakeRef = useRef<PendingWakeCreds | null>(null)
 
   const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
+
+  // Resume wake auto-login if Android Chrome discarded the tab mid-animation.
+  useEffect(() => {
+    if (!USE_SERVER_WAKEUP_LOADER) return
+
+    const resumePendingWake = () => {
+      const saved = readPendingWake()
+      if (!saved) return
+      pendingWakeRef.current = saved
+      setUsername(saved.username)
+      setPassword(saved.password)
+      setRememberMe(saved.remember)
+      setPendingWakeLogin(saved)
+      setIsLoading(true)
+      submitLockRef.current = true
+    }
+
+    resumePendingWake()
+
+    const onPageShow = () => resumePendingWake()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') resumePendingWake()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
 
   // Legacy pre-warm only (USE_SERVER_WAKEUP_LOADER false).
   useEffect(() => {
@@ -123,6 +235,7 @@ export default function Login() {
 
   const finishLoginSuccess = () => {
     stopElapsedCounter()
+    clearPendingWake()
     pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
@@ -133,6 +246,7 @@ export default function Login() {
 
   const failLogin = (message: string) => {
     stopElapsedCounter()
+    clearPendingWake()
     pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
@@ -146,15 +260,12 @@ export default function Login() {
     return status === 401 || status === 400
   }
 
-  const completeLoginWithCredentials = async (creds: {
-    username: string
-    password: string
-    remember: boolean
-  }) => {
+  const completeLoginWithCredentials = async (creds: PendingWakeCreds) => {
     if (autoLoginInFlight.current) return
     autoLoginInFlight.current = true
     try {
-      await login(creds.username, creds.password, creds.remember)
+      // Android: always prefer durable storage so Stay signed in survives process death.
+      await login(creds.username, creds.password, creds.remember !== false)
       finishLoginSuccess()
     } catch (error: unknown) {
       autoLoginInFlight.current = false
@@ -169,8 +280,14 @@ export default function Login() {
   }
 
   const handleWakeReady = () => {
-    const creds = pendingWakeRef.current ?? pendingWakeLogin
-    if (!creds) return
+    const creds = pendingWakeRef.current ?? pendingWakeLogin ?? readPendingWake()
+    if (!creds?.username || !creds?.password) {
+      // Keep overlay; remount so we do not silently drop back to the form on Android.
+      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
+      return
+    }
+    pendingWakeRef.current = creds
+    writePendingWake(creds)
     void completeLoginWithCredentials(creds)
   }
 
@@ -193,8 +310,9 @@ export default function Login() {
     startElapsedCounter()
     autoLoginInFlight.current = false
 
-    const beginWake = (c: { username: string; password: string; remember: boolean }) => {
+    const beginWake = (c: PendingWakeCreds) => {
       pendingWakeRef.current = c
+      writePendingWake(c)
       setPendingWakeLogin(c)
       setWakeEpoch((n) => n + 1)
     }
@@ -219,28 +337,23 @@ export default function Login() {
       await login(creds.username, creds.password, remember)
       finishLoginSuccess()
     } catch (error: unknown) {
-      const err = error as { response?: { status?: number } }
-
-      // Login failed because API is still waking (503) or network flake —
-      // keep credentials + Stay signed in preference; never ask to log in again.
-      if (USE_SERVER_WAKEUP_LOADER && isHubProdApiConfigured() && isStillWakingError(error)) {
-        beginWake({ ...creds, remember })
-        return
-      }
-
+      // Wrong password only → show form. Everything else on prod → keep wake UI.
       if (isWrongCredentialsError(error)) {
         failLogin('Invalid username or password.')
         return
       }
 
+      if (USE_SERVER_WAKEUP_LOADER && isHubProdApiConfigured()) {
+        beginWake({ ...creds, remember })
+        return
+      }
+
       const msg =
-        err?.response != null
-          ? getFriendlyApiErrorMessage(error)
-          : typeof window !== 'undefined' && window.location.hostname.includes('localhost')
-            ? 'Cannot reach API. Start the backend on port 3000 (npm run dev:server from repo root), then try again.'
-            : isTimeoutOrNetworkError(error)
-              ? 'Server took too long to respond. It may still be waking up — please try again.'
-              : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
+        typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+          ? 'Cannot reach API. Start the backend on port 3000 (npm run dev:server from repo root), then try again.'
+          : isTimeoutOrNetworkError(error) || isStillWakingError(error)
+            ? 'Server took too long to respond. It may still be waking up — please try again.'
+            : getFriendlyApiErrorMessage(error)
       failLogin(msg)
     }
   }
