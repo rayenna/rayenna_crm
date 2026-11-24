@@ -90,11 +90,16 @@ const axiosInstance = axios.create({
   withCredentials: true, // Include credentials (cookies, JWT) in cross-origin requests
 });
 
-// Response interceptor: on 401, clear auth so user is redirected to login (token expired)
+// Response interceptor: on 401, clear auth so user is redirected to login (token expired).
+// Never clear session for the login POST itself — Login.tsx handles wrong-password UX,
+// and a 401 there must not wipe a concurrent wake/auto-login race on iPhone.
 axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    const status = err?.response?.status;
+    const url = String(err?.config?.url ?? '');
+    const isLoginAttempt = url.includes('/api/auth/login');
+    if (status === 401 && !isLoginAttempt) {
       notifyAuthError();
     }
     return Promise.reject(err);

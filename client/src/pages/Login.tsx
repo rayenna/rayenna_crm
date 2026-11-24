@@ -21,6 +21,10 @@ const PREVIEW_COLD_MS = 15_000
 /** How long to wait for a health probe before treating the API as cold. */
 const HEALTH_PROBE_MS = 3_000
 
+/** iOS Safari may discard the tab during a long wake; restore auto-login from here. */
+const PENDING_WAKE_KEY = 'rayenna_crm_pending_wake_login'
+const PENDING_WAKE_MAX_AGE_MS = 10 * 60 * 1000
+
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
 
@@ -28,6 +32,44 @@ const apiNotConfigured = isProd && !apiBaseUrl
 const forceWakeupPreview =
   typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).get('wakeup') === '1'
+
+function readPendingWake(): { email: string; password: string } | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_WAKE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { email?: string; password?: string; at?: number }
+    if (!parsed?.email || !parsed?.password || typeof parsed.at !== 'number') {
+      sessionStorage.removeItem(PENDING_WAKE_KEY)
+      return null
+    }
+    if (Date.now() - parsed.at > PENDING_WAKE_MAX_AGE_MS) {
+      sessionStorage.removeItem(PENDING_WAKE_KEY)
+      return null
+    }
+    return { email: parsed.email, password: parsed.password }
+  } catch {
+    return null
+  }
+}
+
+function writePendingWake(creds: { email: string; password: string }) {
+  try {
+    sessionStorage.setItem(
+      PENDING_WAKE_KEY,
+      JSON.stringify({ email: creds.email, password: creds.password, at: Date.now() }),
+    )
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function clearPendingWake() {
+  try {
+    sessionStorage.removeItem(PENDING_WAKE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
 
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
 
@@ -77,6 +119,20 @@ const Login = () => {
   const submitLockRef = useRef(false)
 
   const showWakeupLoader = USE_SERVER_WAKEUP_LOADER && pendingWakeLogin != null
+  const pendingWakeRef = useRef<{ email: string; password: string } | null>(null)
+
+  // Resume wake auto-login if iOS discarded the tab mid-animation.
+  useEffect(() => {
+    if (!USE_SERVER_WAKEUP_LOADER) return
+    const saved = readPendingWake()
+    if (!saved) return
+    pendingWakeRef.current = saved
+    setEmail(saved.email)
+    setPassword(saved.password)
+    setPendingWakeLogin(saved)
+    setIsLoading(true)
+    submitLockRef.current = true
+  }, [])
 
   // Legacy pre-warm only (USE_SERVER_WAKEUP_LOADER false).
   useEffect(() => {
@@ -120,10 +176,9 @@ const Login = () => {
     setElapsed(0)
   }
 
-  const pendingWakeRef = useRef<{ email: string; password: string } | null>(null)
-
   const finishLoginSuccess = () => {
     stopElapsedCounter()
+    clearPendingWake()
     pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
@@ -134,21 +189,13 @@ const Login = () => {
 
   const failLogin = (message: string) => {
     stopElapsedCounter()
+    clearPendingWake()
     pendingWakeRef.current = null
     setPendingWakeLogin(null)
     setIsLoading(false)
     submitLockRef.current = false
     toast.error(message)
     setServerStatus('slow')
-  }
-
-  /** Process / DB still mounting after cold start — keep animating, do not bounce to login. */
-  const isStillWakingError = (error: unknown): boolean => {
-    const err = error as { response?: { status?: number }; code?: string; message?: string }
-    const status = err?.response?.status
-    if (status === 500 || status === 503 || status === 502 || status === 504) return true
-    if (err?.response == null && isTimeoutOrNetworkError(error)) return true
-    return false
   }
 
   const isWrongCredentialsError = (error: unknown): boolean => {
@@ -175,8 +222,12 @@ const Login = () => {
   }
 
   const handleWakeReady = () => {
-    const creds = pendingWakeRef.current ?? pendingWakeLogin
-    if (!creds) return
+    const creds = pendingWakeRef.current ?? pendingWakeLogin ?? readPendingWake()
+    if (!creds?.email || !creds?.password) {
+      // Keep overlay; remount so we do not silently drop back to the form on iPhone.
+      window.setTimeout(() => setWakeEpoch((n) => n + 1), 1500)
+      return
+    }
     void completeLoginWithCredentials(creds)
   }
 
@@ -200,6 +251,7 @@ const Login = () => {
 
     const beginWake = (c: { email: string; password: string }) => {
       pendingWakeRef.current = c
+      writePendingWake(c)
       setPendingWakeLogin(c)
       setWakeEpoch((n) => n + 1)
     }
@@ -224,28 +276,23 @@ const Login = () => {
       await login(creds.email, creds.password)
       finishLoginSuccess()
     } catch (error: unknown) {
-      const err = error as { response?: { status?: number } }
-
-      // Login failed because API is still waking (503) or network flake —
-      // keep credentials and open/continue the wake UI; never ask to log in again.
-      if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl && isStillWakingError(error)) {
-        beginWake(creds)
-        return
-      }
-
+      // Wrong password only → show form. Everything else on prod → keep wake UI.
       if (isWrongCredentialsError(error)) {
         failLogin('Incorrect email or password. Please try again.')
         return
       }
 
+      if (USE_SERVER_WAKEUP_LOADER && isProd && apiBaseUrl) {
+        beginWake(creds)
+        return
+      }
+
       const msg =
-        err?.response != null
-          ? getFriendlyApiErrorMessage(error)
-          : typeof window !== 'undefined' && window.location.hostname.includes('localhost')
-            ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
-            : isTimeoutOrNetworkError(error)
-              ? 'Server took too long to respond. It may still be waking up — please try again.'
-              : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
+        typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+          ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
+          : isTimeoutOrNetworkError(error)
+            ? 'Server took too long to respond. It may still be waking up — please try again.'
+            : getFriendlyApiErrorMessage(error)
       failLogin(msg)
     }
   }

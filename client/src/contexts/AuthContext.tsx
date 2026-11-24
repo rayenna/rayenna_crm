@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { isTimeoutOrNetworkError } from '../utils/axios'
 import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
 import { ErrorModal } from '@/components/common/ErrorModal'
@@ -138,39 +138,101 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setToken(storedToken)
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
       ;(async () => {
-        try {
-          const response = await axiosInstance.get('/api/auth/me')
-          if (!cancelled) {
+        // iPhone cold-start race: wake login can succeed, then a remount /me fails while
+        // Neon/API is still settling — never clearAuth on network/5xx; only on real 401.
+        const maxAttempts = 10
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (cancelled) return
+          try {
+            const response = await axiosInstance.get('/api/auth/me')
+            if (cancelled) return
             const u = response.data as User
             setUser(u)
             if (u?.themePreference === 'light' || u?.themePreference === 'dark') {
               setTheme(u.themePreference)
             }
+            setIsLoading(false)
+            return
+          } catch (error: unknown) {
+            if (cancelled) return
+            const status = (error as { response?: { status?: number } })?.response?.status
+            if (status === 401) {
+              clearAuth()
+              setIsLoading(false)
+              return
+            }
+            const transient =
+              status === 500 ||
+              status === 502 ||
+              status === 503 ||
+              status === 504 ||
+              status == null ||
+              isTimeoutOrNetworkError(error)
+            if (status != null && !transient) {
+              clearAuth()
+              setIsLoading(false)
+              return
+            }
+            if (attempt === maxAttempts - 1) {
+              // Keep token; background retry effect continues. PrivateRoute waits on token&&!user.
+              setIsLoading(false)
+              return
+            }
+            await new Promise((r) => window.setTimeout(r, 1500))
           }
-        } catch {
-          if (!cancelled) clearAuth()
-        } finally {
-          if (!cancelled) setIsLoading(false)
         }
       })()
     } else {
       setIsLoading(false)
     }
     return () => { cancelled = true }
-  }, [clearAuth])
+  }, [clearAuth, setTheme])
+
+  // Keep retrying /me while we have a token but no user (post-wake iPhone remount / flaky Neon).
+  useEffect(() => {
+    if (!token || user) return
+    let cancelled = false
+    const tick = async () => {
+      while (!cancelled) {
+        try {
+          const response = await axiosInstance.get('/api/auth/me')
+          if (cancelled) return
+          const u = response.data as User
+          setUser(u)
+          if (u?.themePreference === 'light' || u?.themePreference === 'dark') {
+            setTheme(u.themePreference)
+          }
+          return
+        } catch (error: unknown) {
+          if (cancelled) return
+          const status = (error as { response?: { status?: number } })?.response?.status
+          if (status === 401) {
+            clearAuth()
+            return
+          }
+          await new Promise((r) => window.setTimeout(r, 2500))
+        }
+      }
+    }
+    void tick()
+    return () => {
+      cancelled = true
+    }
+  }, [token, user, clearAuth, setTheme])
 
   const login = async (email: string, password: string) => {
     const response = await axiosInstance.post('/api/auth/login', { email, password })
     const { token: newToken, user: newUser } = response.data
-    setToken(newToken)
+    // Set user before any follow-up requests so a flaky theme call cannot leave us "logged out".
     setUser(newUser)
+    setToken(newToken)
     setSessionStorageItem('token', newToken)
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    setIsLoading(false)
     if (newUser?.themePreference === 'light' || newUser?.themePreference === 'dark') {
       setTheme(newUser.themePreference)
     } else {
-      // If user has no preference yet, align the server to current UI theme.
-      // (UI defaults to dark; server default is also dark.)
+      // Best-effort; never let theme sync clear the new session (401 interceptor skips login only).
       void axiosInstance.put('/api/auth/theme', { theme: 'dark' }).catch(() => {})
     }
     // Start inactivity timer after login

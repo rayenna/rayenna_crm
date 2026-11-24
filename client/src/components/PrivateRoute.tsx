@@ -11,9 +11,10 @@ const PrivateRoute = ({
   children: ReactNode
   roles?: readonly UserRole[]
 }) => {
-  const { user, isLoading } = useAuth()
+  const { user, token, isLoading } = useAuth()
 
-  if (isLoading) {
+  // Token without user = session restore still settling (common after Render cold start on iPhone).
+  if (isLoading || (token && !user)) {
     return (
       <div className="flex min-h-screen min-h-[100dvh] flex-col items-center justify-center bg-[color:var(--bg-page)] [-webkit-tap-highlight-color:transparent]">
         <div
