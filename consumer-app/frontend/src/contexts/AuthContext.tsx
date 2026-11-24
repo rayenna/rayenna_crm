@@ -10,7 +10,6 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance, {
   clearConsumerToken,
-  isStillWakingError,
   persistConsumerToken,
   readConsumerToken,
   setConsumerAuthToken,
