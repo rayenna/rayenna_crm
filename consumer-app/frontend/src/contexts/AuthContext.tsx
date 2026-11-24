@@ -22,9 +22,12 @@ import type { ConsumerAuthResponse, ConsumerUser } from '@/types'
 
 /** Local preview: with a saved session, `/?wakeup=1` forces the wake animation for 15s. */
 const PREVIEW_COLD_MS = 15_000
-const forceWakeupPreview =
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('wakeup') === '1'
+function isWakeupPreview(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('wakeup') === '1'
+  )
+}
 
 interface AuthContextType {
   user: ConsumerUser | null
@@ -133,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       try {
         // Dev/prod preview: force wake UI even when API is already warm.
-        if (forceWakeupPreview) {
+        if (isWakeupPreview()) {
           setSessionWake(true)
           return
         }
@@ -161,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         // Transient boot failure — keep token, show wake, never bounce to login.
-        if (isHubProdApiConfigured() || forceWakeupPreview) {
+        if (isHubProdApiConfigured() || isWakeupPreview()) {
           setSessionWake(true)
           return
         }
@@ -169,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false)
       } catch {
         if (cancelled || gen !== restoreGen.current) return
-        if (isHubProdApiConfigured() || forceWakeupPreview) {
+        if (isHubProdApiConfigured() || isWakeupPreview()) {
           setSessionWake(true)
           return
         }
@@ -231,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           healthEndpoint="/api/health"
           appMode="consumer"
           initialDelayMs={0}
-          previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+          previewDelayMs={isWakeupPreview() ? PREVIEW_COLD_MS : 0}
           onReady={() => {
             void handleSessionWakeReady()
           }}

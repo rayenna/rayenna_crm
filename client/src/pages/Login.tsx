@@ -32,9 +32,12 @@ const isProd = typeof window !== 'undefined' && !window.location.hostname.includ
 const apiNotConfigured = isProd && !apiBaseUrl
 
 /** Open /login?wakeup=1 → enter credentials → Sign in → 15s animation → auto-enter app. */
-const forceWakeupPreview =
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('wakeup') === '1'
+function isWakeupPreview(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('wakeup') === '1'
+  )
+}
 
 function readPendingWake(): { email: string; password: string } | null {
   try {
@@ -301,7 +304,7 @@ const Login = () => {
     }
 
     // Local preview: keep credentials, animate 15s, then auto-login.
-    if (USE_SERVER_WAKEUP_LOADER && forceWakeupPreview) {
+    if (USE_SERVER_WAKEUP_LOADER && isWakeupPreview()) {
       beginWake(creds)
       return
     }
@@ -361,7 +364,7 @@ const Login = () => {
           healthEndpoint="/api/health"
           appMode="crm"
           initialDelayMs={0}
-          previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+          previewDelayMs={isWakeupPreview() ? PREVIEW_COLD_MS : 0}
           onReady={handleWakeReady}
         />
       ) : null}
