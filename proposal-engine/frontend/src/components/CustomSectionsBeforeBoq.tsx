@@ -30,6 +30,7 @@ import {
   readProposalEditorLinkContext,
   removeProposalEditorLink,
 } from '../lib/proposalEditorLink';
+import { shouldPreventToolbarTouchDefault } from '../lib/peEditorToolbarTouch';
 import {
   attachWrappedImageDrag,
   getImageWrapSide,
@@ -567,13 +568,7 @@ function ColorPicker({
     setPos({ top: rect.bottom + 6, left });
   }, [anchorRef]);
 
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [onClose]);
+  useDismissOnOutsidePointer(wrapRef, onClose, anchorRef);
 
   if (!pos) return null;
 
@@ -659,13 +654,7 @@ function TablePicker({
     setPos({ top: rect.bottom + 6, left });
   }, [anchorRef]);
 
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [onClose]);
+  useDismissOnOutsidePointer(wrapRef, onClose, anchorRef);
 
   if (!pos) return null;
 
@@ -764,6 +753,37 @@ function useFixedPopoverPosition(
   return pos;
 }
 
+/**
+ * Close a portaled picker when tapping outside — but not on the same gesture
+ * that opened it. iOS Safari often delivers a delayed pointer/click after the
+ * open tap; attaching the listener immediately would close the menu instantly
+ * (felt like “lists only work on long-press”).
+ */
+function useDismissOnOutsidePointer(
+  wrapRef: React.RefObject<HTMLElement | null>,
+  onClose: () => void,
+  anchorRef?: React.RefObject<HTMLElement | null>,
+) {
+  useEffect(() => {
+    let remove: (() => void) | undefined;
+    const timer = window.setTimeout(() => {
+      const onDown = (e: PointerEvent) => {
+        const t = e.target as Node | null;
+        if (!t) return;
+        if (wrapRef.current?.contains(t)) return;
+        if (anchorRef?.current?.contains(t)) return;
+        onClose();
+      };
+      document.addEventListener('pointerdown', onDown, true);
+      remove = () => document.removeEventListener('pointerdown', onDown, true);
+    }, 120);
+    return () => {
+      window.clearTimeout(timer);
+      remove?.();
+    };
+  }, [wrapRef, anchorRef, onClose]);
+}
+
 function NumberingLibrary({
   anchorRef,
   onSelect,
@@ -775,13 +795,7 @@ function NumberingLibrary({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const pos = useFixedPopoverPosition(anchorRef, 280);
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [onClose]);
+  useDismissOnOutsidePointer(wrapRef, onClose, anchorRef);
   if (!pos) return null;
   return createPortal(
     <div
@@ -834,13 +848,7 @@ function BulletLibrary({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const pos = useFixedPopoverPosition(anchorRef, 220);
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [onClose]);
+  useDismissOnOutsidePointer(wrapRef, onClose, anchorRef);
   if (!pos) return null;
   return createPortal(
     <div
@@ -891,13 +899,7 @@ function ChangeCaseMenu({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const pos = useFixedPopoverPosition(anchorRef, 200);
-  useEffect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [onClose]);
+  useDismissOnOutsidePointer(wrapRef, onClose, anchorRef);
   if (!pos) return null;
   return createPortal(
     <div
@@ -1304,9 +1306,9 @@ function EditorToolbar({
   const fontColorBtnRef  = useRef<HTMLButtonElement>(null);
   const highlightBtnRef  = useRef<HTMLButtonElement>(null);
   const tableBtnRef      = useRef<HTMLButtonElement>(null);
-  const numberingBtnRef  = useRef<HTMLButtonElement>(null);
-  const bulletBtnRef     = useRef<HTMLButtonElement>(null);
-  const changeCaseBtnRef = useRef<HTMLButtonElement>(null);
+  const numberingGroupRef = useRef<HTMLDivElement>(null);
+  const bulletGroupRef    = useRef<HTMLDivElement>(null);
+  const changeCaseBtnRef  = useRef<HTMLButtonElement>(null);
 
   const closeOtherPickers = (except?: 'font' | 'highlight' | 'numbering' | 'bullet' | 'case' | 'table') => {
     if (except !== 'font') setFontColorOpen(false);
@@ -1340,12 +1342,12 @@ function EditorToolbar({
     // On mobile: single row with horizontal scroll (no wrap) so toolbar stays compact.
     // On sm+: wrap naturally across multiple rows.
     //
-    // onTouchStart preventDefault: on Android Chrome (portrait), tapping anywhere
-    // outside the keyboard's trigger area causes the virtual keyboard to dismiss
-    // and reset the caret BEFORE the click event fires. Intercepting touchstart on
-    // the entire toolbar div and calling preventDefault() tells the browser "this
-    // is an intentional touch on a control, not a tap-to-dismiss", keeping the
-    // keyboard up and the selection intact.
+    // onTouchStart preventDefault (Android only): tapping the toolbar can dismiss
+    // the virtual keyboard and reset the caret before click fires. preventDefault
+    // keeps the keyboard/selection. Skip on iOS — Safari often suppresses the
+    // synthetic click after a canceled touchstart, which made list buttons feel
+    // erratic (work only on long-press). Button-level onPointerDown={preventDefault}
+    // still preserves the contenteditable selection on iPhone.
     //
     // Keep a light document-editor wash even when the app shell is dark mode —
     // the canvas below is white paper; a near-black toolbar made icons illegible.
@@ -1356,7 +1358,10 @@ function EditorToolbar({
                     bg-gradient-to-b from-indigo-100 via-sky-50 to-white
                     px-2.5 py-2 print-hide
                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-      onTouchStart={(e) => e.preventDefault()}
+      onTouchStart={(e) => {
+        if (!shouldPreventToolbarTouchDefault()) return;
+        e.preventDefault();
+      }}
     >
 
       {/* ── Font family ── */}
@@ -1640,18 +1645,25 @@ function EditorToolbar({
 
       <Sep />
 
-      {/* ── Lists (with style libraries) ── */}
+      {/* ── Lists: primary tap applies default; chevron opens style library ── */}
       <div className={groupChip}>
-        <div className="relative flex-shrink-0">
-          <BtnTooltip label="Bullet list styles">
+        <div ref={bulletGroupRef} className="relative flex flex-shrink-0 items-center">
+          <BtnTooltip label="Bullet list">
             <button
-              ref={bulletBtnRef}
               type="button"
-              className={ib(formatState.unorderedList || bulletLibOpen, 'gap-0.5')}
+              aria-label="Bullet list"
+              aria-pressed={formatState.unorderedList}
+              className={ib(formatState.unorderedList, 'rounded-r-none pr-1')}
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
-                closeOtherPickers('bullet');
-                setBulletLibOpen((v) => !v);
+                closeOtherPickers();
+                if (!editorRef.current) return;
+                onFormat(() =>
+                  applyBulletListStyle(
+                    formatState.unorderedList ? 'none' : 'disc',
+                    editorRef.current!,
+                  ),
+                );
               }}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
@@ -1659,12 +1671,26 @@ function EditorToolbar({
                 <circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/>
                 <circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/>
               </svg>
+            </button>
+          </BtnTooltip>
+          <BtnTooltip label="Bullet styles">
+            <button
+              type="button"
+              aria-label="Bullet list styles"
+              aria-expanded={bulletLibOpen}
+              className={ib(bulletLibOpen, 'min-w-[28px] rounded-l-none border-l border-indigo-200/80 px-1')}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('bullet');
+                setBulletLibOpen((v) => !v);
+              }}
+            >
               <ChevronDown />
             </button>
           </BtnTooltip>
           {bulletLibOpen && (
             <BulletLibrary
-              anchorRef={bulletBtnRef}
+              anchorRef={bulletGroupRef}
               onSelect={(id) => {
                 if (!editorRef.current) return;
                 onFormat(() => applyBulletListStyle(id, editorRef.current!));
@@ -1673,16 +1699,23 @@ function EditorToolbar({
             />
           )}
         </div>
-        <div className="relative flex-shrink-0">
-          <BtnTooltip label="Numbered list styles">
+        <div ref={numberingGroupRef} className="relative flex flex-shrink-0 items-center">
+          <BtnTooltip label="Numbered list">
             <button
-              ref={numberingBtnRef}
               type="button"
-              className={ib(formatState.orderedList || numberingOpen, 'gap-0.5')}
+              aria-label="Numbered list"
+              aria-pressed={formatState.orderedList}
+              className={ib(formatState.orderedList, 'rounded-r-none pr-1')}
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => {
-                closeOtherPickers('numbering');
-                setNumberingOpen((v) => !v);
+                closeOtherPickers();
+                if (!editorRef.current) return;
+                onFormat(() =>
+                  applyOrderedListStyle(
+                    formatState.orderedList ? 'none' : 'decimal',
+                    editorRef.current!,
+                  ),
+                );
               }}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
@@ -1690,12 +1723,26 @@ function EditorToolbar({
                 <text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/>
                 <text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/>
               </svg>
+            </button>
+          </BtnTooltip>
+          <BtnTooltip label="Numbering styles">
+            <button
+              type="button"
+              aria-label="Numbered list styles"
+              aria-expanded={numberingOpen}
+              className={ib(numberingOpen, 'min-w-[28px] rounded-l-none border-l border-indigo-200/80 px-1')}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                closeOtherPickers('numbering');
+                setNumberingOpen((v) => !v);
+              }}
+            >
               <ChevronDown />
             </button>
           </BtnTooltip>
           {numberingOpen && (
             <NumberingLibrary
-              anchorRef={numberingBtnRef}
+              anchorRef={numberingGroupRef}
               onSelect={(id) => {
                 if (!editorRef.current) return;
                 onFormat(() => applyOrderedListStyle(id, editorRef.current!));
@@ -1967,13 +2014,8 @@ function CustomBodyEditor({
       catch { return null; }
     })();
 
-    el.focus();
-
-    // Unconditionally restore the snapshotted range. On desktop this is a
-    // no-op (the range equals the current selection). On Android Chrome this
-    // puts the caret/selection back exactly where the user had it before the
-    // toolbar tap blurred the editor.
-    if (rangeToRestore) {
+    const restore = () => {
+      if (!rangeToRestore) return;
       try {
         const sel = window.getSelection();
         if (sel) {
@@ -1981,11 +2023,20 @@ function CustomBodyEditor({
           sel.addRange(rangeToRestore);
         }
       } catch { /* ignore */ }
-    }
+    };
 
-    fn();
-    refreshFormatState();
-    commitFromEditor();
+    el.focus();
+    // Immediate restore for desktop / Android.
+    restore();
+
+    // iOS Safari often settles the caret asynchronously after focus(); re-restore
+    // on the next frame before applying the command so list insert lands correctly.
+    requestAnimationFrame(() => {
+      restore();
+      fn();
+      refreshFormatState();
+      commitFromEditor();
+    });
   }, [commitFromEditor, refreshFormatState]);
 
   /**
