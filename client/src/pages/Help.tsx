@@ -121,10 +121,47 @@ const Help = () => {
     }
   }, [navigate, topicsOpen])
 
-  // Content is loaded at build time via Vite – no fetch
-  const rawContent = selectedSection
-    ? getHelpContent(selectedSection.id) || `# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`
-    : ''
+  const [rawContent, setRawContent] = useState('')
+  const [allContent, setAllContent] = useState<
+    Array<{ id: string; title: string; routeKey: string; content: string }>
+  >([])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!selectedSection) {
+      setRawContent('')
+      return
+    }
+    const sectionId = selectedSection.id
+    const title = selectedSection.title
+    void getHelpContent(sectionId).then((content) => {
+      if (cancelled) return
+      setRawContent(
+        content || `# ${title}\n\nContent for ${title} is coming soon.`,
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSection?.id, selectedSection?.title])
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all(
+      helpSections.map(async (s) => ({
+        id: s.id,
+        title: s.title,
+        routeKey: s.routeKey,
+        content: (await getHelpContent(s.id)) || '',
+      })),
+    ).then((rows) => {
+      if (!cancelled) setAllContent(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const markdownContent = useMemo(() => normalizeHelpMarkdown(rawContent), [rawContent])
 
   // Deep-link to heading within a section (e.g. /help/dashboard#quick-access-tiles)
@@ -138,16 +175,6 @@ const Help = () => {
     return () => window.clearTimeout(timer)
   }, [section, selectedSection?.id, markdownContent, location.hash])
 
-  const allContent = useMemo(
-    () =>
-      helpSections.map((s) => ({
-        id: s.id,
-        title: s.title,
-        routeKey: s.routeKey,
-        content: getHelpContent(s.id) || '',
-      })),
-    []
-  )
   const searchResults = useMemo(
     () => searchHelpContent(searchQuery, allContent),
     [searchQuery, allContent]

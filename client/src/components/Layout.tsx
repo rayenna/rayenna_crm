@@ -1,26 +1,28 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment, lazy, Suspense } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { ROUTE_ROLES } from '../constants/routeRoles'
 import ThemeToggle from './ThemeToggle'
-import TipOfTheDay from './TipOfTheDay'
-import CommandPalette from './CommandPalette'
 import { getHelpPathForRoute } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import '../styles/zenith.css'
 import '../styles/commandPalette.css'
-import VictoryToast from './zenith/VictoryToast'
 import { useVictoryToast } from '../hooks/useVictoryToast'
-import { MyDayProvider } from '../contexts/MyDayContext'
-import MyDayDrawer from './my-day/MyDayDrawer'
+import { MyDayProvider, useMyDayContext } from '../contexts/MyDayContext'
 import MyDayNavEntry from './my-day/MyDayNavEntry'
 import MyDayJournalNudge from './my-day/MyDayJournalNudge'
 import MyDayUrlBridge from './my-day/MyDayUrlBridge'
-import ZenithAskDock, { ZenithAskNavButton } from './zenith/ZenithAskDock'
+import ZenithAskNavButton from './zenith/ZenithAskNavButton'
 import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
 import { openProposalEngine } from '../lib/openProposalEngine'
 import { attachIosEdgeOverscrollLock } from '../utils/lockIosEdgeOverscroll'
+
+const TipOfTheDay = lazy(() => import('./TipOfTheDay'))
+const CommandPalette = lazy(() => import('./CommandPalette'))
+const VictoryToast = lazy(() => import('./zenith/VictoryToast'))
+const MyDayDrawer = lazy(() => import('./my-day/MyDayDrawer'))
+const ZenithAskDock = lazy(() => import('./zenith/ZenithAskDock'))
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -738,24 +740,51 @@ const Layout = () => {
         <Outlet />
       </main>
 
-      {user ? <VictoryToast toast={victoryToast} onDismiss={dismissVictoryToast} /> : null}
-
-      <TipOfTheDay />
-
-      {user ? (
-        <CommandPalette
-          open={commandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
-        />
+      {user && victoryToast ? (
+        <Suspense fallback={null}>
+          <VictoryToast toast={victoryToast} onDismiss={dismissVictoryToast} />
+        </Suspense>
       ) : null}
 
-      {/* My Day drawer — mounted once at layout level; persists state across route changes */}
+      <Suspense fallback={null}>
+        <TipOfTheDay />
+      </Suspense>
+
+      {user && commandPaletteOpen ? (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={commandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+          />
+        </Suspense>
+      ) : null}
+
+      {/* My Day drawer — mount on first open so framer-motion stays out of initial nav */}
       {user ? <MyDayUrlBridge /> : null}
       {user ? <MyDayJournalNudge /> : null}
-      {user ? <MyDayDrawer /> : null}
-      {user ? <ZenithAskDock /> : null}
+      {user ? <DeferredMyDayDrawer /> : null}
+      {user ? (
+        <Suspense fallback={null}>
+          <ZenithAskDock />
+        </Suspense>
+      ) : null}
     </div>
     </MyDayProvider>
+  )
+}
+
+/** Loads My Day drawer chunk only after the first open (or deep-link). */
+function DeferredMyDayDrawer() {
+  const { isOpen } = useMyDayContext()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    if (isOpen) setMounted(true)
+  }, [isOpen])
+  if (!mounted) return null
+  return (
+    <Suspense fallback={null}>
+      <MyDayDrawer />
+    </Suspense>
   )
 }
 

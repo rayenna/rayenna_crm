@@ -2474,14 +2474,16 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
       projects.map((p) => [p.id, toPositiveNumber(p.projectCost)])
     );
 
-    const [selections, costings, boms, rois, proposals, costingSheets] = await Promise.all([
+    // One costing query for both existence + PE order value (previously ran twice).
+    const [selections, costingSheets, boms, rois, proposals] = await Promise.all([
       prisma.pESelectedProject.findMany({
         where: { projectId: { in: projectIds } },
         select: { projectId: true },
       }),
       prisma.pECostingSheet.findMany({
         where: { projectId: { in: projectIds } },
-        select: { projectId: true },
+        select: { projectId: true, items: true, marginPct: true, grandTotal: true, showGst: true, savedAt: true },
+        orderBy: { savedAt: 'desc' },
       }),
       prisma.pEBomSheet.findMany({
         where: { projectId: { in: projectIds } },
@@ -2495,15 +2497,10 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
         where: { projectId: { in: projectIds } },
         select: { projectId: true },
       }),
-      prisma.pECostingSheet.findMany({
-        where: { projectId: { in: projectIds } },
-        select: { projectId: true, items: true, marginPct: true, grandTotal: true, showGst: true, savedAt: true },
-        orderBy: { savedAt: 'desc' },
-      }),
     ]);
 
     const selectedSet = new Set(selections.map((s) => s.projectId));
-    const hasCosting = new Set(costings.map((r) => r.projectId));
+    const hasCosting = new Set(costingSheets.map((r) => r.projectId));
     const hasBom = new Set(boms.map((r) => r.projectId));
     const hasRoi = new Set(rois.map((r) => r.projectId));
     const hasProposal = new Set(proposals.map((r) => r.projectId));
@@ -3189,32 +3186,44 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         ticketWhere.project = { salespersonId: userId };
       }
 
-      const tickets = await prisma.supportTicket.findMany({
-        where: ticketWhere,
-        select: {
-          id: true,
-          ticketNumber: true,
-          title: true,
-          source: true,
-          status: true,
-          createdAt: true,
-          projectId: true,
-          project: {
-            select: {
-              slNo: true,
-              customer: { select: { customerName: true } },
+      const hubWhere = {
+        ...ticketWhere,
+        source: SupportTicketSource.CONSUMER_APP,
+      };
+
+      // Cap row scan for overdue detection; exact open/hub totals via count.
+      const SUPPORT_QUEUE_SCAN_CAP = 400;
+      const [tickets, open, hubOpen] = await Promise.all([
+        prisma.supportTicket.findMany({
+          where: ticketWhere,
+          take: SUPPORT_QUEUE_SCAN_CAP,
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            ticketNumber: true,
+            title: true,
+            source: true,
+            status: true,
+            createdAt: true,
+            projectId: true,
+            project: {
+              select: {
+                slNo: true,
+                customer: { select: { customerName: true } },
+              },
+            },
+            activities: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { createdAt: true, followUpDate: true },
             },
           },
-          activities: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-            select: { createdAt: true, followUpDate: true },
-          },
-        },
-      });
+        }),
+        prisma.supportTicket.count({ where: ticketWhere }),
+        prisma.supportTicket.count({ where: hubWhere }),
+      ]);
 
       let overdue = 0;
-      let hubOpen = 0;
       const overdueTickets: Array<{
         ticketId: string
         ticketNumber: string
@@ -3226,7 +3235,6 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       }> = [];
 
       for (const t of tickets) {
-        if (t.source === SupportTicketSource.CONSUMER_APP) hubOpen += 1;
         if (isSupportTicketOverdue(t)) {
           overdue += 1;
           overdueTickets.push({
@@ -3244,7 +3252,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       overdueTickets.sort((a, b) => a.ticketNumber.localeCompare(b.ticketNumber));
 
       return {
-        open: tickets.length,
+        open,
         overdue,
         hubOpen,
         overdueTickets: overdueTickets.slice(0, 5),

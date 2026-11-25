@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { isTimeoutOrNetworkError } from '../utils/axios'
 import { setAuthErrorCallback } from '../utils/authErrorHandler'
@@ -95,14 +95,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, IDLE_TIMEOUT_MS)
   }, [clearAuth])
 
-  // Set up activity event listeners
+  // Set up activity event listeners (throttle — mousemove/scroll fire very often)
   useEffect(() => {
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
-    
+    let lastReset = 0
+    const THROTTLE_MS = 1000
+
     const handleActivity = () => {
-      if (sessionStorage.getItem('token')) {
-        resetIdleTimer()
-      }
+      if (!sessionStorage.getItem('token')) return
+      const now = Date.now()
+      if (now - lastReset < THROTTLE_MS) return
+      lastReset = now
+      resetIdleTimer()
     }
     
     // Add event listeners
@@ -220,7 +224,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token, user, clearAuth, setTheme])
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const response = await axiosInstance.post('/api/auth/login', { email, password })
     const { token: newToken, user: newUser } = response.data
     // Set user before any follow-up requests so a flaky theme call cannot leave us "logged out".
@@ -237,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     // Start inactivity timer after login
     resetIdleTimer()
-  }
+  }, [resetIdleTimer, setTheme])
 
   const logout = useCallback(() => {
     // Clear inactivity timers
@@ -248,9 +252,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     clearAuth()
   }, [clearAuth])
 
-  const hasRole = (roles: UserRole[]): boolean => {
+  const hasRole = useCallback((roles: UserRole[]): boolean => {
     return user ? roles.includes(user.role) : false
-  }
+  }, [user])
+
+  const authValue = useMemo(
+    () => ({ user, token, login, logout, isLoading, hasRole }),
+    [user, token, login, logout, isLoading, hasRole],
+  )
 
   // Handle "Stay Logged In" button click
   const handleStayLoggedIn = () => {
@@ -258,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, hasRole }}>
+    <AuthContext.Provider value={authValue}>
       {children}
 
       {/* Inactivity Warning: unified ErrorModal with seconds counter */}

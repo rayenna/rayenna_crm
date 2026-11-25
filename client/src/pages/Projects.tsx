@@ -1211,7 +1211,7 @@ const Projects = () => {
       }
     },
     enabled: !!user, // only when logged in
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   })
 
   const peStatusByProjectId = useMemo(() => {

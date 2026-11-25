@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   useRef,
   useEffect,
   type MutableRefObject,
@@ -48,8 +49,9 @@ export function MyDayProvider({ children }: { children: React.ReactNode }) {
     queryKey: MY_DAY_TASKS_QUERY_KEY,
     queryFn: fetchTasks,
     enabled: !!user?.id,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    // Avoid refetch storms when switching apps on iPhone; mutations still invalidate.
+    refetchOnWindowFocus: false,
   })
 
   useEffect(() => {
@@ -81,10 +83,13 @@ export function MyDayProvider({ children }: { children: React.ReactNode }) {
     })
   }, [trackOpen])
 
+  const value = useMemo(
+    () => ({ isOpen, open, openTab, close, toggle, incompleteTasks, setIncompleteTasks, pendingTabRef }),
+    [isOpen, open, openTab, close, toggle, incompleteTasks],
+  )
+
   return (
-    <MyDayContext.Provider
-      value={{ isOpen, open, openTab, close, toggle, incompleteTasks, setIncompleteTasks, pendingTabRef }}
-    >
+    <MyDayContext.Provider value={value}>
       {children}
     </MyDayContext.Provider>
   )

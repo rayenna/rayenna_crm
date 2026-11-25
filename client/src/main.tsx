@@ -44,7 +44,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 30 * 1000,
+      // Reference lists + dashboards: prefer cache for a minute; mutations still invalidate.
+      staleTime: 60 * 1000,
       retry: (failureCount, error: unknown) => {
         const status = (error as { response?: { status?: number } })?.response?.status
         if (status === 401 || status === 403) return false

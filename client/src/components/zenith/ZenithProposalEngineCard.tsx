@@ -71,6 +71,7 @@ export default function ZenithProposalEngineCard({
       const res = await axiosInstance.get(`/api/dashboard/proposal-engine-status?${params.toString()}`)
       return res.data as { rows: PeStatusRow[] }
     },
+    staleTime: 2 * 60_000,
     select: (data: { rows: PeStatusRow[] }) => ({
       rows: (data.rows ?? []).map((r) => ({
         ...r,

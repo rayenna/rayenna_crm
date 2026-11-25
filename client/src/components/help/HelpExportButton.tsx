@@ -10,12 +10,9 @@ type HelpExportButtonProps = {
 
 export default function HelpExportButton({ section, disabled }: HelpExportButtonProps) {
   const handleDownload = () => {
-    try {
-      downloadHelpSectionMarkdown(section)
-      toast.success(`Downloaded ${section.title} help (.md)`)
-    } catch {
-      toast.error('Could not download help file')
-    }
+    void downloadHelpSectionMarkdown(section)
+      .then(() => toast.success(`Downloaded ${section.title} help (.md)`))
+      .catch(() => toast.error('Could not download help file'))
   }
 
   return (

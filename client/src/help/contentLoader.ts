@@ -1,12 +1,13 @@
 /**
- * Load help markdown at build time (no runtime fetch) – works reliably in dev and prod.
- * Uses Vite's import.meta.glob with ?raw so markdown is bundled.
+ * Load help markdown on demand (Vite glob, not eager) so Help chunk stays lean until opened.
  */
+
+type MdLoader = () => Promise<string>
+
 const contentModules = import.meta.glob<string>('./content/*/index.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 /** Extra pages merged after the Getting Started hub (order = sidebar scroll order). */
 const GETTING_STARTED_PART_FILES = [
@@ -96,177 +97,116 @@ const TRAINING_PART_FILES = [
   'reference.md',
 ] as const
 
-const gettingStartedPartModules = import.meta.glob<string>(
-  './content/getting-started/*.md',
-  {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  },
-)
+const gettingStartedPartModules = import.meta.glob<string>('./content/getting-started/*.md', {
+  query: '?raw',
+  import: 'default',
+}) as Record<string, MdLoader>
 
 const rolesPartModules = import.meta.glob<string>('./content/roles/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const modulesPartModules = import.meta.glob<string>('./content/modules/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const dashboardPartModules = import.meta.glob<string>('./content/dashboard/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const zenithPartModules = import.meta.glob<string>('./content/zenith/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const securityPartModules = import.meta.glob<string>('./content/security/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const faqPartModules = import.meta.glob<string>('./content/faq/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
 const trainingPartModules = import.meta.glob<string>('./content/training/*.md', {
   query: '?raw',
   import: 'default',
-  eager: true,
-})
+}) as Record<string, MdLoader>
 
-function loadGettingStartedContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/getting-started/index.md'] ?? ''
-  const parts = GETTING_STARTED_PART_FILES.map((file) => {
-    const key = `./content/getting-started/${file}`
-    return gettingStartedPartModules[key] ?? ''
-  }).filter((p) => p.trim().length > 0)
+async function loadRaw(modules: Record<string, MdLoader>, key: string): Promise<string> {
+  const loader = modules[key]
+  if (!loader) return ''
+  try {
+    return (await loader()) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+async function joinHubAndParts(
+  hubKey: string,
+  partModules: Record<string, MdLoader>,
+  partFiles: readonly string[],
+  partDir: string,
+): Promise<string> {
+  const hub = await loadRaw(contentModules, hubKey)
+  const parts = (
+    await Promise.all(
+      partFiles.map((file) => loadRaw(partModules, `./content/${partDir}/${file}`)),
+    )
+  ).filter((p) => p.trim().length > 0)
   if (parts.length === 0) return hub
   return [hub, ...parts].join('\n\n---\n\n')
 }
 
-function loadRolesPartContent(file: (typeof ROLES_PART_FILES)[number]): string {
-  const key = `./content/roles/${file}`
-  return rolesPartModules[key] ?? ''
-}
-
-function loadRolesContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/roles/index.md'] ?? ''
-  const parts = ROLES_PART_FILES.map(loadRolesPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadModulesPartContent(file: (typeof MODULES_PART_FILES)[number]): string {
-  const key = `./content/modules/${file}`
-  return modulesPartModules[key] ?? ''
-}
-
-function loadModulesContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/modules/index.md'] ?? ''
-  const parts = MODULES_PART_FILES.map(loadModulesPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadDashboardPartContent(file: (typeof DASHBOARD_PART_FILES)[number]): string {
-  const key = `./content/dashboard/${file}`
-  return dashboardPartModules[key] ?? ''
-}
-
-function loadDashboardContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/dashboard/index.md'] ?? ''
-  const parts = DASHBOARD_PART_FILES.map(loadDashboardPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadZenithPartContent(file: (typeof ZENITH_PART_FILES)[number]): string {
-  const key = `./content/zenith/${file}`
-  return zenithPartModules[key] ?? ''
-}
-
-function loadZenithContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/zenith/index.md'] ?? ''
-  const parts = ZENITH_PART_FILES.map(loadZenithPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadSecurityPartContent(file: (typeof SECURITY_PART_FILES)[number]): string {
-  const key = `./content/security/${file}`
-  return securityPartModules[key] ?? ''
-}
-
-function loadSecurityContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/security/index.md'] ?? ''
-  const parts = SECURITY_PART_FILES.map(loadSecurityPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadFaqPartContent(file: (typeof FAQ_PART_FILES)[number]): string {
-  const key = `./content/faq/${file}`
-  return faqPartModules[key] ?? ''
-}
-
-function loadFaqContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/faq/index.md'] ?? ''
-  const parts = FAQ_PART_FILES.map(loadFaqPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-function loadTrainingPartContent(file: (typeof TRAINING_PART_FILES)[number]): string {
-  const key = `./content/training/${file}`
-  return trainingPartModules[key] ?? ''
-}
-
-function loadTrainingContent(): string {
-  const hub = (contentModules as Record<string, string>)['./content/training/index.md'] ?? ''
-  const parts = TRAINING_PART_FILES.map(loadTrainingPartContent).filter((p) => p.trim().length > 0)
-  if (parts.length === 0) return hub
-  return [hub, ...parts].join('\n\n---\n\n')
-}
-
-export function getHelpContent(sectionId: string): string {
+export async function getHelpContent(sectionId: string): Promise<string> {
   if (sectionId === 'getting-started') {
-    return loadGettingStartedContent()
+    return joinHubAndParts(
+      './content/getting-started/index.md',
+      gettingStartedPartModules,
+      GETTING_STARTED_PART_FILES,
+      'getting-started',
+    )
   }
   if (sectionId === 'roles') {
-    return loadRolesContent()
+    return joinHubAndParts('./content/roles/index.md', rolesPartModules, ROLES_PART_FILES, 'roles')
   }
   if (sectionId === 'modules') {
-    return loadModulesContent()
+    return joinHubAndParts('./content/modules/index.md', modulesPartModules, MODULES_PART_FILES, 'modules')
   }
   if (sectionId === 'dashboard') {
-    return loadDashboardContent()
+    return joinHubAndParts(
+      './content/dashboard/index.md',
+      dashboardPartModules,
+      DASHBOARD_PART_FILES,
+      'dashboard',
+    )
   }
   if (sectionId === 'zenith') {
-    return loadZenithContent()
+    return joinHubAndParts('./content/zenith/index.md', zenithPartModules, ZENITH_PART_FILES, 'zenith')
   }
   if (sectionId === 'security') {
-    return loadSecurityContent()
+    return joinHubAndParts(
+      './content/security/index.md',
+      securityPartModules,
+      SECURITY_PART_FILES,
+      'security',
+    )
   }
   if (sectionId === 'faq') {
-    return loadFaqContent()
+    return joinHubAndParts('./content/faq/index.md', faqPartModules, FAQ_PART_FILES, 'faq')
   }
   if (sectionId === 'training') {
-    return loadTrainingContent()
+    return joinHubAndParts(
+      './content/training/index.md',
+      trainingPartModules,
+      TRAINING_PART_FILES,
+      'training',
+    )
   }
-  const path = `./content/${sectionId}/index.md`
-  const content = (contentModules as Record<string, string>)[path]
-  return content ?? ''
+  return loadRaw(contentModules, `./content/${sectionId}/index.md`)
 }

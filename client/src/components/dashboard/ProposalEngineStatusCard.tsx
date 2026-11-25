@@ -53,6 +53,7 @@ const ProposalEngineStatusCard = ({
       const res = await axiosInstance.get(`/api/dashboard/proposal-engine-status?${params.toString()}`)
       return res.data as { rows: PeStatusRow[] }
     },
+    staleTime: 2 * 60_000,
   })
 
   if (isLoading) {

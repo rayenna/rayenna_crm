@@ -100,6 +100,29 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { '@': path.resolve(__dirname, './src') },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/recharts') || id.includes('node_modules/victory-')) {
+              return 'recharts'
+            }
+            if (id.includes('node_modules/framer-motion')) {
+              return 'framer-motion'
+            }
+            if (
+              id.includes('node_modules/react-markdown') ||
+              id.includes('node_modules/remark-gfm') ||
+              id.includes('node_modules/remark-parse') ||
+              id.includes('node_modules/mdast') ||
+              id.includes('node_modules/micromark')
+            ) {
+              return 'markdown'
+            }
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       proxy: {

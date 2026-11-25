@@ -32,8 +32,8 @@ function downloadTextFile(filename: string, content: string, mimeType: string): 
 }
 
 /** Download the merged markdown for one Help section (same text as in-app). */
-export function downloadHelpSectionMarkdown(section: HelpSection): void {
-  const body = getHelpContent(section.id) || ''
+export async function downloadHelpSectionMarkdown(section: HelpSection): Promise<void> {
+  const body = (await getHelpContent(section.id)) || ''
   const content = formatHelpMarkdownExport(section, body)
   downloadTextFile(helpExportFilename(section), content, 'text/markdown;charset=utf-8')
 }

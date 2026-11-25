@@ -4,6 +4,10 @@ import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { logAccess } from '../utils/auditLogger';
+import {
+  getCachedAuthSession,
+  setCachedAuthSession,
+} from '../utils/authSessionCache';
 
 export const authenticate = async (
   req: Request,
@@ -25,16 +29,23 @@ export const authenticate = async (
       tokenVersion?: number;
     };
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        isActive: true,
-        tokenVersion: true,
-      },
-    });
+    let user = getCachedAuthSession(decoded.userId);
+    if (!user) {
+      const row = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          isActive: true,
+          tokenVersion: true,
+        },
+      });
+      if (row) {
+        setCachedAuthSession(row);
+        user = row;
+      }
+    }
 
     if (!user) {
       logAccess({

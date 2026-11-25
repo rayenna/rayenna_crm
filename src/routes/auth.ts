@@ -11,6 +11,7 @@ import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 import { PUBLIC_ERRORS, sendErrorResponse } from '../utils/publicApiError';
 import { signStaffJwt } from '../utils/staffJwt';
 import { hashPasswordResetToken } from '../utils/passwordResetToken';
+import { invalidateAuthSessionCache } from '../utils/authSessionCache';
 
 const router = express.Router();
 
@@ -297,6 +298,7 @@ router.post(
         where: { id: req.user.id },
         data: { password: hashedPassword, tokenVersion: { increment: 1 } },
       });
+      invalidateAuthSessionCache(req.user.id);
 
       res.json({ message: 'Password changed successfully' });
     } catch (error: unknown) {
@@ -458,6 +460,7 @@ router.post(
           tokenVersion: { increment: 1 },
         },
       });
+      invalidateAuthSessionCache(user.id);
 
       // Audit log
       await logPasswordReset({

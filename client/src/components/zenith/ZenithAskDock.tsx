@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
@@ -7,7 +7,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import ZenithAskComposer from './ZenithAskComposer'
-import ZenithAskPanel from './ZenithAskPanel'
+
+const ZenithAskPanel = lazy(() => import('./ZenithAskPanel'))
 import { zenithAskExampleChips } from '../../constants/zenithAskExamples'
 import {
   readZenithAskHistory,
@@ -17,7 +18,7 @@ import {
 import { trackZenithAskEvent } from '../../utils/zenithAskAnalytics'
 import { zenithAskMappedLabel } from '../../utils/zenithAskMappedLabel'
 import { handleZenithAskAction } from '../../utils/zenithAskActionHref'
-import { openZenithAskDock, ZENITH_ASK_OPEN_EVENT, type ZenithAskOpenDetail } from '../../utils/zenithAskOpen'
+import { ZENITH_ASK_OPEN_EVENT, type ZenithAskOpenDetail } from '../../utils/zenithAskOpen'
 import { getZenithAskDateFilters } from '../../utils/zenithAskDateFilters'
 import { formatZenithFilterSummary } from '../../utils/zenithFilterSummary'
 import {
@@ -52,79 +53,6 @@ const ASK_ROLES: UserRole[] = [
   UserRole.OPERATIONS,
   UserRole.FINANCE,
 ]
-
-export function ZenithAskNavButton() {
-  const { user } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const narrow = useZenithNarrowLayout()
-  const [dockOpen, setDockOpen] = useState(false)
-  const [hintOpen, setHintOpen] = useState(false)
-  const allowed = Boolean(user?.role && ASK_ROLES.includes(user.role))
-  const showHint = hintOpen && !dockOpen
-
-  useEffect(() => {
-    const sync = () => setDockOpen(document.body.classList.contains('zenith-ask-dock-open'))
-    sync()
-    const obs = new MutationObserver(sync)
-    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (dockOpen) setHintOpen(false)
-  }, [dockOpen])
-
-  if (!allowed) return null
-  const onZenith = location.pathname.startsWith('/zenith')
-  return (
-    <span
-      className="zenith-ask-launcher-wrap"
-      onMouseEnter={() => {
-        if (!dockOpen) setHintOpen(true)
-      }}
-      onMouseLeave={() => setHintOpen(false)}
-    >
-      <button
-        type="button"
-        className={`zenith-ask-dock-launcher${dockOpen ? ' zenith-ask-dock-launcher--open' : ''}`}
-        aria-label="Ask Zenith"
-        aria-expanded={dockOpen}
-        aria-describedby={showHint ? 'zenith-ask-launcher-hint' : undefined}
-        onFocus={() => {
-          if (!dockOpen) setHintOpen(true)
-        }}
-        onBlur={() => setHintOpen(false)}
-        onClick={() => {
-          setHintOpen(false)
-          if (onZenith && narrow) {
-            navigate('/zenith?askFocus=1')
-            return
-          }
-          openZenithAskDock({ focus: true })
-        }}
-      >
-        <ZenithAskIcon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
-        <span className="sm:hidden">Ask</span>
-        <span className="hidden sm:inline">Ask Zenith</span>
-      </button>
-      {showHint ? (
-        <span
-          id="zenith-ask-launcher-hint"
-          role="tooltip"
-          className="zenith-ask-launcher-hint"
-        >
-          <span className="zenith-ask-launcher-hint__title">
-            Your AI powered personal Assistant
-          </span>
-          <span className="zenith-ask-launcher-hint__body">
-            Ask me anything about Pipeline, Revenue, Payments…!
-          </span>
-        </span>
-      ) : null}
-    </span>
-  )
-}
 
 export default function ZenithAskDock() {
   const { user } = useAuth()
@@ -599,22 +527,24 @@ export default function ZenithAskDock() {
               </div>
             </div>
           ) : null}
-          <ZenithAskPanel
-            result={askResult}
-            error={askError}
-            loading={askLoading}
-            history={askHistory}
-            filterSummary={filterSummary}
-            role={user?.role}
-            mappedLabel={mapped}
-            onClose={() => {
-              setAskResult(null)
-              setAskError(null)
-            }}
-            onNavigateAway={close}
-            onAskSuggestion={(q, source) => void runAsk(q, source === 'catalog' ? 'catalog' : 'follow_up')}
-            onReplayHistory={(item) => void runAsk(item.question, 'history')}
-          />
+          <Suspense fallback={null}>
+            <ZenithAskPanel
+              result={askResult}
+              error={askError}
+              loading={askLoading}
+              history={askHistory}
+              filterSummary={filterSummary}
+              role={user?.role}
+              mappedLabel={mapped}
+              onClose={() => {
+                setAskResult(null)
+                setAskError(null)
+              }}
+              onNavigateAway={close}
+              onAskSuggestion={(q, source) => void runAsk(q, source === 'catalog' ? 'catalog' : 'follow_up')}
+              onReplayHistory={(item) => void runAsk(item.question, 'history')}
+            />
+          </Suspense>
         </div>
         <button
           type="button"

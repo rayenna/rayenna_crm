@@ -6,6 +6,7 @@ import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
 import { sendErrorResponse } from '../utils/publicApiError';
+import { invalidateAuthSessionCache } from '../utils/authSessionCache';
 
 const router = express.Router();
 
@@ -231,6 +232,7 @@ router.put(
           updatedAt: true,
         },
       });
+      invalidateAuthSessionCache(userId);
 
       if (req.user && role !== undefined && role !== currentUser.role) {
         logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'user_role_changed', entityType: 'User', entityId: userId, summary: `Role ${currentUser.role} -> ${role}`, req });
