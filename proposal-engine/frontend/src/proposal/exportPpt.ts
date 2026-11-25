@@ -83,6 +83,62 @@ export function htmlToPlainText(html: string): string {
     .trim();
 }
 
+const PPT_DATA_IMAGE_RE = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i;
+
+/** Validate a data-URI so pptxgenjs can embed it; returns null if unusable. */
+export function normalizePptImageDataUri(src: string): string | null {
+  const t = src.trim().replace(/\s+/g, '');
+  if (!PPT_DATA_IMAGE_RE.test(t)) return null;
+  const comma = t.indexOf(',');
+  if (comma < 0 || t.length - comma < 8) return null;
+  return t;
+}
+
+/**
+ * Pull embeddable images from custom-section HTML (base64 data URIs stored in Neon).
+ * Primary path for panel-layout / inserted editor images.
+ */
+export function extractCustomSectionImages(html: string): string[] {
+  if (!html) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (raw: string | null | undefined) => {
+    if (!raw) return;
+    const normalized = normalizePptImageDataUri(raw);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    out.push(normalized);
+  };
+
+  if (typeof document !== 'undefined') {
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    host.querySelectorAll('img[src]').forEach((el) => {
+      push(el.getAttribute('src'));
+    });
+  }
+
+  // Regex fallback (and catch attrs the DOM walk missed).
+  const re = /<img\b[^>]*\bsrc\s*=\s*["'](data:image\/[^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    push(m[1]);
+  }
+
+  return out;
+}
+
+/** Keep image-only custom sections (plain-text filter would drop them). */
+export function customSectionHasExportableContent(sec: ProposalCustomSectionBeforeBoq): boolean {
+  if (sec.title.trim()) return true;
+  if (htmlToPlainText(sec.bodyHtml || '')) return true;
+  if (/<img\b/i.test(sec.bodyHtml || '')) return true;
+  if (extractCustomSectionImages(sec.bodyHtml || '').length > 0) return true;
+  if (sec.mediaPosterUrl && normalizePptImageDataUri(sec.mediaPosterUrl)) return true;
+  return false;
+}
+
 export function proposalDownloadStem(p: ProposalData): string {
   const name = (p.customer.customerName || 'Customer').replace(/\s+/g, '_').replace(/[^\w.-]/g, '');
   const ref = p.refNumber.replace(/\//g, '-');
@@ -1203,24 +1259,87 @@ export async function exportToPpt(
     );
   };
 
-  // ── Custom sections ─────────────────────────────────────────────────────
+  // ── Custom sections (text + embedded images — mirror DOCX data-URI path) ─
   sectionBuilders['custom-sections'] = () => {
-    const custom = (options?.customSectionsBeforeBoq ?? []).filter(
-      (sec) => sec.title.trim() || htmlToPlainText(sec.bodyHtml || ''),
-    );
+    const custom = (options?.customSectionsBeforeBoq ?? []).filter(customSectionHasExportableContent);
+    const contentX = 0.5;
+    const contentW = 12.3;
+    const slideBottom = 7.2;
+    const y0 = contentTop(true);
+
     custom.forEach((sec) => {
+      const plain = htmlToPlainText(sec.bodyHtml || '');
+      const imagesFromHtml = extractCustomSectionImages(sec.bodyHtml || '');
+      const poster =
+        sec.mediaPosterUrl && normalizePptImageDataUri(sec.mediaPosterUrl)
+          ? [normalizePptImageDataUri(sec.mediaPosterUrl)!]
+          : [];
+      const imgs = [...imagesFromHtml, ...poster.filter((p) => !imagesFromHtml.includes(p))];
+
       const s = newSlide();
       addSectionTitle(s, sec.title.trim() || 'Additional Section', 'Project notes');
-      s.addText(htmlToPlainText(sec.bodyHtml || '') || ' ', {
-        x: 0.5,
-        y: contentTop(true),
-        w: 12.3,
-        h: 5.7,
-        fontFace: FONT,
-        fontSize: 14,
-        color: SLATE,
-        valign: 'top',
-      });
+
+      let imgTop = y0;
+      if (plain) {
+        // Short captions get a tight band so panel images stay large; text-only uses full height.
+        const lineGuess = Math.max(1, plain.split(/\n+/).filter((l) => l.trim()).length);
+        const textH =
+          imgs.length > 0
+            ? Math.min(1.55, Math.max(0.55, lineGuess * 0.32 + 0.15))
+            : slideBottom - y0;
+        s.addText(plain, {
+          x: contentX,
+          y: y0,
+          w: contentW,
+          h: textH,
+          fontFace: FONT,
+          fontSize: 14,
+          color: SLATE,
+          valign: 'top',
+        });
+        imgTop = y0 + textH + 0.12;
+      }
+
+      if (imgs.length === 0) {
+        if (!plain) {
+          s.addText(' ', {
+            x: contentX,
+            y: y0,
+            w: contentW,
+            h: 1,
+            fontFace: FONT,
+            fontSize: 14,
+            color: SLATE,
+          });
+        }
+        return;
+      }
+
+      const placeImage = (slide: PptxGenJS.Slide, data: string, top: number) => {
+        const maxH = Math.max(1.8, slideBottom - top);
+        // Full content width, landscape-friendly — no letterbox bars / no overlap with title.
+        const w = contentW;
+        const h = Math.min(maxH, w * (9 / 16), 5.4);
+        const x = contentX;
+        try {
+          slide.addImage({ data, x, y: top, w, h });
+        } catch {
+          /* bad/truncated data URI — keep text slide */
+        }
+      };
+
+      placeImage(s, imgs[0]!, imgTop);
+
+      // Extra images on continuation slides so nothing overlaps.
+      for (let i = 1; i < imgs.length; i++) {
+        const cont = newSlide();
+        addSectionTitle(
+          cont,
+          `${sec.title.trim() || 'Additional Section'} (${i + 1})`,
+          'Project notes',
+        );
+        placeImage(cont, imgs[i]!, y0);
+      }
     });
   };
 
@@ -1803,14 +1922,16 @@ export async function exportToPpt(
   };
 
   // ── Body sections in user-defined order (same map as preview / Save) ─────
-  const customCount = options?.customSectionsBeforeBoq?.length ?? 0;
+  const hasCustomSections = (options?.customSectionsBeforeBoq ?? []).some(
+    customSectionHasExportableContent,
+  );
   for (const id of pptOrderedBodySectionIds(
     options?.sectionOrder,
     options?.includedOptionalSections,
     {
       hasBom: p.bom.length > 0,
       includeRoof: !!options?.roofLayout,
-      hasCustomSections: customCount > 0,
+      hasCustomSections,
     },
   )) {
     sectionBuilders[id]?.();

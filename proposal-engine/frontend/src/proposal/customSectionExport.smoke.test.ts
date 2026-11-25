@@ -8,9 +8,16 @@ import { describe, it, expect } from 'vitest';
 import { sanitizeProposalCustomBodyHtml } from '../lib/sanitizeProposalCustomHtml';
 import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
 import { PROPOSAL_PRINT_CSS } from './exportPdf';
-import { htmlToPlainText } from './exportPpt';
+import {
+  customSectionHasExportableContent,
+  extractCustomSectionImages,
+  htmlToPlainText,
+} from './exportPpt';
 import { proposalCustomSectionsToDocxBlocks } from '../lib/proposalCustomSectionsDocx';
 import * as docx from 'docx';
+
+const TINY_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 const SAMPLE_CUSTOM_HTML = `
   <p>Intro with <s>old price</s> and <span style="text-decoration: line-through">strike</span>.</p>
@@ -60,6 +67,19 @@ describe('custom section export smoke', () => {
     expect(plain).toContain('First paren');
     expect(plain).toContain('Roman one');
     expect(plain).toMatch(/• /);
+  });
+
+  it('PPT extractCustomSectionImages keeps embedded panel images that plain text drops', () => {
+    const html = `<p>Meridian panel layout</p><img src="${TINY_PNG}" alt="layout" />`;
+    expect(htmlToPlainText(html)).not.toContain('data:image');
+    expect(extractCustomSectionImages(html)).toEqual([TINY_PNG]);
+    expect(
+      customSectionHasExportableContent({
+        id: 'panel',
+        title: '',
+        bodyHtml: `<img src="${TINY_PNG}" />`,
+      }),
+    ).toBe(true);
   });
 
   it('DOCX custom-section blocks emit ordered and bullet markers', () => {
