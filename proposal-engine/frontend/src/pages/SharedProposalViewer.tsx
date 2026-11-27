@@ -1,22 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getSharedProposal } from '../lib/apiClient';
+import { getApiBaseUrl, isTimeoutOrNetworkError } from '../lib/api/core';
 import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
+import { isPeProdApiConfigured, probePeHealthOk } from '../lib/peHealth';
+import { ServerWakeupLoader } from '../components/serverWakeup';
+
+/** Local/prod preview: `/share/:token?wakeup=1` forces the cold-start animation. */
+const PREVIEW_COLD_MS = 15_000;
+const forceWakeupPreview =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('wakeup') === '1';
+
+type ViewerStatus = 'probing' | 'waking' | 'loading' | 'password' | 'content' | 'expired' | 'error';
 
 export default function SharedProposalViewer() {
   const { token } = useParams<{ token: string }>();
-  const [status, setStatus] = useState<'loading' | 'password' | 'content' | 'expired' | 'error'>('loading');
+  const [status, setStatus] = useState<ViewerStatus>('probing');
   const [html, setHtml] = useState<string | null>(null);
   const [refNumber, setRefNumber] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [wakeEpoch, setWakeEpoch] = useState(0);
+  const pendingPasswordRef = useRef<string | undefined>(undefined);
+  const loadInFlight = useRef(false);
 
-  const load = async (pwd?: string) => {
+  const load = useCallback(async (pwd?: string) => {
     if (!token) {
       setStatus('error');
       setErrorMessage('Invalid link.');
       return;
     }
+    if (loadInFlight.current) return;
+    loadInFlight.current = true;
     setStatus('loading');
     setErrorMessage(null);
     try {
@@ -25,6 +41,13 @@ export default function SharedProposalViewer() {
       setRefNumber(data.refNumber ?? null);
       setStatus('content');
     } catch (err: unknown) {
+      // Cold / flaky API after a warm probe — show wake UI instead of a dead blank/error.
+      if (isTimeoutOrNetworkError(err) && (isPeProdApiConfigured() || forceWakeupPreview)) {
+        pendingPasswordRef.current = pwd;
+        setWakeEpoch((n) => n + 1);
+        setStatus('waking');
+        return;
+      }
       const msg = err instanceof Error ? err.message : 'Failed to load proposal';
       setErrorMessage(msg);
       if (msg.toLowerCase().includes('password')) {
@@ -34,17 +57,72 @@ export default function SharedProposalViewer() {
       } else {
         setStatus('error');
       }
+    } finally {
+      loadInFlight.current = false;
     }
-  };
+  }, [token]);
+
+  const startAfterWake = useCallback(() => {
+    const pwd = pendingPasswordRef.current;
+    pendingPasswordRef.current = undefined;
+    void load(pwd);
+  }, [load]);
 
   useEffect(() => {
-    if (token) load();
-  }, [token]);
+    if (!token) {
+      setStatus('error');
+      setErrorMessage('Invalid link.');
+      return;
+    }
+
+    let cancelled = false;
+
+    async function bootstrap() {
+      // Dev preview: always show the wake animation, then load.
+      if (forceWakeupPreview) {
+        if (!cancelled) setStatus('waking');
+        return;
+      }
+
+      // Production share links: probe health first so a sleeping Render API
+      // shows the wake animation instead of a blank spinner for ~90s.
+      if (isPeProdApiConfigured()) {
+        const awake = await probePeHealthOk();
+        if (cancelled) return;
+        if (!awake) {
+          setStatus('waking');
+          return;
+        }
+      }
+
+      if (!cancelled) void load();
+    }
+
+    void bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, load]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    load(password);
+    void load(password);
   };
+
+  if (status === 'waking') {
+    return (
+      <ServerWakeupLoader
+        key={wakeEpoch}
+        apiUrl={getApiBaseUrl() || (typeof window !== 'undefined' ? window.location.origin : '')}
+        healthEndpoint="/api/health"
+        appMode="proposal"
+        initialDelayMs={0}
+        previewDelayMs={forceWakeupPreview ? PREVIEW_COLD_MS : 0}
+        backgroundImageUrl="/background.jpg"
+        onReady={startAfterWake}
+      />
+    );
+  }
 
   if (status === 'password') {
     return (
@@ -86,7 +164,7 @@ export default function SharedProposalViewer() {
     );
   }
 
-  if (status === 'loading') {
+  if (status === 'probing' || status === 'loading') {
     return (
       <div className="pe-force-light min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
