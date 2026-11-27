@@ -53,6 +53,10 @@ services:
       - path: /404.html
         name: Cache-Control
         value: no-cache, no-store, must-revalidate
+      # Stop Cloudflare Polish from turning the OG banner into progressive JPEG/WebP (breaks WhatsApp).
+      - path: /og-share.jpg
+        name: Cache-Control
+        value: public, max-age=604800, no-transform
     envVars:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"

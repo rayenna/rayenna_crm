@@ -10,7 +10,10 @@
       content="Harness the power of the sun. View your Rayenna Energy solar proposal."
     />
 
-    <!-- WhatsApp / Open Graph — one branded preview for all /view/:token share links -->
+    <!-- WhatsApp / Open Graph — one branded preview for all /view/:token share links.
+         Image is served from Cloudinary as baseline JPEG (f_jpg,fl_progressive:none).
+         Render/Cloudflare Polish was converting /og-share.jpg to progressive JPEG/WebP,
+         which WhatsApp often fails to show in link previews. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Rayenna Energy" />
     <meta property="og:title" content="Rayenna Energy — Solar Proposal" />
@@ -20,7 +23,12 @@
     />
     <meta
       property="og:image"
-      content="https://rayenna-proposal-engine.onrender.com/og-share.jpg?v=2"
+      itemprop="image"
+      content="https://res.cloudinary.com/dwmwc2nzf/image/upload/f_jpg,fl_progressive:none,q_80,w_1200,h_630,c_fill/v1795803704/rayenna/og-share-whatsapp.jpg"
+    />
+    <meta
+      property="og:image:secure_url"
+      content="https://res.cloudinary.com/dwmwc2nzf/image/upload/f_jpg,fl_progressive:none,q_80,w_1200,h_630,c_fill/v1795803704/rayenna/og-share-whatsapp.jpg"
     />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
@@ -36,7 +44,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://rayenna-proposal-engine.onrender.com/og-share.jpg?v=2"
+      content="https://res.cloudinary.com/dwmwc2nzf/image/upload/f_jpg,fl_progressive:none,q_80,w_1200,h_630,c_fill/v1795803704/rayenna/og-share-whatsapp.jpg"
     />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
