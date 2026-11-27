@@ -163,6 +163,10 @@ const PIN_ASK_HREF_TO_ROW_IDS = new Set<ZenithNlMetric>([
   'top_customers_by_profit',
   'top_projects_by_profit',
   'latest_payments_received',
+  'subsidy_chase_pack',
+  'guided_playbook',
+  // Latest remarks / other ops tables: Open in Projects → only the rows shown
+  'projects_ops_detail',
 ]);
 
 function isBroadProjectsHref(href: string | null | undefined): boolean {
@@ -472,7 +476,11 @@ export function projectsHrefForIntent(
       );
     }
     case 'pending_subsidy':
+    case 'subsidy_chase_pack':
       return buildZenithNlProjectsHref({ pendingSubsidy: true }, dateFilter);
+    case 'morning_brief':
+    case 'guided_playbook':
+      return null;
     case 'who_to_call':
       return null;
     case 'customer_detail_lookup': {
@@ -757,6 +765,8 @@ const PROJECT_LIST_ROW_METRICS = new Set<ZenithNlMetric>([
   'cohort_summary',
   'availing_loan',
   'pending_subsidy',
+  'subsidy_chase_pack',
+  'guided_playbook',
   'who_to_call',
   'unpaid_invoices',
   'amc_expiring',
@@ -1150,7 +1160,16 @@ export function attachAskDrillHrefs(
           return { ...row, href: '/support-tickets' };
         }
 
-        // 8) Summary KPI tables (profit / capacity) → whole cohort
+        // 8) Ops/detail project rows — prefer single-project drill when id is present
+        if (metric === 'projects_ops_detail') {
+          const pid =
+            typeof asRec.projectId === 'string' && asRec.projectId.trim()
+              ? asRec.projectId.trim()
+              : '';
+          if (pid) return { ...row, href: `/projects/${pid}`, projectId: pid };
+        }
+
+        // 9) Summary KPI tables (profit / capacity) → whole cohort
         if (cohortHref) {
           const hasSignal =
             row.metric != null ||

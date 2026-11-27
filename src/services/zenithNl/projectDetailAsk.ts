@@ -17,6 +17,7 @@ import {
   formatProjectStatusLifecycleLabel,
 } from './lifecycleInstallationStatus';
 import { isConfidentNameMatch, rankNameMatches } from './nameFuzzy';
+import { projectsHrefForAskProjectIds } from './projectsHref';
 
 const TABLE_CAP = 25;
 const ALL_ASK: UserRole[] = [
@@ -84,6 +85,74 @@ function formatDate(d: Date | null | undefined): string {
   } catch {
     return d.toISOString().slice(0, 10);
   }
+}
+
+function formatDateTime(d: Date | null | undefined): string {
+  if (!d) return '—';
+  try {
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 16).replace('T', ' ');
+  }
+}
+
+const WORD_LIMITS: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  twelve: 12,
+};
+
+/** Parse “latest ten remarks” / “last 5 notes” — default 10, cap 25. */
+export function parseLatestRemarksLimit(question: string): number {
+  const q = norm(question);
+  const m =
+    q.match(
+      /\b(?:last|latest|recent)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s+(?:project\s+)?(?:remarks?|notes?)\b/,
+    ) ||
+    q.match(
+      /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s+(?:latest|recent|last)\s+(?:project\s+)?(?:remarks?|notes?)\b/,
+    ) ||
+    q.match(
+      /\b(?:snap\s*shot|snapshot)\s+(?:of\s+)?(?:the\s+)?(?:last|latest|recent)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\b/,
+    );
+  if (!m?.[1]) return 10;
+  const raw = m[1];
+  const n = /^\d+$/.test(raw) ? parseInt(raw, 10) : WORD_LIMITS[raw];
+  if (!n || !Number.isFinite(n)) return 10;
+  return Math.max(1, Math.min(TABLE_CAP, n));
+}
+
+/** True when the ask is a chronological remarks feed, not a text search. */
+export function isLatestRemarksSnapshotQuestion(question: string): boolean {
+  const q = norm(question);
+  if (!/\b(remarks?|notes?)\b/.test(q)) return false;
+  if (/\b(mentioning|containing|about|with\s+text)\b/.test(q)) return false;
+  if (/\blast\s+remarks?\s+on\s+sl\b/.test(q)) return false;
+  return (
+    /\b(last|latest|recent)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s+(?:project\s+)?(?:remarks?|notes?)\b/.test(
+      q,
+    ) ||
+    /\b(snap\s*shot|snapshot)\b/.test(q) ||
+    /\b(latest|last|recent)\s+(?:project\s+)?(?:remarks?|notes?)\b/.test(q) ||
+    /\b(?:remarks?|notes?)\b.{0,40}\b(across|all)\s+(projects?|opportunities|deals)\b/.test(q) ||
+    /\b(?:remarks?|notes?)\s+entered\b/.test(q)
+  );
 }
 
 function money(n: number | null | undefined): string {
@@ -197,17 +266,30 @@ export function matchProjectsOpsDetailIntent(
     }
   }
 
-  const remarkSearch =
-    q.match(
-      /\b(?:projects?\s+)?(?:mentioning|containing)\s+["']?([a-z0-9][\w\s.-]{1,40})["']?/,
-    ) ||
-    q.match(
-      /\b(?:remarks?|notes?)\b(?:\s+(?:mentioning|containing|with|about|for))?\s+["']?([a-z0-9][\w\s.-]{1,40})["']?/,
-    );
-  if (slice === 'remarks' && remarkSearch?.[1]) {
-    const term = remarkSearch[1].trim();
-    if (!/^(projects?|remarks?|notes?|on|for|of|sl)$/i.test(term)) {
-      filters.search = term;
+  if (slice === 'remarks') {
+    const limit = parseLatestRemarksLimit(q);
+    filters.limit = limit;
+
+    // Snapshot / latest-N feeds must not treat filler words as a text search
+    // (bug: “remarks across Projects” → search “across Projects” → empty).
+    if (!isLatestRemarksSnapshotQuestion(q)) {
+      const remarkSearch =
+        q.match(
+          /\b(?:projects?\s+)?(?:mentioning|containing)\s+["']?([a-z0-9][\w\s.-]{1,40})["']?/,
+        ) ||
+        q.match(
+          /\b(?:remarks?|notes?)\b(?:\s+(?:mentioning|containing|with|about|for))\s+["']?([a-z0-9][\w\s.-]{1,40})["']?/,
+        );
+      if (remarkSearch?.[1]) {
+        const term = remarkSearch[1].trim();
+        if (
+          !/^(projects?|remarks?|notes?|on|for|of|sl|across|all|latest|last|recent|ten|five|snapshot|opportunities|deals|entered)$/i.test(
+            term,
+          )
+        ) {
+          filters.search = term;
+        }
+      }
     }
   }
 
@@ -218,11 +300,18 @@ export function matchProjectsOpsDetailIntent(
     filters.projectStatus = 'CONFIRMED';
   }
 
+  const hints =
+    slice === 'remarks'
+      ? filters.search
+        ? `remarks matching ${filters.search}`
+        : `latest ${filters.limit ?? 10} remarks`
+      : slice.replace(/_/g, ' ');
+
   return {
     metric: 'projects_ops_detail',
     viz: 'table',
     filters,
-    insightHints: slice.replace(/_/g, ' '),
+    insightHints: hints,
   };
 }
 
@@ -705,7 +794,7 @@ function projectDetailInclude(role: UserRole) {
 export async function execProjectsOpsDetail(
   where: Prisma.ProjectWhereInput,
   intent: ZenithNlIntent,
-): Promise<{ viz: ZenithNlViz; insight: string }> {
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
   const slice = (intent.filters?.detailSlice || '') as ProjectDetailSlice;
   if (!PROJECT_DETAIL_SLICES.includes(slice)) {
     return {
@@ -783,7 +872,7 @@ export async function execProjectsOpsDetail(
     case 'commissioning_overdue':
       return listCommissioning(base, true);
     case 'remarks':
-      return listRemarks(base, intent.filters?.search);
+      return listRemarks(base, intent.filters?.search, intent.filters?.limit);
     case 'missing_documents':
       return listMissingRelation(base, 'documents', 'Missing documents');
     case 'missing_doc_kseb':
@@ -1112,59 +1201,72 @@ async function listCommissioning(where: Prisma.ProjectWhereInput, overdueOnly: b
   };
 }
 
-async function listRemarks(where: Prisma.ProjectWhereInput, search?: string) {
+/**
+ * Latest project remarks feed (ProjectRemark rows), newest first.
+ * `where` already includes salesperson scope for Sales — so they only see their deals.
+ */
+async function listRemarks(
+  where: Prisma.ProjectWhereInput,
+  search?: string,
+  limit?: number,
+) {
   const q = search?.trim();
-  const projects = await prisma.project.findMany({
+  const take = Math.max(1, Math.min(TABLE_CAP, limit && limit > 0 ? Math.floor(limit) : 10));
+
+  const remarks = await prisma.projectRemark.findMany({
     where: {
-      ...where,
-      OR: q
-        ? [
-            { remarks: { contains: q, mode: 'insensitive' } },
-            { internalNotes: { contains: q, mode: 'insensitive' } },
-            { projectRemarks: { some: { remark: { contains: q, mode: 'insensitive' } } } },
-          ]
-        : [
-            { remarks: { not: null } },
-            { internalNotes: { not: null } },
-            { projectRemarks: { some: {} } },
-          ],
+      project: where,
+      ...(q ? { remark: { contains: q, mode: 'insensitive' } } : {}),
     },
     select: {
-      slNo: true,
-      remarks: true,
-      internalNotes: true,
-      customer: { select: { customerName: true, firstName: true } },
-      projectRemarks: {
-        select: { remark: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+      remark: true,
+      createdAt: true,
+      user: { select: { name: true } },
+      project: {
+        select: {
+          id: true,
+          slNo: true,
+          customer: { select: { customerName: true, firstName: true } },
+        },
       },
     },
-    orderBy: { updatedAt: 'desc' },
-    take: TABLE_CAP,
+    orderBy: { createdAt: 'desc' },
+    take,
   });
+
+  const projectIds = remarks.map((r) => r.project.id);
+  const projectsHref = projectsHrefForAskProjectIds(projectIds) || undefined;
+
   return {
-    insight: projects.length
-      ? `Remarks / notes on ${projects.length} projects${q ? ` matching “${q}”` : ''}.`
-      : 'No remarks match your filters.',
+    insight: remarks.length
+      ? `Latest ${remarks.length} project remark${remarks.length === 1 ? '' : 's'}${
+          q ? ` matching “${q}”` : ''
+        } (newest first).`
+      : q
+        ? `No remarks match “${q}”.`
+        : 'No project remarks found for your scope.',
     viz: {
       kind: 'table' as const,
-      title: 'Project remarks',
+      title: 'Latest project remarks',
       columns: [
+        { key: 'when', label: 'When' },
         { key: 'slNo', label: 'SL No' },
-        { key: 'customer', label: 'Customer' },
-        { key: 'remarks', label: 'Remarks' },
-        { key: 'internal', label: 'Internal' },
-        { key: 'latest', label: 'Latest remark' },
+        { key: 'project', label: 'Project' },
+        { key: 'remark', label: 'Remark' },
+        { key: 'by', label: 'By' },
       ],
-      rows: projects.map((p) => ({
-        slNo: p.slNo,
-        customer: customerLabel(p.customer),
-        remarks: (p.remarks || '—').slice(0, 80),
-        internal: (p.internalNotes || '—').slice(0, 60),
-        latest: p.projectRemarks[0]?.remark?.slice(0, 80) || '—',
+      rows: remarks.map((r) => ({
+        when: formatDateTime(r.createdAt),
+        slNo: r.project.slNo,
+        project: customerLabel(r.project.customer),
+        // Full text — Ask UI truncates with ellipsis and shows tip on hover.
+        remark: (r.remark || '—').trim() || '—',
+        by: r.user?.name?.trim() || '—',
+        projectId: r.project.id,
+        href: `/projects/${r.project.id}`,
       })),
     },
+    projectsHref,
   };
 }
 

@@ -85,7 +85,7 @@ describe('parseZenithRelativeDates', () => {
 
 describe('resolveAskDateFilter', () => {
   it('overrides command bar when question has last FY', () => {
-    const { dateFilter, relative } = resolveAskDateFilter(
+    const { dateFilter, relative, defaulted } = resolveAskDateFilter(
       'SBI loans last FY',
       { selectedFYs: ['2025-26'], selectedQuarters: ['Q1'], selectedMonths: [] },
       NOW,
@@ -93,5 +93,42 @@ describe('resolveAskDateFilter', () => {
     expect(relative?.phrase).toContain('last FY');
     expect(dateFilter.selectedFYs).toEqual(['2024-25']);
     expect(dateFilter.selectedQuarters).toEqual([]);
+    expect(defaulted).toBe(false);
+  });
+
+  it('defaults to this FY when command bar is empty and question has no period', () => {
+    const { dateFilter, relative, defaulted, defaultPhrase } = resolveAskDateFilter(
+      'Who should I call today?',
+      { selectedFYs: [], selectedQuarters: [], selectedMonths: [] },
+      NOW,
+    );
+    expect(defaulted).toBe(true);
+    expect(relative).toBeNull();
+    expect(dateFilter.selectedFYs).toEqual(['2025-26']);
+    expect(defaultPhrase).toContain('this FY');
+  });
+
+  it('applies saved Ask default period (last quarter) when bar empty', () => {
+    const { dateFilter, defaulted, defaultPhrase } = resolveAskDateFilter(
+      'Who should I call today?',
+      { selectedFYs: [], selectedQuarters: [], selectedMonths: [] },
+      NOW,
+      'last_quarter',
+    );
+    expect(defaulted).toBe(true);
+    expect(dateFilter.selectedFYs.length).toBe(1);
+    expect(dateFilter.selectedQuarters.length).toBe(1);
+    expect(defaultPhrase).toMatch(/last quarter/i);
+  });
+
+  it('applies all_time Ask default with empty date filter', () => {
+    const { dateFilter, defaultPhrase } = resolveAskDateFilter(
+      'Revenue by salesperson',
+      { selectedFYs: [], selectedQuarters: [], selectedMonths: [] },
+      NOW,
+      'all_time',
+    );
+    expect(dateFilter.selectedFYs).toEqual([]);
+    expect(defaultPhrase).toMatch(/all time/i);
   });
 });

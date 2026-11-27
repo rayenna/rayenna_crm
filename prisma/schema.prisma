@@ -165,6 +165,8 @@ model User {
   password         String
   role             UserRole
   themePreference  ThemePreference @default(DARK)
+  /// Zenith Ask prefs: { defaultPeriod, favoriteQuestions[] } — cross-device.
+  askPreferences   Json?
   resetToken       String?   @unique
   resetTokenExpiry DateTime?
   isActive         Boolean   @default(true)

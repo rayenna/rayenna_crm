@@ -22,7 +22,13 @@ The header **Ask Zenith** button opens a **draggable floating window** over the 
 **Drag the title bar** to move. **Drag the bottom-right corner** to resize. **Double-click the title** to reset. **Esc** or the title-bar **×** closes the window; **Clear** only clears the current answer. Position is remembered for this browser tab. Guide: [Ask Zenith → Floating window](/help/zenith#floating-window-laptop-desktop).
 
 ### Why don’t Ask numbers match the Zenith date filters?
-Ask uses the Zenith command-bar **FY / Quarter / Month** **only while you are on the Zenith page**. From Projects or other screens, say the period in the question (**this quarter**, **last FY**, **FY 2024-25**) or the answer is unscoped. Details: [Ask Zenith](/help/zenith#ask-zenith-natural-language).
+Ask uses the Zenith command-bar **FY / Quarter / Month** while you are **on Zenith**. From other pages (or when the bar is empty), Ask applies your **Ask prefs → Default period** (default: **this FY**), unless the question names a period (**this quarter**, **last FY**, **FY 2024-25**). Change the default under **Ask prefs** — it syncs across devices. Details: [Ask Zenith](/help/zenith#ask-zenith-natural-language).
+
+### What are Ask playbooks and Morning Ask?
+**My morning Ask** stacks 2–3 role metrics in one answer (e.g. Sales: who to call + stalled + latest payments). The **Playbooks** chips (e.g. **Chase unpaid under-install**) are guided packs with Call / WhatsApp / Payment actions — not free-form agents. Guide: [Ask Zenith → Morning Ask and guided playbooks](/help/zenith#morning-ask-and-guided-playbooks).
+
+### Can I save favorite Ask questions?
+Yes. Star a chip (**★**) or manage the list under **Ask prefs**. Favorites and your default period sync with your login across devices.
 
 ### What are the Dashboard filters (FY, Quarter, Month)?
 **Financial Year** is always available; **Quarter** and **Month** unlock when **exactly one** FY is selected. Tiles and most charts respect these filters. Details: [Dashboard → Filters](/help/dashboard#dashboard-filters) · [Year-on-Year KPIs](/help/dashboard#year-on-year-kpis).

@@ -32,6 +32,9 @@ export function enrichInsight(
     metric === 'availing_loan' ||
     metric === 'outstanding_balance' ||
     metric === 'pending_subsidy' ||
+    metric === 'subsidy_chase_pack' ||
+    metric === 'morning_brief' ||
+    metric === 'guided_playbook' ||
     metric === 'top_customers_by_profit' ||
     metric === 'top_projects_by_profit' ||
     metric === 'support_tickets_summary' ||

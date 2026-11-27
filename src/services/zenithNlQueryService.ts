@@ -119,7 +119,12 @@ import {
   matchReportAskIntent,
 } from './zenithNl/reportPackAsk';
 import { matchAskEditActionIntent } from './zenithNl/askEditActions';
+import { applyPriorToIntent } from './zenithNl/priorFilters';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
+import { execSubsidyChasePack } from './zenithNl/subsidyChaseAsk';
+import { execMorningBrief } from './zenithNl/morningAsk';
+import { execGuidedPlaybook } from './zenithNl/guidedPlaybooks';
+import type { ZenithNlAskSection } from './zenithNl/catalog';
 
 function createAnthropicClient(): Anthropic {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim() || '';
@@ -376,6 +381,17 @@ function parseIntentJson(raw: string): ZenithNlIntent | null {
           undefined,
         detailSlice:
           typeof filtersRaw.detailSlice === 'string' ? filtersRaw.detailSlice.trim() || undefined : undefined,
+        limit: (() => {
+          const raw = filtersRaw.limit;
+          const n =
+            typeof raw === 'number'
+              ? raw
+              : typeof raw === 'string' && raw.trim()
+                ? Number(raw)
+                : undefined;
+          if (n == null || !Number.isFinite(n) || n <= 0) return undefined;
+          return Math.max(1, Math.min(25, Math.floor(n)));
+        })(),
         panelCapacityWMin:
           typeof filtersRaw.panelCapacityWMin === 'number'
             ? filtersRaw.panelCapacityWMin
@@ -661,6 +677,7 @@ Rules:
   - "list fully paid projects" → projects_list_slice filters.paymentStatus=FULLY_PAID
   - "installation status breakdown" (Pending/In progress/Completed records) → installation_model_status; late-stage Project Status cohort → install_by_status
   - "payment timeline", "feasibility pending", "missing documents", "PE missing BOM", "hub station IDs", "550W panels", "lost deal details" → projects_ops_detail with filters.detailSlice
+  - "latest ten remarks" / "snapshot of latest remarks across projects" → projects_ops_detail filters.detailSlice=remarks, filters.limit=N (do NOT put words like across/projects into filters.search)
   - "stalled pipeline", "ageing/aging/aeging pipeline", "pipeline analysis", "pipeline health" → pipeline_health with filters.detailSlice stalled|ageing|analysis
   - "DCR vs Non-DCR profitability" → panel_type_mix + profit insightHints; bank/city/salesperson profitability similarly
   - "most profitable customer" / "top customers by profit" → top_customers_by_profit with filters.detailSlice=top (Completed projects only)
@@ -2496,6 +2513,7 @@ async function executeMetric(
   insight: string;
   projectsHref?: string;
   lookupMiss?: { query: string; suggestions: string[] };
+  sections?: ZenithNlAskSection[];
 }> {
   switch (metric) {
     case 'revenue_by_lead_source':
@@ -2661,6 +2679,20 @@ async function executeMetric(
       return execInstallByStatus(where);
     case 'pending_subsidy':
       return execPendingSubsidy(where);
+    case 'subsidy_chase_pack':
+      return execSubsidyChasePack(where);
+    case 'morning_brief':
+      return execMorningBrief(where, {
+        userId: ctx.userId,
+        role: ctx.role,
+        dateFilter: ctx.dateFilter,
+      });
+    case 'guided_playbook':
+      return execGuidedPlaybook(where, intent, {
+        userId: ctx.userId,
+        role: ctx.role,
+        dateFilter: ctx.dateFilter,
+      });
     case 'availing_loan':
       return execAvailingLoan(where, intent);
     default:
@@ -2761,11 +2793,13 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       ? null
       : matchHelpLookupIntent(question, input.role);
 
-  // Navigation / create / edit actions — before analytics so "create support ticket" is not a ticket count.
-  const actionMatch = helpIntentEarly
-    ? null
-    : matchAskActionIntent(question, input.role) ||
-      (await matchAskEditActionIntent(question, input.role));
+  // Navigation / create / edit actions — before free-form analytics so "create support ticket"
+  // is not a ticket count. Exact analytics chips / report packs still win (e.g. playbooks).
+  const actionMatch =
+    helpIntentEarly || analyticsChipEarly || reportIntentEarly
+      ? null
+      : matchAskActionIntent(question, input.role) ||
+        (await matchAskEditActionIntent(question, input.role));
   if (actionMatch) {
     console.info('[zenith-nl-query]', {
       role: input.role,
@@ -3021,6 +3055,12 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       (chipMatch && intent.metric === 'cohort_summary' && /revenue/i.test(question)),
   };
 
+  // Follow-ups (“as a table”, “by salesperson”) keep prior metric/filters without Claude.
+  intent = normalizeIntent(
+    applyPriorToIntent(question, intent, input.prior, input.role),
+    input.role,
+  );
+
   if (intent.metric === 'clarify') {
     if (!isZenithNlAskEnabled() && !chipMatch) {
       throw new Error('ANTHROPIC_API_KEY_MISSING');
@@ -3107,6 +3147,18 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
       fallbackHref: projectsHrefForIntent(intent.metric, intent, input.dateFilter),
     });
     const followUps = followUpsForMetric(intent.metric, input.role);
+    const sections =
+      executed.sections && executed.sections.length > 0
+        ? executed.sections.map((s) => ({
+            ...s,
+            viz: attachAskDrillHrefs(
+              s.metric,
+              s.viz,
+              { ...intent, metric: s.metric },
+              input.dateFilter,
+            ),
+          }))
+        : undefined;
 
     console.info('[zenith-nl-query]', {
       role: input.role,
@@ -3133,6 +3185,7 @@ export async function runZenithNlQuery(input: ZenithNlQueryInput): Promise<Zenit
         suggestedQuestions: suggestedQuestionsForRole(input.role, live),
         followUps,
         chipMatch,
+        ...(sections ? { sections } : {}),
       },
       dateMeta,
     );

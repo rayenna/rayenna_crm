@@ -8,11 +8,11 @@
 
 ## How to use Ask
 
-1. **Dates for analytics:** while you are **on Zenith**, Ask uses the command-bar **FY / Quarter / Month**. From **any other page**, name the period in the question — otherwise the answer is unscoped. You can always say a relative period (**last FY**, **this / last / next quarter**, **this / last / next half year** — H1 = Q1+Q2, H2 = Q3+Q4 — **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY)** or **quarter-on-quarter (QoQ)** growth / comparison for **revenue**, **gross profit**, or **average margin** — Ask compares both periods in one table. The answer eyebrow shows which filters were used. Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
+1. **Dates for analytics:** while you are **on Zenith**, Ask uses the command-bar **FY / Quarter / Month**. From **any other page** (or when the bar is empty), Ask applies your **Ask prefs → Default period** (ships as **this FY**). You can override that any time by naming a relative period in the question (**last FY**, **this / last / next quarter**, **this / last / next half year** — H1 = Q1+Q2, H2 = Q3+Q4 — **this month**, **FY 2024-25**). You can also ask **year-on-year (YoY)** or **quarter-on-quarter (QoQ)** growth / comparison for **revenue**, **gross profit**, or **average margin** — Ask compares both periods in one table. The answer eyebrow shows which filters were used (**Using … · your Ask default** when prefs applied). Example chips use your current filters unless the question itself names a period. (Date filters apply to **analytics** answers, not task shortcuts.)
 2. Open Ask with the header **Ask Zenith** button (any CRM page), **/** or **A** on Zenith (when you are not already typing in a field), or **Ask Zenith…** from the command palette (**Ctrl+K** / **⌘K**). Type a question or task, or tap **Dictate** (Chrome / Edge / Safari; allow mic permission), then press **Ask**. Dictation fills the box — it does not submit by itself. From the palette you can also type a question and choose **Ask Zenith: “…”** to open Ask and run it.
-3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over.
+3. For analytics: read the insight and the chart/table. Click a **chart bar/slice** or **table row** when links are shown to open the matching **Projects** (or Support Tickets) list. Use **Follow up** or **More questions** chips to refine without starting over. After call-list / stall / unpaid-style answers, use the cohort buttons (**Add all to My Day**, **Open these in Projects**) when shown.
 4. For tasks: Zenith navigates you to the form or list (e.g. new customer, create ticket, customers/projects search, filtered queues).
-5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. **Clear** (gold pill next to Ask) clears the current answer; history stays for your next ask. **×** on the title bar closes the window.
+5. **Recent asks** (analytics) are saved for your login on the server (up to 12) so they follow you across devices after login. A local cache keeps them available if the network blips. **Ask prefs** (default period + starred favorite chips) also sync across devices. **Clear** (gold pill next to Ask) clears the current answer; history stays for your next ask. **×** on the title bar closes the window.
 6. When available, use **Open in Projects →**, **Open in Reports →**, or **Open Support Tickets →** for the **same deals as the answer** (not the full Projects list). Stalled pipeline opens those stalled deals; a lead-source chart opens that source; **Open Support Tickets →** opens the matching ticket queue. Help answers use **Open in Help →**. Report KPI answers open the matching **Reports** pack.
 
 ## Floating window (laptop / desktop)
@@ -31,12 +31,35 @@ Ask is **disabled while Offline** (typed questions, Dictate, and example chips).
 
 ## Analytics you can ask
 
-Role packs differ — example chips under the Ask box show questions allowed for **your** role. Outside the catalog, Zenith asks you to clarify.
+Role packs differ — example chips under the Ask box show questions allowed for **your** role. Outside the catalog, Zenith asks you to clarify (and suggests catalog matches). Star a chip (**★**) to pin it as a **favorite** — favorites appear first and sync with your login.
+
+### Ask prefs (cross-device)
+
+Open **Ask prefs** above the chips (Zenith Ask tab or floating window):
+
+- **Default period** — This FY (default), This quarter, This month, Last FY, Last quarter, or All time. Used when Zenith filters are empty and the question has no dates.
+- **Favorites** — up to 8 starred questions. Unpin from the prefs panel or toggle ★ on a chip.
+
+### Morning Ask and guided playbooks
+
+These are **closed packs** (stacked steps with Call / WA / Payment actions) — not free-form agents.
+
+- **My morning Ask** — role stack of 2–3 blocks (Sales: who-to-call + stalled + latest payments; Ops: call + subsidy chase + overdue tickets; Finance: call + latest payments)
+- **Playbooks** row (role-filtered):
+  - **Chase unpaid under-install** — under-installation deals with balance + who to call next
+  - **Unstick stalled pipeline** — stalled deals + who to call *(Sales / Mgmt / Admin)*
+  - **Chase subsidy credit** — pending credit + docs gaps + owner + days waiting
+  - **Clear overdue tickets** — overdue ticket queue with Start / Close on each row *(not Finance)*
 
 ### Who to call and stalled deals
 
 - **Who should I call today?** — Hit List (overdue / stalled / going cold) plus outstanding payment chase, with a reason for each name
 - **Why is my pipeline stalling?** — Deal Health list of quiet / over-SLA deals. **Open in Projects →** opens only those stalled deals.
+
+### Subsidy chase
+
+- **Subsidy chase pack** / **List pending subsidy projects** — completed / submitted subsidy jobs awaiting credit
+- Chase rows show **owner**, **days waiting**, and **docs** gaps, with **Call** / **WhatsApp** / **Remark** on each row
 
 ### Pipeline, revenue, and equipment
 
@@ -117,12 +140,25 @@ Ask computes from the same builders as the Reports screens (role-filtered; Sales
 
 - **Where do I add the Panel and Inverter brand in CRM?** — **Project Lifecycle** on **Edit Project** (not the create form)
 - **How do I change my password?** · **What is Ask Zenith?** · **Where is the command palette?** · **How do I move Ask Zenith?**
+- **What are Ask playbooks and Morning Ask?** · **Can I save favorite Ask questions?** · **Why don’t Ask numbers match the Zenith date filters?**
 - Any **FAQ** wording works the same way (**How do I create a customer?**, **What is Needs review?**, **Who can use the Proposal Engine?**). Ask names the Help section and lists matching topics. It does **not** invent screens that are not in Help.
 - **Open Help** still jumps to Help. **How many / list / revenue** questions still use live CRM numbers.
 
 ### Act on an answer
 
-Call-list, stalled-deal, PE-missing, and ticket rows can **Call**, **WhatsApp**, **Add to My Day**, **Remark**, **Proposal** (opens Proposal Engine for that CRM project), or **Ticket** without leaving Ask. Confirm remark/ticket in the drawer.
+Call-list, stalled-deal, chase-pack, PE-missing, and ticket rows can act **without leaving Ask**. Each write asks you to **Confirm** before it saves:
+
+| Action | What it does |
+| :-- | :-- |
+| **Call** / **WhatsApp** | Opens the phone / WA link from the customer record |
+| **Add to My Day** | Pins a follow-up task for that project |
+| **Remark** | Saves a project remark; optional **Also add to My Day** |
+| **Payment** | Records a receipt (same installment routing as Finance drawer) + optional note |
+| **Proposal** | Opens Proposal Engine for that CRM project |
+| **Ticket** | Opens create-ticket for the project |
+| **Start** / **Close** | On ticket-queue rows: mark in progress (activity note) or close with a resolution |
+
+Cohort answers may also offer **Add all to My Day** and **Open these in Projects**.
 
 ### Ask everywhere
 

@@ -22,6 +22,7 @@ import {
 } from '../../utils/complianceGaps';
 import type { ZenithNlIntent, ZenithNlViz } from './catalog';
 import { formatDelta, formatGrowthPct, growthPct } from './periodCompare';
+import { projectsHrefForAskProjectIds } from './projectsHref';
 
 const TABLE_CAP = 25;
 
@@ -867,7 +868,7 @@ export async function execPaymentModeMix(
 
 export async function execUnpaidInvoices(
   where: Prisma.ProjectWhereInput,
-): Promise<{ viz: ZenithNlViz; insight: string }> {
+): Promise<{ viz: ZenithNlViz; insight: string; projectsHref?: string }> {
   const invoices = await prisma.invoice.findMany({
     where: {
       project: where,
@@ -880,6 +881,7 @@ export async function execUnpaidInvoices(
       dueDate: true,
       project: {
         select: {
+          id: true,
           slNo: true,
           customer: { select: { customerName: true, firstName: true } },
         },
@@ -897,6 +899,7 @@ export async function execUnpaidInvoices(
     _sum: { total: true },
   });
   const total = Math.round(Number(agg._sum.total) || 0);
+  const projectIds = invoices.map((i) => i.project.id);
   return {
     insight: agg._count.id
       ? `${agg._count.id} unpaid / part-paid invoices · ${formatInr(total)} (showing up to ${TABLE_CAP}).`
@@ -916,8 +919,11 @@ export async function execUnpaidInvoices(
         project: `#${i.project.slNo} ${i.project.customer?.firstName || i.project.customer?.customerName || ''}`.trim(),
         status: i.status,
         total: Math.round(Number(i.total) || 0),
+        projectId: i.project.id,
+        href: `/projects/${i.project.id}`,
       })),
     },
+    projectsHref: projectsHrefForAskProjectIds(projectIds) || undefined,
   };
 }
 

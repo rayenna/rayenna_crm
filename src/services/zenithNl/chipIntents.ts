@@ -18,6 +18,9 @@ import { matchProjectsListFilterIntent } from './listFilterAsk';
 import { matchHelpLookupIntent } from './helpLookupAsk';
 import { matchReportAskIntent } from './reportPackAsk';
 import { matchLatestPaymentsIntent } from './latestPaymentsAsk';
+import { matchMorningBriefIntent } from './morningAsk';
+import { matchSubsidyChaseIntent } from './subsidyChaseAsk';
+import { matchGuidedPlaybookIntent } from './guidedPlaybooks';
 
 function norm(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -79,6 +82,86 @@ const CHIP_INTENT_BY_NORM: Record<string, ZenithNlIntent> = {
     metric: 'pending_subsidy',
     viz: 'table',
     insightHints: 'pending subsidy',
+  },
+  [norm('Subsidy chase pack')]: {
+    metric: 'subsidy_chase_pack',
+    viz: 'table',
+    insightHints: 'subsidy chase',
+  },
+  [norm('Subsidy chase list')]: {
+    metric: 'subsidy_chase_pack',
+    viz: 'table',
+    insightHints: 'subsidy chase',
+  },
+  [norm('My morning Ask')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  [norm('Morning Ask')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  [norm('Start my day')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  // Mined from clarify/miss telemetry — exact paraphrases users already typed.
+  [norm('Who do I call this morning?')]: {
+    metric: 'who_to_call',
+    viz: 'table',
+    insightHints: 'who to call',
+  },
+  [norm('Call list for today')]: {
+    metric: 'who_to_call',
+    viz: 'table',
+    insightHints: 'who to call',
+  },
+  [norm('Pending subsidy with missing docs')]: {
+    metric: 'subsidy_chase_pack',
+    viz: 'table',
+    insightHints: 'subsidy chase',
+  },
+  [norm('Morning priorities')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  [norm('What should I work on this morning?')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  [norm('Stalled deals plus payments')]: {
+    metric: 'morning_brief',
+    viz: 'table',
+    insightHints: 'morning brief',
+  },
+  [norm('Chase unpaid under-install')]: {
+    metric: 'guided_playbook',
+    viz: 'table',
+    filters: { detailSlice: 'chase_unpaid_under_install' },
+    insightHints: 'chase unpaid under-install',
+  },
+  [norm('Unstick stalled pipeline')]: {
+    metric: 'guided_playbook',
+    viz: 'table',
+    filters: { detailSlice: 'unstick_stalled_pipeline' },
+    insightHints: 'unstick stalled pipeline',
+  },
+  [norm('Chase subsidy credit')]: {
+    metric: 'guided_playbook',
+    viz: 'table',
+    filters: { detailSlice: 'chase_subsidy_credit' },
+    insightHints: 'chase subsidy credit',
+  },
+  [norm('Clear overdue tickets')]: {
+    metric: 'guided_playbook',
+    viz: 'table',
+    filters: { detailSlice: 'clear_overdue_tickets' },
+    insightHints: 'clear overdue tickets',
   },
   [norm('Show my ageing pipeline')]: {
     metric: 'pipeline_health',
@@ -1673,6 +1756,9 @@ export function matchExactChipIntent(
       }
     }
     return (
+      matchGuidedPlaybookIntent(question, role) ||
+      matchMorningBriefIntent(question, role) ||
+      matchSubsidyChaseIntent(question, role) ||
       matchWhoToCallIntent(question, role) ||
       matchReportAskIntent(question, role) ||
       matchPipelineHealthIntent(question, role) ||

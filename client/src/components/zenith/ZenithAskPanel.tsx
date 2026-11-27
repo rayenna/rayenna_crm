@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, X } from 'lucide-react'
 import { ZenithAskIcon } from './zenithAskIcon'
@@ -15,9 +16,11 @@ import {
 } from '../../utils/zenithAskTableLayout'
 import ChartPanel from './ChartPanel'
 import { AskBarChart, AskPieChart, buildAskChartData } from './ZenithAskCharts'
-import AskRowActions, { askRowProjectId } from './AskRowActions'
+import AskRowActions, { askRowProjectId, askRowTicketId } from './AskRowActions'
+import AskCohortActions, { askMetricSupportsCohortCta } from './AskCohortActions'
 import { isPeAskHref } from '../../lib/openProposalEngine'
 import { openProposalEngineForProject, peProjectIdFromHref } from '../../lib/openProposalEngine'
+import { formatZenithFilterSummary } from '../../utils/zenithFilterSummary'
 import type { ZenithNlTableRow } from '../../types/zenithNlQuery'
 
 function AskClarifyCatalog({
@@ -93,6 +96,69 @@ function formatCell(v: string | number | null | undefined | string[]): string {
   return String(v)
 }
 
+/**
+ * Truncated in CSS. Long strings get a portal tip on hover/focus.
+ * Native `title` is unreliable in the Ask dock (delay + drag chrome).
+ */
+function AskTableCell({ value }: { value: string | number | null | undefined | string[] }) {
+  const text = formatCell(value)
+  const full = typeof value === 'string' ? value.trim() : ''
+  const tipWorthy = full.length > 40
+  const cellRef = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const [coords, setCoords] = useState<{ top: number; left: number; placeAbove: boolean } | null>(
+    null,
+  )
+
+  useLayoutEffect(() => {
+    if (!open || !cellRef.current) {
+      setCoords(null)
+      return
+    }
+    const rect = cellRef.current.getBoundingClientRect()
+    const placeAbove = rect.bottom > window.innerHeight - 140
+    setCoords({
+      top: placeAbove ? rect.top - 8 : rect.bottom + 8,
+      left: Math.min(rect.left, window.innerWidth - 320),
+      placeAbove,
+    })
+  }, [open, full])
+
+  if (!tipWorthy) {
+    return <span className="zenith-ask-table__cell">{text}</span>
+  }
+
+  return (
+    <span
+      ref={cellRef}
+      className={`zenith-ask-table__cell zenith-ask-table__cell--tip${open ? ' is-open' : ''}`}
+      tabIndex={0}
+      aria-label={full}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={() => setOpen(false)}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {text}
+      {open && coords
+        ? createPortal(
+            <span
+              className={`zenith-ask-table__tip zenith-ask-table__tip--portal${
+                coords.placeAbove ? ' is-above' : ''
+              }`}
+              role="tooltip"
+              style={{ top: coords.top, left: Math.max(8, coords.left) }}
+            >
+              {full}
+            </span>,
+            document.body,
+          )
+        : null}
+    </span>
+  )
+}
+
 function AskTableCards({
   columns,
   rows,
@@ -138,7 +204,9 @@ function AskTableCards({
                 {detailCols.map((c) => (
                   <div key={c.key} className="zenith-ask-table-cards__field">
                     <dt>{c.label}</dt>
-                    <dd>{formatCell(row[c.key] ?? null)}</dd>
+                    <dd>
+                      <AskTableCell value={row[c.key] ?? null} />
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -150,7 +218,7 @@ function AskTableCards({
             ) : null}
           </>
         )
-        const canAct = Boolean(askRowProjectId(row))
+        const canAct = Boolean(askRowProjectId(row) || askRowTicketId(row))
         return (
           <li key={i} className="zenith-ask-table-cards__item">
             {clickable ? (
@@ -184,7 +252,7 @@ function AskViz({
 }) {
   if (viz.kind === 'table') {
     const anyClickable = viz.rows.some((r) => typeof r.href === 'string' && r.href.length > 0)
-    const anyAct = viz.rows.some((r) => Boolean(askRowProjectId(r)))
+    const anyAct = viz.rows.some((r) => Boolean(askRowProjectId(r) || askRowTicketId(r)))
     const colCount = viz.columns.length + (anyAct ? 1 : 0)
     // Wide min-width so equal % columns stay readable; shared overflow-x scrolls head+body together.
     const tableMinWidthRem = Math.max(36, viz.columns.length * 7 + (anyAct ? 9 : 0))
@@ -282,7 +350,7 @@ function AskViz({
                                 key={c.key}
                                 className={clickable && c.key === 'count' ? 'is-drill' : undefined}
                               >
-                                {formatCell(row[c.key] ?? null)}
+                                <AskTableCell value={row[c.key] ?? null} />
                               </td>
                             ))}
                             {anyAct ? (
@@ -383,10 +451,15 @@ export default function ZenithAskPanel({
   }
   if (!result && !error && !loading && history.length === 0) return null
 
-  const datePhrase =
-    result?.effectiveDateFilter?.source === 'question' && result.effectiveDateFilter.phrase
-      ? result.effectiveDateFilter.phrase
-      : filterSummary
+  const ed = result?.effectiveDateFilter
+  const datePhrase = ed
+    ? ed.phrase ||
+      formatZenithFilterSummary(ed.selectedFYs, ed.selectedQuarters, ed.selectedMonths)
+    : filterSummary
+  const dateEyebrow =
+    ed?.source === 'default' && ed.phrase
+      ? `${ed.phrase} · default`
+      : datePhrase
 
   const historyOnly = !result && !error && !loading && history.length > 0
 
@@ -405,8 +478,8 @@ export default function ZenithAskPanel({
               <p className="zenith-ask-result__eyebrow">
                 <ZenithAskIcon className="inline w-3 h-3 mr-1 -mt-0.5" aria-hidden />
                 Zenith Ask
-                {datePhrase ? (
-                  <span className="zenith-ask-result__filters"> · Using {datePhrase}</span>
+                {dateEyebrow ? (
+                  <span className="zenith-ask-result__filters"> · Using {dateEyebrow}</span>
                 ) : null}
               </p>
               {result?.question ? (
@@ -538,18 +611,57 @@ export default function ZenithAskPanel({
         {result && result.ok && result.kind === 'metric' ? (
           <>
             <p className="zenith-ask-result__insight">{result.insight}</p>
-            <AskViz
-              viz={result.viz}
-              metric={result.intent.metric}
-              onDrill={(href) => {
-                trackZenithAskEvent('ask_open_projects', {
-                  role,
-                  metric: result.intent.metric,
-                  chipMatch: result.chipMatch,
-                })
-                leaveTo(href)
-              }}
-            />
+            {result.sections && result.sections.length > 0 ? (
+              result.sections.map((section, si) => (
+                <div key={`${section.metric}-${si}`} className="zenith-ask-section">
+                  <p className="zenith-ask-section__title">{section.title}</p>
+                  <p className="zenith-ask-section__insight">{section.insight}</p>
+                  {section.viz.kind === 'table' ? (
+                    <AskCohortActions
+                      metric={section.metric}
+                      rows={section.viz.rows}
+                      projectsHref={section.projectsHref ?? null}
+                      onNavigateAway={onNavigateAway}
+                    />
+                  ) : null}
+                  <AskViz
+                    viz={section.viz}
+                    metric={section.metric}
+                    onDrill={(href) => {
+                      trackZenithAskEvent('ask_open_projects', {
+                        role,
+                        metric: section.metric,
+                        chipMatch: result.chipMatch,
+                      })
+                      leaveTo(href)
+                    }}
+                  />
+                </div>
+              ))
+            ) : (
+              <>
+                {result.viz.kind === 'table' ? (
+                  <AskCohortActions
+                    metric={result.intent.metric}
+                    rows={result.viz.rows}
+                    projectsHref={result.projectsHref}
+                    onNavigateAway={onNavigateAway}
+                  />
+                ) : null}
+                <AskViz
+                  viz={result.viz}
+                  metric={result.intent.metric}
+                  onDrill={(href) => {
+                    trackZenithAskEvent('ask_open_projects', {
+                      role,
+                      metric: result.intent.metric,
+                      chipMatch: result.chipMatch,
+                    })
+                    leaveTo(href)
+                  }}
+                />
+              </>
+            )}
             {result.intent.metric === 'support_tickets_summary' &&
             result.viz.kind === 'table' &&
             result.viz.rows.length === 0 ? (
@@ -578,7 +690,13 @@ export default function ZenithAskPanel({
                 </div>
               </div>
             ) : null}
-            {result.projectsHref ? (
+            {!result.sections?.length &&
+            result.projectsHref &&
+            !(
+              result.viz.kind === 'table' &&
+              askMetricSupportsCohortCta(result.intent.metric) &&
+              result.projectsHref.startsWith('/projects')
+            ) ? (
               <Link
                 to={result.projectsHref}
                 className="zenith-ask-result__cta"

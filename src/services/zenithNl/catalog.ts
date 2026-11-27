@@ -22,6 +22,9 @@ export const ZENITH_NL_METRICS = [
   'support_tickets_summary',
   'install_by_status',
   'pending_subsidy',
+  'subsidy_chase_pack',
+  'morning_brief',
+  'guided_playbook',
   'availing_loan',
   'revenue_by_project_type',
   'revenue_by_customer_type',
@@ -145,6 +148,8 @@ export type ZenithNlIntent = {
      * (payment_timeline, feasibility_pending, missing_documents, pe_missing_bom, …).
      */
     detailSlice?: string;
+    /** Row cap for latest-N style lists (e.g. latest remarks). */
+    limit?: number;
   };
   insightHints?: string;
 };
@@ -192,10 +197,23 @@ export type ZenithNlEffectiveDateFilter = {
   selectedFYs: string[];
   selectedQuarters: string[];
   selectedMonths: string[];
-  /** command_bar = Zenith filters; question = relative/explicit phrase in the Ask. */
-  source: 'command_bar' | 'question';
-  /** e.g. "last FY (2024-25)" when source is question. */
+  /**
+   * command_bar = Zenith filters;
+   * question = relative/explicit phrase in the Ask;
+   * default = no bar / no phrase → this FY applied server-side.
+   */
+  source: 'command_bar' | 'question' | 'default';
+  /** e.g. "last FY (2024-25)" or "this FY (2025-26)" when source is question/default. */
   phrase?: string;
+};
+
+/** Stacked morning Ask / multi-metric pack blocks. */
+export type ZenithNlAskSection = {
+  metric: ZenithNlMetric;
+  title: string;
+  insight: string;
+  viz: ZenithNlViz;
+  projectsHref?: string | null;
 };
 
 export type ZenithNlQueryMetricSuccess = {
@@ -211,6 +229,8 @@ export type ZenithNlQueryMetricSuccess = {
   effectiveDateFilter?: ZenithNlEffectiveDateFilter;
   /** True when intent came from an exact example-chip match (no Claude). */
   chipMatch?: boolean;
+  /** When present (e.g. morning_brief), render each block after the summary insight. */
+  sections?: ZenithNlAskSection[];
 };
 
 /** Navigate / create from the Ask box (not an analytics answer). */
@@ -633,6 +653,27 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
     roles: [...OPS_PLUS, UserRole.FINANCE],
   },
   {
+    metric: 'subsidy_chase_pack',
+    description:
+      'Subsidy chase pack: pending credit + missing docs + owner + days waiting (Call/WA ready)',
+    defaultViz: 'table',
+    roles: [...OPS_PLUS, UserRole.FINANCE, UserRole.SALES],
+  },
+  {
+    metric: 'morning_brief',
+    description:
+      'Role morning Ask: stacks 2–3 metrics (Sales: who-to-call + stall + latest payments)',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
+    metric: 'guided_playbook',
+    description:
+      'Closed guided playbooks (e.g. chase unpaid under-install) — stacked steps, not free-form agents',
+    defaultViz: 'table',
+    roles: ALL_ASK,
+  },
+  {
     metric: 'availing_loan',
     description:
       'Projects availing loan / financing (not Lost); filter by financingBank when a bank is named (SBI, HDFC, etc.)',
@@ -649,7 +690,7 @@ export const METRIC_CATALOG: MetricCatalogEntry[] = [
   {
     metric: 'projects_ops_detail',
     description:
-      'Detail lists: payment timeline, KSEB/MNRE gaps, commissioning, remarks, missing docs/survey/install/invoice/PE/roof, hub IDs, incentive, panel W, lost reasons — pair with salesperson/ops name filters',
+      'Detail lists: payment timeline, KSEB/MNRE gaps, commissioning, latest N remarks (newest first, Sales sees own projects only), missing docs/survey/install/invoice/PE/roof, hub IDs, incentive, panel W, lost reasons — pair with salesperson/ops name filters',
     defaultViz: 'table',
     roles: ALL_ASK,
   },
@@ -734,69 +775,69 @@ export function isZenithNlMetric(v: unknown): v is ZenithNlMetric {
  */
 export const EXAMPLE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
+    'My morning Ask',
+    'Chase unpaid under-install',
     'Who should I call today?',
     'Why is my pipeline stalling?',
     'List the last five payments received',
-    'Which lead sources drove the most revenue?',
-    'Customer details for {customer}',
   ],
   MANAGEMENT: [
+    'My morning Ask',
+    'Chase unpaid under-install',
     'Who should I call today?',
-    'Why is my pipeline stalling?',
     'List the last five payments received',
     'Show open support tickets',
-    'Customer details for {customer}',
   ],
   ADMIN: [
-    'Who should I call today?',
-    'Why is my pipeline stalling?',
+    'My morning Ask',
+    'Chase unpaid under-install',
+    'Subsidy chase pack',
     'List the last five payments received',
     'Show open support tickets',
-    'Customer details for {customer}',
   ],
   OPERATIONS: [
-    'Who should I call today?',
-    'List pending subsidy projects',
-    'Projects missing documents',
+    'My morning Ask',
+    'Chase subsidy credit',
+    'Chase unpaid under-install',
     'Show open support tickets',
-    'AMCs expiring',
+    'Clear overdue tickets',
   ],
   FINANCE: [
-    'Who should I call today?',
+    'My morning Ask',
+    'Chase unpaid under-install',
     'List the last five payments received',
     'Unpaid invoices',
     'Payment status breakdown',
-    'Profit summary this quarter',
   ],
 };
 
 export const EXAMPLE_MORE_QUESTIONS_BY_ROLE: Record<string, string[]> = {
   SALES: [
-    'Where do I add the Panel and Inverter brand in CRM?',
+    'Call list for today',
+    'Subsidy chase pack',
     'Sales Review achievement',
-    'Funnel Velocity SLA red',
     'Show my ageing pipeline',
   ],
   MANAGEMENT: [
-    'Where do I add the Panel and Inverter brand in CRM?',
+    'Morning priorities',
+    'Subsidy chase pack',
     'Sales Review achievement',
     'Margin & Mix summary',
-    'DCR vs Non-DCR profitability',
   ],
   ADMIN: [
-    'Where do I add the Panel and Inverter brand in CRM?',
-    'Sales Review achievement',
+    'What should I work on this morning?',
+    'Chase subsidy credit',
     'Delivery Control blockers',
     'List lost deals with active PE proposals',
   ],
   OPERATIONS: [
-    'Where do I add the Panel and Inverter brand in CRM?',
+    'Pending subsidy with missing docs',
     'Delivery Control blockers',
     'Subsidy clock',
     'Projects with feasibility pending',
   ],
   FINANCE: [
-    'Where do I add the Panel and Inverter brand in CRM?',
+    'Stalled deals plus payments',
     'Collections outstanding',
     'Thin margin jobs',
     'Payment mode mix',
@@ -825,6 +866,9 @@ const METRIC_EXAMPLE_ASK: Partial<Record<ZenithNlMetric, string>> = {
   support_tickets_summary: 'Show open support tickets',
   install_by_status: 'Show installation status breakdown',
   pending_subsidy: 'List pending subsidy projects',
+  subsidy_chase_pack: 'Subsidy chase pack',
+  morning_brief: 'My morning Ask',
+  guided_playbook: 'Chase unpaid under-install',
   availing_loan: 'Which projects are availing loan?',
   revenue_by_project_type: 'Subsidy vs non-subsidy revenue',
   revenue_by_customer_type: 'Revenue by customer type',
@@ -1052,9 +1096,24 @@ export function followUpsForMetric(metric: ZenithNlMetric, role: UserRole): stri
       'What capacity have we sold?',
     ],
     pending_subsidy: [
+      'Subsidy chase pack',
       'Show installation status breakdown',
       'Payment status breakdown',
-      'Show Completed projects',
+    ],
+    subsidy_chase_pack: [
+      'List pending subsidy projects',
+      'Projects missing documents',
+      'Who should I call today?',
+    ],
+    morning_brief: [
+      'Who should I call today?',
+      'Why is my pipeline stalling?',
+      'List the last five payments received',
+    ],
+    guided_playbook: [
+      'Chase unpaid under-install',
+      'Unstick stalled pipeline',
+      'My morning Ask',
     ],
     availing_loan: [
       'Payment status breakdown',

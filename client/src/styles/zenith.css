@@ -2326,6 +2326,46 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   vertical-align: top;
 }
 
+/* Inner span keeps ellipsis; long cells open a custom tip on hover/focus. */
+.zenith-root .zenith-ask-table__body td .zenith-ask-table__cell {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zenith-root .zenith-ask-table__body td .zenith-ask-table__cell--tip {
+  cursor: help;
+}
+
+/* Portal tip — fixed to viewport so dock overflow / drag chrome cannot clip it. */
+.zenith-ask-table__tip--portal {
+  position: fixed;
+  z-index: 8000;
+  min-width: 12rem;
+  max-width: min(28rem, 70vw);
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold, #d4a017) 35%, #444);
+  background: color-mix(in srgb, #1c1c1c 94%, #000);
+  color: #f3f3f3;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  transform: translateY(0);
+}
+
+.zenith-ask-table__tip--portal.is-above {
+  transform: translateY(-100%);
+}
+
 .zenith-root .zenith-ask-table__body tr:last-child td {
   border-bottom: 0;
 }
@@ -2747,6 +2787,55 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 
 .zenith-root .zenith-ask-result--history-only .zenith-ask-history {
   width: 100%;
+}
+
+.zenith-root .zenith-ask-cohort-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  margin: 0.65rem 0 0.35rem;
+}
+
+.zenith-root .zenith-ask-cohort-actions__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 45%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-gold) 18%, var(--bg-card));
+  color: var(--accent-gold);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zenith-root .zenith-ask-cohort-actions__primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-gold) 28%, var(--bg-card));
+}
+
+.zenith-root .zenith-ask-cohort-actions__primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.zenith-root .zenith-ask-cohort-actions__secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--accent-teal);
+  text-decoration: none;
+}
+
+.zenith-root .zenith-ask-cohort-actions__secondary:hover {
+  text-decoration: underline;
 }
 
 .zenith-root .zenith-ask-result__cta {
@@ -3193,6 +3282,200 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   color: var(--text-primary);
   font-size: 0.75rem;
   padding: 0.35rem 0.5rem;
+}
+
+.zenith-ask-row-actions__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.zenith-ask-row-actions__pay-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.zenith-ask-row-actions__input {
+  flex: 1 1 7rem;
+  min-width: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.zenith-ask-row-actions__confirm {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.zenith-ask-row-actions__confirm-msg {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.zenith-ask-row-actions__confirm-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.zenith-ask-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.zenith-ask-section__title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.zenith-ask-section__insight {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.zenith-ask-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+}
+
+.zenith-ask-fav {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 0.15rem 0.2rem;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.zenith-ask-fav.is-on,
+.zenith-ask-fav:hover {
+  color: var(--accent-gold);
+  opacity: 1;
+}
+
+.zenith-ask-prefs {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.zenith-ask-prefs--dense {
+  margin: 0.25rem 0 0.4rem;
+}
+
+.zenith-ask-prefs__toggle {
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.zenith-ask-prefs__panel {
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.zenith-ask-prefs__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.zenith-ask-prefs__field select {
+  border-radius: 0.45rem;
+  border: 1px solid var(--border-default);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.45rem;
+}
+
+.zenith-ask-prefs__hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.zenith-ask-prefs__favorites {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.zenith-ask-prefs__favorites li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-primary);
+}
+
+.zenith-ask-prefs__unpin {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.zenith-ask-playbooks {
+  margin-top: 0.55rem;
+}
+
+.zenith-ask-playbooks__label {
+  display: block;
+  margin: 0 0 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .zenith-root .zenith-ask-demo,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { UserRole } from '@prisma/client';
 import {
+  isLatestRemarksSnapshotQuestion,
   matchProjectDetailLookupIntent,
   matchProjectsOpsDetailIntent,
+  parseLatestRemarksLimit,
 } from './projectDetailAsk';
 
 describe('matchProjectDetailLookupIntent', () => {
@@ -82,6 +84,36 @@ describe('matchProjectsOpsDetailIntent', () => {
       matchProjectsOpsDetailIntent('incentive eligible projects', UserRole.FINANCE)?.filters
         ?.detailSlice,
     ).toBe('incentive_eligible');
+  });
+
+  it('latest remarks snapshot does not invent a text search', () => {
+    const snap = matchProjectsOpsDetailIntent(
+      'Give a snap shot of the latest ten remarks across Projects',
+      UserRole.SALES,
+    );
+    expect(snap?.filters?.detailSlice).toBe('remarks');
+    expect(snap?.filters?.search).toBeUndefined();
+    expect(snap?.filters?.limit).toBe(10);
+
+    const lastFive = matchProjectsOpsDetailIntent(
+      'latest five remarks',
+      UserRole.MANAGEMENT,
+    );
+    expect(lastFive?.filters?.detailSlice).toBe('remarks');
+    expect(lastFive?.filters?.search).toBeUndefined();
+    expect(lastFive?.filters?.limit).toBe(5);
+  });
+});
+
+describe('parseLatestRemarksLimit / isLatestRemarksSnapshotQuestion', () => {
+  it('parses N and snapshot phrasing', () => {
+    expect(parseLatestRemarksLimit('latest ten remarks')).toBe(10);
+    expect(parseLatestRemarksLimit('last 5 project notes')).toBe(5);
+    expect(
+      parseLatestRemarksLimit('Give a snap shot of the latest ten remarks across Projects'),
+    ).toBe(10);
+    expect(isLatestRemarksSnapshotQuestion('latest remarks across projects')).toBe(true);
+    expect(isLatestRemarksSnapshotQuestion('projects mentioning delay')).toBe(false);
   });
 });
 

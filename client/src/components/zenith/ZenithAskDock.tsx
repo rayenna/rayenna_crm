@@ -10,6 +10,15 @@ import ZenithAskComposer from './ZenithAskComposer'
 
 const ZenithAskPanel = lazy(() => import('./ZenithAskPanel'))
 import { zenithAskExampleChips } from '../../constants/zenithAskExamples'
+import { useZenithAskPreferences } from '../../hooks/useZenithAskPreferences'
+import ZenithAskPrefsBar from './ZenithAskPrefsBar'
+import AskChipWithFav from './AskChipWithFav'
+import {
+  mergeFavoriteAskChips,
+  type ZenithAskPreferences,
+  writeZenithAskPreferences,
+} from '../../utils/zenithAskPreferencesStorage'
+import toast from 'react-hot-toast'
 import {
   readZenithAskHistory,
   writeZenithAskHistory,
@@ -31,9 +40,25 @@ import {
 
 function isAskDockInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
+  // Body / composer / results must not start a drag — that fights hover tooltips on table cells.
   return Boolean(
     target.closest(
-      'button, a, input, textarea, select, label, [role="button"], [contenteditable="true"], .zenith-ask-dock__resize',
+      [
+        'button',
+        'a',
+        'input',
+        'textarea',
+        'select',
+        'label',
+        '[role="button"]',
+        '[contenteditable="true"]',
+        '.zenith-ask-dock__resize',
+        '.zenith-ask-dock__composer',
+        '.zenith-ask-dock__body',
+        '.zenith-ask-table',
+        '.zenith-ask-table__cell',
+        '.zenith-ask-table__tip',
+      ].join(', '),
     ),
   )
 }
@@ -63,6 +88,7 @@ export default function ZenithAskDock() {
   const onZenith = location.pathname.startsWith('/zenith')
   const allowed = Boolean(user?.role && ASK_ROLES.includes(user.role))
   const [open, setOpen] = useState(false)
+  const askPrefs = useZenithAskPreferences(user?.id, Boolean(allowed && isOnline && open))
   const [askValue, setAskValue] = useState('')
   const [askLoading, setAskLoading] = useState(false)
   const [askError, setAskError] = useState<string | null>(null)
@@ -448,10 +474,34 @@ export default function ZenithAskDock() {
 
   if (!allowed || !open || (onZenith && narrow)) return null
 
-  const chips = zenithAskExampleChips(user?.role)
+  const chips = mergeFavoriteAskChips(
+    askPrefs.preferences.favoriteQuestions,
+    zenithAskExampleChips(user?.role),
+    8,
+  )
+  const playbookChips = askPrefs.playbooks
   const mapped = askLoading ? zenithAskMappedLabel(askValue) : null
   const dates = getZenithAskDateFilters()
   const filterSummary = formatZenithFilterSummary(dates.fy, dates.quarter, dates.month)
+
+  const saveAskFavorites = async (favoriteQuestions: string[]) => {
+    if (!user?.id) return
+    const next = { ...askPrefs.preferences, favoriteQuestions }
+    askPrefs.setPreferences(next)
+    writeZenithAskPreferences(user.id, next)
+    try {
+      const { data } = await axiosInstance.put<{ preferences: ZenithAskPreferences }>(
+        '/api/dashboard/zenith-ask-preferences',
+        next,
+      )
+      if (data?.preferences) {
+        askPrefs.setPreferences(data.preferences)
+        writeZenithAskPreferences(user.id, data.preferences)
+      }
+    } catch (err: unknown) {
+      toast.error(getFriendlyApiErrorMessage(err) || 'Could not save favorite')
+    }
+  }
   const overlay = (
     <div className="zenith-ask-dock-layer">
       <div
@@ -476,9 +526,8 @@ export default function ZenithAskDock() {
           if (isAskDockInteractiveTarget(e.target)) return
           resetFrame()
         }}
-        title="Drag anywhere to move · double-click empty area to reset"
       >
-        <div className="zenith-ask-dock__bar">
+        <div className="zenith-ask-dock__bar" aria-label="Drag header to move Ask Zenith">
           <p className="zenith-ask-dock__title">
             <ZenithAskIcon className="h-4 w-4 text-[color:var(--accent-gold)]" aria-hidden />
             Ask Zenith
@@ -511,18 +560,42 @@ export default function ZenithAskDock() {
         <div className="zenith-ask-dock__body">
           {!askResult && !askLoading && !askError ? (
             <div className="zenith-ask-dock__prompts">
+              {user?.id ? (
+                <ZenithAskPrefsBar
+                  userId={user.id}
+                  preferences={askPrefs.preferences}
+                  onPreferencesChange={askPrefs.setPreferences}
+                  dense
+                />
+              ) : null}
+              {playbookChips.length > 0 ? (
+                <div className="zenith-ask-playbooks">
+                  <span className="zenith-ask-playbooks__label">Playbooks</span>
+                  <div className="zenith-ask-examples zenith-ask-examples--panel">
+                    {playbookChips.map((q) => (
+                      <AskChipWithFav
+                        key={q}
+                        question={q}
+                        disabled={!isOnline}
+                        preferences={askPrefs.preferences}
+                        onFavoritesChange={(next) => void saveAskFavorites(next)}
+                        onAsk={() => void runAsk(q, 'chip')}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <span className="zenith-ask-examples__label">Try asking</span>
               <div className="zenith-ask-examples zenith-ask-examples--panel">
                 {chips.map((q) => (
-                  <button
+                  <AskChipWithFav
                     key={q}
-                    type="button"
+                    question={q}
                     disabled={!isOnline}
-                    className="zenith-ask-examples__chip"
-                    onClick={() => void runAsk(q, 'chip')}
-                  >
-                    {q}
-                  </button>
+                    preferences={askPrefs.preferences}
+                    onFavoritesChange={(next) => void saveAskFavorites(next)}
+                    onAsk={() => void runAsk(q, 'chip')}
+                  />
                 ))}
               </div>
             </div>

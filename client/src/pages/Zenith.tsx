@@ -11,6 +11,15 @@ import CommandBar from '../components/zenith/CommandBar'
 import ZenithAskComposer from '../components/zenith/ZenithAskComposer'
 import ZenithAskPanel from '../components/zenith/ZenithAskPanel'
 import ZenithAskAdoptionStats from '../components/zenith/ZenithAskAdoptionStats'
+import ZenithAskPrefsBar from '../components/zenith/ZenithAskPrefsBar'
+import AskChipWithFav from '../components/zenith/AskChipWithFav'
+import { useZenithAskPreferences } from '../hooks/useZenithAskPreferences'
+import {
+  mergeFavoriteAskChips,
+  type ZenithAskPreferences,
+  writeZenithAskPreferences,
+} from '../utils/zenithAskPreferencesStorage'
+import toast from 'react-hot-toast'
 import DailyBriefing from '../components/zenith/DailyBriefing'
 import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
@@ -167,30 +176,70 @@ const Zenith = () => {
     selectedQuarters,
     selectedMonths,
   )
+  const askPrefs = useZenithAskPreferences(user?.id, Boolean(showZenithAsk && isOnline))
   const askExamplesQ = useQuery({
     queryKey: ['zenith-ask-examples', user?.id],
     queryFn: async () => {
-      const { data } = await axiosInstance.get<{ chips?: string[]; more?: string[] }>(
-        '/api/dashboard/zenith-ask-examples',
-      )
+      const { data } = await axiosInstance.get<{
+        chips?: string[]
+        more?: string[]
+        playbooks?: string[]
+        preferences?: ZenithAskPreferences
+      }>('/api/dashboard/zenith-ask-examples')
+      if (data.preferences) {
+        askPrefs.setPreferences(data.preferences)
+        writeZenithAskPreferences(user?.id, data.preferences)
+      }
       return {
         chips: Array.isArray(data.chips) ? data.chips.filter((q) => q.trim()) : [],
         more: Array.isArray(data.more) ? data.more.filter((q) => q.trim()) : [],
+        playbooks: Array.isArray(data.playbooks)
+          ? data.playbooks.filter((q) => typeof q === 'string' && q.trim())
+          : [],
       }
     },
     enabled: Boolean(user?.id && showZenithAsk && isOnline),
     staleTime: ZENITH_QUERY_STALE_MS,
   })
-  const askExampleChips =
+  const askExampleChips = mergeFavoriteAskChips(
+    askPrefs.preferences.favoriteQuestions,
     askExamplesQ.data?.chips && askExamplesQ.data.chips.length > 0
       ? askExamplesQ.data.chips
-      : zenithAskExampleChips(user?.role)
+      : zenithAskExampleChips(user?.role),
+    8,
+  )
   const askDemoChips = zenithAskDemoChips(user?.role)
   const askTryChips = zenithAskTryChips(askExampleChips, askDemoChips)
   const askMoreChips =
     askExamplesQ.data?.more && askExamplesQ.data.more.length > 0
       ? askExamplesQ.data.more
       : zenithAskMoreChips(user?.role)
+  const askPlaybookChips =
+    askExamplesQ.data?.playbooks && askExamplesQ.data.playbooks.length > 0
+      ? askExamplesQ.data.playbooks
+      : askPrefs.playbooks
+
+  const saveAskFavorites = useCallback(
+    async (favoriteQuestions: string[]) => {
+      if (!user?.id) return
+      const next = { ...askPrefs.preferences, favoriteQuestions }
+      askPrefs.setPreferences(next)
+      writeZenithAskPreferences(user.id, next)
+      try {
+        const { data } = await axiosInstance.put<{ preferences: ZenithAskPreferences }>(
+          '/api/dashboard/zenith-ask-preferences',
+          next,
+        )
+        if (data?.preferences) {
+          askPrefs.setPreferences(data.preferences)
+          writeZenithAskPreferences(user.id, data.preferences)
+        }
+      } catch (err: unknown) {
+        toast.error(getFriendlyApiErrorMessage(err) || 'Could not save favorite')
+      }
+    },
+    [askPrefs, user?.id],
+  )
   const showAskSideSuggestions = Boolean(
     showZenithAsk && user?.role && !askResult && !askLoading && !askError,
   )
@@ -807,6 +856,13 @@ const Zenith = () => {
           ) : null}
           {showAskSideSuggestions ? (
             <aside className="zenith-ask-suggestions" aria-label="Example questions">
+              {user?.id ? (
+                <ZenithAskPrefsBar
+                  userId={user.id}
+                  preferences={askPrefs.preferences}
+                  onPreferencesChange={askPrefs.setPreferences}
+                />
+              ) : null}
               {isOnline ? (
                 <div className="zenith-ask-demo">
                   <span className="zenith-ask-demo__label">Guided demo</span>
@@ -828,6 +884,29 @@ const Zenith = () => {
                   <ZenithAskAdoptionStats />
                 </div>
               ) : null}
+              {askPlaybookChips.length > 0 ? (
+                <div className="zenith-ask-playbooks" aria-label="Guided playbooks">
+                  <span className="zenith-ask-playbooks__label">Playbooks</span>
+                  <div className="zenith-ask-examples zenith-ask-examples--panel">
+                    {askPlaybookChips.map((q) => (
+                      <AskChipWithFav
+                        key={q}
+                        question={q}
+                        disabled={!isOnline}
+                        preferences={askPrefs.preferences}
+                        onFavoritesChange={(next) => void saveAskFavorites(next)}
+                        onAsk={() => {
+                          trackZenithAskEvent('ask_chip_click', {
+                            role: user?.role,
+                            source: 'chip',
+                          })
+                          void runZenithAsk(q, 'chip')
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {askTryChips.length > 0 ? (
                 <>
                   <div className="zenith-ask-suggestions__head">
@@ -843,18 +922,20 @@ const Zenith = () => {
                   </div>
                   <div className="zenith-ask-examples zenith-ask-examples--panel">
                     {askTryChips.map((q) => (
-                      <button
+                      <AskChipWithFav
                         key={q}
-                        type="button"
+                        question={q}
                         disabled={!isOnline}
-                        onClick={() => {
-                          trackZenithAskEvent('ask_chip_click', { role: user?.role, source: 'chip' })
+                        preferences={askPrefs.preferences}
+                        onFavoritesChange={(next) => void saveAskFavorites(next)}
+                        onAsk={() => {
+                          trackZenithAskEvent('ask_chip_click', {
+                            role: user?.role,
+                            source: 'chip',
+                          })
                           void runZenithAsk(q, 'chip')
                         }}
-                        className="zenith-ask-examples__chip"
-                      >
-                        {q}
-                      </button>
+                      />
                     ))}
                   </div>
                 </>

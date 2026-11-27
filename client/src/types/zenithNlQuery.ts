@@ -90,8 +90,17 @@ export type ZenithNlEffectiveDateFilter = {
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
-  source: 'command_bar' | 'question'
+  source: 'command_bar' | 'question' | 'default'
   phrase?: string
+}
+
+/** Stacked morning Ask / multi-metric pack blocks. */
+export type ZenithNlAskSection = {
+  metric: string
+  title: string
+  insight: string
+  viz: ZenithNlViz
+  projectsHref?: string | null
 }
 
 export type ZenithNlQueryMetricSuccess = {
@@ -106,6 +115,8 @@ export type ZenithNlQueryMetricSuccess = {
   followUps?: string[]
   effectiveDateFilter?: ZenithNlEffectiveDateFilter
   chipMatch?: boolean
+  /** When present (e.g. morning_brief), render each block after the summary insight. */
+  sections?: ZenithNlAskSection[]
 }
 
 export type ZenithNlQueryActionSuccess = {

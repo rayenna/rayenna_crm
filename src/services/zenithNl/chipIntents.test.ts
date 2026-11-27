@@ -9,6 +9,21 @@ import {
 import { extractZenithDimensions, mergeDimensionsIntoIntent } from './dimensionFilters';
 
 describe('matchExactChipIntent', () => {
+  it('matches My morning Ask, playbooks, and Subsidy chase pack chips', () => {
+    expect(matchExactChipIntent('My morning Ask', UserRole.SALES)?.metric).toBe('morning_brief');
+    expect(matchExactChipIntent('Start my day', UserRole.ADMIN)?.metric).toBe('morning_brief');
+    expect(matchExactChipIntent('Chase unpaid under-install', UserRole.SALES)?.metric).toBe(
+      'guided_playbook',
+    );
+    expect(
+      matchExactChipIntent('Chase unpaid under-install', UserRole.SALES)?.filters?.detailSlice,
+    ).toBe('chase_unpaid_under_install');
+    expect(matchExactChipIntent('Subsidy chase pack', UserRole.OPERATIONS)?.metric).toBe(
+      'subsidy_chase_pack',
+    );
+    expect(matchExactChipIntent('Call list for today', UserRole.SALES)?.metric).toBe('who_to_call');
+  });
+
   it('matches least vs most profitable customer without Claude', () => {
     const least = matchExactChipIntent('who is my least profitable customer', UserRole.MANAGEMENT);
     expect(least?.metric).toBe('top_customers_by_profit');

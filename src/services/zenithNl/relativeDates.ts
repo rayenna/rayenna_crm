@@ -1,4 +1,5 @@
 import { calculateFYInIst, calendarYmdInTimeZone } from '../../utils/istCalendar';
+import type { AskDefaultPeriod } from './askPreferences';
 import type { ZenithNlDateFilter } from './projectsHref';
 
 export type ZenithRelativeDateParse = ZenithNlDateFilter & {
@@ -297,25 +298,108 @@ export function parseZenithRelativeDates(
   return null;
 }
 
-/** Merge question dates over command-bar dates when a relative phrase is present. */
+function commandBarHasDates(commandBar: ZenithNlDateFilter): boolean {
+  return (
+    (commandBar.selectedFYs?.length ?? 0) > 0 ||
+    (commandBar.selectedQuarters?.length ?? 0) > 0 ||
+    (commandBar.selectedMonths?.length ?? 0) > 0
+  );
+}
+
+/** Saved Ask default period → date filter when bar + question have no dates. */
+export function dateFilterFromAskDefaultPeriod(
+  period: AskDefaultPeriod | null | undefined,
+  now: Date = new Date(),
+): { dateFilter: ZenithNlDateFilter; phrase: string } {
+  const cur = currentFyQuarterMonth(now);
+  const p = period || 'current_fy';
+  if (p === 'all_time') {
+    return {
+      dateFilter: { selectedFYs: [], selectedQuarters: [], selectedMonths: [] },
+      phrase: 'all time (your Ask default)',
+    };
+  }
+  if (p === 'last_fy') {
+    const fy = getPreviousFY(cur.fy) || cur.fy;
+    return {
+      dateFilter: { selectedFYs: [fy], selectedQuarters: [], selectedMonths: [] },
+      phrase: `last FY (${fy}) · your Ask default`,
+    };
+  }
+  if (p === 'current_quarter') {
+    return {
+      dateFilter: {
+        selectedFYs: [cur.fy],
+        selectedQuarters: [cur.quarter],
+        selectedMonths: [],
+      },
+      phrase: `this quarter (${cur.fy} · ${cur.quarter}) · your Ask default`,
+    };
+  }
+  if (p === 'last_quarter') {
+    const prev = previousQuarter(cur.fy, cur.quarter);
+    return {
+      dateFilter: {
+        selectedFYs: [prev.fy],
+        selectedQuarters: [prev.quarter],
+        selectedMonths: [],
+      },
+      phrase: `last quarter (${prev.fy} · ${prev.quarter}) · your Ask default`,
+    };
+  }
+  if (p === 'current_month') {
+    return {
+      dateFilter: {
+        selectedFYs: [cur.fy],
+        selectedQuarters: [],
+        selectedMonths: [cur.month],
+      },
+      phrase: `this month (${cur.fy} · ${cur.month}) · your Ask default`,
+    };
+  }
+  return {
+    dateFilter: { selectedFYs: [cur.fy], selectedQuarters: [], selectedMonths: [] },
+    phrase: `this FY (${cur.fy}) · your Ask default`,
+  };
+}
+
+/**
+ * Merge question dates over command-bar dates when a relative phrase is present.
+ * When the command bar is empty (Ask off Zenith) and the question has no period,
+ * apply the user’s saved Ask default period (else current Indian FY).
+ */
 export function resolveAskDateFilter(
   question: string,
   commandBar: ZenithNlDateFilter,
   now: Date = new Date(),
+  preferredDefaultPeriod?: AskDefaultPeriod | null,
 ): {
   dateFilter: ZenithNlDateFilter;
   relative: ZenithRelativeDateParse | null;
+  /** True when a default period was applied because bar + question had no dates. */
+  defaulted: boolean;
+  defaultPhrase?: string;
 } {
   const relative = parseZenithRelativeDates(question, now);
-  if (!relative) {
-    return { dateFilter: commandBar, relative: null };
+  if (relative) {
+    return {
+      dateFilter: {
+        selectedFYs: relative.selectedFYs,
+        selectedQuarters: relative.selectedQuarters,
+        selectedMonths: relative.selectedMonths,
+      },
+      relative,
+      defaulted: false,
+    };
   }
-  return {
-    dateFilter: {
-      selectedFYs: relative.selectedFYs,
-      selectedQuarters: relative.selectedQuarters,
-      selectedMonths: relative.selectedMonths,
-    },
-    relative,
-  };
+  if (!commandBarHasDates(commandBar)) {
+    const fromPref = dateFilterFromAskDefaultPeriod(preferredDefaultPeriod ?? 'current_fy', now);
+    return {
+      dateFilter: fromPref.dateFilter,
+      relative: null,
+      defaulted: true,
+      defaultPhrase: fromPref.phrase,
+    };
+  }
+  return { dateFilter: commandBar, relative: null, defaulted: false };
 }

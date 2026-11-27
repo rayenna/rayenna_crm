@@ -37,6 +37,7 @@ import {
   paymentCollectionDateInputMax,
   formatPaymentCollectionDateLabel,
 } from '../../utils/paymentCollectionDate'
+import { buildAskFinancePaymentBody as buildFinanceRadarPaymentBody } from '../../utils/askFinancePaymentBody'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -65,59 +66,6 @@ function paymentStatusLabel(s: PaymentStatus | string | null | undefined): strin
   if (s === PaymentStatus.PARTIAL) return 'Partial'
   if (s === PaymentStatus.FULLY_PAID) return 'Fully paid'
   return String(s)
-}
-
-/**
- * Route a new receipt from Payment radar → Finance drawer to PAYMENT TRACKING fields (same PUT as project form).
- * - If amount ≥ balance pending → Last Payment (+ date) only; server recalculates totals / status.
- * - If Pending and amount &lt; balance → Advance Received (+ date).
- * - If Partial and amount &lt; balance → Payment 1, then 2, then 3; further receipts add to Payment 3.
- */
-function buildFinanceRadarPaymentBody(
-  project: Project,
-  add: number,
-  paymentDateIso: string,
-): Record<string, unknown> {
-  const balance = Number(project.balanceAmount ?? 0)
-  const prevAdv = Number(project.advanceReceived ?? 0)
-  const p1 = Number(project.payment1 ?? 0)
-  const p2 = Number(project.payment2 ?? 0)
-  const p3 = Number(project.payment3 ?? 0)
-  const prevLast = Number(project.lastPayment ?? 0)
-
-  if (add >= balance) {
-    return {
-      lastPayment: prevLast + add,
-      lastPaymentDate: paymentDateIso,
-    }
-  }
-
-  if (project.paymentStatus === PaymentStatus.PENDING) {
-    return {
-      advanceReceived: prevAdv + add,
-      advanceReceivedDate: paymentDateIso,
-    }
-  }
-
-  if (prevAdv <= 0) {
-    return {
-      advanceReceived: add,
-      advanceReceivedDate: paymentDateIso,
-    }
-  }
-  if (p1 <= 0) {
-    return { payment1: add, payment1Date: paymentDateIso }
-  }
-  if (p2 <= 0) {
-    return { payment2: add, payment2Date: paymentDateIso }
-  }
-  if (p3 <= 0) {
-    return { payment3: add, payment3Date: paymentDateIso }
-  }
-  return {
-    payment3: p3 + add,
-    payment3Date: paymentDateIso,
-  }
 }
 
 function mergeFinanceRadarPaymentCache(project: Project, body: Record<string, unknown>): Partial<Project> {

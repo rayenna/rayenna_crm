@@ -30,6 +30,14 @@ import { resolveAskDateFilter } from '../services/zenithNl/relativeDates';
 import { parsePeriodCompare } from '../services/zenithNl/periodCompare';
 import { parseZenithNlPriorFilters } from '../services/zenithNl/priorFilters';
 import { listUserAskHistory, persistUserAskHistory } from '../services/zenithNl/askHistory';
+import {
+  getUserAskPreferences,
+  mergeFavoriteAskChips,
+  upsertUserAskPreferences,
+  type AskDefaultPeriod,
+  isAskDefaultPeriod,
+} from '../services/zenithNl/askPreferences';
+import { playbookAsksForRole } from '../services/zenithNl/guidedPlaybooks';
 import { loadLiveAskBook } from '../services/zenithNl/askExampleLive';
 import { moreQuestionsForRole, suggestedQuestionsForRole } from '../services/zenithNl/catalog';
 import { logZenithAskEvent } from '../utils/auditLogger';
@@ -3381,29 +3389,43 @@ router.post(
       let dateFilter = commandBarDates;
       let relative: { phrase: string } | null = null;
       let compareDateFilter: typeof commandBarDates | null = null;
+      let dateSource: 'command_bar' | 'question' | 'default' = 'command_bar';
       if (periodCompare) {
         dateFilter = periodCompare.primary;
         compareDateFilter = periodCompare.prior;
         relative = { phrase: periodCompare.phrase };
+        dateSource = 'question';
       } else {
-        const resolved = resolveAskDateFilter(question, commandBarDates);
+        let preferredDefault: AskDefaultPeriod | null = null;
+        try {
+          preferredDefault = (await getUserAskPreferences(userId)).defaultPeriod;
+        } catch {
+          preferredDefault = null;
+        }
+        const resolved = resolveAskDateFilter(
+          question,
+          commandBarDates,
+          new Date(),
+          preferredDefault,
+        );
         dateFilter = resolved.dateFilter;
-        relative = resolved.relative;
+        if (resolved.relative) {
+          relative = { phrase: resolved.relative.phrase };
+          dateSource = 'question';
+        } else if (resolved.defaulted) {
+          relative = { phrase: resolved.defaultPhrase || 'this FY' };
+          dateSource = 'default';
+        } else {
+          dateSource = 'command_bar';
+        }
       }
-      const effectiveDateFilter = relative
-        ? {
-            selectedFYs: dateFilter.selectedFYs,
-            selectedQuarters: dateFilter.selectedQuarters,
-            selectedMonths: dateFilter.selectedMonths,
-            source: 'question' as const,
-            phrase: relative.phrase,
-          }
-        : {
-            selectedFYs: dateFilter.selectedFYs,
-            selectedQuarters: dateFilter.selectedQuarters,
-            selectedMonths: dateFilter.selectedMonths,
-            source: 'command_bar' as const,
-          };
+      const effectiveDateFilter = {
+        selectedFYs: dateFilter.selectedFYs,
+        selectedQuarters: dateFilter.selectedQuarters,
+        selectedMonths: dateFilter.selectedMonths,
+        source: dateSource,
+        ...(relative?.phrase ? { phrase: relative.phrase } : {}),
+      };
 
       const baseWhere: Record<string, unknown> = {};
       if (role === UserRole.SALES) {
@@ -3471,7 +3493,12 @@ router.post(
           userId,
           role,
           event: 'ask_clarify',
-          summary: { ms, relativeDate: relative?.phrase || null },
+          summary: {
+            ms,
+            relativeDate: relative?.phrase || null,
+            question: String(result.question || '').slice(0, 240),
+            miss: true,
+          },
           req,
         });
       } else if (result.ok && result.kind === 'metric') {
@@ -3569,15 +3596,92 @@ router.get(
         return res.status(403).json({ error: 'Forbidden' });
       }
       const live = await loadLiveAskBook(userId, role);
+      const prefs = await getUserAskPreferences(userId);
+      const roleChips = suggestedQuestionsForRole(role, live);
+      const playbooks = playbookAsksForRole(role);
       return res.json({
-        chips: suggestedQuestionsForRole(role, live),
+        chips: mergeFavoriteAskChips(prefs.favoriteQuestions, roleChips, 8),
         more: moreQuestionsForRole(role, live),
+        playbooks,
+        preferences: prefs,
         customerName: live.customerName,
         slNo: live.slNo,
       });
     } catch (error) {
       console.error('[zenith-ask-examples]', error);
       return res.status(500).json({ error: 'Failed to load Ask examples' });
+    }
+  },
+);
+
+/**
+ * Cross-device Zenith Ask preferences (default period + favorite chips).
+ */
+router.get(
+  '/zenith-ask-preferences',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const preferences = await getUserAskPreferences(userId);
+      return res.json({ preferences, playbooks: playbookAsksForRole(role) });
+    } catch (error) {
+      console.error('[zenith-ask-preferences]', error);
+      return res.status(500).json({ error: 'Failed to load Ask preferences' });
+    }
+  },
+);
+
+router.put(
+  '/zenith-ask-preferences',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const patch: {
+        defaultPeriod?: AskDefaultPeriod;
+        favoriteQuestions?: string[];
+      } = {};
+      if (body.defaultPeriod !== undefined) {
+        if (!isAskDefaultPeriod(body.defaultPeriod)) {
+          return res.status(400).json({ error: 'Invalid defaultPeriod' });
+        }
+        patch.defaultPeriod = body.defaultPeriod;
+      }
+      if (body.favoriteQuestions !== undefined) {
+        if (!Array.isArray(body.favoriteQuestions)) {
+          return res.status(400).json({ error: 'favoriteQuestions must be an array' });
+        }
+        patch.favoriteQuestions = body.favoriteQuestions;
+      }
+      const preferences = await upsertUserAskPreferences(userId, patch);
+      return res.json({ preferences });
+    } catch (error) {
+      console.error('[zenith-ask-preferences put]', error);
+      return res.status(500).json({ error: 'Failed to save Ask preferences' });
     }
   },
 );
@@ -3719,6 +3823,34 @@ router.get(
         MANAGEMENT: 'Management copilot',
         ADMIN: 'Admin copilot',
       };
+      // Mine clarify questions → candidates for new exact chips (CHIP_INTENT_BY_NORM).
+      const clarifyLogs = await prisma.securityAuditLog.findMany({
+        where: {
+          entityType: 'ZenithAsk',
+          createdAt: { gte: since },
+          actionType: 'zenith_ask_clarify',
+        },
+        select: { summary: true },
+        take: 500,
+        orderBy: { createdAt: 'desc' },
+      });
+      const clarifyCounts = new Map<string, number>();
+      for (const row of clarifyLogs) {
+        if (!row.summary) continue;
+        try {
+          const parsed = JSON.parse(row.summary) as { question?: unknown };
+          const q = typeof parsed.question === 'string' ? parsed.question.trim() : '';
+          if (q.length < 4) continue;
+          const key = q.toLowerCase().replace(/\s+/g, ' ');
+          clarifyCounts.set(key, (clarifyCounts.get(key) || 0) + 1);
+        } catch {
+          /* ignore malformed */
+        }
+      }
+      const topClarifyQuestions = [...clarifyCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 25)
+        .map(([question, count]) => ({ question, count }));
       return res.json({
         days,
         since: since.toISOString(),
@@ -3728,6 +3860,7 @@ router.get(
         uniqueByRole,
         rolePack,
         clarifyRate: submitted > 0 ? Math.round((clarify / submitted) * 1000) / 10 : null,
+        topClarifyQuestions,
       });
     } catch (error) {
       console.error('[zenith-ask-stats]', error);
