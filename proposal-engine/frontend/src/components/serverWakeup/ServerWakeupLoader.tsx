@@ -356,7 +356,9 @@ export default function ServerWakeupLoader({
   const subtitle =
     appMode === 'consumer'
       ? 'Solar Hub · homeowner energy dashboard'
-      : 'CRM · solar operations & pipeline'
+      : appMode === 'proposal'
+        ? 'Proposal · shared solar proposal link'
+        : 'CRM · solar operations & pipeline'
 
   const markReady = useCallback(() => {
     if (readyFiredRef.current) return
@@ -508,7 +510,11 @@ export default function ServerWakeupLoader({
                 }`}
               />
             </span>
-            {appMode === 'consumer' ? 'Rayenna Solar Hub' : 'Rayenna CRM'}
+            {appMode === 'consumer'
+              ? 'Rayenna Solar Hub'
+              : appMode === 'proposal'
+                ? 'Rayenna Proposal'
+                : 'Rayenna CRM'}
           </div>
           <span className="rounded-md border border-[color:var(--border-default)] bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-2.5 py-1 font-mono text-[11px] font-medium text-[color:var(--nav-text)]">
             {isReady ? 'ONLINE · 100%' : formatElapsed(elapsedMs / 1000)}

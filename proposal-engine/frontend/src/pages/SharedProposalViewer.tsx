@@ -6,11 +6,13 @@ import { PE_CUSTOM_LIST_STYLE_CSS } from '../lib/proposalEditorListStyles';
 import { isPeProdApiConfigured, probePeHealthOk } from '../lib/peHealth';
 import { ServerWakeupLoader } from '../components/serverWakeup';
 
-/** Local/prod preview: `/share/:token?wakeup=1` forces the cold-start animation. */
+/** Local/prod preview: `/view/:token?wakeup=1` forces the cold-start animation. */
 const PREVIEW_COLD_MS = 15_000;
-const forceWakeupPreview =
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('wakeup') === '1';
+
+function isWakeupPreview(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('wakeup') === '1';
+}
 
 type ViewerStatus = 'probing' | 'waking' | 'loading' | 'password' | 'content' | 'expired' | 'error';
 
@@ -22,6 +24,7 @@ export default function SharedProposalViewer() {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [wakeEpoch, setWakeEpoch] = useState(0);
+  const [forceWakeupPreview] = useState(() => isWakeupPreview());
   const pendingPasswordRef = useRef<string | undefined>(undefined);
   const loadInFlight = useRef(false);
 
@@ -42,7 +45,7 @@ export default function SharedProposalViewer() {
       setStatus('content');
     } catch (err: unknown) {
       // Cold / flaky API after a warm probe — show wake UI instead of a dead blank/error.
-      if (isTimeoutOrNetworkError(err) && (isPeProdApiConfigured() || forceWakeupPreview)) {
+      if (isTimeoutOrNetworkError(err) && (isPeProdApiConfigured() || isWakeupPreview())) {
         pendingPasswordRef.current = pwd;
         setWakeEpoch((n) => n + 1);
         setStatus('waking');
@@ -102,7 +105,7 @@ export default function SharedProposalViewer() {
     return () => {
       cancelled = true;
     };
-  }, [token, load]);
+  }, [token, load, forceWakeupPreview]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();

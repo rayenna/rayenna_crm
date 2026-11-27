@@ -29,6 +29,10 @@ function stripLandingFlags(params: URLSearchParams): URLSearchParams {
   if (params.get('clearSelection') === '1') {
     clearActiveCustomer();
   }
+  // Dev/prod preview for shared proposal cold-start UI — must survive SSO URL cleanup.
+  if (params.get('wakeup') === '1') {
+    keep.set('wakeup', '1');
+  }
   return keep;
 }
 
@@ -59,6 +63,11 @@ function useSsoTicketExchange() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ticket = params.get('ticket');
+    // Public share links: never rewrite the URL (preserve ?wakeup=1 and avoid auth side-effects).
+    if (window.location.pathname.startsWith('/view/')) {
+      setStatus('done');
+      return;
+    }
     if (!ticket) {
       const next = stripLandingFlags(params);
       const newSearch = next.toString();
