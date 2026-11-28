@@ -4,11 +4,38 @@
  *
  * Copy this folder into Solar Hub and mount with appMode="consumer".
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 
 /** Official Rayenna mark navy/purple (matches rayenna_logo.jpg swooshes + wordmark). */
 const LOGO_NAVY = '#0A1445'
 const AMBER = '#FDB813'
+
+/**
+ * CRM / Solar Hub dark theme tokens — PE has no global `--nav-*` theme, so the
+ * share-link wake screen must scope these locally or the glass card goes transparent.
+ */
+const WAKE_DARK_TOKENS: CSSProperties = {
+  ['--bg-page' as string]: '#0A0A0F',
+  ['--nav-bg' as string]: '#111118',
+  ['--nav-border' as string]: 'rgba(255,255,255,0.08)',
+  ['--nav-text' as string]: 'rgba(255,255,255,0.75)',
+  ['--nav-text-active' as string]: '#FFFFFF',
+  ['--border-default' as string]: 'rgba(255,255,255,0.09)',
+  ['--accent-gold' as string]: '#F5A623',
+  ['--accent-gold-border' as string]: 'rgba(245,166,35,0.3)',
+  ['--accent-teal' as string]: '#00D4B4',
+  ['--accent-teal-border' as string]: 'rgba(0,212,180,0.3)',
+  ['--text-inverse' as string]: '#0A0A0F',
+  ['--shadow-card' as string]: 'none',
+  ['--shadow-modal' as string]: '0 20px 60px rgba(0,0,0,0.6)',
+}
 
 const SHARED_MESSAGES = [
   'Waking up the solar grid... zero fossil fuels harmed in this boot-up.',
@@ -29,9 +56,20 @@ const CONSUMER_MESSAGES = [
   'Harnessing rooftop vibes—your solar insights are coming right up.',
 ] as const
 
+/** Customer-facing share wake copy (brand + premium). No GenZ jokes on client links. */
 const PROPOSAL_MESSAGES = [
-  'Opening your shared solar proposal—almost at full brightness...',
-  'Waking the proposal vault so your client can read every page.',
+  // Option A — brand & trust
+  "Rayenna Energy — Kerala's PM Surya Ghar empanelled solar partner.",
+  'Designed, installed, and backed by a local team that stays after switch-on.',
+  'Honest sizing first — we recommend the kW your roof and bill actually need.',
+  'Subsidy, ekiran, and approvals handled end to end — not left to you.',
+  'Preparing your personalised solar proposal…',
+  'Quality brands. Trained engineers. Support that picks up the phone.',
+  // Option E — minimal / premium
+  'Your Rayenna Energy solar proposal is loading…',
+  'Empanelled installer · Honest sizing · End-to-end support',
+  'Clean power. Clear paperwork. A team that stays.',
+  'Thank you for your patience — good proposals are worth a moment.',
 ] as const
 
 const POLL_INTERVAL_MS = 2500
@@ -83,7 +121,8 @@ function asymptoticProgress(elapsedMs: number, ready: boolean): number {
 
 function messagesForMode(appMode: ServerWakeupAppMode): string[] {
   if (appMode === 'consumer') return [...SHARED_MESSAGES, ...CONSUMER_MESSAGES]
-  if (appMode === 'proposal') return [...SHARED_MESSAGES, ...PROPOSAL_MESSAGES]
+  // Share links are customer-facing — brand/premium copy only (Options A + E).
+  if (appMode === 'proposal') return [...PROPOSAL_MESSAGES]
   return [...SHARED_MESSAGES, ...CRM_MESSAGES]
 }
 
@@ -467,25 +506,34 @@ export default function ServerWakeupLoader({
     return null
   }
 
+  const readySubtitle =
+    appMode === 'proposal'
+      ? 'Backend is awake — opening your proposal…'
+      : appMode === 'consumer'
+        ? 'Backend is awake — opening Solar Hub…'
+        : 'Backend is awake — signing you in…'
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto bg-[color:var(--bg-page)] px-4 py-8 [-webkit-tap-highlight-color:transparent]"
       style={{
+        ...WAKE_DARK_TOKENS,
         paddingTop: 'max(2rem, env(safe-area-inset-top, 0px))',
         paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 0px))',
       }}
       role="dialog"
       aria-modal="true"
       aria-label="Waking up Rayenna servers"
+      data-theme="dark"
     >
-      {/* Same wallpaper as Login */}
+      {/* Standard Rayenna wallpaper (public/background.jpg) — same as CRM / Solar Hub */}
       <div
         className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${backgroundImageUrl})` }}
         aria-hidden
       />
 
-      {/* Same dark glass card language as Login */}
+      {/* Same dark glass card language as CRM / Solar Hub Login */}
       <div className="relative z-10 w-full max-w-xl space-y-4 overflow-hidden rounded-2xl border border-[color:var(--nav-border)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:color-mix(in_srgb,var(--nav-bg)_95%,transparent)] p-6 text-[color:var(--nav-text-active)] shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] backdrop-blur-md sm:space-y-5 sm:p-8">
         <div
           className="absolute left-0 right-0 top-0 h-1 transition-all duration-300"
@@ -546,7 +594,7 @@ export default function ServerWakeupLoader({
                   Grid connected
                 </p>
                 <p className="text-sm font-semibold text-[color:var(--nav-text-active)] sm:text-base">
-                  Backend is awake — signing you in…
+                  {readySubtitle}
                 </p>
               </div>
             </div>

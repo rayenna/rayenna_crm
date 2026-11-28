@@ -449,8 +449,7 @@ export const PROPOSAL_PRINT_CSS = `
       break-before: auto !important;
       page-break-before: auto !important;
     }
-    /* Keep “N categories” + Bill of Quantities title with the table header row */
-    caption.bom-boq-caption { break-inside:avoid; page-break-inside:avoid; break-after:avoid; page-break-after:avoid; }
+    /* BOQ title uses .pdf-section-heading (break-after:avoid) so it stays with the table */
     thead { display: table-header-group; }
     tfoot { display: table-footer-group; }
     h1, h2, h3 { page-break-after:avoid; }

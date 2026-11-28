@@ -1450,12 +1450,34 @@ export function BOMGroupedTable({
 
   return (
     <div className="mb-0 pdf-section" data-pdf-section="bom">
-      {/* Collapse-all only (category summary lives in <caption> so PDF pagination keeps it with the BOQ title) */}
-      <div className="flex items-center justify-end mb-3 px-1 print-hide">
+      <div
+        className="flex items-center gap-3 mb-4 pdf-section-heading"
+        data-pdf-keep="section-heading"
+      >
+        <div
+          className="w-1 rounded-full flex-shrink-0"
+          style={{ background: '#b45309', height: '28px' }}
+        />
+        <span className="text-lg leading-none" aria-hidden>
+          📋
+        </span>
+        <h2
+          className="text-base font-extrabold uppercase tracking-widest"
+          style={{ color: '#b45309' }}
+        >
+          Bill of Quantities
+        </h2>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mb-3 pl-7 min-h-[44px]">
+        <p className="text-xs text-secondary-400 font-normal normal-case tracking-normal">
+          {grouped.length} categories
+          {!allCollapsed && <> · {items.length} items</>}
+        </p>
         <button
           type="button"
           onClick={toggleAll}
-          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
+          className="print-hide flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation flex-shrink-0"
           style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed', touchAction: 'manipulation' }}
           aria-label={allCollapsed ? 'Expand all categories' : 'Collapse all categories'}
         >
@@ -1466,18 +1488,6 @@ export function BOMGroupedTable({
       {/* Column header + table */}
       <div className="overflow-x-auto print:overflow-visible rounded-xl border border-secondary-200 shadow-sm">
         <table className="w-full text-sm border-collapse min-w-[560px]">
-          <caption
-            className="bom-boq-caption text-left px-3 pt-3 pb-1"
-            style={{ captionSide: 'top' as any }}
-          >
-            <p className="text-xs text-secondary-400 mb-1 font-normal normal-case tracking-normal">
-              {grouped.length} categories
-              {!allCollapsed && <> · {items.length} items</>}
-            </p>
-            <span className="text-sm font-extrabold uppercase tracking-widest" style={{ color: '#b45309' }}>
-              Bill of Quantities
-            </span>
-          </caption>
           <thead>
             <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #b45309)' }}>
               <th className="px-3 py-2.5 text-left text-xs text-white font-semibold uppercase tracking-wide w-8">#</th>
